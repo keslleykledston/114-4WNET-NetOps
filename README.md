@@ -6,10 +6,15 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 
 - `workspace/` — código-fonte app, API, libs e schema Drizzle
 - `infra/` — arquivos de infraestrutura do repositório
+- `docs/` — documentação funcional e status do projeto
 - `docker-compose.yml` — sobe PostgreSQL, migração, API e frontend
 - `Dockerfile` — build multi-stage para API e frontend
 - `infra/nginx/default.conf` — reverse proxy do frontend para `/api`
 - `.env.example` — variáveis base
+
+## Documentação
+
+- Status funcional e pendências: [docs/PROJECT_STATUS.md](/Users/keslleykssantos/projects/ativos/114-4WNET_NetOps/docs/PROJECT_STATUS.md)
 
 ## Subir com Docker
 

@@ -1,17 +1,16 @@
 import { useState } from "react";
-import { useListDevices, useCreateDevice, getListDevicesQueryKey, useTestDeviceConnection, useDeleteDevice } from "@workspace/api-client-react";
+import { useListDevices, useCreateDevice, useUpdateDevice, getListDevicesQueryKey, getGetDeviceQueryKey, useTestDeviceConnection, useDeleteDevice } from "@workspace/api-client-react";
+import type { DeviceInput, DeviceUpdate } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Server, Plus, Search, Trash2, Activity, TerminalSquare, SearchX } from "lucide-react";
+import { Server, Plus, Search, Trash2, Activity, TerminalSquare, SearchX, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
+import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
 
 export default function Devices() {
   const [search, setSearch] = useState("");
@@ -20,32 +19,69 @@ export default function Devices() {
   const { toast } = useToast();
 
   const createDevice = useCreateDevice();
+  const updateDevice = useUpdateDevice();
   const deleteDevice = useDeleteDevice();
   const testConnection = useTestDeviceConnection();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newDevice, setNewDevice] = useState({
-    hostname: "",
-    ipAddress: "",
-    vendor: "cisco",
-    platform: "ios",
-    username: "",
-    password: "",
-    site: "",
-    sshPort: 22
-  });
+  const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
+  const editingDevice = devices?.find((device) => device.id === editingDeviceId) ?? null;
 
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault();
-    createDevice.mutate({ data: newDevice }, {
+  const handleCreate = (values: DeviceFormValues) => {
+    const payload: DeviceInput = {
+      hostname: values.hostname,
+      ipAddress: values.ipAddress,
+      vendor: values.vendor,
+      platform: values.platform,
+      username: values.username,
+      password: values.password,
+      site: values.site,
+      sshPort: values.sshPort,
+      role: values.role || undefined,
+      snmpCommunity: values.snmpCommunity || undefined,
+    };
+
+    createDevice.mutate({ data: payload }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
         setIsCreateOpen(false);
-        toast({ title: "Device added successfully" });
+        toast({ title: "Dispositivo adicionado com sucesso" });
       },
       onError: (err: any) => {
-        toast({ title: "Error adding device", description: err.message, variant: "destructive" });
+        toast({ title: "Erro ao adicionar dispositivo", description: err.message, variant: "destructive" });
       }
+    });
+  };
+
+  const handleUpdate = (values: DeviceFormValues) => {
+    if (!editingDevice) return;
+
+    const payload: DeviceUpdate = {
+      hostname: values.hostname,
+      ipAddress: values.ipAddress,
+      vendor: values.vendor,
+      platform: values.platform,
+      username: values.username,
+      site: values.site,
+      sshPort: values.sshPort,
+      role: values.role || "",
+      snmpCommunity: values.snmpCommunity,
+    };
+
+    if (values.password.trim().length > 0) {
+      payload.password = values.password;
+    }
+
+    updateDevice.mutate({ id: editingDevice.id, data: payload }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetDeviceQueryKey(editingDevice.id) });
+        setEditingDeviceId(null);
+        toast({ title: "Dispositivo atualizado" });
+      },
+      onError: (err: any) => {
+        toast({ title: "Erro ao atualizar dispositivo", description: err.message, variant: "destructive" });
+      },
     });
   };
 
@@ -54,18 +90,18 @@ export default function Devices() {
       deleteDevice.mutate({ id }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
-          toast({ title: "Device deleted" });
+        toast({ title: "Dispositivo removido" });
         }
       });
     }
   };
 
   const handleTestConnection = (id: number) => {
-    toast({ title: "Testing connection..." });
+    toast({ title: "Validando conexão SSH..." });
     testConnection.mutate({ id }, {
       onSuccess: (res) => {
         toast({ 
-          title: res.success ? "Connection Successful" : "Connection Failed", 
+          title: res.success ? "Conexão SSH OK" : "Falha na conexão SSH", 
           description: res.message,
           variant: res.success ? "default" : "destructive"
         });
@@ -85,80 +121,32 @@ export default function Devices() {
           <h1 className="text-3xl font-bold tracking-tight">Devices</h1>
           <p className="text-muted-foreground mt-1">Manage network infrastructure inventory</p>
         </div>
-        
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
+
+        <DeviceFormDialog
+          mode="create"
+          open={isCreateOpen}
+          onOpenChange={setIsCreateOpen}
+          onSubmit={handleCreate}
+          isPending={createDevice.isPending}
+          trigger={
             <Button>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               Add Device
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Register New Device</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Hostname</Label>
-                  <Input required value={newDevice.hostname} onChange={e => setNewDevice({...newDevice, hostname: e.target.value})} placeholder="pe01.nyc" />
-                </div>
-                <div className="space-y-2">
-                  <Label>IP Address</Label>
-                  <Input required className="font-mono" value={newDevice.ipAddress} onChange={e => setNewDevice({...newDevice, ipAddress: e.target.value})} placeholder="10.0.0.1" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Vendor</Label>
-                  <Select value={newDevice.vendor} onValueChange={v => setNewDevice({...newDevice, vendor: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cisco">Cisco</SelectItem>
-                      <SelectItem value="juniper">Juniper</SelectItem>
-                      <SelectItem value="huawei">Huawei</SelectItem>
-                      <SelectItem value="nokia">Nokia</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Platform</Label>
-                  <Select value={newDevice.platform} onValueChange={v => setNewDevice({...newDevice, platform: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ios">IOS</SelectItem>
-                      <SelectItem value="ios-xe">IOS-XE</SelectItem>
-                      <SelectItem value="ios-xr">IOS-XR</SelectItem>
-                      <SelectItem value="junos">Junos</SelectItem>
-                      <SelectItem value="vrp">VRP</SelectItem>
-                      <SelectItem value="sros">SR-OS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Site</Label>
-                  <Input required value={newDevice.site} onChange={e => setNewDevice({...newDevice, site: e.target.value})} placeholder="NYC-DC1" />
-                </div>
-                <div className="space-y-2">
-                  <Label>SSH Port</Label>
-                  <Input required type="number" value={newDevice.sshPort} onChange={e => setNewDevice({...newDevice, sshPort: parseInt(e.target.value)})} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Username</Label>
-                  <Input required value={newDevice.username} onChange={e => setNewDevice({...newDevice, username: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Password</Label>
-                  <Input required type="password" value={newDevice.password} onChange={e => setNewDevice({...newDevice, password: e.target.value})} />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit" disabled={createDevice.isPending}>
-                  {createDevice.isPending ? "Adding..." : "Add Device"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+          }
+        />
       </div>
+
+      <DeviceFormDialog
+        mode="edit"
+        open={editingDeviceId !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingDeviceId(null);
+        }}
+        onSubmit={handleUpdate}
+        isPending={updateDevice.isPending}
+        device={editingDevice}
+      />
 
       <Card>
         <CardHeader className="py-4">
@@ -222,6 +210,9 @@ export default function Devices() {
                     <TableCell className="text-right space-x-2">
                       <Button variant="ghost" size="icon" onClick={() => handleTestConnection(device.id)} title="Test Connection">
                         <Activity className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => setEditingDeviceId(device.id)} title="Edit Device">
+                        <Pencil className="h-4 w-4" />
                       </Button>
                       <Link href={`/devices/${device.id}`}>
                         <Button variant="ghost" size="icon" title="View Details">

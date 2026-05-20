@@ -32,21 +32,8 @@ export async function testSSHConnection(config: SSHConfig): Promise<{ success: b
         resolved = true;
         clearTimeout(timeout);
         const latencyMs = Date.now() - start;
-        conn.exec("show version | include uptime", (err, stream) => {
-          if (err) {
-            conn.end();
-            resolve({ success: true, latencyMs, hostname: null, message: "Connected successfully" });
-            return;
-          }
-          let output = "";
-          stream.on("data", (data: Buffer) => { output += data.toString(); });
-          stream.stderr.on("data", () => {});
-          stream.on("close", () => {
-            conn.end();
-            const hostnameMatch = output.match(/^(\S+)\s+uptime/m);
-            resolve({ success: true, latencyMs, hostname: hostnameMatch?.[1] ?? null, message: "Connected successfully" });
-          });
-        });
+        conn.end();
+        resolve({ success: true, latencyMs, hostname: null, message: "Connected successfully" });
       }
     });
 

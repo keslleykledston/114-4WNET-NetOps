@@ -66,6 +66,7 @@ router.post("/devices", async (req, res) => {
   const [device] = await db.insert(devicesTable).values({
     ...rest,
     sshPort: rest.sshPort ?? 22,
+    snmpCommunity: rest.snmpCommunity?.trim() || null,
     passwordEncrypted: encrypt(password),
     status: "unknown",
   }).returning();
@@ -136,6 +137,11 @@ router.patch("/devices/:id", async (req, res) => {
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   const { password, ...rest } = parsed.data as { password?: string; [key: string]: unknown };
   Object.assign(updateData, rest);
+  if ("snmpCommunity" in rest) {
+    updateData.snmpCommunity = typeof rest.snmpCommunity === "string" && rest.snmpCommunity.trim().length > 0
+      ? rest.snmpCommunity.trim()
+      : null;
+  }
   if (password) updateData.passwordEncrypted = encrypt(password);
 
   const [updated] = await db.update(devicesTable)

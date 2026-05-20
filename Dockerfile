@@ -9,7 +9,7 @@ WORKDIR /app/workspace
 
 COPY workspace/ ./
 
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --no-frozen-lockfile --ignore-scripts
 
 FROM workspace-base AS api-runtime
 

@@ -1,27 +1,38 @@
+import { useState } from "react";
 import { useRoute } from "wouter";
 import { 
-  useGetDevice, getGetDeviceQueryKey, 
-  useGetDeviceCollectedConfig, 
+  useGetDevice, getGetDeviceQueryKey, getListDevicesQueryKey,
+  useGetDeviceCollectedConfig, getGetDeviceCollectedConfigQueryKey,
   useListComplianceJobs,
-  useListProvisioningJobs 
+  useListProvisioningJobs,
+  useUpdateDevice,
 } from "@workspace/api-client-react";
+import type { DeviceUpdate } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Server, Activity, ShieldCheck, Rocket, Terminal, History, ChevronRight } from "lucide-react";
+import { Server, Activity, ShieldCheck, Rocket, Terminal, History, ChevronRight, Pencil } from "lucide-react";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
 
 export default function DeviceDetail() {
   const [, params] = useRoute("/devices/:id");
   const deviceId = params?.id ? parseInt(params.id) : 0;
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const updateDevice = useUpdateDevice();
 
   const { data: device, isLoading: deviceLoading } = useGetDevice(deviceId, { 
     query: { enabled: !!deviceId, queryKey: getGetDeviceQueryKey(deviceId) } 
   });
   
   const { data: config, isLoading: configLoading } = useGetDeviceCollectedConfig(deviceId, {
-    query: { enabled: !!deviceId }
+    query: { enabled: !!deviceId, queryKey: getGetDeviceCollectedConfigQueryKey(deviceId) }
   });
 
   const { data: complianceJobs } = useListComplianceJobs({ deviceId });
@@ -34,6 +45,36 @@ export default function DeviceDetail() {
   if (!device) {
     return <div>Device not found</div>;
   }
+
+  const handleUpdate = (values: DeviceFormValues) => {
+    const payload: DeviceUpdate = {
+      hostname: values.hostname,
+      ipAddress: values.ipAddress,
+      vendor: values.vendor,
+      platform: values.platform,
+      username: values.username,
+      site: values.site,
+      sshPort: values.sshPort,
+      role: values.role || "",
+      snmpCommunity: values.snmpCommunity,
+    };
+
+    if (values.password.trim().length > 0) {
+      payload.password = values.password;
+    }
+
+    updateDevice.mutate({ id: device.id, data: payload }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetDeviceQueryKey(device.id) });
+        queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
+        setIsEditOpen(false);
+        toast({ title: "Dispositivo atualizado" });
+      },
+      onError: (err: any) => {
+        toast({ title: "Erro ao atualizar dispositivo", description: err.message, variant: "destructive" });
+      },
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -58,6 +99,21 @@ export default function DeviceDetail() {
             <span className="text-sm text-muted-foreground capitalize">{device.vendor} {device.platform}</span>
           </div>
         </div>
+
+        <DeviceFormDialog
+          mode="edit"
+          open={isEditOpen}
+          onOpenChange={setIsEditOpen}
+          onSubmit={handleUpdate}
+          isPending={updateDevice.isPending}
+          device={device}
+          trigger={
+            <Button variant="outline">
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </Button>
+          }
+        />
       </div>
 
       <Tabs defaultValue="overview" className="w-full">

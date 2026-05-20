@@ -3,3 +3,4 @@ export * from "./compliance";
 export * from "./templates";
 export * from "./provisioning";
 export * from "./collected_configs";
+export * from "./snmp_snapshots";

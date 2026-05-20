@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "NetOps Manager"
+version = "1.0.0"
+id = "artifacts/netops-manager"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24780
+
+[services.development]
+run = "pnpm --filter @workspace/netops-manager run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/netops-manager", "run", "build" ]
+publicDir = "artifacts/netops-manager/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24780"
+BASE_PATH = "/"

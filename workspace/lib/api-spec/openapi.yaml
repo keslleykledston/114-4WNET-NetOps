@@ -1,0 +1,1436 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: NetOps Manager API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: devices
+    description: Network device registry
+  - name: device-groups
+    description: Device group management
+  - name: compliance-policies
+    description: Compliance policy rules
+  - name: compliance-jobs
+    description: Compliance job execution
+  - name: config-templates
+    description: VPN configuration templates
+  - name: provisioning-jobs
+    description: VPN provisioning jobs
+  - name: collected-configs
+    description: Collected device configurations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── DEVICES ──────────────────────────────────────────────────────────────────
+  /devices:
+    get:
+      operationId: listDevices
+      tags: [devices]
+      summary: List all devices
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: vendor
+          in: query
+          schema:
+            type: string
+        - name: site
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Device"
+    post:
+      operationId: createDevice
+      tags: [devices]
+      summary: Register a new device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+
+  /devices/stats:
+    get:
+      operationId: getDeviceStats
+      tags: [devices]
+      summary: Device statistics summary
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceStats"
+
+  /devices/{id}:
+    get:
+      operationId: getDevice
+      tags: [devices]
+      summary: Get device by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateDevice
+      tags: [devices]
+      summary: Update device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+    delete:
+      operationId: deleteDevice
+      tags: [devices]
+      summary: Delete device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /devices/{id}/test-connection:
+    post:
+      operationId: testDeviceConnection
+      tags: [devices]
+      summary: Test SSH connectivity to a device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionTestResult"
+
+  /devices/{id}/collected-config:
+    get:
+      operationId: getDeviceCollectedConfig
+      tags: [devices]
+      summary: Get latest collected config for device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Collected config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectedConfig"
+        "404":
+          description: Not found
+
+  # ── DEVICE GROUPS ─────────────────────────────────────────────────────────────
+  /device-groups:
+    get:
+      operationId: listDeviceGroups
+      tags: [device-groups]
+      summary: List device groups
+      responses:
+        "200":
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeviceGroup"
+    post:
+      operationId: createDeviceGroup
+      tags: [device-groups]
+      summary: Create a device group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceGroupInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceGroup"
+
+  /device-groups/{id}:
+    get:
+      operationId: getDeviceGroup
+      tags: [device-groups]
+      summary: Get device group
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceGroup"
+    patch:
+      operationId: updateDeviceGroup
+      tags: [device-groups]
+      summary: Update device group
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceGroupUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceGroup"
+    delete:
+      operationId: deleteDeviceGroup
+      tags: [device-groups]
+      summary: Delete device group
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── COMPLIANCE POLICIES ──────────────────────────────────────────────────────
+  /compliance-policies:
+    get:
+      operationId: listCompliancePolicies
+      tags: [compliance-policies]
+      summary: List compliance policies
+      responses:
+        "200":
+          description: Policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CompliancePolicy"
+    post:
+      operationId: createCompliancePolicy
+      tags: [compliance-policies]
+      summary: Create compliance policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompliancePolicyInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompliancePolicy"
+
+  /compliance-policies/{id}:
+    get:
+      operationId: getCompliancePolicy
+      tags: [compliance-policies]
+      summary: Get compliance policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompliancePolicy"
+    patch:
+      operationId: updateCompliancePolicy
+      tags: [compliance-policies]
+      summary: Update compliance policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompliancePolicyUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompliancePolicy"
+    delete:
+      operationId: deleteCompliancePolicy
+      tags: [compliance-policies]
+      summary: Delete compliance policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── COMPLIANCE JOBS ──────────────────────────────────────────────────────────
+  /compliance-jobs:
+    get:
+      operationId: listComplianceJobs
+      tags: [compliance-jobs]
+      summary: List compliance jobs
+      parameters:
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ComplianceJob"
+    post:
+      operationId: createComplianceJob
+      tags: [compliance-jobs]
+      summary: Start a compliance job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplianceJobInput"
+      responses:
+        "201":
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceJob"
+
+  /compliance-jobs/summary:
+    get:
+      operationId: getComplianceSummary
+      tags: [compliance-jobs]
+      summary: Compliance summary across all jobs
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceSummary"
+
+  /compliance-jobs/{id}:
+    get:
+      operationId: getComplianceJob
+      tags: [compliance-jobs]
+      summary: Get compliance job details and findings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job with findings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceJobDetail"
+
+  /compliance-jobs/{id}/execute:
+    post:
+      operationId: executeComplianceJob
+      tags: [compliance-jobs]
+      summary: Execute/re-run a compliance job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Executed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceJobDetail"
+
+  # ── CONFIG TEMPLATES ─────────────────────────────────────────────────────────
+  /config-templates:
+    get:
+      operationId: listConfigTemplates
+      tags: [config-templates]
+      summary: List config templates
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConfigTemplate"
+    post:
+      operationId: createConfigTemplate
+      tags: [config-templates]
+      summary: Create config template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplate"
+
+  /config-templates/{id}:
+    get:
+      operationId: getConfigTemplate
+      tags: [config-templates]
+      summary: Get config template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplate"
+    patch:
+      operationId: updateConfigTemplate
+      tags: [config-templates]
+      summary: Update config template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplate"
+    delete:
+      operationId: deleteConfigTemplate
+      tags: [config-templates]
+      summary: Delete config template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /config-templates/{id}/render:
+    post:
+      operationId: renderConfigTemplate
+      tags: [config-templates]
+      summary: Render a template with parameters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateRenderInput"
+      responses:
+        "200":
+          description: Rendered config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateRenderResult"
+
+  # ── PROVISIONING JOBS ────────────────────────────────────────────────────────
+  /provisioning-jobs:
+    get:
+      operationId: listProvisioningJobs
+      tags: [provisioning-jobs]
+      summary: List provisioning jobs
+      parameters:
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProvisioningJob"
+    post:
+      operationId: createProvisioningJob
+      tags: [provisioning-jobs]
+      summary: Create a provisioning job (L2VPN/L3VPN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProvisioningJobInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningJob"
+
+  /provisioning-jobs/stats:
+    get:
+      operationId: getProvisioningStats
+      tags: [provisioning-jobs]
+      summary: Provisioning job statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningStats"
+
+  /provisioning-jobs/{id}:
+    get:
+      operationId: getProvisioningJob
+      tags: [provisioning-jobs]
+      summary: Get provisioning job details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningJobDetail"
+
+  /provisioning-jobs/{id}/validate:
+    post:
+      operationId: validateProvisioningJob
+      tags: [provisioning-jobs]
+      summary: Validate a provisioning job before execution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResult"
+
+  /provisioning-jobs/{id}/execute:
+    post:
+      operationId: executeProvisioningJob
+      tags: [provisioning-jobs]
+      summary: Execute a provisioning job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Executed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningJobDetail"
+
+  /provisioning-jobs/{id}/rollback:
+    post:
+      operationId: rollbackProvisioningJob
+      tags: [provisioning-jobs]
+      summary: Rollback a provisioning job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rollback result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningJobDetail"
+
+  # ── COLLECTED CONFIGS ─────────────────────────────────────────────────────────
+  /collected-configs:
+    get:
+      operationId: listCollectedConfigs
+      tags: [collected-configs]
+      summary: List collected device configs
+      parameters:
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Configs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CollectedConfig"
+    post:
+      operationId: collectDeviceConfig
+      tags: [collected-configs]
+      summary: Collect config from a device via SSH
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CollectConfigInput"
+      responses:
+        "201":
+          description: Collected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectedConfig"
+
+  /collected-configs/{id}:
+    get:
+      operationId: getCollectedConfig
+      tags: [collected-configs]
+      summary: Get a collected config
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollectedConfig"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    # ── DEVICES ────────────────────────────────────────────────────────────────
+    Device:
+      type: object
+      required: [id, hostname, ipAddress, vendor, platform, sshPort, username, site, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        hostname:
+          type: string
+        ipAddress:
+          type: string
+        vendor:
+          type: string
+          description: "cisco, huawei, juniper, nokia"
+        platform:
+          type: string
+          description: "ios, ios-xe, ios-xr, vrp, junos, sros"
+        sshPort:
+          type: integer
+        username:
+          type: string
+        site:
+          type: string
+        role:
+          type: ["string", "null"]
+          description: "pe, p, ce, sw"
+        groupId:
+          type: ["integer", "null"]
+        snmpCommunity:
+          type: ["string", "null"]
+        netboxDeviceId:
+          type: ["integer", "null"]
+          description: "Future Netbox integration ID"
+        lastSeen:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: "active, unreachable, unknown"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    DeviceInput:
+      type: object
+      required: [hostname, ipAddress, vendor, platform, username, password, site]
+      properties:
+        hostname:
+          type: string
+        ipAddress:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+        sshPort:
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+        site:
+          type: string
+        role:
+          type: string
+        groupId:
+          type: integer
+        snmpCommunity:
+          type: string
+        netboxDeviceId:
+          type: integer
+
+    DeviceUpdate:
+      type: object
+      properties:
+        hostname:
+          type: string
+        ipAddress:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+        sshPort:
+          type: integer
+        username:
+          type: string
+        password:
+          type: string
+        site:
+          type: string
+        role:
+          type: string
+        groupId:
+          type: integer
+        snmpCommunity:
+          type: string
+        status:
+          type: string
+
+    DeviceStats:
+      type: object
+      required: [total, active, unreachable, unknown, byVendor, bySite]
+      properties:
+        total:
+          type: integer
+        active:
+          type: integer
+        unreachable:
+          type: integer
+        unknown:
+          type: integer
+        byVendor:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByKey"
+        bySite:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByKey"
+
+    ConnectionTestResult:
+      type: object
+      required: [success, message, latencyMs]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        latencyMs:
+          type: ["integer", "null"]
+        hostname:
+          type: ["string", "null"]
+
+    CountByKey:
+      type: object
+      required: [key, count]
+      properties:
+        key:
+          type: string
+        count:
+          type: integer
+
+    # ── DEVICE GROUPS ──────────────────────────────────────────────────────────
+    DeviceGroup:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        deviceCount:
+          type: integer
+        createdAt:
+          type: string
+
+    DeviceGroupInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    DeviceGroupUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    # ── COMPLIANCE POLICIES ────────────────────────────────────────────────────
+    CompliancePolicy:
+      type: object
+      required: [id, name, context, severity, enabled, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        context:
+          type: string
+          description: "sysname, vlan, bgp, ntp, snmp, interface, l2vpn, l3vpn, security"
+        severity:
+          type: string
+          description: "critical, high, medium, low, info"
+        ruleType:
+          type: string
+          description: "regex, presence, absence, range"
+        rulePattern:
+          type: ["string", "null"]
+        vendor:
+          type: ["string", "null"]
+          description: "null means applies to all vendors"
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+
+    CompliancePolicyInput:
+      type: object
+      required: [name, context, severity, ruleType]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        context:
+          type: string
+        severity:
+          type: string
+        ruleType:
+          type: string
+        rulePattern:
+          type: string
+        vendor:
+          type: string
+        enabled:
+          type: boolean
+
+    CompliancePolicyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        context:
+          type: string
+        severity:
+          type: string
+        ruleType:
+          type: string
+        rulePattern:
+          type: string
+        vendor:
+          type: string
+        enabled:
+          type: boolean
+
+    # ── COMPLIANCE JOBS ────────────────────────────────────────────────────────
+    ComplianceJob:
+      type: object
+      required: [id, deviceId, contexts, status, createdAt]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        deviceHostname:
+          type: ["string", "null"]
+        contexts:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          description: "pending, running, passed, failed, error"
+        passCount:
+          type: integer
+        failCount:
+          type: integer
+        errorMessage:
+          type: ["string", "null"]
+        startedAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ComplianceJobInput:
+      type: object
+      required: [deviceId, contexts]
+      properties:
+        deviceId:
+          type: integer
+        contexts:
+          type: array
+          items:
+            type: string
+
+    ComplianceJobDetail:
+      type: object
+      required: [id, deviceId, contexts, status, findings, createdAt]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        deviceHostname:
+          type: ["string", "null"]
+        contexts:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        passCount:
+          type: integer
+        failCount:
+          type: integer
+        errorMessage:
+          type: ["string", "null"]
+        startedAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplianceFinding"
+
+    ComplianceFinding:
+      type: object
+      required: [id, jobId, policyId, policyName, severity, context, result]
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        policyId:
+          type: integer
+        policyName:
+          type: string
+        severity:
+          type: string
+        context:
+          type: string
+        result:
+          type: string
+          description: "pass, fail, error"
+        detail:
+          type: ["string", "null"]
+        evidence:
+          type: ["string", "null"]
+
+    ComplianceSummary:
+      type: object
+      required: [totalJobs, passed, failed, running, recentJobs, failuresByContext, failuresBySeverity]
+      properties:
+        totalJobs:
+          type: integer
+        passed:
+          type: integer
+        failed:
+          type: integer
+        running:
+          type: integer
+        recentJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplianceJob"
+        failuresByContext:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByKey"
+        failuresBySeverity:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByKey"
+
+    # ── CONFIG TEMPLATES ───────────────────────────────────────────────────────
+    ConfigTemplate:
+      type: object
+      required: [id, name, type, vendor, platform, template, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          description: "l2vpn, l3vpn, vlan, interface, bgp"
+        vendor:
+          type: string
+        platform:
+          type: string
+        template:
+          type: string
+          description: "Jinja2-style template content"
+        parameters:
+          type: ["string", "null"]
+          description: "JSON string describing required parameters"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    ConfigTemplateInput:
+      type: object
+      required: [name, type, vendor, platform, template]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+        template:
+          type: string
+        parameters:
+          type: string
+
+    ConfigTemplateUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+        template:
+          type: string
+        parameters:
+          type: string
+
+    TemplateRenderInput:
+      type: object
+      required: [params]
+      properties:
+        params:
+          type: object
+          additionalProperties: true
+
+    TemplateRenderResult:
+      type: object
+      required: [rendered]
+      properties:
+        rendered:
+          type: string
+        warnings:
+          type: array
+          items:
+            type: string
+
+    # ── PROVISIONING JOBS ──────────────────────────────────────────────────────
+    ProvisioningJob:
+      type: object
+      required: [id, name, type, status, deviceIds, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          description: "l2vpn, l3vpn"
+        status:
+          type: string
+          description: "draft, validated, executing, completed, failed, rolled_back"
+        deviceIds:
+          type: array
+          items:
+            type: integer
+        templateId:
+          type: ["integer", "null"]
+        parameters:
+          type: ["string", "null"]
+          description: "JSON of provisioning parameters"
+        validatedAt:
+          type: ["string", "null"]
+        executedAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ProvisioningJobInput:
+      type: object
+      required: [name, type, deviceIds]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        deviceIds:
+          type: array
+          items:
+            type: integer
+        templateId:
+          type: integer
+        parameters:
+          type: string
+
+    ProvisioningJobDetail:
+      type: object
+      required: [id, name, type, status, deviceIds, steps, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        deviceIds:
+          type: array
+          items:
+            type: integer
+        templateId:
+          type: ["integer", "null"]
+        parameters:
+          type: ["string", "null"]
+        validatedAt:
+          type: ["string", "null"]
+        executedAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProvisioningStep"
+
+    ProvisioningStep:
+      type: object
+      required: [id, jobId, deviceId, stepName, status]
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        deviceId:
+          type: integer
+        deviceHostname:
+          type: ["string", "null"]
+        stepName:
+          type: string
+        status:
+          type: string
+          description: "pending, running, completed, failed, skipped"
+        configApplied:
+          type: ["string", "null"]
+        output:
+          type: ["string", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        executedAt:
+          type: ["string", "null"]
+
+    ValidationResult:
+      type: object
+      required: [valid, checks]
+      properties:
+        valid:
+          type: boolean
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationCheck"
+
+    ValidationCheck:
+      type: object
+      required: [name, passed, message]
+      properties:
+        name:
+          type: string
+        passed:
+          type: boolean
+        message:
+          type: string
+
+    ProvisioningStats:
+      type: object
+      required: [total, completed, failed, executing, draft, byType]
+      properties:
+        total:
+          type: integer
+        completed:
+          type: integer
+        failed:
+          type: integer
+        executing:
+          type: integer
+        draft:
+          type: integer
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/CountByKey"
+
+    # ── COLLECTED CONFIGS ─────────────────────────────────────────────────────
+    CollectedConfig:
+      type: object
+      required: [id, deviceId, collectedAt]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        deviceHostname:
+          type: ["string", "null"]
+        rawConfig:
+          type: ["string", "null"]
+        parsedVlans:
+          type: ["string", "null"]
+          description: "JSON array of VLAN objects"
+        parsedInterfaces:
+          type: ["string", "null"]
+          description: "JSON array of interface objects"
+        parsedBgp:
+          type: ["string", "null"]
+          description: "JSON BGP neighbor summary"
+        parsedL2vpn:
+          type: ["string", "null"]
+          description: "JSON L2VPN instances"
+        parsedL3vpn:
+          type: ["string", "null"]
+          description: "JSON VRF/L3VPN instances"
+        collectedAt:
+          type: string
+
+    CollectConfigInput:
+      type: object
+      required: [deviceId]
+      properties:
+        deviceId:
+          type: integer
+        commands:
+          type: array
+          items:
+            type: string
+          description: "Optional specific commands; defaults to full config collection"

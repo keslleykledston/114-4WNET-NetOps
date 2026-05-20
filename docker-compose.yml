@@ -1,0 +1,86 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: netops-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-netops}
+      POSTGRES_USER: ${POSTGRES_USER:-netops}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-netops}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  migrate:
+    build:
+      context: .
+      target: api-runtime
+    container_name: netops-migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-netops}:${POSTGRES_PASSWORD:-netops}@db:5432/${POSTGRES_DB:-netops}
+      SESSION_SECRET: ${SESSION_SECRET:-netops-default-secret-key-32bytes}
+    command: ["pnpm", "--filter", "@workspace/db", "run", "push"]
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      target: api-runtime
+    container_name: netops-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-netops}:${POSTGRES_PASSWORD:-netops}@db:5432/${POSTGRES_DB:-netops}
+      SESSION_SECRET: ${SESSION_SECRET:-netops-default-secret-key-32bytes}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8080/api/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "${API_PORT:-8080}:8080"
+
+  web:
+    build:
+      context: .
+      target: frontend-runtime
+      args:
+        FRONTEND_PORT: 24780
+        BASE_PATH: /
+    container_name: netops-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "${WEB_PORT:-3000}:80"
+
+volumes:
+  postgres-data:

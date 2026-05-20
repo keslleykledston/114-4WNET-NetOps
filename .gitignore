@@ -1,0 +1,12 @@
+.env
+.DS_Store
+**/.DS_Store
+
+workspace/node_modules/
+workspace/**/node_modules/
+workspace/**/dist/
+workspace/.turbo/
+workspace/.vite/
+workspace/.cache/
+
+docker/postgres-data/

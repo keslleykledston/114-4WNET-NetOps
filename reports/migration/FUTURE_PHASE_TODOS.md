@@ -10,7 +10,161 @@
 - FASE 4.x concluida: filtros BGP no painel (busca, estado, papel, iBGP), role override local (`bgp_peer_role_overrides`), precedencia `manual_override > classifier > snapshot`.
 - FASE 4.y concluida: AF filter, Down state, localStorage por device, arvore BGP expandida (CDN/IX/iBGP/Unknown), Sheet peer actions, contadores 12, relatorio `PHASE_4Y_BGP_UX_PARITY_REPORT.md`.
 - FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.
-- FASE 5+ pendente: coleta real controlada read-only, paineis BGP completos, pre-check de servico, plano de configuracao com aprovacao humana.
+- FASE 5 concluida: SNMP read-only real ativo, 78 BGP peers IPv4 coletados, schemas + diagnostics.
+- FASE 5.1.fix em investigacao: IF-MIB retorna 0 (root cause pendente), diagnostics por OID implementados, timeout aumentado.
+- FASE 5.2 planejada: inventario persistido (interfaces/vrfs/config), SSH config collection read-only.
+- FASE 6 planejada: BGP import policy editor preview (seguro, sem apply), route-policy parser, community library read-only.
+- FASE 7 planejada: apply real com RBAC, duplo check, auditoria completa, SSH write controlado.
+- FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.
+- FASE 8+ pendente: export policy, provisioning seguro com aprovacao.
+
+# FASE 5.1.fix: IF-MIB Debugging
+
+## Problema
+- BGP4-MIB OK: 78 peers coletados
+- IF-MIB falha: 0 interfaces retornadas
+- Manual snmpwalk provou IF-MIB funciona no device
+- Logo: bug na aplicacao, nao no device
+
+## Status
+- ✅ Timeout aumentado: 5s → 30s
+- ✅ Retries: 1 → 3
+- ✅ OID diagnostics implementados
+- ❌ Root cause ainda investigando (timeout? parser? network?)
+
+## Proximas Acoes
+1. Testar container diretamente com SNMP
+2. Aumentar timeout para 60s
+3. Adicionar debug logging detalhado
+4. Verificar UDP/161 connectivity
+
+## Fallback
+- Interfaces vazio, usar snapshot legado
+- Warning claro em UI: "SNMP respondeu BGP, if-MIB nao respondeu"
+
+---
+
+# FASE 5.2: Inventario Persistido
+
+## Objetivo
+Coletar e persistir inventario completo via SSH read-only
+
+## Scope
+- Interfaces (IF-MIB + config display)
+- VRFs (lista)
+- BGP config snapshot
+- Route-policies (lista nomes + nodes)
+- Communities (lista + lists)
+
+## Dados
+```json
+{
+  "collector": "snmp",
+  "collectorVersion": "phase5",
+  "interfaces": [],
+  "bgpPeers": [],
+  "vrfs": [{"name": "Public"}],
+  "configSnapshot": {
+    "bgpConfiguration": "...",
+    "routePolicies": {...},
+    "ipPrefixes": {...},
+    "communities": {...}
+  }
+}
+```
+
+## Commands
+```
+display current-configuration configuration bgp
+display route-policy
+display ip ip-prefix
+display ip community-filter
+```
+
+---
+
+# FASE 6: Import Policy Editor (Preview Only)
+
+## Objetivo
+Safe import policy editing com preview visual, sem SSH execute
+
+## Componentes
+
+### 6.1 Route-Policy Parser
+- Parse Huawei VRP output
+- Extract nodes, if-match, apply actions
+- Identify edit constraints (no if-match, no deny final)
+
+### 6.2 Community Library
+- Central registry de communities individuais
+- Named community-lists
+- Discovery from config + SNMP
+- Read-only endpoints para UI picker
+
+### 6.3 Policy Preview Engine
+- Validar mudanca proposta (community existe? list existe?)
+- Gerar diff lógico
+- Gerar commands esperados (sem executar)
+- Mostrar warnings (mode change impact)
+
+### 6.4 UI Preview Modal
+- Selecionar mode: individual vs list
+- Picker de communities/lists
+- Mostrar diff antes/depois
+- Botao apply DESABILITADO (FASE 7)
+- Auditoria loga tentativa (sem apply)
+
+## Constraints
+- ✅ Editar: apply community/community-list
+- ✅ Validar: community existe na library
+- ✅ Validar: community-list existe em config
+- ❌ Nao editar: if-match
+- ❌ Nao editar: local-preference
+- ❌ Nao editar: node 65535 (final deny)
+
+## Endpoints
+```
+GET /bgp-peers/:id?role=customer
+GET /route-policies/:name
+GET /route-policies/:name/nodes/:id
+GET /bgp-communities
+GET /bgp-communities/:community
+GET /bgp-communities/lists/:name
+POST /policy-editor/preview (no execute)
+```
+
+## Docs
+- `docs/netops/BGP_IMPORT_POLICY_EDITOR_PLAN.md`
+- `docs/netops/ROUTE_POLICY_PARSER_SPEC.md`
+- `docs/netops/COMMUNITY_LIBRARY_SPEC.md`
+
+---
+
+# FASE 7: Apply Real (Futuro)
+
+## Prerequisitos
+- ✅ RBAC: `bgp:edit:import-policy:customer`
+- ✅ SSH write credentials (encrypted)
+- ✅ Duplo check: user + admin approval
+- ✅ Network change window (não apply fora de horario)
+- ✅ Ticket integration (audit trail)
+
+## Flow
+1. User submits change → stored as pending
+2. Admin reviews diff → approves/rejects
+3. System schedules SSH write
+4. SSH session → send commands
+5. Device validates → ack/nack
+6. Rollback automático se erro
+7. Notificacao final (email)
+
+## Safety
+- Max 3 edits por peer por hora
+- Max 1 simultaneous edit por device
+- Rollback automático se device invalida config
+- Manual rollback interface para operator
+
+---
 
 # BGP Operational Abstractions — vindo do 60-bgp_manager
 

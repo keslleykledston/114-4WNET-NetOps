@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AsPathTokens } from "@/components/AsPathTokens";
 
 interface BgpPeerRoutesModalProps {
   device: Device;
@@ -119,30 +120,17 @@ export function BgpPeerRoutesModal({
                   routesData.items.map((item: any, idx: number) => (
                     <div
                       key={idx}
-                      className="flex gap-3 rounded-lg bg-slate-900/50 border border-slate-800 p-3 text-xs"
+                      className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-lg bg-slate-900/50 border border-slate-800 p-3 text-xs"
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="font-mono text-slate-200 break-all">
-                          {item.prefix}
-                        </div>
-                        <div className="text-slate-500 mt-1">
-                          {item.asPathType}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1 justify-end">
-                        {item.asPath.map((asn: string, asnIdx: number) => (
-                          <Badge
-                            key={asnIdx}
-                            className={cn(
-                              "text-[10px] px-1.5 py-0.5",
-                              asnIdx % 2 === 0
-                                ? "bg-purple-700/40 text-purple-200 border border-purple-600/30"
-                                : "bg-blue-700/40 text-blue-200 border border-blue-600/30"
-                            )}
-                          >
-                            {asn}
-                          </Badge>
-                        ))}
+                      <span className="font-mono text-slate-200 break-all shrink-0">
+                        {item.prefix}
+                      </span>
+                      <span className="text-slate-600 hidden sm:inline">·</span>
+                      <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                        <span className="text-slate-500 uppercase text-[10px] tracking-wide shrink-0">
+                          AS-PATH
+                        </span>
+                        <AsPathTokens asPath={item.asPath?.join(" ")} compact />
                       </div>
                     </div>
                   ))

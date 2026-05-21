@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Download, FileSearch, Network, Save, Search } from "lucide-react";
 import { BgpPeerModal } from "./bgp-peer-modal";
 import { BgpPeerRoutesModal } from "./bgp-peer-routes-modal";
+import { BgpPeerDetailModal } from "./bgp-peer-detail-modal";
 import { CollectSnmpButton } from "@/features/device-inventory/collect-snmp-button";
 import { useDiscoveryBgpPeers, type DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
 
@@ -143,6 +144,8 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   const [routesModalPeer, setRoutesModalPeer] = useState<DiscoveryBgpPeer | null>(null);
   const [routesModalOpen, setRoutesModalOpen] = useState(false);
   const [routesDirection, setRoutesDirection] = useState<"received" | "advertised">("received");
+  const [detailModalPeer, setDetailModalPeer] = useState<DiscoveryBgpPeer | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   const listParams = useMemo(
     () => buildListParams(role, stateFilter, afFilter),
@@ -257,6 +260,11 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
     setRoutesModalPeer(peer);
     setRoutesDirection(direction);
     setRoutesModalOpen(true);
+  }
+
+  function openDetailModal(peer: DiscoveryBgpPeer) {
+    setDetailModalPeer(peer);
+    setDetailModalOpen(true);
   }
 
   function saveRole(peer: DiscoveryBgpPeer) {
@@ -426,7 +434,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0 hover:bg-slate-800"
-                            onClick={() => openPeerModal(peer)}
+                            onClick={() => openDetailModal(peer)}
                             title="Detalhes do peer"
                           >
                             <FileSearch className="h-3.5 w-3.5" />
@@ -519,6 +527,13 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
         direction={routesDirection}
         isOpen={routesModalOpen}
         onClose={() => setRoutesModalOpen(false)}
+      />
+
+      <BgpPeerDetailModal
+        device={device}
+        peer={detailModalPeer}
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
       />
     </Card>
   );

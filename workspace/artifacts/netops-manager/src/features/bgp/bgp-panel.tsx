@@ -283,7 +283,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 lg:grid-cols-[minmax(200px,1fr)_160px_160px_160px_auto]">
+        <div className="space-y-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -293,44 +293,74 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
               className="pl-9"
             />
           </div>
-          <Select value={stateFilter} onValueChange={(value) => setStateFilter(value as StateFilter)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
+
+          <div className="space-y-2">
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Estado</div>
+            <div className="flex flex-wrap gap-2">
               {stateOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                <button
+                  key={option.value}
+                  onClick={() => setStateFilter(option.value as StateFilter)}
+                  className={`h-8 rounded px-3 text-sm transition-colors ${
+                    stateFilter === option.value
+                      ? "bg-primary text-primary-foreground"
+                      : "border bg-muted/20 hover:bg-muted/40"
+                  }`}
+                >
+                  {option.label}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-          <Select value={afFilter} onValueChange={(value) => setAfFilter(value as AfFilter)}>
-            <SelectTrigger>
-              <SelectValue placeholder="AF" />
-            </SelectTrigger>
-            <SelectContent>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Família de endereço</div>
+            <div className="flex flex-wrap gap-2">
               {afOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                <button
+                  key={option.value}
+                  onClick={() => setAfFilter(option.value as AfFilter)}
+                  className={`h-8 rounded px-3 text-sm transition-colors ${
+                    afFilter === option.value
+                      ? "bg-primary text-primary-foreground"
+                      : "border bg-muted/20 hover:bg-muted/40"
+                  }`}
+                >
+                  {option.label}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={roleFilter}
-            onValueChange={(value) => setRoleFilter(value as RoleFilter)}
-            disabled={!!role}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Papel" />
-            </SelectTrigger>
-            <SelectContent>
-              {roleOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <label className="flex h-9 items-center gap-2 rounded-md border px-3 text-sm text-muted-foreground">
-            <Checkbox checked={includeIbgp} onCheckedChange={(checked) => setIncludeIbgp(checked === true)} />
-            Incluir iBGP
-          </label>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold uppercase text-muted-foreground">Papel</div>
+              {!role && (
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Checkbox checked={includeIbgp} onCheckedChange={(checked) => setIncludeIbgp(checked === true)} />
+                  Incluir iBGP
+                </label>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {roleOptions
+                .filter((opt) => opt.value !== (includeIbgp ? "" : "ibgp"))
+                .map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setRoleFilter(option.value as RoleFilter)}
+                    disabled={!!role}
+                    className={`h-8 rounded px-3 text-sm transition-colors disabled:opacity-50 ${
+                      roleFilter === option.value
+                        ? "bg-primary text-primary-foreground"
+                        : "border bg-muted/20 hover:bg-muted/40"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-12">

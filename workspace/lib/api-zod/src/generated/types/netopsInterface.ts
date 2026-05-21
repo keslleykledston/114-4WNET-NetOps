@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { NetopsInterfaceAdminStatus } from './netopsInterfaceAdminStatus';
+import type { NetopsInterfaceKind } from './netopsInterfaceKind';
 import type { NetopsInterfaceOperStatus } from './netopsInterfaceOperStatus';
 import type { NetopsInterfaceSource } from './netopsInterfaceSource';
 
@@ -13,6 +14,10 @@ export interface NetopsInterface {
   name: string;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  alias?: string | null;
+  /** @nullable */
+  rawDescr?: string | null;
   adminStatus: NetopsInterfaceAdminStatus;
   operStatus: NetopsInterfaceOperStatus;
   ipv4: string[];
@@ -22,4 +27,9 @@ export interface NetopsInterface {
   /** @nullable */
   vrf?: string | null;
   source: NetopsInterfaceSource;
+  ifIndex?: number;
+  kind?: NetopsInterfaceKind;
+  parentInterface?: string;
+  vlanId?: number;
+  encapsulation?: string;
 }

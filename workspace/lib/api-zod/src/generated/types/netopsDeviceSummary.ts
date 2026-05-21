@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { NetopsCounters } from './netopsCounters';
+import type { NetopsDeviceSummaryDeviceKind } from './netopsDeviceSummaryDeviceKind';
 import type { NetopsSafeDevice } from './netopsSafeDevice';
 
 export interface NetopsDeviceSummary {
@@ -13,4 +14,5 @@ export interface NetopsDeviceSummary {
   counters: NetopsCounters;
   /** @nullable */
   lastSnapshotAt?: string | null;
+  deviceKind: NetopsDeviceSummaryDeviceKind;
 }

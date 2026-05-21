@@ -887,7 +887,8 @@ export const GetNetopsDeviceSummaryResponse = zod.object({
   "filters": zod.number(),
   "communities": zod.number()
 }),
-  "lastSnapshotAt": zod.string().nullish()
+  "lastSnapshotAt": zod.string().nullish(),
+  "deviceKind": zod.enum(['router', 'switch', 'unknown'])
 })
 
 
@@ -901,13 +902,20 @@ export const ListNetopsDeviceInterfacesParams = zod.object({
 export const ListNetopsDeviceInterfacesResponseItem = zod.object({
   "name": zod.string(),
   "description": zod.string().nullish(),
+  "alias": zod.string().nullish(),
+  "rawDescr": zod.string().nullish(),
   "adminStatus": zod.enum(['up', 'down', 'unknown']),
   "operStatus": zod.enum(['up', 'down', 'unknown']),
   "ipv4": zod.array(zod.string()),
   "ipv6": zod.array(zod.string()),
   "vlan": zod.number().nullish(),
   "vrf": zod.string().nullish(),
-  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db']),
+  "ifIndex": zod.number().optional(),
+  "kind": zod.enum(['physical', 'aggregate', 'subinterface', 'vlanif', 'loopback', 'tunnel', 'virtual_template', 'null', 'other']).optional(),
+  "parentInterface": zod.string().optional(),
+  "vlanId": zod.number().optional(),
+  "encapsulation": zod.string().optional()
 })
 export const ListNetopsDeviceInterfacesResponse = zod.array(ListNetopsDeviceInterfacesResponseItem)
 

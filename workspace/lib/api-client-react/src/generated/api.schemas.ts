@@ -464,11 +464,21 @@ export interface NetopsCounters {
   communities: number;
 }
 
+export type NetopsDeviceSummaryDeviceKind = typeof NetopsDeviceSummaryDeviceKind[keyof typeof NetopsDeviceSummaryDeviceKind];
+
+
+export const NetopsDeviceSummaryDeviceKind = {
+  router: 'router',
+  switch: 'switch',
+  unknown: 'unknown',
+} as const;
+
 export interface NetopsDeviceSummary {
   device: NetopsSafeDevice;
   counters: NetopsCounters;
   /** @nullable */
   lastSnapshotAt?: string | null;
+  deviceKind: NetopsDeviceSummaryDeviceKind;
 }
 
 export type NetopsInterfaceAdminStatus = typeof NetopsInterfaceAdminStatus[keyof typeof NetopsInterfaceAdminStatus];
@@ -500,10 +510,29 @@ export const NetopsInterfaceSource = {
   db: 'db',
 } as const;
 
+export type NetopsInterfaceKind = typeof NetopsInterfaceKind[keyof typeof NetopsInterfaceKind];
+
+
+export const NetopsInterfaceKind = {
+  physical: 'physical',
+  aggregate: 'aggregate',
+  subinterface: 'subinterface',
+  vlanif: 'vlanif',
+  loopback: 'loopback',
+  tunnel: 'tunnel',
+  virtual_template: 'virtual_template',
+  null: 'null',
+  other: 'other',
+} as const;
+
 export interface NetopsInterface {
   name: string;
   /** @nullable */
   description?: string | null;
+  /** @nullable */
+  alias?: string | null;
+  /** @nullable */
+  rawDescr?: string | null;
   adminStatus: NetopsInterfaceAdminStatus;
   operStatus: NetopsInterfaceOperStatus;
   ipv4: string[];
@@ -513,6 +542,11 @@ export interface NetopsInterface {
   /** @nullable */
   vrf?: string | null;
   source: NetopsInterfaceSource;
+  ifIndex?: number;
+  kind?: NetopsInterfaceKind;
+  parentInterface?: string;
+  vlanId?: number;
+  encapsulation?: string;
 }
 
 export type NetopsBgpPeerState = typeof NetopsBgpPeerState[keyof typeof NetopsBgpPeerState];

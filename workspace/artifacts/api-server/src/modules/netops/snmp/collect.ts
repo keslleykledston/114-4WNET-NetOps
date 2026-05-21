@@ -23,7 +23,7 @@ export async function collectSnmpReadonly(device: Device, community: string): Pr
   const errors: string[] = [];
   const warnings: string[] = [];
   const oidDiagnostics: Record<string, OidDiagnostic> = {};
-  const session = createSnmpSession(device.ipAddress, community, { timeout: 15000, retries: 2 });
+  const session = createSnmpSession(device.ipAddress, community, { timeout: 60000, retries: 4 });
 
   try {
     const { interfaces, ifMibDiagnostics } = await collectInterfaces(session, errors, warnings);
@@ -72,12 +72,14 @@ async function collectInterfaces(
 
   try {
     const descrResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifDescr);
+    console.log(`[IF-MIB-DEBUG] ifDescr: status=${descrResult.status} count=${descrResult.count} error=${descrResult.error?.message ?? "none"}`);
     ifMibDiagnostics.ifDescr = { oid: descrResult.oid, status: descrResult.status, count: descrResult.count };
     if (descrResult.error) {
       warnings.push(`ifDescr (1.3.6.1.2.1.2.2.1.2) failed: ${descrResult.error.message}`);
     }
 
     const ifNameResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifName);
+    console.log(`[IF-MIB-DEBUG] ifName: status=${ifNameResult.status} count=${ifNameResult.count} error=${ifNameResult.error?.message ?? "none"}`);
     ifMibDiagnostics.ifName = { oid: ifNameResult.oid, status: ifNameResult.status, count: ifNameResult.count };
     if (ifNameResult.error) {
       warnings.push(`ifName (1.3.6.1.2.1.31.1.1.1.1) failed: ${ifNameResult.error.message}`);

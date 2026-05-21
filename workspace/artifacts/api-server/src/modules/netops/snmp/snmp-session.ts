@@ -36,23 +36,29 @@ export function snmpWalk(session: SnmpSession, columnOid: string): Promise<Recor
     const rows: Record<string, unknown> = {};
 
     session.subtree(columnOid, 20, (error, varbinds) => {
-      if (error) {
+      const toProcess = Array.isArray(error) ? error : varbinds;
+      if (error && !Array.isArray(error) && error instanceof Error) {
         reject(error);
         return;
       }
 
-      for (const varbind of varbinds ?? []) {
+      for (const varbind of toProcess ?? []) {
         const index = indexFromOid(varbind.oid, columnOid);
         if (index) {
           rows[index] = varbind.value;
         }
       }
     }, (error) => {
-      if (error) {
+      if (error instanceof Error) {
         reject(error);
-        return;
+      } else if (Array.isArray(error)) {
+        // net-snmp may pass varbinds array in error param on success
+        resolve(rows);
+      } else if (error) {
+        reject(new Error(String(error)));
+      } else {
+        resolve(rows);
       }
-      resolve(rows);
     });
   });
 }
@@ -77,6 +83,7 @@ export async function snmpWalkWithDiagnostics(session: SnmpSession, columnOid: s
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    console.log(`[SNMP-WALK-ERROR] OID ${columnOid}: ${message} (full: ${JSON.stringify(error)})`);
     let status: OidWalkResult["status"] = "error";
 
     if (message.includes("timeout") || message.includes("Timeout")) {

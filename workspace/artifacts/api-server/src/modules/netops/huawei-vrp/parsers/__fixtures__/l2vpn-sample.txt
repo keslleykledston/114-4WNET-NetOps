@@ -1,0 +1,8 @@
+interface GigabitEthernet0/0/0.100
+ mpls l2vc 192.0.2.10 1000
+interface GigabitEthernet0/0/1.200
+ mpls l2vc 198.51.100.20 2000
+vsi CUST-VSI-1
+ up
+vsi CUST-VSI-2
+ down

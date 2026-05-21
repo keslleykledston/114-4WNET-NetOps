@@ -2,6 +2,16 @@ import type { BgpPeerDetails, BgpPeerSummary, CommunityFilter, CommunityList, Pr
 import { sourceConfidence } from "../source-priority.js";
 import type { NetopsBgpPeer } from "../../types.js";
 
+function normalizeLegacyRole(role: NetopsBgpPeer["role"] | null | undefined): NetopsBgpPeer["role"] | null {
+  if (!role || role === "unknown") return null;
+  return role;
+}
+
+function normalizeLegacyRoleSource(roleSource: NetopsBgpPeer["roleSource"] | null | undefined): NetopsBgpPeer["roleSource"] | null {
+  if (!roleSource || roleSource === "unknown") return null;
+  return roleSource;
+}
+
 export function primaryDirectionForRole(role: NetopsBgpPeer["role"]): BgpPeerSummary["primaryDirection"] {
   if (role === "customer") return "import";
   if (role === "ibgp") return "internal";
@@ -17,14 +27,14 @@ export function normalizeDiscoveryBgpPeers(
   const byPeer = new Map<string, BgpPeerSummary>();
 
   const upsert = (peer: NetopsBgpPeer, source: BgpPeerSummary["source"], evidence: string) => {
-    const key = `${peer.peerIp}|${peer.addressFamily}`;
+    const key = `${peer.peerIp}|${peer.addressFamily}|${peer.vrf ?? ""}`;
     const current = byPeer.get(key);
     const merged: NetopsBgpPeer = {
       ...(current ?? peer),
       ...peer,
       state: peer.state !== "Unknown" ? peer.state : current?.state ?? peer.state,
-      role: peer.role !== "unknown" ? peer.role : current?.role ?? peer.role,
-      roleSource: peer.roleSource !== "unknown" ? peer.roleSource : current?.roleSource ?? peer.roleSource,
+      role: normalizeLegacyRole(peer.role) ?? normalizeLegacyRole(current?.role) ?? "customer",
+      roleSource: normalizeLegacyRoleSource(peer.roleSource) ?? normalizeLegacyRoleSource(current?.roleSource) ?? "classifier",
       importPolicy: peer.importPolicy ?? current?.importPolicy ?? null,
       exportPolicy: peer.exportPolicy ?? current?.exportPolicy ?? null,
       description: peer.description ?? current?.description ?? null,

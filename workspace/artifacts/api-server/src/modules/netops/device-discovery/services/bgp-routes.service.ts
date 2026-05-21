@@ -42,14 +42,14 @@ export interface RouteQueryResponse {
   errorMessage?: string;
 }
 
-const MAX_DISPLAY_ROUTES = 200;
-const DEFAULT_LIMIT = 200;
+export const MAX_DISPLAY_ROUTES = 200;
+export const DEFAULT_LIMIT = 200;
 
 function isIpv6(ip: string): boolean {
   return ip.includes(":");
 }
 
-function buildRouteCommands(
+export function buildRouteCommands(
   peerIp: string,
   direction: "received" | "advertised",
   vrf: string | null
@@ -124,7 +124,8 @@ export async function queryBgpRoutes(
   direction: "received" | "advertised",
   vrf: string | null | undefined,
   routeCounters: { receivedRoutes?: number | null; advertisedRoutes?: number | null } | null,
-  body: RouteQueryRequest
+  body: RouteQueryRequest,
+  executor: (device: Device, commands: string[]) => Promise<string> = executeSSHCommands,
 ): Promise<RouteQueryResponse> {
   const limit = Math.min(Math.max(1, body.limit ?? DEFAULT_LIMIT), DEFAULT_LIMIT);
   const page = Math.max(1, body.page ?? 1);
@@ -133,7 +134,7 @@ export async function queryBgpRoutes(
 
   try {
     const commands = buildRouteCommands(peerIp, direction, (vrf ?? null) as string | null);
-    const output = await executeSSHCommands(device, commands);
+    const output = await executor(device, commands);
 
     if (!output || output.trim().length === 0) {
       return {

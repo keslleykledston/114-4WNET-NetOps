@@ -1,0 +1,6 @@
+ip community-filter basic CUST-CF index 10 permit 65000:100
+ip community-filter advanced CDN-CF index 20 deny .*:666
+ip community-list CUST-LIST
+ community 65000:100 customer-rt
+ community 65000:200 backup-rt
+ip community-list EMPTY-LIST

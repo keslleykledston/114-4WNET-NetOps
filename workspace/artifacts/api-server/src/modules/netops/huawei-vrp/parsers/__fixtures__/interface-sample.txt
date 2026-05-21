@@ -1,0 +1,14 @@
+interface GigabitEthernet0/0/0
+ description Uplink-1
+ undo shutdown
+interface GigabitEthernet0/0/0.100
+ description CUST-VLAN100
+ encapsulation dot1q 100
+ undo shutdown
+interface GigabitEthernet0/0/1.200
+ description QINQ-EDGE
+ encapsulation qinq vlan 200 to 300
+ shutdown
+interface LoopBack0
+ description Router-ID
+ undo shutdown

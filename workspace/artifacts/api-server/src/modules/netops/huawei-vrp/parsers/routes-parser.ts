@@ -12,7 +12,7 @@ export interface ParsedRoutes {
 }
 
 const RE_TOTAL_ROUTES = /Total\s+Number\s+of\s+Routes\s*:\s*(\d+)/i;
-const RE_NETWORK_PREFIXLEN = /Network\s*:\s*([0-9a-fA-F:]+)\s+.*?PrefixLen\s*:\s*(\d+)/i;
+const RE_NETWORK_PREFIXLEN = /Network\s*:\s*([0-9a-fA-F:.]+)\s+.*?PrefixLen\s*:\s*(\d+)/i;
 const RE_PATH_OGN = /Path\/Ogn\s*:\s*(.+)$/i;
 
 function parseReportedTotal(text: string): number | null {

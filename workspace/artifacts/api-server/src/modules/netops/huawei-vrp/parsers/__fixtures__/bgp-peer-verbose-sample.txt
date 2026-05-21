@@ -1,0 +1,24 @@
+BGP Peer is 10.20.1.5,  remote AS 270966
+Type: EBGP link
+Peer's description: "C35-BGP-BVA-MNS"
+BGP version 4, Remote router ID 140.99.104.255
+BGP current state: Established, Up for 14d18h36m08s
+Received total routes: 0
+Received active routes total: 0
+Advertised total routes: 10
+Received: Total 24998 messages
+                 Update messages                1
+                 Open messages                  1
+                 KeepAlive messages             24996
+Sent: Total 66944 messages
+                 Update messages                42004
+                 Open messages                  1
+                 KeepAlive messages             24939
+
+BGP Peer is 2001:db8::5,  remote AS 65001
+Type: IBGP link
+Peer's description: "VRF-CUST-V6"
+BGP current state: Idle
+Received total routes: 128
+Received active routes total: 64
+Advertised total routes: 12

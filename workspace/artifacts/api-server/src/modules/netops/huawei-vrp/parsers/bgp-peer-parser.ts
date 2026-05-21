@@ -8,7 +8,7 @@ function numberValue(value: string | undefined): number | null {
 }
 
 // Regex for extracting peer info from compact peer list
-const peerListLineRegex = /^([0-9a-fA-F:.]+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+([0-9A-Za-z:]+)\s+([A-Za-z]+|-)/;
+const peerListLineRegex = /^([0-9a-fA-F:.]+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+([0-9A-Za-z:]+)\s+([A-Za-z()]+|-)/;
 
 // Regex for extracting verbose peer info - in sections like "BGP Peer is 189.23.156.121"
 const peerHeaderRegex = /^BGP Peer is ([0-9a-fA-F:.]+),\s*remote AS (\d+)/i;
@@ -16,8 +16,12 @@ const peerDescriptionRegex = /^Peer's description:\s*"([^"]+)"/i;
 const receivedTotalRoutesRegex = /^Received total routes:\s*(\d+)\s*$/i;
 const receivedActiveRoutesRegex = /^Received active routes total:\s*(\d+)\s*$/i;
 const advertisedTotalRoutesRegex = /^Advertised total routes:\s*(\d+)\s*$/i;
-const stateRegex = /^BGP current state:\s*([A-Za-z]+)/i;
+const stateRegex = /^BGP current state:\s*([A-Za-z()]+)/i;
 const uptimeRegex = /^BGP current state:[^,]*,\s*Up for\s+([0-9A-Za-z:d]+)/i;
+
+function normalizeStateKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z]/g, "");
+}
 
 interface ParsedVerbosePeer extends Partial<NetopsBgpPeer> {
   peerIp: string;
@@ -75,7 +79,7 @@ function parseVerbosePeerBlock(lines: string[]): ParsedVerbosePeer | null {
       // Also extract state from this line
       let stateMatch = stateRegex.exec(trimmed);
       if (stateMatch) {
-        const stateStr = stateMatch[1].toLowerCase();
+        const stateStr = normalizeStateKey(stateMatch[1]);
         const stateMap: Record<string, "Established" | "Idle" | "Active" | "Connect"> = {
           "established": "Established",
           "idle": "Idle",
@@ -90,7 +94,7 @@ function parseVerbosePeerBlock(lines: string[]): ParsedVerbosePeer | null {
     // Extract state (when uptime is not available)
     let stateMatch = stateRegex.exec(trimmed);
     if (stateMatch) {
-      const stateStr = stateMatch[1].toLowerCase();
+      const stateStr = normalizeStateKey(stateMatch[1]);
       const stateMap: Record<string, "Established" | "Idle" | "Active" | "Connect"> = {
         "established": "Established",
         "idle": "Idle",
@@ -149,6 +153,7 @@ export function parseHuaweiBgpPeers(output: string, addressFamilyHint?: "ipv4" |
     const validStates: Record<string, "Established" | "Idle" | "Active" | "Connect" | undefined> = {
       "Established": "Established",
       "Idle": "Idle",
+      "Idle(Admin)": "Idle",
       "Active": "Active",
       "Connect": "Connect",
       "-": undefined,

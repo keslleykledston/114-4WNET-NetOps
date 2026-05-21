@@ -29,6 +29,7 @@ import { Download, FileSearch, Network, Save, Search } from "lucide-react";
 import { BgpPeerModal } from "./bgp-peer-modal";
 import { BgpPeerRoutesModal } from "./bgp-peer-routes-modal";
 import { BgpPeerDetailModal } from "./bgp-peer-detail-modal";
+import { formatBgpUptime } from "./format-bgp-uptime";
 import { CollectSnmpButton } from "@/features/device-inventory/collect-snmp-button";
 import { useDiscoveryBgpPeers, type DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
 
@@ -416,7 +417,6 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                   <TableHead>Estado</TableHead>
                   <TableHead>Uptime</TableHead>
                   <TableHead>Papel</TableHead>
-                  <TableHead>Detalhes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -463,7 +463,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                         </div>
                       </TableCell>
                       <TableCell><Badge variant="outline">{peer.state}</Badge></TableCell>
-                      <TableCell>{peer.uptime ?? "-"}</TableCell>
+                      <TableCell>{formatBgpUptime(peer.uptime)}</TableCell>
                       <TableCell className="min-w-44">
                         <div className="flex items-center gap-2">
                           <Select
@@ -501,9 +501,6 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                             </Button>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-[10px] text-muted-foreground">{peer.source} / {peer.confidence}</span>
                       </TableCell>
                     </TableRow>
                   );

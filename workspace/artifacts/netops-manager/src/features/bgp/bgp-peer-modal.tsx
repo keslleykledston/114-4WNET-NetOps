@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, X, Download, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDiscoveryBgpPeerDetails, type DiscoveryBgpPeer, type DiscoveryBgpPeerDetails } from "@/features/device-discovery/discovery-api";
+import { formatBgpUptime } from "./format-bgp-uptime";
 
 interface BgpPeerModalProps {
   device: Device;
@@ -165,7 +166,7 @@ function OperationalSummary({
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <OpCard label="Rotas Recebidas" value={peer.receivedPrefixes?.toLocaleString() ?? "—"} mono />
         <OpCard label="Rotas Anunciadas" value={peer.advertisedPrefixes?.toLocaleString() ?? "—"} mono />
-        <OpCard label="Uptime" value={peer.uptime || "—"} />
+        <OpCard label="Uptime" value={formatBgpUptime(peer.uptime)} />
       </div>
 
       {primaryPolicy && (

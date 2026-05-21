@@ -21,7 +21,7 @@ export interface RawBgpPeerLike {
 }
 
 export function normalizeBgpState(value: string | null | undefined): NetopsBgpPeer["state"] {
-  const normalized = value?.trim().toLowerCase();
+  const normalized = value?.trim().toLowerCase().replace(/[^a-z]/g, "");
   if (normalized === "established") return "Established";
   if (normalized === "idle") return "Idle";
   if (normalized === "active") return "Active";

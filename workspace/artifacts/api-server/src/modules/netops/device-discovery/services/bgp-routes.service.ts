@@ -1,5 +1,6 @@
 import type { Device } from "@workspace/db";
 import { runSSHCommands } from "../../../../lib/ssh.js";
+import { decrypt } from "../../../../lib/crypto.js";
 import { parseHuaweiRoutes } from "../../huawei-vrp/parsers/routes-parser.js";
 import { validateReadonlyCommand } from "../../huawei-vrp/commands.js";
 
@@ -87,7 +88,7 @@ async function executeSSHCommands(
   device: Device,
   commands: string[]
 ): Promise<string> {
-  const decrypted = require("../../../lib/crypto.js").decrypt(device.passwordEncrypted);
+  const decrypted = decrypt(device.passwordEncrypted);
 
   for (const cmd of commands) {
     const check = validateReadonlyCommand(cmd);

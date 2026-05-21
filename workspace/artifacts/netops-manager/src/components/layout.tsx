@@ -41,24 +41,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <span className="font-bold tracking-tight text-sidebar-foreground">NetOps Manager</span>
         </div>
         
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 scrollbar-thin scrollbar-track-sidebar scrollbar-thumb-sidebar-accent">
           {navItems.map((item) => {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             const Icon = item.icon;
-            
+
             return (
               <Link key={item.href} href={item.href}>
-                <div 
+                <div
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer text-sm font-medium",
-                    isActive 
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground" 
+                    "flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer text-sm font-medium min-h-10",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
                   data-testid={`link-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{item.label}</span>
                 </div>
               </Link>
             );

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import type { Device } from "@workspace/api-client-react";
+import type { Device, NetopsBgpPeer } from "@workspace/api-client-react";
+import { useListNetopsDeviceBgpPeers } from "@workspace/api-client-react";
 import {
   Building2,
   ChevronDown,
@@ -27,6 +28,13 @@ interface NetopsTreeProps {
   onSelect: (selection: NetopsTreeSelection) => void;
 }
 
+interface BgpCategoryItem {
+  key: NetopsTreeView;
+  label: string;
+  icon: LucideIcon;
+  roleFilter?: string;
+}
+
 const deviceViews: Array<{ key: NetopsTreeView; label: string; icon: LucideIcon }> = [
   { key: "device", label: "Summary", icon: Server },
   { key: "interfaces", label: "Interfaces", icon: GitBranch },
@@ -35,15 +43,17 @@ const deviceViews: Array<{ key: NetopsTreeView; label: string; icon: LucideIcon 
   { key: "communities", label: "Communities", icon: Tags },
 ];
 
-const bgpViews: Array<{ key: NetopsTreeView; label: string; icon: LucideIcon }> = [
-  { key: "bgp-providers", label: "Operadoras", icon: RadioTower },
-  { key: "bgp-customers", label: "Clientes", icon: Users },
-  { key: "bgp-cdn", label: "CDN", icon: Cloud },
-  { key: "bgp-ix", label: "IX", icon: Share2 },
-  { key: "bgp-cdn-ix", label: "CDN/IX", icon: Network },
-  { key: "bgp-ibgp", label: "iBGP", icon: Link2 },
-  { key: "bgp-unknown", label: "Unknown", icon: CircleHelp },
+const bgpCategories: Array<BgpCategoryItem> = [
+  { key: "bgp-providers", label: "Operadoras", icon: RadioTower, roleFilter: "provider" },
+  { key: "bgp-customers", label: "Clientes", icon: Users, roleFilter: "customer" },
+  { key: "bgp-cdn", label: "CDN", icon: Cloud, roleFilter: "cdn" },
+  { key: "bgp-ix", label: "IX", icon: Share2, roleFilter: "ix" },
+  { key: "bgp-cdn-ix", label: "CDN/IX", icon: Network, roleFilter: "cdn_ix" },
+  { key: "bgp-ibgp", label: "iBGP", icon: Link2, roleFilter: "ibgp" },
+  { key: "bgp-unknown", label: "Unknown", icon: CircleHelp, roleFilter: "unknown" },
 ];
+
+const bgpViews = bgpCategories;
 
 function groupLabel(device: Device): string {
   return device.site?.trim() || "Sem cliente";
@@ -69,10 +79,58 @@ function groupDevices(devices: Device[]): Array<[string, Device[]]> {
     });
 }
 
+function BgpCategoryTree({
+  device,
+  category,
+  expanded,
+  onToggle,
+}: {
+  device: Device;
+  category: BgpCategoryItem;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const { data: peers } = useListNetopsDeviceBgpPeers(device.id);
+  const filteredPeers = useMemo(
+    () => (peers ?? []).filter((p) => p.role === category.roleFilter),
+    [peers, category.roleFilter],
+  );
+
+  const Icon = category.icon;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 rounded py-1.5 pl-8 pr-2 text-xs">
+        <button
+          type="button"
+          className="-ml-1 rounded p-0.5 hover:bg-muted"
+          onClick={onToggle}
+        >
+          {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        </button>
+        <Icon className="h-3 w-3 shrink-0" />
+        <span className="flex-1">{category.label}</span>
+        <Badge variant="outline" className="h-4 px-1 text-[9px]">
+          {filteredPeers.length}
+        </Badge>
+      </div>
+
+      {expanded &&
+        filteredPeers.map((peer) => (
+          <div key={`${peer.peerIp}-${peer.addressFamily}`} className="flex items-center gap-2 rounded py-1.5 pl-12 pr-2 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground">
+            <span className="min-w-0 flex-1 truncate font-mono text-xs">{peer.peerIp}</span>
+            <span className="shrink-0 text-[10px]">AS{peer.remoteAs}</span>
+          </div>
+        ))}
+    </div>
+  );
+}
+
 export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedDevices, setExpandedDevices] = useState<Record<number, boolean>>({});
   const [expandedBgp, setExpandedBgp] = useState<Record<number, boolean>>({});
+  const [expandedBgpCategories, setExpandedBgpCategories] = useState<Record<string, boolean>>({});
 
   const groups = useMemo(() => groupDevices(devices), [devices]);
 
@@ -188,17 +246,21 @@ export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
                                     </button>
                                   </div>
 
-                                  {bgpOpen && bgpViews.map(({ key: childKey, label: childLabel, icon: ChildIcon }) => (
-                                    <button
-                                      key={childKey}
-                                      type="button"
-                                      className={treeItemClass(activeDevice && selected?.view === childKey, "child")}
-                                      onClick={() => selectDevice(device, childKey)}
-                                    >
-                                      <ChildIcon className="h-3 w-3 shrink-0" />
-                                      <span>{childLabel}</span>
-                                    </button>
-                                  ))}
+                                  {bgpOpen &&
+                                    bgpCategories.map((category) => (
+                                      <BgpCategoryTree
+                                        key={category.key}
+                                        device={device}
+                                        category={category}
+                                        expanded={expandedBgpCategories[`${device.id}-${category.key}`] ?? false}
+                                        onToggle={() =>
+                                          setExpandedBgpCategories((current) => ({
+                                            ...current,
+                                            [`${device.id}-${category.key}`]: !current[`${device.id}-${category.key}`],
+                                          }))
+                                        }
+                                      />
+                                    ))}
                                 </div>
                               );
                             }

@@ -28,6 +28,7 @@ interface NetopsTreeProps {
 }
 
 const deviceViews: Array<{ key: NetopsTreeView; label: string; icon: LucideIcon }> = [
+  { key: "device", label: "Summary", icon: Server },
   { key: "interfaces", label: "Interfaces", icon: GitBranch },
   { key: "bgp", label: "BGP", icon: Network },
   { key: "filters", label: "Filters", icon: Filter },

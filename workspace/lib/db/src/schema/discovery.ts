@@ -50,9 +50,26 @@ export const discoveryEvidenceTable = pgTable("discovery_evidence", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const bgpRouteHistoryTable = pgTable("bgp_route_history", {
+  id: serial("id").primaryKey(),
+  deviceId: integer("device_id").notNull().references(() => devicesTable.id, { onDelete: "cascade" }),
+  peerIp: text("peer_ip").notNull(),
+  direction: text("direction").notNull(), // "received" | "advertised"
+  queryTime: timestamp("query_time").notNull(),
+  totalRoutes: integer("total_routes").notNull(),
+  routesReturned: integer("routes_returned").notNull(),
+  routesJson: jsonb("routes_json").notNull(), // Array of {prefix, asPath, origin}
+  source: text("source").notNull(), // "ssh"
+  status: text("status").notNull(), // "ok" | "error"
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type DiscoveryRun = typeof discoveryRunsTable.$inferSelect;
 export type InsertDiscoveryRun = typeof discoveryRunsTable.$inferInsert;
 export type DiscoverySnapshot = typeof discoverySnapshotsTable.$inferSelect;
 export type InsertDiscoverySnapshot = typeof discoverySnapshotsTable.$inferInsert;
 export type DiscoveryEvidence = typeof discoveryEvidenceTable.$inferSelect;
 export type InsertDiscoveryEvidence = typeof discoveryEvidenceTable.$inferInsert;
+export type BgpRouteHistory = typeof bgpRouteHistoryTable.$inferSelect;
+export type InsertBgpRouteHistory = typeof bgpRouteHistoryTable.$inferInsert;

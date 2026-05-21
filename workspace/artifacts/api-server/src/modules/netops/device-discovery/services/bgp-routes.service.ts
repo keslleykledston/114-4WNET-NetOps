@@ -1,4 +1,5 @@
 import type { Device } from "@workspace/db";
+import { db, bgpRouteHistoryTable } from "@workspace/db";
 import { runSSHCommands } from "../../../../lib/ssh.js";
 import { decrypt } from "../../../../lib/crypto.js";
 import { parseHuaweiRoutes } from "../../huawei-vrp/parsers/routes-parser.js";
@@ -128,6 +129,7 @@ export async function queryBgpRoutes(
   const limit = Math.min(Math.max(1, body.limit ?? DEFAULT_LIMIT), DEFAULT_LIMIT);
   const page = Math.max(1, body.page ?? 1);
   const offset = (page - 1) * limit;
+  const queryTime = new Date();
 
   try {
     const commands = buildRouteCommands(peerIp, direction, (vrf ?? null) as string | null);
@@ -182,6 +184,24 @@ export async function queryBgpRoutes(
       evidence: `SSH ${direction} route from peer ${peerIp}`,
     }));
 
+    // Persist route history to database
+    try {
+      await db.insert(bgpRouteHistoryTable).values({
+        deviceId: device.id,
+        peerIp,
+        direction,
+        queryTime,
+        totalRoutes: fullTotal,
+        routesReturned: displayRows.length,
+        routesJson: allRows as any,
+        source: "ssh",
+        status: "ok",
+      });
+    } catch (err) {
+      // Log but don't fail on persistence
+      console.warn(`Failed to persist route history for ${peerIp}:`, err);
+    }
+
     return {
       peerIp,
       peerName,
@@ -199,6 +219,25 @@ export async function queryBgpRoutes(
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
+
+    // Persist error to history
+    try {
+      await db.insert(bgpRouteHistoryTable).values({
+        deviceId: device.id,
+        peerIp,
+        direction,
+        queryTime,
+        totalRoutes: 0,
+        routesReturned: 0,
+        routesJson: [] as any,
+        source: "ssh",
+        status: "error",
+        errorMessage: errorMsg,
+      });
+    } catch (err) {
+      console.warn(`Failed to persist route error for ${peerIp}:`, err);
+    }
+
     return {
       peerIp,
       peerName,

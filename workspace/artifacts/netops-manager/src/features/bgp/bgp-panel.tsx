@@ -26,8 +26,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, FileSearch, ListTree, Network, Route, Save, Search, ShieldCheck } from "lucide-react";
-import { BgpPeerSheet, type BgpPeerActionKind } from "./bgp-peer-sheet";
+import { FileSearch, Network, Save, Search } from "lucide-react";
+import { BgpPeerModal } from "./bgp-peer-modal";
 import { CollectSnmpButton } from "@/features/device-inventory/collect-snmp-button";
 
 interface BgpPanelProps {
@@ -43,27 +43,26 @@ type AfFilter = "all" | NetopsBgpPeer["addressFamily"];
 const STORAGE_PREFIX = "netops:bgp-filters:";
 
 const roleLabel: Record<NetopsBgpPeerRole, string> = {
-  provider: "Provedor",
+  provider: "Operadora",
   customer: "Cliente",
   cdn: "CDN",
   ix: "IX",
   cdn_ix: "CDN/IX",
   ibgp: "iBGP",
-  unknown: "Não classificado",
+  unknown: "Cliente",
 };
 
 const roleOptions: Array<{ value: RoleFilter; label: string }> = [
   { value: "all", label: "Todos" },
   { value: "customer", label: "Cliente" },
-  { value: "provider", label: "Provedor" },
+  { value: "provider", label: "Operadora" },
   { value: "ix", label: "IX" },
   { value: "cdn", label: "CDN" },
   { value: "cdn_ix", label: "CDN/IX" },
   { value: "ibgp", label: "iBGP" },
-  { value: "unknown", label: "Não classificado" },
 ];
 
-const editableRoleOptions: NetopsBgpPeerRole[] = ["customer", "provider", "ix", "cdn", "cdn_ix", "ibgp", "unknown"];
+const editableRoleOptions: NetopsBgpPeerRole[] = ["customer", "provider", "ix", "cdn", "ibgp"];
 
 const stateOptions: Array<{ value: StateFilter; label: string }> = [
   { value: "all", label: "Todos" },
@@ -78,16 +77,6 @@ const afOptions: Array<{ value: AfFilter; label: string }> = [
   { value: "all", label: "Todos" },
   { value: "ipv4", label: "IPv4" },
   { value: "ipv6", label: "IPv6" },
-  { value: "unknown", label: "Unknown" },
-];
-
-const peerActions: Array<{ kind: BgpPeerActionKind; label: string; icon: typeof FileSearch }> = [
-  { kind: "details", label: "Detalhes", icon: FileSearch },
-  { kind: "received", label: "Prefixos recebidos", icon: Route },
-  { kind: "advertised", label: "Prefixos exportados", icon: Route },
-  { kind: "policies", label: "Policies", icon: ShieldCheck },
-  { kind: "communities", label: "Communities", icon: ListTree },
-  { kind: "diagnostics", label: "Diagnostico", icon: Activity },
 ];
 
 interface StoredBgpFilters {
@@ -148,9 +137,8 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   const [includeIbgp, setIncludeIbgp] = useState(role === "ibgp");
   const [editedRoles, setEditedRoles] = useState<Record<string, NetopsBgpPeerRole>>({});
   const [savingPeer, setSavingPeer] = useState<string | null>(null);
-  const [sheetPeer, setSheetPeer] = useState<NetopsBgpPeer | null>(null);
-  const [sheetAction, setSheetAction] = useState<BgpPeerActionKind | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [modalPeer, setModalPeer] = useState<NetopsBgpPeer | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const listParams = useMemo(
     () => buildListParams(role, stateFilter, afFilter),
@@ -158,6 +146,17 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   );
 
   const { data: peers, isLoading, isError } = useListNetopsDeviceBgpPeers(device.id, listParams);
+
+  useEffect(() => {
+    if (!peers) return;
+    const peersToMigrate = peers.filter((p) => p.role === "unknown" && !editedRoles[peerEditKey(p)]);
+    peersToMigrate.forEach((peer) => {
+      setEditedRoles((current) => ({
+        ...current,
+        [peerEditKey(peer)]: "customer",
+      }));
+    });
+  }, [peers?.length]);
 
   useEffect(() => {
     if (role) {
@@ -210,10 +209,11 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
 
   const filteredPeers = useMemo(() => {
     return (peers ?? []).filter((peer) => {
-      const selectedRole = editedRoles[peerEditKey(peer)] ?? peer.role;
+      const selectedRole = editedRoles[peerEditKey(peer)] ?? (peer.role === "unknown" ? "customer" : peer.role);
       if (!includeIbgp && selectedRole === "ibgp") return false;
       if (!role && roleFilter !== "all" && selectedRole !== roleFilter) return false;
-      if (afFilter === "unknown" && peer.addressFamily !== "unknown") return false;
+      if (afFilter === "ipv4" && peer.addressFamily !== "ipv4") return false;
+      if (afFilter === "ipv6" && peer.addressFamily !== "ipv6") return false;
       if (stateFilter === "Down" && peer.state === "Established") return false;
       if (
         stateFilter !== "all" &&
@@ -239,16 +239,14 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
       ix: countRoleWithEdits(base, editedRoles, "ix"),
       cdn: countRoleWithEdits(base, editedRoles, "cdn"),
       cdnIx: countRoleWithEdits(base, editedRoles, "cdn_ix"),
-      unknown: countRoleWithEdits(base, editedRoles, "unknown"),
       ipv4: base.filter((peer) => peer.addressFamily === "ipv4").length,
       ipv6: base.filter((peer) => peer.addressFamily === "ipv6").length,
     };
   }, [editedRoles, includeIbgp, peers]);
 
-  function openPeerAction(peer: NetopsBgpPeer, kind: BgpPeerActionKind) {
-    setSheetPeer(peer);
-    setSheetAction(kind);
-    setSheetOpen(true);
+  function openPeerModal(peer: NetopsBgpPeer) {
+    setModalPeer(peer);
+    setModalOpen(true);
   }
 
   function saveRole(peer: NetopsBgpPeer) {
@@ -370,11 +368,10 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
           <Counter label="eBGP" value={counters.ebgp} />
           <Counter label="iBGP" value={counters.ibgp} />
           <Counter label="Cliente" value={counters.customer} />
-          <Counter label="Provedor" value={counters.provider} />
+          <Counter label="Operadora" value={counters.provider} />
           <Counter label="IX" value={counters.ix} />
           <Counter label="CDN" value={counters.cdn} />
           <Counter label="CDN/IX" value={counters.cdnIx} />
-          <Counter label="Não classificado" value={counters.unknown} />
           <Counter label="IPv4" value={counters.ipv4} />
           <Counter label="IPv6" value={counters.ipv6} />
         </div>
@@ -401,7 +398,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                   <TableHead>Estado</TableHead>
                   <TableHead>Uptime</TableHead>
                   <TableHead>Papel</TableHead>
-                  <TableHead className="min-w-56">Acoes read-only</TableHead>
+                  <TableHead>Detalhes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -417,7 +414,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <Badge variant="outline" className="w-fit">{peer.sessionType}</Badge>
-                          <span className="text-xs text-muted-foreground">{peer.vrf ?? "-"}</span>
+                          <span className="text-[10px] text-muted-foreground">{peer.vrf ?? "-"}</span>
                         </div>
                       </TableCell>
                       <TableCell><Badge variant="outline">{peer.state}</Badge></TableCell>
@@ -426,17 +423,22 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                         <div className="flex items-center gap-2">
                           <Select
                             value={selectedRole}
-                            onValueChange={(value) => setEditedRoles((current) => ({
-                              ...current,
-                              [peerEditKey(peer)]: value as NetopsBgpPeerRole,
-                            }))}
+                            onValueChange={(value) => {
+                              if (value === "ibgp") {
+                                setIncludeIbgp(true);
+                              }
+                              setEditedRoles((current) => ({
+                                ...current,
+                                [peerEditKey(peer)]: value as NetopsBgpPeerRole,
+                              }));
+                            }}
                           >
                             <SelectTrigger className="h-8">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               {editableRoleOptions.map((option) => (
-                                <SelectItem key={option} value={option}>{option}</SelectItem>
+                                <SelectItem key={option} value={option}>{roleLabel[option]}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -447,32 +449,25 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                               className="h-8 px-2"
                               onClick={() => saveRole(peer)}
                               disabled={saving}
-                              title="Salvar papel local"
+                              title="Salvar papel"
                             >
                               <Save className="h-3.5 w-3.5" />
                               {saving ? "..." : "Salvar"}
                             </Button>
                           )}
                         </div>
-                        <span className="mt-1 block text-[10px] text-muted-foreground">{peer.roleSource}</span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-1.5">
-                          {peerActions.map(({ kind, label, icon: Icon }) => (
-                            <Button
-                              key={kind}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              title={`${label} read-only`}
-                              className="h-7 px-2 text-[11px]"
-                              onClick={() => openPeerAction(peer, kind)}
-                            >
-                              <Icon className="h-3.5 w-3.5" />
-                              {label}
-                            </Button>
-                          ))}
-                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => openPeerModal(peer)}
+                        >
+                          <FileSearch className="h-3.5 w-3.5 mr-1" />
+                          Detalhes
+                        </Button>
                       </TableCell>
                     </TableRow>
                   );
@@ -483,12 +478,11 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
         )}
       </CardContent>
 
-      <BgpPeerSheet
+      <BgpPeerModal
         device={device}
-        peer={sheetPeer}
-        action={sheetAction}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        peer={modalPeer}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
       />
     </Card>
   );

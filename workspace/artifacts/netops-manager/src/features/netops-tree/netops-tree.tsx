@@ -82,13 +82,13 @@ function groupDevices(devices: Device[]): Array<[string, Device[]]> {
 function BgpCategoryTree({
   device,
   category,
-  expanded,
-  onToggle,
+  selected,
+  onSelect,
 }: {
   device: Device;
   category: BgpCategoryItem;
-  expanded: boolean;
-  onToggle: () => void;
+  selected: NetopsTreeSelection | null;
+  onSelect: (selection: NetopsTreeSelection) => void;
 }) {
   const { data: peers } = useListNetopsDeviceBgpPeers(device.id);
   const filteredPeers = useMemo(
@@ -97,32 +97,25 @@ function BgpCategoryTree({
   );
 
   const Icon = category.icon;
+  const isActive = selected?.device.id === device.id && selected?.view === category.key;
 
   return (
-    <div>
-      <div className="flex items-center gap-2 rounded py-1.5 pl-8 pr-2 text-xs">
-        <button
-          type="button"
-          className="-ml-1 rounded p-0.5 hover:bg-muted"
-          onClick={onToggle}
-        >
-          {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        </button>
-        <Icon className="h-3 w-3 shrink-0" />
-        <span className="flex-1">{category.label}</span>
-        <Badge variant="outline" className="h-4 px-1 text-[9px]">
-          {filteredPeers.length}
-        </Badge>
-      </div>
-
-      {expanded &&
-        filteredPeers.map((peer) => (
-          <div key={`${peer.peerIp}-${peer.addressFamily}`} className="flex items-center gap-2 rounded py-1.5 pl-12 pr-2 text-xs text-muted-foreground hover:bg-muted/50 hover:text-foreground">
-            <span className="min-w-0 flex-1 truncate font-mono text-xs">{peer.peerIp}</span>
-            <span className="shrink-0 text-[10px]">AS{peer.remoteAs}</span>
-          </div>
-        ))}
-    </div>
+    <button
+      type="button"
+      onClick={() => onSelect({ device, view: category.key })}
+      className={cn(
+        "flex w-full items-center gap-2 rounded-md py-1.5 pl-8 pr-2 text-xs transition-colors",
+        isActive
+          ? "border border-primary/20 bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+      )}
+    >
+      <Icon className="h-3 w-3 shrink-0" />
+      <span className="flex-1 text-left">{category.label}</span>
+      <Badge variant="outline" className="h-4 px-1 text-[9px]">
+        {filteredPeers.length}
+      </Badge>
+    </button>
   );
 }
 
@@ -130,7 +123,6 @@ export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedDevices, setExpandedDevices] = useState<Record<number, boolean>>({});
   const [expandedBgp, setExpandedBgp] = useState<Record<number, boolean>>({});
-  const [expandedBgpCategories, setExpandedBgpCategories] = useState<Record<string, boolean>>({});
 
   const groups = useMemo(() => groupDevices(devices), [devices]);
 
@@ -252,13 +244,8 @@ export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
                                         key={category.key}
                                         device={device}
                                         category={category}
-                                        expanded={expandedBgpCategories[`${device.id}-${category.key}`] ?? false}
-                                        onToggle={() =>
-                                          setExpandedBgpCategories((current) => ({
-                                            ...current,
-                                            [`${device.id}-${category.key}`]: !current[`${device.id}-${category.key}`],
-                                          }))
-                                        }
+                                        selected={selected}
+                                        onSelect={onSelect}
                                       />
                                     ))}
                                 </div>

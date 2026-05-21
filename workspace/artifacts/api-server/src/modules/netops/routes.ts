@@ -278,4 +278,38 @@ router.get("/netops/devices/:id/snmp-snapshots/latest", async (req, res) => {
   res.json(latestSnapshot);
 });
 
+router.get("/netops/devices/:id/bgp-peers/:peerIp/modal-detail", async (req, res) => {
+  const deviceId = parseDeviceId(req.params.id);
+  const peerIp = parsePeerIp(req.params.peerIp);
+  if (!deviceId || !peerIp) { res.status(400).json({ error: "Invalid device ID or peer IP" }); return; }
+
+  try {
+    const peer = await getNetopsBgpPeer(deviceId, peerIp);
+    if (!peer) { res.status(404).json({ error: "Peer not found" }); return; }
+
+    res.json({
+      layer1: {
+        peerIp: peer.peerIp,
+        remoteAs: peer.remoteAs,
+        description: peer.name || peer.description,
+        role: peer.role,
+        addressFamily: peer.addressFamily,
+        vrf: peer.vrf,
+        state: peer.state,
+        sessionType: peer.sessionType,
+        importPolicy: peer.importPolicy,
+        exportPolicy: peer.exportPolicy,
+        receivedPrefixes: peer.receivedPrefixes,
+        advertisedPrefixes: peer.advertisedPrefixes,
+        lastCollected: peer.source === "snapshot" ? new Date().toISOString() : null,
+        volumeWarning:
+          (peer.receivedPrefixes && peer.receivedPrefixes > 5000) ||
+          (peer.advertisedPrefixes && peer.advertisedPrefixes > 5000)
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load peer details" });
+  }
+});
+
 export default router;

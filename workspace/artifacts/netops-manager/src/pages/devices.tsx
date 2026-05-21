@@ -42,10 +42,40 @@ export default function Devices() {
     };
 
     createDevice.mutate({ data: payload }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
-        setIsCreateOpen(false);
-        toast({ title: "Dispositivo adicionado com sucesso" });
+      onSuccess: async (newDevice: any) => {
+        toast({ title: "Testando conectividade..." });
+
+        try {
+          const testResponse = await fetch(`/api/devices/${newDevice.id}/test-connectivity`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+          });
+          const testResult = await testResponse.json();
+
+          queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
+          setIsCreateOpen(false);
+
+          if (testResult.status === "active") {
+            toast({ title: "Dispositivo adicionado — SSH e SNMP OK" });
+          } else if (testResult.status === "pending") {
+            const working = testResult.ssh?.success ? "SSH" : "SNMP";
+            const failing = testResult.ssh?.success ? "SNMP" : "SSH";
+            toast({
+              title: "Dispositivo adicionado — Status pendente",
+              description: `${working} OK, ${failing} falhou. Verifique as credenciais.`
+            });
+          } else {
+            toast({
+              title: "Dispositivo adicionado — Falha em testes",
+              description: "Nem SSH nem SNMP responderam. Verifique IP e credenciais.",
+              variant: "destructive"
+            });
+          }
+        } catch (err) {
+          toast({ title: "Dispositivo adicionado", description: "Testes não puderam ser executados" });
+          queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
+          setIsCreateOpen(false);
+        }
       },
       onError: (err: any) => {
         toast({ title: "Erro ao adicionar dispositivo", description: err.message, variant: "destructive" });

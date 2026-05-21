@@ -4,6 +4,7 @@ import { devicesTable, deviceGroupsTable } from "@workspace/db";
 import { eq, sql, count } from "drizzle-orm";
 import { encrypt, decrypt } from "../lib/crypto.js";
 import { testSSHConnection } from "../lib/ssh.js";
+import { collectSnmpSnapshot } from "../lib/snmp.js";
 import {
   CreateDeviceBody,
   UpdateDeviceBody,
@@ -193,6 +194,63 @@ router.post("/devices/:id/test-connection", async (req, res) => {
   }).where(eq(devicesTable.id, device.id));
 
   res.json(result);
+});
+
+router.post("/devices/:id/test-connectivity", async (req, res) => {
+  const params = TestDeviceConnectionParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, params.data.id));
+  if (!device) { res.status(404).json({ error: "Device not found" }); return; }
+
+  let password: string;
+  try {
+    password = decrypt(device.passwordEncrypted);
+  } catch {
+    res.status(500).json({ error: "Failed to decrypt credentials" });
+    return;
+  }
+
+  const [sshResult, snmpResult] = await Promise.all([
+    testSSHConnection({
+      host: device.ipAddress,
+      port: device.sshPort,
+      username: device.username,
+      password,
+    }),
+    device.snmpCommunity ? collectSnmpSnapshot({
+      id: device.id,
+      hostname: device.hostname,
+      ipAddress: device.ipAddress,
+      vendor: device.vendor,
+      platform: device.platform,
+      snmpCommunity: device.snmpCommunity,
+    }) : Promise.resolve({ success: false, errorMessage: "No SNMP community configured" })
+  ]);
+
+  const sshOk = sshResult.success;
+  const snmpOk = snmpResult.success;
+
+  let status: string;
+  if (sshOk && snmpOk) {
+    status = "active";
+  } else if (!sshOk && !snmpOk) {
+    status = "fail";
+  } else {
+    status = "pending";
+  }
+
+  await db.update(devicesTable).set({
+    status,
+    lastSeen: (sshOk || snmpOk) ? new Date() : undefined,
+    updatedAt: new Date(),
+  }).where(eq(devicesTable.id, device.id));
+
+  res.json({
+    status,
+    ssh: { success: sshOk, message: sshResult.message ?? sshResult.error ?? (sshOk ? "SSH OK" : "SSH failed") },
+    snmp: { success: snmpOk, message: snmpResult.errorMessage ?? (snmpOk ? "SNMP OK" : "SNMP failed") }
+  });
 });
 
 router.get("/devices/:id/collected-config", async (req, res) => {

@@ -29,6 +29,8 @@ ENV NODE_ENV=production
 ENV PORT=${FRONTEND_PORT}
 ENV BASE_PATH=${BASE_PATH}
 
+RUN rm -rf /app/workspace/artifacts/netops-manager/.vite /app/workspace/artifacts/netops-manager/dist
+
 RUN pnpm --filter @workspace/netops-manager run build
 
 FROM nginx:1.27-alpine AS frontend-runtime

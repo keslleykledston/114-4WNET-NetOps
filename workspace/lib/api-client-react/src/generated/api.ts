@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AuditLogListResponse,
   BgpPeerDetails,
   BgpPeerSummary,
   CollectConfigInput,
@@ -52,6 +53,9 @@ import type {
   DeviceStats,
   DeviceUpdate,
   HealthStatus,
+  IntegrationListResponse,
+  IntegrationSetting,
+  ListAuditLogsParams,
   ListCollectedConfigsParams,
   ListComplianceJobsParams,
   ListConfigTemplatesParams,
@@ -80,12 +84,15 @@ import type {
   ProvisioningJobDetail,
   ProvisioningJobInput,
   ProvisioningStats,
+  Report,
+  ReportListResponse,
   RouteQueryRequest,
   RouteQueryResponse,
   SnmpSnapshot,
   TemplateRenderInput,
   TemplateRenderResult,
   UpdateCommunitySetBody,
+  UpdateIntegrationBody,
   ValidationResult
 } from './api.schemas';
 
@@ -5581,4 +5588,538 @@ export function useGetCommunityChangeAudit<TData = Awaited<ReturnType<typeof get
 
 
 
+
+export const getListAuditLogsUrl = (params?: ListAuditLogsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/audit-logs?${stringifiedParams}` : `/api/audit-logs`
+}
+
+/**
+ * @summary List audit logs
+ */
+export const listAuditLogs = async (params?: ListAuditLogsParams, options?: RequestInit): Promise<AuditLogListResponse> => {
+
+  return customFetch<AuditLogListResponse>(getListAuditLogsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAuditLogsQueryKey = (params?: ListAuditLogsParams,) => {
+    return [
+    `/api/audit-logs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAuditLogsQueryOptions = <TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorType<unknown>>(params?: ListAuditLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAuditLogsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAuditLogs>>> = ({ signal }) => listAuditLogs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAuditLogsQueryResult = NonNullable<Awaited<ReturnType<typeof listAuditLogs>>>
+export type ListAuditLogsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List audit logs
+ */
+
+export function useListAuditLogs<TData = Awaited<ReturnType<typeof listAuditLogs>>, TError = ErrorType<unknown>>(
+ params?: ListAuditLogsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAuditLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAuditLogsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListReportsUrl = () => {
+
+
+
+
+  return `/api/reports`
+}
+
+/**
+ * @summary List generated provisioning reports
+ */
+export const listReports = async ( options?: RequestInit): Promise<ReportListResponse> => {
+
+  return customFetch<ReportListResponse>(getListReportsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListReportsQueryKey = () => {
+    return [
+    `/api/reports`
+    ] as const;
+    }
+
+
+export const getListReportsQueryOptions = <TData = Awaited<ReturnType<typeof listReports>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReportsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReports>>> = ({ signal }) => listReports({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListReportsQueryResult = NonNullable<Awaited<ReturnType<typeof listReports>>>
+export type ListReportsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List generated provisioning reports
+ */
+
+export function useListReports<TData = Awaited<ReturnType<typeof listReports>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListReportsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetReportUrl = (id: number,) => {
+
+
+
+
+  return `/api/reports/${id}`
+}
+
+/**
+ * @summary Get a generated provisioning report
+ */
+export const getReport = async (id: number, options?: RequestInit): Promise<Report> => {
+
+  return customFetch<Report>(getGetReportUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReportQueryKey = (id: number,) => {
+    return [
+    `/api/reports/${id}`
+    ] as const;
+    }
+
+
+export const getGetReportQueryOptions = <TData = Awaited<ReturnType<typeof getReport>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReportQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReport>>> = ({ signal }) => getReport(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReportQueryResult = NonNullable<Awaited<ReturnType<typeof getReport>>>
+export type GetReportQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get a generated provisioning report
+ */
+
+export function useGetReport<TData = Awaited<ReturnType<typeof getReport>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReportQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateProvisioningReportUrl = (id: number,) => {
+
+
+
+
+  return `/api/provisioning-jobs/${id}/report`
+}
+
+/**
+ * @summary Generate a provisioning report
+ */
+export const createProvisioningReport = async (id: number, options?: RequestInit): Promise<Report> => {
+
+  return customFetch<Report>(getCreateProvisioningReportUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCreateProvisioningReportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProvisioningReport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProvisioningReport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['createProvisioningReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProvisioningReport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  createProvisioningReport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProvisioningReportMutationResult = NonNullable<Awaited<ReturnType<typeof createProvisioningReport>>>
+
+    export type CreateProvisioningReportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Generate a provisioning report
+ */
+export const useCreateProvisioningReport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProvisioningReport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProvisioningReport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCreateProvisioningReportMutationOptions(options));
+    }
+
+export const getListIntegrationsUrl = () => {
+
+
+
+
+  return `/api/integrations`
+}
+
+/**
+ * @summary List integration readiness settings
+ */
+export const listIntegrations = async ( options?: RequestInit): Promise<IntegrationListResponse> => {
+
+  return customFetch<IntegrationListResponse>(getListIntegrationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListIntegrationsQueryKey = () => {
+    return [
+    `/api/integrations`
+    ] as const;
+    }
+
+
+export const getListIntegrationsQueryOptions = <TData = Awaited<ReturnType<typeof listIntegrations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIntegrations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListIntegrationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listIntegrations>>> = ({ signal }) => listIntegrations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listIntegrations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListIntegrationsQueryResult = NonNullable<Awaited<ReturnType<typeof listIntegrations>>>
+export type ListIntegrationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List integration readiness settings
+ */
+
+export function useListIntegrations<TData = Awaited<ReturnType<typeof listIntegrations>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listIntegrations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListIntegrationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetIntegrationUrl = (name: string,) => {
+
+
+
+
+  return `/api/integrations/${name}`
+}
+
+/**
+ * @summary Get integration readiness setting
+ */
+export const getIntegration = async (name: string, options?: RequestInit): Promise<IntegrationSetting> => {
+
+  return customFetch<IntegrationSetting>(getGetIntegrationUrl(name),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetIntegrationQueryKey = (name: string,) => {
+    return [
+    `/api/integrations/${name}`
+    ] as const;
+    }
+
+
+export const getGetIntegrationQueryOptions = <TData = Awaited<ReturnType<typeof getIntegration>>, TError = ErrorType<unknown>>(name: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntegration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetIntegrationQueryKey(name);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getIntegration>>> = ({ signal }) => getIntegration(name, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(name), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getIntegration>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIntegrationQueryResult = NonNullable<Awaited<ReturnType<typeof getIntegration>>>
+export type GetIntegrationQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get integration readiness setting
+ */
+
+export function useGetIntegration<TData = Awaited<ReturnType<typeof getIntegration>>, TError = ErrorType<unknown>>(
+ name: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIntegration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetIntegrationQueryOptions(name,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateIntegrationUrl = (name: string,) => {
+
+
+
+
+  return `/api/integrations/${name}`
+}
+
+/**
+ * @summary Update integration readiness setting
+ */
+export const updateIntegration = async (name: string,
+    updateIntegrationBody: UpdateIntegrationBody, options?: RequestInit): Promise<IntegrationSetting> => {
+
+  return customFetch<IntegrationSetting>(getUpdateIntegrationUrl(name),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateIntegrationBody,)
+  }
+);}
+
+
+
+
+export const getUpdateIntegrationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIntegration>>, TError,{name: string;data: BodyType<UpdateIntegrationBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateIntegration>>, TError,{name: string;data: BodyType<UpdateIntegrationBody>}, TContext> => {
+
+const mutationKey = ['updateIntegration'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateIntegration>>, {name: string;data: BodyType<UpdateIntegrationBody>}> = (props) => {
+          const {name,data} = props ?? {};
+
+          return  updateIntegration(name,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateIntegrationMutationResult = NonNullable<Awaited<ReturnType<typeof updateIntegration>>>
+    export type UpdateIntegrationMutationBody = BodyType<UpdateIntegrationBody>
+    export type UpdateIntegrationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update integration readiness setting
+ */
+export const useUpdateIntegration = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateIntegration>>, TError,{name: string;data: BodyType<UpdateIntegrationBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateIntegration>>,
+        TError,
+        {name: string;data: BodyType<UpdateIntegrationBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateIntegrationMutationOptions(options));
+    }
 

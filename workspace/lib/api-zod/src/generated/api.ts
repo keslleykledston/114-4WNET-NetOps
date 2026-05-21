@@ -1813,3 +1813,126 @@ export const GetCommunityChangeAuditResponseItem = zod.object({
 export const GetCommunityChangeAuditResponse = zod.array(GetCommunityChangeAuditResponseItem)
 
 
+/**
+ * @summary List audit logs
+ */
+export const ListAuditLogsQueryParams = zod.object({
+  "action": zod.coerce.string().optional(),
+  "objectType": zod.coerce.string().optional(),
+  "objectId": zod.coerce.string().optional(),
+  "dateFrom": zod.date().optional(),
+  "dateTo": zod.date().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
+})
+
+export const ListAuditLogsResponseItem = zod.object({
+  "id": zod.number(),
+  "actorId": zod.number().nullish(),
+  "actor": zod.string().optional(),
+  "action": zod.string(),
+  "objectType": zod.string(),
+  "objectId": zod.string(),
+  "metadataJson": zod.record(zod.string(), zod.unknown()).nullish(),
+  "sourceIp": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAuditLogsResponse = zod.array(ListAuditLogsResponseItem)
+
+
+/**
+ * @summary List generated provisioning reports
+ */
+export const ListReportsResponseItem = zod.object({
+  "id": zod.number(),
+  "provisioningJobId": zod.number(),
+  "reportType": zod.string(),
+  "contentMarkdown": zod.string(),
+  "generatedBy": zod.string().nullish(),
+  "generatedAt": zod.coerce.date(),
+  "jobName": zod.string().nullish(),
+  "jobType": zod.string().nullish()
+})
+export const ListReportsResponse = zod.array(ListReportsResponseItem)
+
+
+/**
+ * @summary Get a generated provisioning report
+ */
+export const GetReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetReportResponse = zod.object({
+  "id": zod.number(),
+  "provisioningJobId": zod.number(),
+  "reportType": zod.string(),
+  "contentMarkdown": zod.string(),
+  "generatedBy": zod.string().nullish(),
+  "generatedAt": zod.coerce.date(),
+  "jobName": zod.string().nullish(),
+  "jobType": zod.string().nullish()
+})
+
+
+/**
+ * @summary Generate a provisioning report
+ */
+export const CreateProvisioningReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List integration readiness settings
+ */
+export const ListIntegrationsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "configJson": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListIntegrationsResponse = zod.array(ListIntegrationsResponseItem)
+
+
+/**
+ * @summary Get integration readiness setting
+ */
+export const GetIntegrationParams = zod.object({
+  "name": zod.coerce.string()
+})
+
+export const GetIntegrationResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "configJson": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update integration readiness setting
+ */
+export const UpdateIntegrationParams = zod.object({
+  "name": zod.coerce.string()
+})
+
+export const UpdateIntegrationBody = zod.object({
+  "enabled": zod.boolean().optional(),
+  "configJson": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const UpdateIntegrationResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "configJson": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+

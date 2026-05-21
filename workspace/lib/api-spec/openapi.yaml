@@ -21,6 +21,12 @@ tags:
     description: VPN configuration templates
   - name: provisioning-jobs
     description: VPN provisioning jobs
+  - name: audit
+    description: Audit trail
+  - name: reports
+    description: Generated reports
+  - name: integrations
+    description: Integration readiness settings
   - name: collected-configs
     description: Collected device configurations
   - name: snmp-snapshots
@@ -1594,6 +1600,162 @@ paths:
                 items:
                   $ref: "#/components/schemas/CommunityChangeAudit"
 
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [audit]
+      summary: List audit logs
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: objectType
+          in: query
+          schema:
+            type: string
+        - name: objectId
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogListResponse"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List generated provisioning reports
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportListResponse"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a generated provisioning report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /provisioning-jobs/{id}/report:
+    post:
+      operationId: createProvisioningReport
+      tags: [provisioning-jobs]
+      summary: Generate a provisioning report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Generated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /integrations:
+    get:
+      operationId: listIntegrations
+      tags: [integrations]
+      summary: List integration readiness settings
+      responses:
+        "200":
+          description: Integrations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationListResponse"
+
+  /integrations/{name}:
+    get:
+      operationId: getIntegration
+      tags: [integrations]
+      summary: Get integration readiness setting
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationSetting"
+    patch:
+      operationId: updateIntegration
+      tags: [integrations]
+      summary: Update integration readiness setting
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                configJson:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Updated integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationSetting"
+
 components:
   schemas:
     HealthStatus:
@@ -1602,6 +1764,88 @@ components:
       properties:
         status:
           type: string
+
+    AuditLog:
+      type: object
+      required: [id, action, objectType, objectId, createdAt]
+      properties:
+        id:
+          type: integer
+        actorId:
+          type: ["integer", "null"]
+        actor:
+          type: string
+        action:
+          type: string
+        objectType:
+          type: string
+        objectId:
+          type: string
+        metadataJson:
+          type: ["object", "null"]
+          additionalProperties: true
+        sourceIp:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLogListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/AuditLog"
+
+    Report:
+      type: object
+      required: [id, provisioningJobId, reportType, contentMarkdown, generatedAt]
+      properties:
+        id:
+          type: integer
+        provisioningJobId:
+          type: integer
+        reportType:
+          type: string
+        contentMarkdown:
+          type: string
+        generatedBy:
+          type: ["string", "null"]
+        generatedAt:
+          type: string
+          format: date-time
+        jobName:
+          type: ["string", "null"]
+        jobType:
+          type: ["string", "null"]
+
+    ReportListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/Report"
+
+    IntegrationSetting:
+      type: object
+      required: [id, name, enabled, configJson, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        enabled:
+          type: boolean
+        configJson:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IntegrationListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/IntegrationSetting"
 
     DiscoveryStatus:
       type: string

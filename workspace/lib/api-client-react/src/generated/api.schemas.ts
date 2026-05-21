@@ -9,6 +9,57 @@ export interface HealthStatus {
   status: string;
 }
 
+/**
+ * @nullable
+ */
+export type AuditLogMetadataJson = { [key: string]: unknown } | null;
+
+export interface AuditLog {
+  id: number;
+  /** @nullable */
+  actorId?: number | null;
+  actor?: string;
+  action: string;
+  objectType: string;
+  objectId: string;
+  /** @nullable */
+  metadataJson?: AuditLogMetadataJson;
+  /** @nullable */
+  sourceIp?: string | null;
+  createdAt: string;
+}
+
+export type AuditLogListResponse = AuditLog[];
+
+export interface Report {
+  id: number;
+  provisioningJobId: number;
+  reportType: string;
+  contentMarkdown: string;
+  /** @nullable */
+  generatedBy?: string | null;
+  generatedAt: string;
+  /** @nullable */
+  jobName?: string | null;
+  /** @nullable */
+  jobType?: string | null;
+}
+
+export type ReportListResponse = Report[];
+
+export type IntegrationSettingConfigJson = { [key: string]: unknown };
+
+export interface IntegrationSetting {
+  id: number;
+  name: string;
+  enabled: boolean;
+  configJson: IntegrationSettingConfigJson;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type IntegrationListResponse = IntegrationSetting[];
+
 export type DiscoveryStatus = typeof DiscoveryStatus[keyof typeof DiscoveryStatus];
 
 
@@ -1691,5 +1742,22 @@ export type UpdateCommunitySetBody = {
   slug?: string;
   vrpObjectName?: string;
   description?: string;
+};
+
+export type ListAuditLogsParams = {
+action?: string;
+objectType?: string;
+objectId?: string;
+dateFrom?: string;
+dateTo?: string;
+limit?: number;
+offset?: number;
+};
+
+export type UpdateIntegrationBodyConfigJson = { [key: string]: unknown };
+
+export type UpdateIntegrationBody = {
+  enabled?: boolean;
+  configJson?: UpdateIntegrationBodyConfigJson;
 };
 

@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './auditLog';
+export * from './auditLogListResponse';
+export * from './auditLogMetadataJson';
 export * from './bgpPeerDetails';
 export * from './bgpPeerDetailsCategory';
 export * from './bgpPeerDetailsPrimaryDirection';
@@ -70,8 +73,12 @@ export * from './discoveryStatus';
 export * from './discoveryWarning';
 export * from './discoveryWarningLevel';
 export * from './healthStatus';
+export * from './integrationListResponse';
+export * from './integrationSetting';
+export * from './integrationSettingConfigJson';
 export * from './interfaceSummary';
 export * from './l2vpnSummary';
+export * from './listAuditLogsParams';
 export * from './listCollectedConfigsParams';
 export * from './listComplianceJobsParams';
 export * from './listConfigTemplatesParams';
@@ -141,6 +148,8 @@ export * from './provisioningJobDetail';
 export * from './provisioningJobInput';
 export * from './provisioningStats';
 export * from './provisioningStep';
+export * from './report';
+export * from './reportListResponse';
 export * from './routePolicyNode';
 export * from './routePolicySummary';
 export * from './routeQueryItem';
@@ -161,5 +170,7 @@ export * from './templateRenderInput';
 export * from './templateRenderInputParams';
 export * from './templateRenderResult';
 export * from './updateCommunitySetBody';
+export * from './updateIntegrationBody';
+export * from './updateIntegrationBodyConfigJson';
 export * from './validationCheck';
 export * from './validationResult';

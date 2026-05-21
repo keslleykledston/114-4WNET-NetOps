@@ -1975,7 +1975,7 @@ components:
 
     NetopsDeviceSummary:
       type: object
-      required: [device, counters]
+      required: [device, counters, deviceKind]
       properties:
         device:
           $ref: "#/components/schemas/NetopsSafeDevice"
@@ -1983,6 +1983,9 @@ components:
           $ref: "#/components/schemas/NetopsCounters"
         lastSnapshotAt:
           type: ["string", "null"]
+        deviceKind:
+          type: string
+          enum: [router, switch, unknown]
 
     NetopsInterface:
       type: object
@@ -1991,6 +1994,10 @@ components:
         name:
           type: string
         description:
+          type: ["string", "null"]
+        alias:
+          type: ["string", "null"]
+        rawDescr:
           type: ["string", "null"]
         adminStatus:
           type: string
@@ -2013,6 +2020,17 @@ components:
         source:
           type: string
           enum: [snmp, ssh, snapshot, mock, db]
+        ifIndex:
+          type: integer
+        kind:
+          type: string
+          enum: [physical, aggregate, subinterface, vlanif, loopback, tunnel, virtual_template, "null", other]
+        parentInterface:
+          type: string
+        vlanId:
+          type: integer
+        encapsulation:
+          type: string
 
     NetopsBgpPeer:
       type: object

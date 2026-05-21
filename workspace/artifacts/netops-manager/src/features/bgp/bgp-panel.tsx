@@ -43,24 +43,24 @@ type AfFilter = "all" | NetopsBgpPeer["addressFamily"];
 const STORAGE_PREFIX = "netops:bgp-filters:";
 
 const roleLabel: Record<NetopsBgpPeerRole, string> = {
-  provider: "Operadoras",
-  customer: "Clientes",
+  provider: "Provedor",
+  customer: "Cliente",
   cdn: "CDN",
   ix: "IX",
   cdn_ix: "CDN/IX",
   ibgp: "iBGP",
-  unknown: "Unknown",
+  unknown: "Não classificado",
 };
 
 const roleOptions: Array<{ value: RoleFilter; label: string }> = [
   { value: "all", label: "Todos" },
-  { value: "customer", label: "Clientes" },
-  { value: "provider", label: "Operadoras" },
+  { value: "customer", label: "Cliente" },
+  { value: "provider", label: "Provedor" },
   { value: "ix", label: "IX" },
   { value: "cdn", label: "CDN" },
   { value: "cdn_ix", label: "CDN/IX" },
   { value: "ibgp", label: "iBGP" },
-  { value: "unknown", label: "Unknown" },
+  { value: "unknown", label: "Não classificado" },
 ];
 
 const editableRoleOptions: NetopsBgpPeerRole[] = ["customer", "provider", "ix", "cdn", "cdn_ix", "ibgp", "unknown"];
@@ -339,12 +339,12 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
           <Counter label="Down" value={counters.down} />
           <Counter label="eBGP" value={counters.ebgp} />
           <Counter label="iBGP" value={counters.ibgp} />
-          <Counter label="Clientes" value={counters.customer} />
-          <Counter label="Operadoras" value={counters.provider} />
+          <Counter label="Cliente" value={counters.customer} />
+          <Counter label="Provedor" value={counters.provider} />
           <Counter label="IX" value={counters.ix} />
           <Counter label="CDN" value={counters.cdn} />
           <Counter label="CDN/IX" value={counters.cdnIx} />
-          <Counter label="Unknown" value={counters.unknown} />
+          <Counter label="Não classificado" value={counters.unknown} />
           <Counter label="IPv4" value={counters.ipv4} />
           <Counter label="IPv6" value={counters.ipv6} />
         </div>

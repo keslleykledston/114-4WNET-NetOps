@@ -51,9 +51,14 @@ export function CommunityLibraryTab({ deviceId }: CommunityLibraryTabProps) {
                 <p className="text-sm font-semibold text-slate-100">
                   {item.filterName}
                 </p>
-                <p className="text-xs text-slate-400 font-mono mt-1">
-                  {item.communityValue}
-                </p>
+                <div className="mt-2 flex items-center gap-1.5">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] bg-purple-500/10 border-purple-500/25 text-purple-300 font-mono"
+                  >
+                    {item.communityValue}
+                  </Badge>
+                </div>
                 {item.description && (
                   <p className="text-xs text-slate-500 mt-2">
                     {item.description}

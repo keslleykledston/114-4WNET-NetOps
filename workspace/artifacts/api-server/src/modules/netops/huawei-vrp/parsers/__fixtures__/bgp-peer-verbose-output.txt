@@ -1,0 +1,30 @@
+BGP Peer is 189.23.156.121, remote AS 4230
+Peer's description: "C10-EBT-MNS"
+BGP current state: Established, Up for 365d10h
+Received total routes: 1050786
+Received active routes total: 524000
+Advertised total routes: 10
+  Advertised Routes:
+    10.0.0.0/8
+    172.16.0.0/12
+    192.168.0.0/16
+    203.0.113.0/24
+    198.51.100.0/24
+    192.0.2.0/24
+    10.20.0.0/16
+    10.30.0.0/16
+    10.40.0.0/16
+    10.50.0.0/16
+
+BGP Peer is 192.0.2.1, remote AS 65001
+Peer's description: "ISP-UPLINK"
+BGP current state: Established, Up for 180d5h
+Received total routes: 850000
+Received active routes total: 425000
+Advertised total routes: 45
+
+BGP Peer is 203.0.113.5, remote AS 65002
+BGP current state: Idle
+Received total routes: 0
+Received active routes total: 0
+Advertised total routes: 0

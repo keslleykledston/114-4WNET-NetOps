@@ -19,6 +19,7 @@ const CONTEXT_COMMANDS: Record<DiscoveryContext, string[]> = {
   bgp: [
     "display current-configuration configuration bgp",
     "display bgp peer",
+    "display bgp peer verbose",
     "display bgp vpnv4 all peer",
     "display bgp vpnv6 all peer",
   ],

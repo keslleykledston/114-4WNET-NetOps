@@ -1,0 +1,190 @@
+import { useState } from "react";
+import type { Device } from "@workspace/api-client-react";
+import type { DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
+import { useDiscoveryBgpPeerRoutes } from "@/features/device-discovery/discovery-api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface BgpPeerRoutesModalProps {
+  device: Device;
+  peer: DiscoveryBgpPeer | null;
+  direction: "received" | "advertised";
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function BgpPeerRoutesModal({
+  device,
+  peer,
+  direction,
+  isOpen,
+  onClose,
+}: BgpPeerRoutesModalProps) {
+  const [page, setPage] = useState(1);
+  const peerIp = peer?.peerIp ?? "";
+  const peerName = peer?.name || peer?.description || "Unknown";
+  const deviceId = device.id;
+  const fetchEnabled = isOpen && !!peer;
+
+  const { data: routesData, isLoading } = useDiscoveryBgpPeerRoutes(
+    deviceId,
+    peerIp,
+    direction,
+    page,
+    200,
+    fetchEnabled
+  );
+
+  const isReceivedDirection = direction === "received";
+  const title = isReceivedDirection
+    ? `Prefixos recebidos (SSH) — ${peerName}`
+    : `Prefixos advertidos (SSH) — ${peerName}`;
+  const counterLabel = isReceivedDirection
+    ? `Total de prefixos recebidos: ${routesData?.total ?? 0}`
+    : `Total de prefixos anunciados: ${routesData?.total ?? 0}`;
+
+  const handlePreviousPage = () => {
+    setPage(p => Math.max(1, p - 1));
+  };
+
+  const handleNextPage = () => {
+    setPage(p => p + 1);
+  };
+
+  const startIdx = (page - 1) * 200 + 1;
+  const endIdx = Math.min(page * 200, routesData?.total ?? 0);
+  const pageRange = `${startIdx}–${endIdx} de ${routesData?.total ?? 0}`;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col bg-slate-950 border border-slate-800 rounded-lg shadow-2xl">
+        <DialogHeader className="flex-shrink-0 border-b border-slate-800 px-6 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-lg font-semibold text-slate-100">
+                {title}
+              </DialogTitle>
+              <div className="text-xs text-slate-400 mt-2">
+                <span className="text-slate-300 font-mono">{peerIp}</span>
+                <span className="text-slate-600"> · </span>
+                <span>Principal</span>
+              </div>
+            </div>
+            <DialogClose asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 hover:bg-slate-800 text-slate-400"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
+          </div>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900">
+          {isLoading ? (
+            <div className="px-6 py-5 space-y-4">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+          ) : (
+            <div className="px-6 py-5 space-y-5">
+              {/* Counter */}
+              <div className="text-sm font-medium text-slate-300">
+                {counterLabel}
+              </div>
+
+              {/* Excess Warning */}
+              {routesData?.excessWarning && (
+                <div className="flex gap-3 rounded-lg bg-amber-500/10 border border-amber-500/25 p-4">
+                  <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs">
+                    <div className="font-medium text-amber-200">Alto volume de prefixos</div>
+                    <p className="text-amber-300/70 mt-1">
+                      {routesData.warningMessage ||
+                        "Esta consulta foi limitada a 200 prefixos por página para proteger o dispositivo."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Routes Table */}
+              <div className="space-y-2">
+                {routesData?.items && routesData.items.length > 0 ? (
+                  routesData.items.map((item: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex gap-3 rounded-lg bg-slate-900/50 border border-slate-800 p-3 text-xs"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-mono text-slate-200 break-all">
+                          {item.prefix}
+                        </div>
+                        <div className="text-slate-500 mt-1">
+                          {item.asPathType}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 justify-end">
+                        {item.asPath.map((asn: string, asnIdx: number) => (
+                          <Badge
+                            key={asnIdx}
+                            className={cn(
+                              "text-[10px] px-1.5 py-0.5",
+                              asnIdx % 2 === 0
+                                ? "bg-purple-700/40 text-purple-200 border border-purple-600/30"
+                                : "bg-blue-700/40 text-blue-200 border border-blue-600/30"
+                            )}
+                          >
+                            {asn}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-slate-400 p-4 rounded-lg bg-slate-900/50 border border-slate-800 italic">
+                    Nenhum prefixo encontrado
+                  </div>
+                )}
+              </div>
+
+              {/* Pagination */}
+              <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+                <div className="text-xs text-slate-400">
+                  {pageRange}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    disabled={page === 1}
+                    onClick={handlePreviousPage}
+                  >
+                    <ChevronLeft className="h-3 w-3 mr-1" />
+                    Anterior
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    disabled={!routesData?.hasNextPage}
+                    onClick={handleNextPage}
+                  >
+                    Próxima
+                    <ChevronRight className="h-3 w-3 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

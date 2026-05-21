@@ -72,3 +72,12 @@ Alteracao permitida:
 - `workspace/artifacts/netops-manager/src/features/bgp`
 - `workspace/artifacts/netops-manager/src/features/communities`
 - `workspace/artifacts/netops-manager/src/pages/netops-operations.tsx`
+
+## Discovery UI
+
+- Mostrar discovery como bloco operacional no detalhe do device, usando cards compactos.
+- BGP deve consumir dados estruturados da API; nao interpretar CLI nem OID no frontend.
+- Evidence deve aparecer como source/confidence curto, sem payload bruto grande.
+- Alertas de compliance/confianca devem usar `Alert` compacto e manter densidade NOC.
+- Empty state de BGP sem snapshot deve orientar "Execute discovery para carregar peers BGP."
+- Snapshot vindo de cache persistido deve aparecer como aviso operacional, nao como erro visual.

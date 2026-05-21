@@ -1239,6 +1239,132 @@ paths:
         "404":
           description: Device not found
 
+  /devices/{id}/discover:
+    post:
+      operationId: discoverDevice
+      tags: [netops-readonly]
+      summary: Run read-only device discovery
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceDiscoveryRequest"
+      responses:
+        "202":
+          description: Discovery result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceDiscoverySnapshot"
+
+  /devices/{id}/discovery-snapshot:
+    get:
+      operationId: getDeviceDiscoverySnapshot
+      tags: [netops-readonly]
+      summary: Get latest persisted device discovery snapshot
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest discovery snapshot
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: "#/components/schemas/DeviceDiscoverySnapshot"
+                  - type: "null"
+
+  /devices/{id}/bgp/peers:
+    get:
+      operationId: listDeviceBgpPeers
+      tags: [netops-readonly]
+      summary: List normalized BGP peers from discovery
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [provider, customer, cdn, ix, cdn_ix, ibgp, unknown]
+      responses:
+        "200":
+          description: BGP peers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BgpPeerSummary"
+
+  /devices/{id}/bgp/peers/{peerIp}/details:
+    get:
+      operationId: getDeviceBgpPeerDetails
+      tags: [netops-readonly]
+      summary: Get normalized BGP peer details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: BGP peer details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BgpPeerDetails"
+
+  /devices/{id}/bgp/peers/{peerIp}/routes/query:
+    post:
+      operationId: queryDeviceBgpPeerRoutes
+      tags: [netops-readonly]
+      summary: Protected route query for a BGP peer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouteQueryRequest"
+      responses:
+        "200":
+          description: Protected route query result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteQueryResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -1246,6 +1372,442 @@ components:
       required: [status]
       properties:
         status:
+          type: string
+
+    DiscoveryStatus:
+      type: string
+      enum: [full, partial, fallback, cached, failed]
+
+    DiscoverySource:
+      type: string
+      enum: [ssh_live, ssh_running_config, manual_upload, snmp_snapshot, local_db, netbox]
+
+    DiscoveryConfidence:
+      type: string
+      enum: [high, medium, low]
+
+    DiscoveryEvidenceSummary:
+      type: object
+      required: [source, confidence]
+      properties:
+        source:
+          $ref: "#/components/schemas/DiscoverySource"
+        confidence:
+          $ref: "#/components/schemas/DiscoveryConfidence"
+        evidence:
+          type: string
+
+    SourceSummary:
+      type: object
+      required: [ssh, snmp, cachedConfig]
+      properties:
+        ssh:
+          type: string
+          enum: [success, failed, skipped]
+        snmp:
+          type: string
+          enum: [success, failed, skipped]
+        cachedConfig:
+          type: string
+          enum: [used, available, missing, skipped]
+
+    DeviceDiscoveryRequest:
+      type: object
+      required: [contexts, preferLiveSsh, allowSnmpFallback, useCachedConfig]
+      properties:
+        contexts:
+          type: array
+          items:
+            type: string
+            enum: [interfaces, bgp, l2vpn, policies, vrfs]
+        preferLiveSsh:
+          type: boolean
+        allowSnmpFallback:
+          type: boolean
+        useCachedConfig:
+          type: boolean
+
+    DiscoveryWarning:
+      type: object
+      required: [level, message, source]
+      properties:
+        level:
+          type: string
+          enum: [info, warning, error]
+        message:
+          type: string
+        source:
+          type: string
+
+    RoutePolicyNode:
+      type: object
+      required: [sequence, action, matches, applies, evidence]
+      properties:
+        sequence:
+          type: ["integer", "null"]
+        action:
+          type: ["string", "null"]
+        matches:
+          type: array
+          items:
+            type: string
+        applies:
+          type: array
+          items:
+            type: string
+        evidence:
+          $ref: "#/components/schemas/DiscoveryEvidenceSummary"
+
+    DiscoveryNamedEntries:
+      allOf:
+        - $ref: "#/components/schemas/DiscoveryEvidenceSummary"
+        - type: object
+          required: [name, entries]
+          properties:
+            name:
+              type: string
+            entries:
+              type: array
+              items: {}
+
+    RoutePolicySummary:
+      allOf:
+        - $ref: "#/components/schemas/DiscoveryEvidenceSummary"
+        - type: object
+          required: [name, nodes]
+          properties:
+            name:
+              type: string
+            nodes:
+              type: array
+              items:
+                $ref: "#/components/schemas/RoutePolicyNode"
+
+    L2vpnSummary:
+      allOf:
+        - $ref: "#/components/schemas/DiscoveryEvidenceSummary"
+        - type: object
+          required: [l2vcs, vsis]
+          properties:
+            l2vcs:
+              type: array
+              items: {}
+            vsis:
+              type: array
+              items: {}
+
+    InterfaceSummary:
+      allOf:
+        - $ref: "#/components/schemas/NetopsInterface"
+        - $ref: "#/components/schemas/DiscoveryEvidenceSummary"
+        - type: object
+          required: [exists]
+          properties:
+            exists:
+              type: boolean
+
+    BgpPeerSummary:
+      type: object
+      required:
+        - peerIp
+        - state
+        - role
+        - roleSource
+        - addressFamily
+        - sessionType
+        - source
+        - confidence
+        - category
+        - primaryDirection
+        - largeReceivedRoutes
+        - largeAdvertisedRoutes
+        - autoLoadRoutes
+        - requiresExplicitRouteSearch
+      properties:
+        peerIp:
+          type: string
+        remoteAs:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        name:
+          type: ["string", "null"]
+        state:
+          type: string
+          enum: [Established, Idle, Active, Connect, Unknown]
+        role:
+          type: string
+          enum: [provider, customer, cdn, ix, cdn_ix, ibgp, unknown]
+        roleSource:
+          type: string
+          enum: [manual_override, classifier, snapshot, unknown]
+        addressFamily:
+          type: string
+          enum: [ipv4, ipv6, unknown]
+        sessionType:
+          type: string
+          enum: [iBGP, eBGP, unknown]
+        vrf:
+          type: ["string", "null"]
+        importPolicy:
+          type: ["string", "null"]
+        exportPolicy:
+          type: ["string", "null"]
+        receivedPrefixes:
+          type: ["integer", "null"]
+        advertisedPrefixes:
+          type: ["integer", "null"]
+        activePrefixes:
+          type: ["integer", "null"]
+        uptime:
+          type: ["string", "null"]
+        source:
+          $ref: "#/components/schemas/DiscoverySource"
+        confidence:
+          $ref: "#/components/schemas/DiscoveryConfidence"
+        evidence:
+          type: string
+        category:
+          type: string
+          enum: [provider, customer, cdn, ix, cdn_ix, ibgp, unknown]
+        primaryDirection:
+          type: string
+          enum: [import, export, internal]
+        largeReceivedRoutes:
+          type: boolean
+        largeAdvertisedRoutes:
+          type: boolean
+        autoLoadRoutes:
+          type: boolean
+          enum: [false]
+        requiresExplicitRouteSearch:
+          type: boolean
+
+    BgpPeerDetails:
+      type: object
+      required: [peer, category, primaryDirection, importPolicy, exportPolicy, primaryPolicy, secondaryPolicy, routePolicyNodes, routeCounters, operationalState, protections, evidence]
+      properties:
+        peer:
+          $ref: "#/components/schemas/BgpPeerSummary"
+        category:
+          type: string
+          enum: [provider, customer, cdn, ix, cdn_ix, ibgp, unknown]
+        primaryDirection:
+          type: string
+          enum: [import, export, internal]
+        importPolicy:
+          type: ["string", "null"]
+        exportPolicy:
+          type: ["string", "null"]
+        primaryPolicy:
+          type: ["string", "null"]
+        secondaryPolicy:
+          type: ["string", "null"]
+        routePolicyNodes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoutePolicyNode"
+        referencedIpPrefixes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoveryNamedEntries"
+        referencedCommunityFilters:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoveryNamedEntries"
+        referencedCommunityLists:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoveryNamedEntries"
+        routeCounters:
+          type: object
+          required: [receivedRoutes, advertisedRoutes, largeReceivedRoutes, largeAdvertisedRoutes, autoLoadRoutes, requiresExplicitRouteSearch]
+          properties:
+            receivedRoutes:
+              type: ["integer", "null"]
+            advertisedRoutes:
+              type: ["integer", "null"]
+            largeReceivedRoutes:
+              type: boolean
+            largeAdvertisedRoutes:
+              type: boolean
+            autoLoadRoutes:
+              type: boolean
+              enum: [false]
+            requiresExplicitRouteSearch:
+              type: boolean
+        operationalState:
+          type: string
+        protections:
+          type: object
+          required: [noFullDumpAutomatic, sampleLimit, maxAutoRoutes]
+          properties:
+            noFullDumpAutomatic:
+              type: boolean
+              enum: [true]
+            sampleLimit:
+              type: integer
+            maxAutoRoutes:
+              type: integer
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoveryEvidenceSummary"
+
+    DeviceDiscoverySnapshot:
+      type: object
+      required: [deviceId, discoveryRunId, status, contexts, startedAt, finishedAt, sourceStatus, sourcesUsed, interfaces, bgpPeers, policies, communities, communityLists, prefixLists, vrfs, l2vpn, warnings, audit]
+      properties:
+        deviceId:
+          type: integer
+        discoveryRunId:
+          type: string
+        status:
+          $ref: "#/components/schemas/DiscoveryStatus"
+        contexts:
+          type: array
+          items:
+            type: string
+        startedAt:
+          type: string
+        finishedAt:
+          type: string
+        sourceStatus:
+          $ref: "#/components/schemas/SourceSummary"
+        persistedRunId:
+          type: integer
+        persistedSnapshotId:
+          type: ["integer", "null"]
+        cachedFromPersistedSnapshot:
+          type: boolean
+        sourcesUsed:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoverySource"
+        interfaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/InterfaceSummary"
+        bgpPeers:
+          type: array
+          items:
+            $ref: "#/components/schemas/BgpPeerSummary"
+        policies:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoutePolicySummary"
+        communities:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoveryNamedEntries"
+        communityLists:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoveryNamedEntries"
+        prefixLists:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoveryNamedEntries"
+        vrfs:
+          type: array
+          items: {}
+        l2vpn:
+          $ref: "#/components/schemas/L2vpnSummary"
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoveryWarning"
+        audit:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoveryWarning"
+
+    DeviceDiscoveryResponse:
+      $ref: "#/components/schemas/DeviceDiscoverySnapshot"
+
+    RouteQueryRequest:
+      type: object
+      properties:
+        direction:
+          type: string
+          enum: [received, advertised]
+        filter:
+          type: string
+          description: "Reserved for future use"
+        limit:
+          type: integer
+          default: 200
+          maximum: 200
+        offset:
+          type: integer
+          default: 0
+        page:
+          type: integer
+          default: 1
+
+    RouteQueryResponse:
+      type: object
+      required: [peerIp, direction, source, status, total, page, limit, hasNextPage, hasPreviousPage, excessWarning, items]
+      properties:
+        peerIp:
+          type: string
+        peerName:
+          type: string
+        direction:
+          type: string
+          enum: [received, advertised]
+        source:
+          type: string
+          enum: [ssh]
+        status:
+          type: string
+          enum: [ok, error]
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+        excessWarning:
+          type: boolean
+        warningMessage:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteQueryItem"
+        errorMessage:
+          type: string
+
+    RouteQueryItem:
+      type: object
+      required: [prefix, asPathType, asPath, source, confidence, evidence]
+      properties:
+        prefix:
+          type: string
+        asPathType:
+          type: string
+        asPath:
+          type: array
+          items:
+            type: string
+        origin:
+          type: string
+        localPref:
+          type: integer
+        med:
+          type: integer
+        source:
+          type: string
+          enum: [ssh]
+        confidence:
+          type: string
+          enum: [high, medium, low]
+        evidence:
           type: string
 
     # ── DEVICES ────────────────────────────────────────────────────────────────

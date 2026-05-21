@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
-import { useGetNetopsDeviceBgpPeer } from "@workspace/api-client-react";
-import type { Device, NetopsBgpPeer } from "@workspace/api-client-react";
+import type { Device } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, X, Download, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDiscoveryBgpPeerDetails, type DiscoveryBgpPeer, type DiscoveryBgpPeerDetails } from "@/features/device-discovery/discovery-api";
 
 interface BgpPeerModalProps {
   device: Device;
-  peer: NetopsBgpPeer | null;
+  peer: DiscoveryBgpPeer | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -33,15 +33,12 @@ export function BgpPeerModal({ device, peer, open, onOpenChange }: BgpPeerModalP
   const deviceId = device.id;
   const fetchEnabled = open && !!peer;
 
-  const details = useGetNetopsDeviceBgpPeer(deviceId, peerIp, {
-    query: {
-      enabled: fetchEnabled,
-    },
-  });
+  const details = useDiscoveryBgpPeerDetails(deviceId, peerIp, fetchEnabled);
 
-  const data = details.data ?? peer;
+  const detail = details.data;
+  const data = detail?.peer ?? peer;
   const isLargeVolume = useMemo(() => {
-    return (
+    return Boolean(
       (data?.receivedPrefixes && data.receivedPrefixes > 5000) ||
       (data?.advertisedPrefixes && data.advertisedPrefixes > 5000)
     );
@@ -95,7 +92,7 @@ export function BgpPeerModal({ device, peer, open, onOpenChange }: BgpPeerModalP
               {data && (
                 <>
                   {/* RESUMO OPERACIONAL */}
-                  <OperationalSummary peer={data} deviceName={device.hostname} />
+                  <OperationalSummary peer={data} deviceName={device.hostname} primaryDirection={detail?.primaryDirection} />
 
                   {/* ALERTA DE VOLUME */}
                   {isLargeVolume && (
@@ -130,7 +127,7 @@ export function BgpPeerModal({ device, peer, open, onOpenChange }: BgpPeerModalP
 
                   {/* TAB CONTENT */}
                   <div className="pb-2">
-                    {activeTab === "policy" && <PolicyTabContent peer={data} />}
+                    {activeTab === "policy" && <PolicyTabContent peer={data} detail={detail} />}
                     {activeTab === "routes" && <RoutesTabContent peer={data} isLargeVolume={isLargeVolume} />}
                     {activeTab === "references" && <ReferencesTabContent peer={data} />}
                   </div>
@@ -147,11 +144,13 @@ export function BgpPeerModal({ device, peer, open, onOpenChange }: BgpPeerModalP
 function OperationalSummary({
   peer,
   deviceName,
+  primaryDirection,
 }: {
-  peer: NetopsBgpPeer;
+  peer: DiscoveryBgpPeer;
   deviceName: string;
+  primaryDirection?: "import" | "export" | "internal";
 }) {
-  const isPrimaryExport = peer.role === "provider" || peer.role === "ix" || peer.role === "cdn";
+  const isPrimaryExport = primaryDirection ? primaryDirection === "export" : peer.role === "provider" || peer.role === "ix" || peer.role === "cdn";
   const primaryPolicy = isPrimaryExport ? peer.exportPolicy : peer.importPolicy;
 
   return (
@@ -209,10 +208,10 @@ function OpCard({
   );
 }
 
-function PolicyTabContent({ peer }: { peer: NetopsBgpPeer }) {
-  const isPrimaryExport = peer.role === "provider" || peer.role === "ix" || peer.role === "cdn";
-  const primaryPolicy = isPrimaryExport ? peer.exportPolicy : peer.importPolicy;
-  const secondaryPolicy = isPrimaryExport ? peer.importPolicy : peer.exportPolicy;
+function PolicyTabContent({ peer, detail }: { peer: DiscoveryBgpPeer; detail?: DiscoveryBgpPeerDetails }) {
+  const isPrimaryExport = detail?.primaryDirection ? detail.primaryDirection === "export" : peer.role === "provider" || peer.role === "ix" || peer.role === "cdn";
+  const primaryPolicy = detail?.primaryPolicy ?? (isPrimaryExport ? peer.exportPolicy : peer.importPolicy);
+  const secondaryPolicy = detail?.secondaryPolicy ?? (isPrimaryExport ? peer.importPolicy : peer.exportPolicy);
 
   return (
     <div className="space-y-4">
@@ -238,9 +237,20 @@ function PolicyTabContent({ peer }: { peer: NetopsBgpPeer }) {
         </div>
       </div>
 
-      <div className="text-xs text-slate-400 italic pt-2">
-        Estrutura de nodes (if-match, apply, communities) será disponível após parsing de running-config.
-      </div>
+      {detail?.routePolicyNodes?.length ? (
+        <div className="space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Nodes</div>
+          {detail.routePolicyNodes.map((node, index) => (
+            <div key={index} className="rounded-lg bg-slate-900/50 border border-slate-800 p-3 text-xs text-slate-300">
+              Seq {node.sequence ?? "—"} · {node.action ?? "match"}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-xs text-slate-400 italic pt-2">
+          Nenhum node detalhado encontrado no snapshot estruturado.
+        </div>
+      )}
     </div>
   );
 }
@@ -249,7 +259,7 @@ function RoutesTabContent({
   peer,
   isLargeVolume,
 }: {
-  peer: NetopsBgpPeer;
+  peer: DiscoveryBgpPeer;
   isLargeVolume: boolean;
 }) {
   return (
@@ -275,7 +285,7 @@ function RouteSection({
   isLargeVolume,
 }: {
   title: string;
-  total?: number;
+  total?: number | null;
   isLargeVolume: boolean;
 }) {
   return (
@@ -319,7 +329,7 @@ function RouteSection({
   );
 }
 
-function ReferencesTabContent({ peer }: { peer: NetopsBgpPeer }) {
+function ReferencesTabContent({ peer }: { peer: DiscoveryBgpPeer }) {
   return (
     <div className="space-y-4">
       <DetailLine label="Peer IP" value={peer.peerIp} mono />
@@ -332,6 +342,8 @@ function ReferencesTabContent({ peer }: { peer: NetopsBgpPeer }) {
       <DetailLine label="Export Policy" value={peer.exportPolicy || "—"} mono />
       <DetailLine label="Estado" value={peer.state || "—"} />
       <DetailLine label="Source" value={peer.source || "—"} />
+      <DetailLine label="Confidence" value={peer.confidence || "—"} />
+      <DetailLine label="Evidence" value={peer.evidence || "—"} mono />
     </div>
   );
 }

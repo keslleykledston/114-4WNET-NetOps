@@ -67,7 +67,7 @@ export function DeviceFormDialog({
         password: "",
         site: device.site,
         role: device.role ?? "",
-        snmpCommunity: device.snmpCommunity ?? "",
+        snmpCommunity: "",
         sshPort: device.sshPort,
       });
       return;
@@ -79,7 +79,7 @@ export function DeviceFormDialog({
   const title = mode === "create" ? "Cadastrar Novo Dispositivo" : `Editar ${device?.hostname ?? "Dispositivo"}`;
   const description = mode === "create"
     ? "Preencha credenciais SSH e, opcionalmente, a comunidade SNMP."
-    : "Atualize dados de acesso. Senha em branco mantém a atual.";
+    : "Atualize dados de acesso. Senha e comunidade SNMP em branco mantêm os valores atuais.";
   const submitLabel = mode === "create" ? "Adicionar Dispositivo" : "Salvar Alterações";
 
   return (
@@ -192,7 +192,7 @@ export function DeviceFormDialog({
               <Input
                 value={form.snmpCommunity}
                 onChange={(event) => setForm({ ...form, snmpCommunity: event.target.value })}
-                placeholder="public"
+                placeholder={mode === "edit" ? "Deixe em branco para manter" : "public"}
               />
             </FormField>
           </div>

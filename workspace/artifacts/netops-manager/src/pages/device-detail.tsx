@@ -18,6 +18,7 @@ import { Server, Activity, ShieldCheck, Rocket, Terminal, History, ChevronRight,
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
+import { DiscoveryPanel } from "@/features/device-discovery/discovery-panel";
 
 export default function DeviceDetail() {
   const [, params] = useRoute("/devices/:id");
@@ -56,8 +57,11 @@ export default function DeviceDetail() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || "",
-      snmpCommunity: values.snmpCommunity,
     };
+
+    if (values.snmpCommunity.trim().length > 0) {
+      payload.snmpCommunity = values.snmpCommunity;
+    }
 
     if (values.password.trim().length > 0) {
       payload.password = values.password;
@@ -180,12 +184,13 @@ export default function DeviceDetail() {
                   </div>
                   <div>
                     <div className="text-muted-foreground mb-1">SNMP Community</div>
-                    <div>{device.snmpCommunity || 'Not configured'}</div>
+                    <div>Not exposed</div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+          <DiscoveryPanel device={device} />
         </TabsContent>
 
         <TabsContent value="config" className="mt-6">

@@ -13,6 +13,7 @@
 - FASE 5 concluida: SNMP read-only real ativo, 78 BGP peers IPv4 coletados, schemas + diagnostics.
 - FASE 5.1.fix concluida: IF-MIB agora coleta 164 interfaces. Root cause: net-snmp doneCallback passa varbind array em error param. Fix: type-check error antes de rejeitar.
 - FASE 5.2 planejada: inventario persistido (interfaces/vrfs/config), SSH config collection read-only.
+- FASE 5.3 concluida: Device Discovery persistente com `discovery_runs`, `discovery_snapshots`, `discovery_evidence`, OpenAPI atualizado e client Orval regenerado.
 - FASE 6 planejada: BGP import policy editor preview (seguro, sem apply), route-policy parser, community library read-only.
 - FASE 7 planejada: apply real com RBAC, duplo check, auditoria completa, SSH write controlado.
 - FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.
@@ -635,3 +636,11 @@ Objetivo: migrar favicon/icone K3G do `60-bgp_manager` sem trocar layout, tema o
 - Nunca usar `docker compose down -v`, `docker volume rm`, reset de banco ou apagar migrations sem pedido explicito e backup confirmado.
 - Antes de FASE 4, escrever testes/fixtures para parser.
 - Antes de qualquer acao SSH write, exigir preview, auditoria e confirmacao explicita.
+
+## Discovery SSH/SNMP implementado nesta fase
+
+- [x] Adicionar modulo read-only `device-discovery` com SSH primary e SNMP fallback/complement.
+- [x] Expor peers BGP e detalhes normalizados sem CLI/OID cru para o frontend.
+- [x] Proteger consultas de rotas contra full dump automatico.
+- [ ] Persistir discovery/evidencias em tabelas dedicadas.
+- [ ] Completar parsers Huawei VRP para nodes de route-policy, community-list, L2VC e VSI.

@@ -53,3 +53,11 @@
 - Adicionar um item de menu em `layout.tsx` sem reescrever sidebar.
 - Usar `Card`, `Badge`, `Table`, `Skeleton`, `Button`, `Tabs`, `Separator`.
 - Usar `lucide-react` para icones discretos.
+
+## Baseline apos discovery
+
+- Device detail inclui bloco `Discovery` no overview.
+- BGP panel mantem tabela densa e filtros existentes, mas busca peers no endpoint estruturado de discovery.
+- Modal de peer mantem desenho escuro redesenhado e adiciona source/confidence/evidence curta.
+- Discovery panel mostra status persistido, fontes SSH/SNMP/cache, data do ultimo run e contadores de interfaces, peers, VRFs, L2VPN e policies.
+- Quando nao ha snapshot persistido, BGP mostra empty state pedindo discovery em vez de tentar interpretar CLI.

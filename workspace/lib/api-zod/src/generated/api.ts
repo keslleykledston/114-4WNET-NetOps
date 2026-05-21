@@ -1231,3 +1231,346 @@ export const GetNetopsDeviceLatestSnmpSnapshotResponse = zod.object({
 })
 
 
+/**
+ * @summary Run read-only device discovery
+ */
+export const DiscoverDeviceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DiscoverDeviceBody = zod.object({
+  "contexts": zod.array(zod.enum(['interfaces', 'bgp', 'l2vpn', 'policies', 'vrfs'])),
+  "preferLiveSsh": zod.boolean(),
+  "allowSnmpFallback": zod.boolean(),
+  "useCachedConfig": zod.boolean()
+})
+
+
+/**
+ * @summary Get latest persisted device discovery snapshot
+ */
+export const GetDeviceDiscoverySnapshotParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDeviceDiscoverySnapshotResponse = zod.union([zod.object({
+  "deviceId": zod.number(),
+  "discoveryRunId": zod.string(),
+  "status": zod.enum(['full', 'partial', 'fallback', 'cached', 'failed']),
+  "contexts": zod.array(zod.string()),
+  "startedAt": zod.string(),
+  "finishedAt": zod.string(),
+  "sourceStatus": zod.object({
+  "ssh": zod.enum(['success', 'failed', 'skipped']),
+  "snmp": zod.enum(['success', 'failed', 'skipped']),
+  "cachedConfig": zod.enum(['used', 'available', 'missing', 'skipped'])
+}),
+  "persistedRunId": zod.number().optional(),
+  "persistedSnapshotId": zod.number().nullish(),
+  "cachedFromPersistedSnapshot": zod.boolean().optional(),
+  "sourcesUsed": zod.array(zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox'])),
+  "interfaces": zod.array(zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "alias": zod.string().nullish(),
+  "rawDescr": zod.string().nullish(),
+  "adminStatus": zod.enum(['up', 'down', 'unknown']),
+  "operStatus": zod.enum(['up', 'down', 'unknown']),
+  "ipv4": zod.array(zod.string()),
+  "ipv6": zod.array(zod.string()),
+  "vlan": zod.number().nullish(),
+  "vrf": zod.string().nullish(),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db']),
+  "ifIndex": zod.number().optional(),
+  "kind": zod.enum(['physical', 'aggregate', 'subinterface', 'vlanif', 'loopback', 'tunnel', 'virtual_template', 'null', 'other']).optional(),
+  "parentInterface": zod.string().optional(),
+  "vlanId": zod.number().optional(),
+  "encapsulation": zod.string().optional()
+}).and(zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+})).and(zod.object({
+  "exists": zod.boolean()
+}))),
+  "bgpPeers": zod.array(zod.object({
+  "peerIp": zod.string(),
+  "remoteAs": zod.number().nullish(),
+  "description": zod.string().nullish(),
+  "name": zod.string().nullish(),
+  "state": zod.enum(['Established', 'Idle', 'Active', 'Connect', 'Unknown']),
+  "role": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "roleSource": zod.enum(['manual_override', 'classifier', 'snapshot', 'unknown']),
+  "addressFamily": zod.enum(['ipv4', 'ipv6', 'unknown']),
+  "sessionType": zod.enum(['iBGP', 'eBGP', 'unknown']),
+  "vrf": zod.string().nullish(),
+  "importPolicy": zod.string().nullish(),
+  "exportPolicy": zod.string().nullish(),
+  "receivedPrefixes": zod.number().nullish(),
+  "advertisedPrefixes": zod.number().nullish(),
+  "activePrefixes": zod.number().nullish(),
+  "uptime": zod.string().nullish(),
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional(),
+  "category": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "primaryDirection": zod.enum(['import', 'export', 'internal']),
+  "largeReceivedRoutes": zod.boolean(),
+  "largeAdvertisedRoutes": zod.boolean(),
+  "autoLoadRoutes": zod.literal(false),
+  "requiresExplicitRouteSearch": zod.boolean()
+})),
+  "policies": zod.array(zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+}).and(zod.object({
+  "name": zod.string(),
+  "nodes": zod.array(zod.object({
+  "sequence": zod.number().nullable(),
+  "action": zod.string().nullable(),
+  "matches": zod.array(zod.string()),
+  "applies": zod.array(zod.string()),
+  "evidence": zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+})
+}))
+}))),
+  "communities": zod.array(zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+}).and(zod.object({
+  "name": zod.string(),
+  "entries": zod.array(zod.unknown())
+}))),
+  "communityLists": zod.array(zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+}).and(zod.object({
+  "name": zod.string(),
+  "entries": zod.array(zod.unknown())
+}))),
+  "prefixLists": zod.array(zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+}).and(zod.object({
+  "name": zod.string(),
+  "entries": zod.array(zod.unknown())
+}))),
+  "vrfs": zod.array(zod.unknown()),
+  "l2vpn": zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+}).and(zod.object({
+  "l2vcs": zod.array(zod.unknown()),
+  "vsis": zod.array(zod.unknown())
+})),
+  "warnings": zod.array(zod.object({
+  "level": zod.enum(['info', 'warning', 'error']),
+  "message": zod.string(),
+  "source": zod.string()
+})),
+  "audit": zod.array(zod.object({
+  "level": zod.enum(['info', 'warning', 'error']),
+  "message": zod.string(),
+  "source": zod.string()
+}))
+}),zod.null()])
+
+
+/**
+ * @summary List normalized BGP peers from discovery
+ */
+export const ListDeviceBgpPeersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListDeviceBgpPeersQueryParams = zod.object({
+  "category": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']).optional()
+})
+
+export const ListDeviceBgpPeersResponseItem = zod.object({
+  "peerIp": zod.string(),
+  "remoteAs": zod.number().nullish(),
+  "description": zod.string().nullish(),
+  "name": zod.string().nullish(),
+  "state": zod.enum(['Established', 'Idle', 'Active', 'Connect', 'Unknown']),
+  "role": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "roleSource": zod.enum(['manual_override', 'classifier', 'snapshot', 'unknown']),
+  "addressFamily": zod.enum(['ipv4', 'ipv6', 'unknown']),
+  "sessionType": zod.enum(['iBGP', 'eBGP', 'unknown']),
+  "vrf": zod.string().nullish(),
+  "importPolicy": zod.string().nullish(),
+  "exportPolicy": zod.string().nullish(),
+  "receivedPrefixes": zod.number().nullish(),
+  "advertisedPrefixes": zod.number().nullish(),
+  "activePrefixes": zod.number().nullish(),
+  "uptime": zod.string().nullish(),
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional(),
+  "category": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "primaryDirection": zod.enum(['import', 'export', 'internal']),
+  "largeReceivedRoutes": zod.boolean(),
+  "largeAdvertisedRoutes": zod.boolean(),
+  "autoLoadRoutes": zod.literal(false),
+  "requiresExplicitRouteSearch": zod.boolean()
+})
+export const ListDeviceBgpPeersResponse = zod.array(ListDeviceBgpPeersResponseItem)
+
+
+/**
+ * @summary Get normalized BGP peer details
+ */
+export const GetDeviceBgpPeerDetailsParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const GetDeviceBgpPeerDetailsResponse = zod.object({
+  "peer": zod.object({
+  "peerIp": zod.string(),
+  "remoteAs": zod.number().nullish(),
+  "description": zod.string().nullish(),
+  "name": zod.string().nullish(),
+  "state": zod.enum(['Established', 'Idle', 'Active', 'Connect', 'Unknown']),
+  "role": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "roleSource": zod.enum(['manual_override', 'classifier', 'snapshot', 'unknown']),
+  "addressFamily": zod.enum(['ipv4', 'ipv6', 'unknown']),
+  "sessionType": zod.enum(['iBGP', 'eBGP', 'unknown']),
+  "vrf": zod.string().nullish(),
+  "importPolicy": zod.string().nullish(),
+  "exportPolicy": zod.string().nullish(),
+  "receivedPrefixes": zod.number().nullish(),
+  "advertisedPrefixes": zod.number().nullish(),
+  "activePrefixes": zod.number().nullish(),
+  "uptime": zod.string().nullish(),
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional(),
+  "category": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "primaryDirection": zod.enum(['import', 'export', 'internal']),
+  "largeReceivedRoutes": zod.boolean(),
+  "largeAdvertisedRoutes": zod.boolean(),
+  "autoLoadRoutes": zod.literal(false),
+  "requiresExplicitRouteSearch": zod.boolean()
+}),
+  "category": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "primaryDirection": zod.enum(['import', 'export', 'internal']),
+  "importPolicy": zod.string().nullable(),
+  "exportPolicy": zod.string().nullable(),
+  "primaryPolicy": zod.string().nullable(),
+  "secondaryPolicy": zod.string().nullable(),
+  "routePolicyNodes": zod.array(zod.object({
+  "sequence": zod.number().nullable(),
+  "action": zod.string().nullable(),
+  "matches": zod.array(zod.string()),
+  "applies": zod.array(zod.string()),
+  "evidence": zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+})
+})),
+  "referencedIpPrefixes": zod.array(zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+}).and(zod.object({
+  "name": zod.string(),
+  "entries": zod.array(zod.unknown())
+}))).optional(),
+  "referencedCommunityFilters": zod.array(zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+}).and(zod.object({
+  "name": zod.string(),
+  "entries": zod.array(zod.unknown())
+}))).optional(),
+  "referencedCommunityLists": zod.array(zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+}).and(zod.object({
+  "name": zod.string(),
+  "entries": zod.array(zod.unknown())
+}))).optional(),
+  "routeCounters": zod.object({
+  "receivedRoutes": zod.number().nullable(),
+  "advertisedRoutes": zod.number().nullable(),
+  "largeReceivedRoutes": zod.boolean(),
+  "largeAdvertisedRoutes": zod.boolean(),
+  "autoLoadRoutes": zod.literal(false),
+  "requiresExplicitRouteSearch": zod.boolean()
+}),
+  "operationalState": zod.string(),
+  "protections": zod.object({
+  "noFullDumpAutomatic": zod.literal(true),
+  "sampleLimit": zod.number(),
+  "maxAutoRoutes": zod.number()
+}),
+  "evidence": zod.array(zod.object({
+  "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Protected route query for a BGP peer
+ */
+export const QueryDeviceBgpPeerRoutesParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const queryDeviceBgpPeerRoutesBodyLimitDefault = 200;
+export const queryDeviceBgpPeerRoutesBodyLimitMax = 200;
+
+export const queryDeviceBgpPeerRoutesBodyOffsetDefault = 0;
+export const queryDeviceBgpPeerRoutesBodyPageDefault = 1;
+
+export const QueryDeviceBgpPeerRoutesBody = zod.object({
+  "direction": zod.enum(['received', 'advertised']).optional(),
+  "filter": zod.string().optional().describe('Reserved for future use'),
+  "limit": zod.number().max(queryDeviceBgpPeerRoutesBodyLimitMax).default(queryDeviceBgpPeerRoutesBodyLimitDefault),
+  "offset": zod.number().default(queryDeviceBgpPeerRoutesBodyOffsetDefault),
+  "page": zod.number().default(queryDeviceBgpPeerRoutesBodyPageDefault)
+})
+
+export const QueryDeviceBgpPeerRoutesResponse = zod.object({
+  "peerIp": zod.string(),
+  "peerName": zod.string().optional(),
+  "direction": zod.enum(['received', 'advertised']),
+  "source": zod.enum(['ssh']),
+  "status": zod.enum(['ok', 'error']),
+  "total": zod.number(),
+  "page": zod.number(),
+  "limit": zod.number(),
+  "hasNextPage": zod.boolean(),
+  "hasPreviousPage": zod.boolean(),
+  "excessWarning": zod.boolean(),
+  "warningMessage": zod.string().optional(),
+  "items": zod.array(zod.object({
+  "prefix": zod.string(),
+  "asPathType": zod.string(),
+  "asPath": zod.array(zod.string()),
+  "origin": zod.string().optional(),
+  "localPref": zod.number().optional(),
+  "med": zod.number().optional(),
+  "source": zod.enum(['ssh']),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "evidence": zod.string()
+})),
+  "errorMessage": zod.string().optional()
+})
+
+

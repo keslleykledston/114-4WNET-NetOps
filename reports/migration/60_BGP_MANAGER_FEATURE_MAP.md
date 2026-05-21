@@ -65,3 +65,16 @@
 - Arvore operacional visual dentro do layout atual.
 - Placeholders funcionais para Interfaces, BGP, Operadoras, Clientes, CDN/IX, Filters e Communities.
 - Nenhuma integracao SNMP/SSH nova nesta etapa.
+
+## Discovery read-only implementado depois da etapa visual
+
+- `POST /api/devices/:id/discover`
+- `GET /api/devices/:id/discovery-snapshot`
+- `GET /api/devices/:id/bgp/peers?category=customer`
+- `GET /api/devices/:id/bgp/peers/:peerIp/details`
+- `POST /api/devices/:id/bgp/peers/:peerIp/routes/query`
+- Frontend BGP passa a consumir objetos estruturados de discovery.
+- Persistencia local adicionada em `discovery_runs`, `discovery_snapshots` e `discovery_evidence`.
+- OpenAPI/Orval atualizado para os endpoints de discovery.
+- Parser Huawei VRP cobre primeira melhoria de route-policy nodes, community-filter/list e L2VC/VSI basico.
+- Ainda pendente: parser Huawei VRP completo e busca viva protegida de rotas.

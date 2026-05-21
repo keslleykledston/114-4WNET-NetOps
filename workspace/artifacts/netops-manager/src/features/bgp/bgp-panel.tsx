@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListNetopsDeviceBgpPeersQueryKey,
-  useListNetopsDeviceBgpPeers,
   useUpdateNetopsDeviceBgpPeerRole,
 } from "@workspace/api-client-react";
 import type {
@@ -26,9 +25,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { FileSearch, Network, Save, Search } from "lucide-react";
+import { Download, FileSearch, Network, Save, Search } from "lucide-react";
 import { BgpPeerModal } from "./bgp-peer-modal";
+import { BgpPeerRoutesModal } from "./bgp-peer-routes-modal";
 import { CollectSnmpButton } from "@/features/device-inventory/collect-snmp-button";
+import { useDiscoveryBgpPeers, type DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
 
 interface BgpPanelProps {
   device: Device;
@@ -87,11 +88,11 @@ interface StoredBgpFilters {
   includeIbgp: boolean;
 }
 
-function peerEditKey(peer: Pick<NetopsBgpPeer, "peerIp" | "addressFamily">): string {
+function peerEditKey(peer: Pick<DiscoveryBgpPeer, "peerIp" | "addressFamily">): string {
   return `${peer.peerIp}|${peer.addressFamily}`;
 }
 
-function peerMatchesSearch(peer: NetopsBgpPeer, search: string): boolean {
+function peerMatchesSearch(peer: DiscoveryBgpPeer, search: string): boolean {
   const term = search.trim().toLowerCase();
   if (!term) return true;
   return [
@@ -137,15 +138,18 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   const [includeIbgp, setIncludeIbgp] = useState(role === "ibgp");
   const [editedRoles, setEditedRoles] = useState<Record<string, NetopsBgpPeerRole>>({});
   const [savingPeer, setSavingPeer] = useState<string | null>(null);
-  const [modalPeer, setModalPeer] = useState<NetopsBgpPeer | null>(null);
+  const [modalPeer, setModalPeer] = useState<DiscoveryBgpPeer | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [routesModalPeer, setRoutesModalPeer] = useState<DiscoveryBgpPeer | null>(null);
+  const [routesModalOpen, setRoutesModalOpen] = useState(false);
+  const [routesDirection, setRoutesDirection] = useState<"received" | "advertised">("received");
 
   const listParams = useMemo(
     () => buildListParams(role, stateFilter, afFilter),
     [afFilter, role, stateFilter],
   );
 
-  const { data: peers, isLoading, isError } = useListNetopsDeviceBgpPeers(device.id, listParams);
+  const { data: peers, isLoading, isError } = useDiscoveryBgpPeers(device.id, role);
 
   useEffect(() => {
     if (!peers) return;
@@ -244,12 +248,18 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
     };
   }, [editedRoles, includeIbgp, peers]);
 
-  function openPeerModal(peer: NetopsBgpPeer) {
+  function openPeerModal(peer: DiscoveryBgpPeer) {
     setModalPeer(peer);
     setModalOpen(true);
   }
 
-  function saveRole(peer: NetopsBgpPeer) {
+  function openRoutesModal(peer: DiscoveryBgpPeer, direction: "received" | "advertised") {
+    setRoutesModalPeer(peer);
+    setRoutesDirection(direction);
+    setRoutesModalOpen(true);
+  }
+
+  function saveRole(peer: DiscoveryBgpPeer) {
     const selectedRole = editedRoles[peerEditKey(peer)];
     if (!selectedRole || selectedRole === peer.role) return;
     setSavingPeer(peerEditKey(peer));
@@ -380,7 +390,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
           <Skeleton className="h-44 w-full" />
         ) : isError ? (
           <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-            Falha ao carregar peers BGP.
+            Execute discovery para carregar peers BGP.
           </div>
         ) : !filteredPeers.length ? (
           <div className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">
@@ -408,7 +418,34 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                   const saving = savingPeer === peerEditKey(peer);
                   return (
                     <TableRow key={`${peer.peerIp}-${peer.remoteAs ?? "na"}-${peer.addressFamily}`}>
-                      <TableCell className="font-mono text-xs">{peer.peerIp}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        <div className="flex items-center gap-2">
+                          <span>{peer.peerIp}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-slate-800"
+                            onClick={() => openPeerModal(peer)}
+                            title="Detalhes do peer"
+                          >
+                            <FileSearch className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-slate-800"
+                            onClick={() => {
+                              const direction = peer.role === "customer" ? "received" : "advertised";
+                              openRoutesModal(peer, direction);
+                            }}
+                            title={peer.role === "customer" ? "Prefixos recebidos (SSH)" : "Prefixos advertidos (SSH)"}
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell>{peer.name ?? peer.description ?? "-"}</TableCell>
                       <TableCell>{peer.remoteAs ?? "-"}</TableCell>
                       <TableCell>
@@ -458,16 +495,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 px-2 text-[11px]"
-                          onClick={() => openPeerModal(peer)}
-                        >
-                          <FileSearch className="h-3.5 w-3.5 mr-1" />
-                          Detalhes
-                        </Button>
+                        <span className="text-[10px] text-muted-foreground">{peer.source} / {peer.confidence}</span>
                       </TableCell>
                     </TableRow>
                   );
@@ -484,6 +512,14 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
         open={modalOpen}
         onOpenChange={setModalOpen}
       />
+
+      <BgpPeerRoutesModal
+        device={device}
+        peer={routesModalPeer}
+        direction={routesDirection}
+        isOpen={routesModalOpen}
+        onClose={() => setRoutesModalOpen(false)}
+      />
     </Card>
   );
 }
@@ -498,7 +534,7 @@ function Counter({ label, value }: { label: string; value: number }) {
 }
 
 function countRoleWithEdits(
-  peers: NetopsBgpPeer[],
+  peers: DiscoveryBgpPeer[],
   editedRoles: Record<string, NetopsBgpPeerRole>,
   role: NetopsBgpPeerRole,
 ): number {

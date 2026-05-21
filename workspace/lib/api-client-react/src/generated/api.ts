@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BgpPeerDetails,
+  BgpPeerSummary,
   CollectConfigInput,
   CollectedConfig,
   ComplianceJob,
@@ -34,6 +36,8 @@ import type {
   ConfigTemplateUpdate,
   ConnectionTestResult,
   Device,
+  DeviceDiscoveryRequest,
+  DeviceDiscoverySnapshot,
   DeviceGroup,
   DeviceGroupInput,
   DeviceGroupUpdate,
@@ -44,6 +48,7 @@ import type {
   ListCollectedConfigsParams,
   ListComplianceJobsParams,
   ListConfigTemplatesParams,
+  ListDeviceBgpPeersParams,
   ListDevicesParams,
   ListNetopsDeviceBgpPeersParams,
   ListProvisioningJobsParams,
@@ -68,6 +73,8 @@ import type {
   ProvisioningJobDetail,
   ProvisioningJobInput,
   ProvisioningStats,
+  RouteQueryRequest,
+  RouteQueryResponse,
   SnmpSnapshot,
   TemplateRenderInput,
   TemplateRenderResult,
@@ -4495,4 +4502,398 @@ export function useGetNetopsDeviceLatestSnmpSnapshot<TData = Awaited<ReturnType<
 
 
 
+
+export const getDiscoverDeviceUrl = (id: number,) => {
+
+
+
+
+  return `/api/devices/${id}/discover`
+}
+
+/**
+ * @summary Run read-only device discovery
+ */
+export const discoverDevice = async (id: number,
+    deviceDiscoveryRequest: DeviceDiscoveryRequest, options?: RequestInit): Promise<DeviceDiscoverySnapshot> => {
+
+  return customFetch<DeviceDiscoverySnapshot>(getDiscoverDeviceUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deviceDiscoveryRequest,)
+  }
+);}
+
+
+
+
+export const getDiscoverDeviceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof discoverDevice>>, TError,{id: number;data: BodyType<DeviceDiscoveryRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof discoverDevice>>, TError,{id: number;data: BodyType<DeviceDiscoveryRequest>}, TContext> => {
+
+const mutationKey = ['discoverDevice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof discoverDevice>>, {id: number;data: BodyType<DeviceDiscoveryRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  discoverDevice(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DiscoverDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof discoverDevice>>>
+    export type DiscoverDeviceMutationBody = BodyType<DeviceDiscoveryRequest>
+    export type DiscoverDeviceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Run read-only device discovery
+ */
+export const useDiscoverDevice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof discoverDevice>>, TError,{id: number;data: BodyType<DeviceDiscoveryRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof discoverDevice>>,
+        TError,
+        {id: number;data: BodyType<DeviceDiscoveryRequest>},
+        TContext
+      > => {
+      return useMutation(getDiscoverDeviceMutationOptions(options));
+    }
+
+export const getGetDeviceDiscoverySnapshotUrl = (id: number,) => {
+
+
+
+
+  return `/api/devices/${id}/discovery-snapshot`
+}
+
+/**
+ * @summary Get latest persisted device discovery snapshot
+ */
+export const getDeviceDiscoverySnapshot = async (id: number, options?: RequestInit): Promise<DeviceDiscoverySnapshot | null> => {
+
+  return customFetch<DeviceDiscoverySnapshot | null>(getGetDeviceDiscoverySnapshotUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeviceDiscoverySnapshotQueryKey = (id: number,) => {
+    return [
+    `/api/devices/${id}/discovery-snapshot`
+    ] as const;
+    }
+
+
+export const getGetDeviceDiscoverySnapshotQueryOptions = <TData = Awaited<ReturnType<typeof getDeviceDiscoverySnapshot>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeviceDiscoverySnapshot>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeviceDiscoverySnapshotQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeviceDiscoverySnapshot>>> = ({ signal }) => getDeviceDiscoverySnapshot(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeviceDiscoverySnapshot>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDeviceDiscoverySnapshotQueryResult = NonNullable<Awaited<ReturnType<typeof getDeviceDiscoverySnapshot>>>
+export type GetDeviceDiscoverySnapshotQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get latest persisted device discovery snapshot
+ */
+
+export function useGetDeviceDiscoverySnapshot<TData = Awaited<ReturnType<typeof getDeviceDiscoverySnapshot>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeviceDiscoverySnapshot>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDeviceDiscoverySnapshotQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListDeviceBgpPeersUrl = (id: number,
+    params?: ListDeviceBgpPeersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/devices/${id}/bgp/peers?${stringifiedParams}` : `/api/devices/${id}/bgp/peers`
+}
+
+/**
+ * @summary List normalized BGP peers from discovery
+ */
+export const listDeviceBgpPeers = async (id: number,
+    params?: ListDeviceBgpPeersParams, options?: RequestInit): Promise<BgpPeerSummary[]> => {
+
+  return customFetch<BgpPeerSummary[]>(getListDeviceBgpPeersUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDeviceBgpPeersQueryKey = (id: number,
+    params?: ListDeviceBgpPeersParams,) => {
+    return [
+    `/api/devices/${id}/bgp/peers`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDeviceBgpPeersQueryOptions = <TData = Awaited<ReturnType<typeof listDeviceBgpPeers>>, TError = ErrorType<unknown>>(id: number,
+    params?: ListDeviceBgpPeersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeviceBgpPeers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDeviceBgpPeersQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeviceBgpPeers>>> = ({ signal }) => listDeviceBgpPeers(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDeviceBgpPeers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDeviceBgpPeersQueryResult = NonNullable<Awaited<ReturnType<typeof listDeviceBgpPeers>>>
+export type ListDeviceBgpPeersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List normalized BGP peers from discovery
+ */
+
+export function useListDeviceBgpPeers<TData = Awaited<ReturnType<typeof listDeviceBgpPeers>>, TError = ErrorType<unknown>>(
+ id: number,
+    params?: ListDeviceBgpPeersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeviceBgpPeers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDeviceBgpPeersQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetDeviceBgpPeerDetailsUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/devices/${id}/bgp/peers/${peerIp}/details`
+}
+
+/**
+ * @summary Get normalized BGP peer details
+ */
+export const getDeviceBgpPeerDetails = async (id: number,
+    peerIp: string, options?: RequestInit): Promise<BgpPeerDetails> => {
+
+  return customFetch<BgpPeerDetails>(getGetDeviceBgpPeerDetailsUrl(id,peerIp),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeviceBgpPeerDetailsQueryKey = (id: number,
+    peerIp: string,) => {
+    return [
+    `/api/devices/${id}/bgp/peers/${peerIp}/details`
+    ] as const;
+    }
+
+
+export const getGetDeviceBgpPeerDetailsQueryOptions = <TData = Awaited<ReturnType<typeof getDeviceBgpPeerDetails>>, TError = ErrorType<unknown>>(id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeviceBgpPeerDetails>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeviceBgpPeerDetailsQueryKey(id,peerIp);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeviceBgpPeerDetails>>> = ({ signal }) => getDeviceBgpPeerDetails(id,peerIp, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && peerIp), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeviceBgpPeerDetails>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDeviceBgpPeerDetailsQueryResult = NonNullable<Awaited<ReturnType<typeof getDeviceBgpPeerDetails>>>
+export type GetDeviceBgpPeerDetailsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get normalized BGP peer details
+ */
+
+export function useGetDeviceBgpPeerDetails<TData = Awaited<ReturnType<typeof getDeviceBgpPeerDetails>>, TError = ErrorType<unknown>>(
+ id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeviceBgpPeerDetails>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDeviceBgpPeerDetailsQueryOptions(id,peerIp,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getQueryDeviceBgpPeerRoutesUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/devices/${id}/bgp/peers/${peerIp}/routes/query`
+}
+
+/**
+ * @summary Protected route query for a BGP peer
+ */
+export const queryDeviceBgpPeerRoutes = async (id: number,
+    peerIp: string,
+    routeQueryRequest?: RouteQueryRequest, options?: RequestInit): Promise<RouteQueryResponse> => {
+
+  return customFetch<RouteQueryResponse>(getQueryDeviceBgpPeerRoutesUrl(id,peerIp),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      routeQueryRequest,)
+  }
+);}
+
+
+
+
+export const getQueryDeviceBgpPeerRoutesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof queryDeviceBgpPeerRoutes>>, TError,{id: number;peerIp: string;data?: BodyType<RouteQueryRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof queryDeviceBgpPeerRoutes>>, TError,{id: number;peerIp: string;data?: BodyType<RouteQueryRequest>}, TContext> => {
+
+const mutationKey = ['queryDeviceBgpPeerRoutes'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof queryDeviceBgpPeerRoutes>>, {id: number;peerIp: string;data?: BodyType<RouteQueryRequest>}> = (props) => {
+          const {id,peerIp,data} = props ?? {};
+
+          return  queryDeviceBgpPeerRoutes(id,peerIp,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type QueryDeviceBgpPeerRoutesMutationResult = NonNullable<Awaited<ReturnType<typeof queryDeviceBgpPeerRoutes>>>
+    export type QueryDeviceBgpPeerRoutesMutationBody = BodyType<RouteQueryRequest> | undefined
+    export type QueryDeviceBgpPeerRoutesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Protected route query for a BGP peer
+ */
+export const useQueryDeviceBgpPeerRoutes = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof queryDeviceBgpPeerRoutes>>, TError,{id: number;peerIp: string;data?: BodyType<RouteQueryRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof queryDeviceBgpPeerRoutes>>,
+        TError,
+        {id: number;peerIp: string;data?: BodyType<RouteQueryRequest>},
+        TContext
+      > => {
+      return useMutation(getQueryDeviceBgpPeerRoutesMutationOptions(options));
+    }
 

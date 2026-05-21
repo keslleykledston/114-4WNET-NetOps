@@ -9,6 +9,494 @@ export interface HealthStatus {
   status: string;
 }
 
+export type DiscoveryStatus = typeof DiscoveryStatus[keyof typeof DiscoveryStatus];
+
+
+export const DiscoveryStatus = {
+  full: 'full',
+  partial: 'partial',
+  fallback: 'fallback',
+  cached: 'cached',
+  failed: 'failed',
+} as const;
+
+export type DiscoverySource = typeof DiscoverySource[keyof typeof DiscoverySource];
+
+
+export const DiscoverySource = {
+  ssh_live: 'ssh_live',
+  ssh_running_config: 'ssh_running_config',
+  manual_upload: 'manual_upload',
+  snmp_snapshot: 'snmp_snapshot',
+  local_db: 'local_db',
+  netbox: 'netbox',
+} as const;
+
+export type DiscoveryConfidence = typeof DiscoveryConfidence[keyof typeof DiscoveryConfidence];
+
+
+export const DiscoveryConfidence = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export interface DiscoveryEvidenceSummary {
+  source: DiscoverySource;
+  confidence: DiscoveryConfidence;
+  evidence?: string;
+}
+
+export type SourceSummarySsh = typeof SourceSummarySsh[keyof typeof SourceSummarySsh];
+
+
+export const SourceSummarySsh = {
+  success: 'success',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+export type SourceSummarySnmp = typeof SourceSummarySnmp[keyof typeof SourceSummarySnmp];
+
+
+export const SourceSummarySnmp = {
+  success: 'success',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+export type SourceSummaryCachedConfig = typeof SourceSummaryCachedConfig[keyof typeof SourceSummaryCachedConfig];
+
+
+export const SourceSummaryCachedConfig = {
+  used: 'used',
+  available: 'available',
+  missing: 'missing',
+  skipped: 'skipped',
+} as const;
+
+export interface SourceSummary {
+  ssh: SourceSummarySsh;
+  snmp: SourceSummarySnmp;
+  cachedConfig: SourceSummaryCachedConfig;
+}
+
+export type DeviceDiscoveryRequestContextsItem = typeof DeviceDiscoveryRequestContextsItem[keyof typeof DeviceDiscoveryRequestContextsItem];
+
+
+export const DeviceDiscoveryRequestContextsItem = {
+  interfaces: 'interfaces',
+  bgp: 'bgp',
+  l2vpn: 'l2vpn',
+  policies: 'policies',
+  vrfs: 'vrfs',
+} as const;
+
+export interface DeviceDiscoveryRequest {
+  contexts: DeviceDiscoveryRequestContextsItem[];
+  preferLiveSsh: boolean;
+  allowSnmpFallback: boolean;
+  useCachedConfig: boolean;
+}
+
+export type DiscoveryWarningLevel = typeof DiscoveryWarningLevel[keyof typeof DiscoveryWarningLevel];
+
+
+export const DiscoveryWarningLevel = {
+  info: 'info',
+  warning: 'warning',
+  error: 'error',
+} as const;
+
+export interface DiscoveryWarning {
+  level: DiscoveryWarningLevel;
+  message: string;
+  source: string;
+}
+
+export interface RoutePolicyNode {
+  /** @nullable */
+  sequence: number | null;
+  /** @nullable */
+  action: string | null;
+  matches: string[];
+  applies: string[];
+  evidence: DiscoveryEvidenceSummary;
+}
+
+export type DiscoveryNamedEntries = DiscoveryEvidenceSummary & {
+  name: string;
+  entries: unknown[];
+};
+
+export type RoutePolicySummary = DiscoveryEvidenceSummary & {
+  name: string;
+  nodes: RoutePolicyNode[];
+};
+
+export type L2vpnSummary = DiscoveryEvidenceSummary & {
+  l2vcs: unknown[];
+  vsis: unknown[];
+};
+
+export type NetopsInterfaceAdminStatus = typeof NetopsInterfaceAdminStatus[keyof typeof NetopsInterfaceAdminStatus];
+
+
+export const NetopsInterfaceAdminStatus = {
+  up: 'up',
+  down: 'down',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsInterfaceOperStatus = typeof NetopsInterfaceOperStatus[keyof typeof NetopsInterfaceOperStatus];
+
+
+export const NetopsInterfaceOperStatus = {
+  up: 'up',
+  down: 'down',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsInterfaceSource = typeof NetopsInterfaceSource[keyof typeof NetopsInterfaceSource];
+
+
+export const NetopsInterfaceSource = {
+  snmp: 'snmp',
+  ssh: 'ssh',
+  snapshot: 'snapshot',
+  mock: 'mock',
+  db: 'db',
+} as const;
+
+export type NetopsInterfaceKind = typeof NetopsInterfaceKind[keyof typeof NetopsInterfaceKind];
+
+
+export const NetopsInterfaceKind = {
+  physical: 'physical',
+  aggregate: 'aggregate',
+  subinterface: 'subinterface',
+  vlanif: 'vlanif',
+  loopback: 'loopback',
+  tunnel: 'tunnel',
+  virtual_template: 'virtual_template',
+  null: 'null',
+  other: 'other',
+} as const;
+
+export interface NetopsInterface {
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  alias?: string | null;
+  /** @nullable */
+  rawDescr?: string | null;
+  adminStatus: NetopsInterfaceAdminStatus;
+  operStatus: NetopsInterfaceOperStatus;
+  ipv4: string[];
+  ipv6: string[];
+  /** @nullable */
+  vlan?: number | null;
+  /** @nullable */
+  vrf?: string | null;
+  source: NetopsInterfaceSource;
+  ifIndex?: number;
+  kind?: NetopsInterfaceKind;
+  parentInterface?: string;
+  vlanId?: number;
+  encapsulation?: string;
+}
+
+export type InterfaceSummary = NetopsInterface & DiscoveryEvidenceSummary & {
+  exists: boolean;
+};
+
+export type BgpPeerSummaryState = typeof BgpPeerSummaryState[keyof typeof BgpPeerSummaryState];
+
+
+export const BgpPeerSummaryState = {
+  Established: 'Established',
+  Idle: 'Idle',
+  Active: 'Active',
+  Connect: 'Connect',
+  Unknown: 'Unknown',
+} as const;
+
+export type BgpPeerSummaryRole = typeof BgpPeerSummaryRole[keyof typeof BgpPeerSummaryRole];
+
+
+export const BgpPeerSummaryRole = {
+  provider: 'provider',
+  customer: 'customer',
+  cdn: 'cdn',
+  ix: 'ix',
+  cdn_ix: 'cdn_ix',
+  ibgp: 'ibgp',
+  unknown: 'unknown',
+} as const;
+
+export type BgpPeerSummaryRoleSource = typeof BgpPeerSummaryRoleSource[keyof typeof BgpPeerSummaryRoleSource];
+
+
+export const BgpPeerSummaryRoleSource = {
+  manual_override: 'manual_override',
+  classifier: 'classifier',
+  snapshot: 'snapshot',
+  unknown: 'unknown',
+} as const;
+
+export type BgpPeerSummaryAddressFamily = typeof BgpPeerSummaryAddressFamily[keyof typeof BgpPeerSummaryAddressFamily];
+
+
+export const BgpPeerSummaryAddressFamily = {
+  ipv4: 'ipv4',
+  ipv6: 'ipv6',
+  unknown: 'unknown',
+} as const;
+
+export type BgpPeerSummarySessionType = typeof BgpPeerSummarySessionType[keyof typeof BgpPeerSummarySessionType];
+
+
+export const BgpPeerSummarySessionType = {
+  iBGP: 'iBGP',
+  eBGP: 'eBGP',
+  unknown: 'unknown',
+} as const;
+
+export type BgpPeerSummaryCategory = typeof BgpPeerSummaryCategory[keyof typeof BgpPeerSummaryCategory];
+
+
+export const BgpPeerSummaryCategory = {
+  provider: 'provider',
+  customer: 'customer',
+  cdn: 'cdn',
+  ix: 'ix',
+  cdn_ix: 'cdn_ix',
+  ibgp: 'ibgp',
+  unknown: 'unknown',
+} as const;
+
+export type BgpPeerSummaryPrimaryDirection = typeof BgpPeerSummaryPrimaryDirection[keyof typeof BgpPeerSummaryPrimaryDirection];
+
+
+export const BgpPeerSummaryPrimaryDirection = {
+  import: 'import',
+  export: 'export',
+  internal: 'internal',
+} as const;
+
+export interface BgpPeerSummary {
+  peerIp: string;
+  /** @nullable */
+  remoteAs?: number | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  name?: string | null;
+  state: BgpPeerSummaryState;
+  role: BgpPeerSummaryRole;
+  roleSource: BgpPeerSummaryRoleSource;
+  addressFamily: BgpPeerSummaryAddressFamily;
+  sessionType: BgpPeerSummarySessionType;
+  /** @nullable */
+  vrf?: string | null;
+  /** @nullable */
+  importPolicy?: string | null;
+  /** @nullable */
+  exportPolicy?: string | null;
+  /** @nullable */
+  receivedPrefixes?: number | null;
+  /** @nullable */
+  advertisedPrefixes?: number | null;
+  /** @nullable */
+  activePrefixes?: number | null;
+  /** @nullable */
+  uptime?: string | null;
+  source: DiscoverySource;
+  confidence: DiscoveryConfidence;
+  evidence?: string;
+  category: BgpPeerSummaryCategory;
+  primaryDirection: BgpPeerSummaryPrimaryDirection;
+  largeReceivedRoutes: boolean;
+  largeAdvertisedRoutes: boolean;
+  autoLoadRoutes: false;
+  requiresExplicitRouteSearch: boolean;
+}
+
+export type BgpPeerDetailsCategory = typeof BgpPeerDetailsCategory[keyof typeof BgpPeerDetailsCategory];
+
+
+export const BgpPeerDetailsCategory = {
+  provider: 'provider',
+  customer: 'customer',
+  cdn: 'cdn',
+  ix: 'ix',
+  cdn_ix: 'cdn_ix',
+  ibgp: 'ibgp',
+  unknown: 'unknown',
+} as const;
+
+export type BgpPeerDetailsPrimaryDirection = typeof BgpPeerDetailsPrimaryDirection[keyof typeof BgpPeerDetailsPrimaryDirection];
+
+
+export const BgpPeerDetailsPrimaryDirection = {
+  import: 'import',
+  export: 'export',
+  internal: 'internal',
+} as const;
+
+export type BgpPeerDetailsRouteCounters = {
+  /** @nullable */
+  receivedRoutes: number | null;
+  /** @nullable */
+  advertisedRoutes: number | null;
+  largeReceivedRoutes: boolean;
+  largeAdvertisedRoutes: boolean;
+  autoLoadRoutes: false;
+  requiresExplicitRouteSearch: boolean;
+};
+
+export type BgpPeerDetailsProtections = {
+  noFullDumpAutomatic: true;
+  sampleLimit: number;
+  maxAutoRoutes: number;
+};
+
+export interface BgpPeerDetails {
+  peer: BgpPeerSummary;
+  category: BgpPeerDetailsCategory;
+  primaryDirection: BgpPeerDetailsPrimaryDirection;
+  /** @nullable */
+  importPolicy: string | null;
+  /** @nullable */
+  exportPolicy: string | null;
+  /** @nullable */
+  primaryPolicy: string | null;
+  /** @nullable */
+  secondaryPolicy: string | null;
+  routePolicyNodes: RoutePolicyNode[];
+  referencedIpPrefixes?: DiscoveryNamedEntries[];
+  referencedCommunityFilters?: DiscoveryNamedEntries[];
+  referencedCommunityLists?: DiscoveryNamedEntries[];
+  routeCounters: BgpPeerDetailsRouteCounters;
+  operationalState: string;
+  protections: BgpPeerDetailsProtections;
+  evidence: DiscoveryEvidenceSummary[];
+}
+
+export interface DeviceDiscoverySnapshot {
+  deviceId: number;
+  discoveryRunId: string;
+  status: DiscoveryStatus;
+  contexts: string[];
+  startedAt: string;
+  finishedAt: string;
+  sourceStatus: SourceSummary;
+  persistedRunId?: number;
+  /** @nullable */
+  persistedSnapshotId?: number | null;
+  cachedFromPersistedSnapshot?: boolean;
+  sourcesUsed: DiscoverySource[];
+  interfaces: InterfaceSummary[];
+  bgpPeers: BgpPeerSummary[];
+  policies: RoutePolicySummary[];
+  communities: DiscoveryNamedEntries[];
+  communityLists: DiscoveryNamedEntries[];
+  prefixLists: DiscoveryNamedEntries[];
+  vrfs: unknown[];
+  l2vpn: L2vpnSummary;
+  warnings: DiscoveryWarning[];
+  audit: DiscoveryWarning[];
+}
+
+export type DeviceDiscoveryResponse = DeviceDiscoverySnapshot;
+
+export type RouteQueryRequestDirection = typeof RouteQueryRequestDirection[keyof typeof RouteQueryRequestDirection];
+
+
+export const RouteQueryRequestDirection = {
+  received: 'received',
+  advertised: 'advertised',
+} as const;
+
+export interface RouteQueryRequest {
+  direction?: RouteQueryRequestDirection;
+  /** Reserved for future use */
+  filter?: string;
+  /** @maximum 200 */
+  limit?: number;
+  offset?: number;
+  page?: number;
+}
+
+export type RouteQueryResponseDirection = typeof RouteQueryResponseDirection[keyof typeof RouteQueryResponseDirection];
+
+
+export const RouteQueryResponseDirection = {
+  received: 'received',
+  advertised: 'advertised',
+} as const;
+
+export type RouteQueryResponseSource = typeof RouteQueryResponseSource[keyof typeof RouteQueryResponseSource];
+
+
+export const RouteQueryResponseSource = {
+  ssh: 'ssh',
+} as const;
+
+export type RouteQueryResponseStatus = typeof RouteQueryResponseStatus[keyof typeof RouteQueryResponseStatus];
+
+
+export const RouteQueryResponseStatus = {
+  ok: 'ok',
+  error: 'error',
+} as const;
+
+export type RouteQueryItemSource = typeof RouteQueryItemSource[keyof typeof RouteQueryItemSource];
+
+
+export const RouteQueryItemSource = {
+  ssh: 'ssh',
+} as const;
+
+export type RouteQueryItemConfidence = typeof RouteQueryItemConfidence[keyof typeof RouteQueryItemConfidence];
+
+
+export const RouteQueryItemConfidence = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export interface RouteQueryItem {
+  prefix: string;
+  asPathType: string;
+  asPath: string[];
+  origin?: string;
+  localPref?: number;
+  med?: number;
+  source: RouteQueryItemSource;
+  confidence: RouteQueryItemConfidence;
+  evidence: string;
+}
+
+export interface RouteQueryResponse {
+  peerIp: string;
+  peerName?: string;
+  direction: RouteQueryResponseDirection;
+  source: RouteQueryResponseSource;
+  status: RouteQueryResponseStatus;
+  total: number;
+  page: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  excessWarning: boolean;
+  warningMessage?: string;
+  items: RouteQueryItem[];
+  errorMessage?: string;
+}
+
 export interface Device {
   id: number;
   hostname: string;
@@ -479,74 +967,6 @@ export interface NetopsDeviceSummary {
   /** @nullable */
   lastSnapshotAt?: string | null;
   deviceKind: NetopsDeviceSummaryDeviceKind;
-}
-
-export type NetopsInterfaceAdminStatus = typeof NetopsInterfaceAdminStatus[keyof typeof NetopsInterfaceAdminStatus];
-
-
-export const NetopsInterfaceAdminStatus = {
-  up: 'up',
-  down: 'down',
-  unknown: 'unknown',
-} as const;
-
-export type NetopsInterfaceOperStatus = typeof NetopsInterfaceOperStatus[keyof typeof NetopsInterfaceOperStatus];
-
-
-export const NetopsInterfaceOperStatus = {
-  up: 'up',
-  down: 'down',
-  unknown: 'unknown',
-} as const;
-
-export type NetopsInterfaceSource = typeof NetopsInterfaceSource[keyof typeof NetopsInterfaceSource];
-
-
-export const NetopsInterfaceSource = {
-  snmp: 'snmp',
-  ssh: 'ssh',
-  snapshot: 'snapshot',
-  mock: 'mock',
-  db: 'db',
-} as const;
-
-export type NetopsInterfaceKind = typeof NetopsInterfaceKind[keyof typeof NetopsInterfaceKind];
-
-
-export const NetopsInterfaceKind = {
-  physical: 'physical',
-  aggregate: 'aggregate',
-  subinterface: 'subinterface',
-  vlanif: 'vlanif',
-  loopback: 'loopback',
-  tunnel: 'tunnel',
-  virtual_template: 'virtual_template',
-  null: 'null',
-  other: 'other',
-} as const;
-
-export interface NetopsInterface {
-  name: string;
-  /** @nullable */
-  description?: string | null;
-  /** @nullable */
-  alias?: string | null;
-  /** @nullable */
-  rawDescr?: string | null;
-  adminStatus: NetopsInterfaceAdminStatus;
-  operStatus: NetopsInterfaceOperStatus;
-  ipv4: string[];
-  ipv6: string[];
-  /** @nullable */
-  vlan?: number | null;
-  /** @nullable */
-  vrf?: string | null;
-  source: NetopsInterfaceSource;
-  ifIndex?: number;
-  kind?: NetopsInterfaceKind;
-  parentInterface?: string;
-  vlanId?: number;
-  encapsulation?: string;
 }
 
 export type NetopsBgpPeerState = typeof NetopsBgpPeerState[keyof typeof NetopsBgpPeerState];
@@ -1065,5 +1485,22 @@ export const ListNetopsDeviceBgpPeersState = {
   Connect: 'Connect',
   Unknown: 'Unknown',
   Down: 'Down',
+} as const;
+
+export type ListDeviceBgpPeersParams = {
+category?: ListDeviceBgpPeersCategory;
+};
+
+export type ListDeviceBgpPeersCategory = typeof ListDeviceBgpPeersCategory[keyof typeof ListDeviceBgpPeersCategory];
+
+
+export const ListDeviceBgpPeersCategory = {
+  provider: 'provider',
+  customer: 'customer',
+  cdn: 'cdn',
+  ix: 'ix',
+  cdn_ix: 'cdn_ix',
+  ibgp: 'ibgp',
+  unknown: 'unknown',
 } as const;
 

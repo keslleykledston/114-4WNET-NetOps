@@ -8,6 +8,7 @@ import provisioningRouter from "./provisioning.js";
 import collectedConfigsRouter from "./collected_configs.js";
 import snmpSnapshotsRouter from "./snmp_snapshots.js";
 import netopsRouter from "../modules/netops/routes.js";
+import discoveryRouter from "../modules/netops/device-discovery/discovery.routes.js";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(provisioningRouter);
 router.use(collectedConfigsRouter);
 router.use(snmpSnapshotsRouter);
 router.use(netopsRouter);
+router.use(discoveryRouter);
 
 export default router;

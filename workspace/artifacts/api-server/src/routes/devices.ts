@@ -19,6 +19,16 @@ import { collectedConfigsTable } from "@workspace/db";
 
 const router = Router();
 
+function publicDevice<T extends { snmpCommunity?: string | null; lastSeen?: Date | null; createdAt: Date; updatedAt: Date }>(device: T) {
+  return {
+    ...device,
+    snmpCommunity: null,
+    lastSeen: device.lastSeen?.toISOString() ?? null,
+    createdAt: device.createdAt.toISOString(),
+    updatedAt: device.updatedAt.toISOString(),
+  };
+}
+
 router.get("/devices", async (req, res) => {
   const query = ListDevicesQueryParams.safeParse(req.query);
   const devices = await db.select({
@@ -49,12 +59,7 @@ router.get("/devices", async (req, res) => {
     return true;
   });
 
-  res.json(filtered.map(d => ({
-    ...d,
-    lastSeen: d.lastSeen?.toISOString() ?? null,
-    createdAt: d.createdAt.toISOString(),
-    updatedAt: d.updatedAt.toISOString(),
-  })));
+  res.json(filtered.map(publicDevice));
 });
 
 router.post("/devices", async (req, res) => {
@@ -71,12 +76,7 @@ router.post("/devices", async (req, res) => {
     passwordEncrypted: encrypt(password),
     status: "unknown",
   }).returning();
-  res.status(201).json({
-    ...device,
-    lastSeen: device.lastSeen?.toISOString() ?? null,
-    createdAt: device.createdAt.toISOString(),
-    updatedAt: device.updatedAt.toISOString(),
-  });
+  res.status(201).json(publicDevice(device));
 });
 
 router.get("/devices/stats", async (req, res) => {
@@ -121,12 +121,7 @@ router.get("/devices/:id", async (req, res) => {
   }).from(devicesTable).where(eq(devicesTable.id, params.data.id));
 
   if (!device) { res.status(404).json({ error: "Device not found" }); return; }
-  res.json({
-    ...device,
-    lastSeen: device.lastSeen?.toISOString() ?? null,
-    createdAt: device.createdAt.toISOString(),
-    updatedAt: device.updatedAt.toISOString(),
-  });
+  res.json(publicDevice(device));
 });
 
 router.patch("/devices/:id", async (req, res) => {
@@ -150,12 +145,7 @@ router.patch("/devices/:id", async (req, res) => {
     .where(eq(devicesTable.id, params.data.id))
     .returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
-  res.json({
-    ...updated,
-    lastSeen: updated.lastSeen?.toISOString() ?? null,
-    createdAt: updated.createdAt.toISOString(),
-    updatedAt: updated.updatedAt.toISOString(),
-  });
+  res.json(publicDevice(updated));
 });
 
 router.delete("/devices/:id", async (req, res) => {
@@ -248,7 +238,7 @@ router.post("/devices/:id/test-connectivity", async (req, res) => {
 
   res.json({
     status,
-    ssh: { success: sshOk, message: sshResult.message ?? sshResult.error ?? (sshOk ? "SSH OK" : "SSH failed") },
+    ssh: { success: sshOk, message: sshResult.message ?? (sshOk ? "SSH OK" : "SSH failed") },
     snmp: { success: snmpOk, message: snmpResult.errorMessage ?? (snmpOk ? "SNMP OK" : "SNMP failed") }
   });
 });

@@ -106,13 +106,14 @@ export async function runSSHCommands(config: SSHConfig, commands: string[]): Pro
     const results: SSHCommandResult[] = [];
     let resolved = false;
 
+    // Timeout de 5min: running-config pode ser grande em NE8000 (60s+) + outros commands
     const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true;
         conn.end();
-        reject(new Error("SSH session timed out"));
+        reject(new Error("SSH session timed out after 5 minutes"));
       }
-    }, 60000);
+    }, 300000);
 
     conn.on("ready", async () => {
       try {

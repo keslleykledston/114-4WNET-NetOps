@@ -10,14 +10,33 @@ import { parseHuaweiVrfs } from "../../huawei-vrp/parsers/vrf-parser.js";
 import type { CollectorOutput, DiscoveryContext, VrfSummary } from "../discovery.types.js";
 import { emptyL2vpnSummary } from "../normalizers/l2vpn.normalizer.js";
 
+// Estratégia: running-config PRIMEIRO (grande, até 60s) + commands específicos
+// running-config inclui tudo que precisa ser parseado para config/policies/communities
+const DISCOVERY_COMMANDS = [
+  // SEMPRE PRIMEIRO: running-config (pode demorar até 60s em NE8000 grande)
+  "display current-configuration",
+  // BGP commands
+  "display bgp peer",
+  "display bgp peer verbose",
+  "display bgp vpnv4 all peer",
+  "display bgp vpnv6 all peer",
+  // Interface commands
+  "display interface brief",
+  "display interface description",
+  // Routing commands
+  "display route-policy",
+  "display ip ip-prefix",
+  // L2VPN commands
+  "display mpls l2vc",
+  "display vsi",
+];
+
 const CONTEXT_COMMANDS: Record<DiscoveryContext, string[]> = {
   interfaces: [
-    "display current-configuration interface",
     "display interface brief",
     "display interface description",
   ],
   bgp: [
-    "display current-configuration configuration bgp",
     "display bgp peer",
     "display bgp peer verbose",
     "display bgp vpnv4 all peer",
@@ -30,17 +49,19 @@ const CONTEXT_COMMANDS: Record<DiscoveryContext, string[]> = {
   policies: [
     "display route-policy",
     "display ip ip-prefix",
-    "display current-configuration | include community",
-    "display current-configuration | include ip community-filter",
-    "display current-configuration | include ip community-list",
   ],
   vrfs: [
-    "display current-configuration",
+    // VRFs são parseados de running-config
   ],
 };
 
 export function getDiscoverySshCommands(contexts: DiscoveryContext[]): string[] {
-  return [...new Set(contexts.flatMap((context) => CONTEXT_COMMANDS[context] ?? []))];
+  // Sempre incluir running-config + commands específicos por contexto
+  const specificCommands = [...new Set(contexts.flatMap((context) => CONTEXT_COMMANDS[context] ?? []))];
+
+  // Consolidar com DISCOVERY_COMMANDS, mantendo running-config PRIMEIRO
+  const allCommands = ["display current-configuration", ...specificCommands];
+  return [...new Set(allCommands)];
 }
 
 export async function collectDiscoverySsh(

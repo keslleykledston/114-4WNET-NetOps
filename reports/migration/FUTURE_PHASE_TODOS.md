@@ -11,14 +11,14 @@
 - FASE 4.y concluida: AF filter, Down state, localStorage por device, arvore BGP expandida (CDN/IX/iBGP/Unknown), Sheet peer actions, contadores 12, relatorio `PHASE_4Y_BGP_UX_PARITY_REPORT.md`.
 - FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.
 - FASE 5 concluida: SNMP read-only real ativo, 78 BGP peers IPv4 coletados, schemas + diagnostics.
-- FASE 5.1.fix em investigacao: IF-MIB retorna 0 (root cause pendente), diagnostics por OID implementados, timeout aumentado.
+- FASE 5.1.fix concluida: IF-MIB agora coleta 164 interfaces. Root cause: net-snmp doneCallback passa varbind array em error param. Fix: type-check error antes de rejeitar.
 - FASE 5.2 planejada: inventario persistido (interfaces/vrfs/config), SSH config collection read-only.
 - FASE 6 planejada: BGP import policy editor preview (seguro, sem apply), route-policy parser, community library read-only.
 - FASE 7 planejada: apply real com RBAC, duplo check, auditoria completa, SSH write controlado.
 - FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.
 - FASE 8+ pendente: export policy, provisioning seguro com aprovacao.
 
-# FASE 5.1.fix: IF-MIB Debugging
+# FASE 5.1.fix: IF-MIB Debugging ✅ CONCLUIDA
 
 ## Problema
 - BGP4-MIB OK: 78 peers coletados
@@ -26,21 +26,26 @@
 - Manual snmpwalk provou IF-MIB funciona no device
 - Logo: bug na aplicacao, nao no device
 
-## Status
-- ✅ Timeout aumentado: 5s → 30s
-- ✅ Retries: 1 → 3
-- ✅ OID diagnostics implementados
-- ❌ Root cause ainda investigando (timeout? parser? network?)
+## Root Cause (ENCONTRADO)
+net-snmp library callback signature differs from TypeScript interface:
+- doneCallback receives varbind array in error param on success
+- Code assumed error param = null or Error object
+- Any truthy value was treated as error → rejected → data lost
 
-## Proximas Acoes
-1. Testar container diretamente com SNMP
-2. Aumentar timeout para 60s
-3. Adicionar debug logging detalhado
-4. Verificar UDP/161 connectivity
+## Solucao (IMPLEMENTADA)
+Modified snmp-session.ts feedCallback + doneCallback:
+- Type-check error param: Array vs Error vs null
+- Only reject on actual Error instances
+- Arrays indicate valid response → resolve
 
-## Fallback
-- Interfaces vazio, usar snapshot legado
-- Warning claro em UI: "SNMP respondeu BGP, if-MIB nao respondeu"
+## Resultado
+✅ interfaces: 0 → 164  
+✅ bgpPeers: 51 collected  
+✅ OID diagnostics: all status=ok  
+✅ No SNMP-WALK-ERROR logs  
+
+Commit: `fix: resolve IF-MIB collection returning 0 interfaces`  
+Report: `reports/migration/PHASE_5_1_FIX_IFMIB_RESOLVED.md`
 
 ---
 

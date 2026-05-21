@@ -12,6 +12,8 @@ Fallback rules:
 6. New data is additive; missing live data does not delete local DB data.
 7. If a local interface or BGP peer is absent from the new collection, discovery emits a candidate-removal warning.
 8. If no live, cached, or local source has usable data, discovery returns `failed`.
+9. Manual BGP role overrides are re-applied even when discovery falls back to SNMP-only peers.
+10. VRF-scoped BGP peers are collected separately via SSH `vpnv4` / `vpnv6` verbose commands and are not collapsed into the global list.
 
 Statuses:
 

@@ -19,3 +19,11 @@ Confidence:
 Every normalized discovery object carries source and confidence metadata. Evidence is short, sanitized, and optional in API responses.
 
 For interface and BGP peer existence/status, SNMP has contextual priority during collection. SSH enriches details but should not remove SNMP/local DB inventory facts. If a fresh query does not contain an already-known item, the item stays in the local model and is reported as a candidate for removal.
+
+For BGP role classification, precedence is:
+
+```text
+manual_override > classifier > snapshot > customer(default)
+```
+
+`unknown` is treated as an internal fallback only. The API contract should never expose it as a navigable BGP category in the UI.

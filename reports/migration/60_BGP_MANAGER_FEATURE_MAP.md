@@ -22,6 +22,8 @@
 - Tabela `snmp_snapshots`.
 - Poller SNMP persistindo interfaces, BGP peers e VRFs em JSON.
 - API e tela de historico SNMP: `/api/snmp-snapshots` e `SNMP History`.
+- Discovery BGP agora e VRF-aware: coleta SSH cobre `display bgp peer verbose`, `display bgp ipv6 peer verbose`, `vpnv4` e `vpnv6` por `vpn-instance`.
+- Override local de papel BGP ja persistido em `bgp_peer_role_overrides`, com `manual_override > classifier > snapshot > customer(default)`.
 - OpenAPI, Orval e Zod.
 - CI com typecheck, build e smoke Docker.
 
@@ -59,6 +61,7 @@
 - Huawei VRP tem saidas variantes por plataforma e versao.
 - APIs read-only devem nascer sem quebrar contratos existentes.
 - UI operacional pode crescer demais; precisa manter densidade e padrao visual atual.
+- Override de papel BGP nao usa `unknown` como categoria visivel; `unknown` fica como fallback interno apenas.
 
 ## Proxima etapa implementada agora
 

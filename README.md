@@ -14,7 +14,8 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 
 ## Documentação
 
-- Status funcional e pendências: [docs/PROJECT_STATUS.md](/Users/keslleykssantos/projects/ativos/114-4WNET_NetOps/docs/PROJECT_STATUS.md)
+- Status funcional e pendências: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+- Plano de fechamento do MVP: [docs/MVP_CLOSURE_PLAN.md](docs/MVP_CLOSURE_PLAN.md)
 
 ## Subir com Docker
 

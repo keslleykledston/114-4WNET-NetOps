@@ -6,6 +6,8 @@ Destino: `114-4WNET-NetOps`.
 
 Regra principal: BGP nao e so tabela de vizinhos. BGP deve virar painel operacional por papel do peer, sem copiar layout do 60 e sem quebrar design atual do 114.
 
+Contrato operacional consolidado: [`docs/netops/BGP_ROLE_OVERRIDE_AND_VRF_CONTRACT.md`](./BGP_ROLE_OVERRIDE_AND_VRF_CONTRACT.md)
+
 ## Objetivo
 
 Transformar o painel BGP em visao operacional segmentada por:
@@ -96,7 +98,7 @@ cdn       -> CDN
 ix        -> IX
 cdn_ix    -> CDN/IX quando nao for possivel separar
 ibgp      -> iBGP
-unknown   -> Nao classificado
+unknown   -> Nao classificado (legado interno; nao expor na UI)
 ```
 
 Classificador deve ser defensivo:
@@ -104,7 +106,7 @@ Classificador deve ser defensivo:
 - Preferir dado explicito do backend quando existir.
 - Usar descricao, ASN, VRF, policy e padroes locais como hints.
 - Nao forcar papel quando evidencia for fraca.
-- Retornar `unknown` em caso duvidoso.
+- Retornar `customer` no contrato final quando nao houver evidencia suficiente; `unknown` fica apenas como fallback interno de parser/classificador.
 
 ## Role Override Local (FASE 4.x)
 
@@ -128,7 +130,7 @@ PUT /api/netops/devices/:id/bgp-peers/:peerIp/role
 Precedencia ao montar `GET /api/netops/devices/:id/bgp-peers`:
 
 ```text
-manual_override > classifier > snapshot/mock > unknown
+manual_override > classifier > snapshot/mock > customer(default)
 ```
 
 Campo `roleSource` no peer:
@@ -144,7 +146,7 @@ Criterio classificador (quando sem override):
 - OPERADORA/UPSTREAM/TRANSITO -> `provider`
 - IX/PTT -> `ix`
 - CDN/CACHE/GOOGLE/AKAMAI/META/NETFLIX -> `cdn`
-- sem match -> `unknown`
+- sem match -> `customer` no contrato final; `unknown` apenas em camadas internas de parsing/classificacao
 
 Log operacional local ao salvar override:
 
@@ -204,10 +206,10 @@ FASE 4.x + 4.y no painel BGP (`bgp-panel.tsx`), sem mudar design global:
 - Busca: IP, ASN, nome, VRF, policies
 - Estado: Todos, Established, Active, Idle, Connect, **Down / Not Established** (`?state=Down` ou client-side)
 - Address family: Todos, IPv4, IPv6, Unknown (`?af=ipv4|ipv6` ou client-side para unknown)
-- Papel: Todos, Clientes, Operadoras, IX, CDN, CDN/IX, iBGP, Unknown (desabilitado quando no da arvore fixa role)
+- Papel: Todos, Clientes, Operadoras, IX, CDN, CDN/IX, iBGP, Unknown apenas para compatibilidade legada
 - Checkbox: Incluir iBGP
 - Persistencia: `localStorage` chave `netops:bgp-filters:<deviceId>` (search, state, role, af, includeIbgp)
-- Contadores: total, established, down, eBGP, iBGP, clientes, operadoras, IX, CDN, CDN/IX, unknown, IPv4, IPv6
+- Contadores: total, established, down, eBGP, iBGP, clientes, operadoras, IX, CDN, CDN/IX, unknown legado, IPv4, IPv6
 - Papel editavel por linha (select) + Salvar (dirty) -> PUT role override local
 
 Pendente fases futuras:
@@ -241,7 +243,7 @@ GET /api/netops/devices/:id/bgp-peers?role=cdn
 GET /api/netops/devices/:id/bgp-peers?role=ix
 GET /api/netops/devices/:id/bgp-peers?role=cdn_ix
 GET /api/netops/devices/:id/bgp-peers?role=ibgp
-GET /api/netops/devices/:id/bgp-peers?role=unknown
+GET /api/netops/devices/:id/bgp-peers?role=customer  # fallback default when classification is weak
 GET /api/netops/devices/:id/bgp-peers?af=ipv4
 GET /api/netops/devices/:id/bgp-peers?af=ipv6
 GET /api/netops/devices/:id/bgp-peers?state=Established
@@ -324,7 +326,7 @@ ip community-filter ...
 
 ## Criterio de Aceite
 
-- BGP separado por Cliente, Operadora, CDN, IX, iBGP e Unknown.
+- BGP separado por Cliente, Operadora, CDN, IX, iBGP e Unknown legado apenas para compatibilidade.
 - IPv4 e IPv6 identificados.
 - Botoes de prefixos recebidos e exportados aparecem.
 - Policies, communities e diagnostico aparecem como acoes read-only.

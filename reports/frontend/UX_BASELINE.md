@@ -58,6 +58,7 @@
 
 - Device detail inclui bloco `Discovery` no overview.
 - BGP panel mantem tabela densa e filtros existentes, mas busca peers no endpoint estruturado de discovery.
+- A lista BGP respeita override local de papel, reaplica o valor salvo mesmo no fallback SNMP e trata peers VRF-aware como registros distintos.
 - Modal de peer mantem desenho escuro redesenhado e adiciona source/confidence/evidence curta.
 - Discovery panel mostra status persistido, fontes SSH/SNMP/cache, data do ultimo run e contadores de interfaces, peers, VRFs, L2VPN e policies.
 - Quando nao ha snapshot persistido, BGP mostra empty state pedindo discovery em vez de tentar interpretar CLI.

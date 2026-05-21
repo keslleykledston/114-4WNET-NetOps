@@ -144,6 +144,7 @@
 - `docker compose config` OK
 - `docker build --pull --no-cache -t netops-manager-ci .` OK
 - conexão SSH validada no dispositivo cadastrado `4WNET-BVA-BRT-RX`
+- rebuild local `docker compose up -d --build api web` OK com BuildKit + cache pnpm
 
 ## Dados Relevantes do Modelo
 
@@ -159,6 +160,9 @@
 - `provisioning_steps`
 - `collected_configs`
 - `snmp_snapshots`
+- `audit_logs`
+- `reports`
+- `integration_settings`
 
 ### Dados gravados em `snmp_snapshots`
 
@@ -169,6 +173,16 @@
 - `bgp_peers_json`
 - `vrfs_json`
 - `collected_at`
+
+## MVP Critical Gaps Closure
+
+- guards de segurança para apply/rollback implementados com default seguro
+- audit trail sanitizada disponível via `/api/audit-logs`
+- relatórios Markdown disponíveis via `/api/reports`
+- integrações readiness-only disponíveis via `/api/integrations`
+- páginas `/audit`, `/reports` e `/integrations` adicionadas ao frontend
+- índices faltantes aplicados no banco vivo
+- rebuild Docker estabilizado com `.dockerignore` enxuto e install PNPM por manifesto
 
 ## Pendências
 
@@ -206,6 +220,15 @@
 - falta secrets management formal para ambientes fora do Docker local
 - falta definir estratégia de backup do PostgreSQL
 - se SSH ainda falhar com `SSH authentication failed`, validar credencial, AAA no equipamento e se o usuario VRP permite login SSH por `keyboard-interactive`
+
+### MVP Closure
+
+- apply real continua bloqueado por padrão
+- NetBox permanece readiness-only, sem sync real
+- RBAC formal e scheduler configurável seguem fora do escopo desta fase
+- parser Huawei ainda precisa de cobertura adicional em cenários reais
+- hardening final adicionou fixtures formais para BGP verbose, route-policy, communities, interfaces, L2VPN e route query
+- relatório de aceite atualizado em `reports/MVP_ACCEPTANCE_VALIDATION.md`
 
 ## Issues Técnicas Abertas
 

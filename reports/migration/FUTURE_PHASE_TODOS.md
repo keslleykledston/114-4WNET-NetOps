@@ -7,8 +7,9 @@
 - FASE 2 concluida: arvore operacional com placeholders, sem mudar layout global.
 - FASE 3 concluida: APIs read-only, frontend ligado, container aplicado.
 - FASE 4 concluida: safety guard, adapters SNMP/SSH read-only stub, parsers Huawei VRP iniciais, botoes BGP, containers aplicados.
-- FASE 4.x concluida: filtros BGP no painel (busca, estado, papel, iBGP), role override local (`bgp_peer_role_overrides`), precedencia `manual_override > classifier > snapshot`.
-- FASE 4.y concluida: AF filter, Down state, localStorage por device, arvore BGP expandida (CDN/IX/iBGP/Unknown), Sheet peer actions, contadores 12, relatorio `PHASE_4Y_BGP_UX_PARITY_REPORT.md`.
+- FASE 4.x concluida: filtros BGP no painel (busca, estado, papel, iBGP), role override local (`bgp_peer_role_overrides`), precedencia `manual_override > classifier > snapshot > customer(default)`.
+- FASE 4.x.b concluida: contrato BGP de role override e peers VRF-aware documentado em `docs/netops/BGP_ROLE_OVERRIDE_AND_VRF_CONTRACT.md`.
+- FASE 4.y concluida: AF filter, Down state, localStorage por device, arvore BGP expandida (CDN/IX/iBGP/Unknown legado), Sheet peer actions, contadores 12, relatorio `PHASE_4Y_BGP_UX_PARITY_REPORT.md`.
 - FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.
 - FASE 5 concluida: SNMP read-only real ativo, 78 BGP peers IPv4 coletados, schemas + diagnostics.
 - FASE 5.1.fix concluida: IF-MIB agora coleta 164 interfaces. Root cause: net-snmp doneCallback passa varbind array em error param. Fix: type-check error antes de rejeitar.
@@ -234,7 +235,7 @@ cdn       -> CDN
 ix        -> IX
 cdn_ix    -> CDN/IX quando nao for possivel separar
 ibgp      -> iBGP
-unknown   -> Nao classificado
+unknown   -> Nao classificado (fallback interno; nao expor na UI)
 ```
 
 ## IPv4 / IPv6
@@ -573,7 +574,7 @@ Objetivo: migrar favicon/icone K3G do `60-bgp_manager` sem trocar layout, tema o
 - [ ] BGP IX: filtro `role=ix`.
 - [ ] BGP CDN/IX legado: filtro `role=cdn_ix` quando nao for possivel separar.
 - [ ] BGP iBGP: filtro `role=ibgp`.
-- [ ] BGP Unknown: filtro `role=unknown`.
+- [ ] BGP Unknown legado: manter compatibilidade apenas para dados antigos, sem categoria navegavel.
 - [ ] Modais/drawers read-only por peer:
   - [ ] Detalhes
   - [ ] Prefixos recebidos

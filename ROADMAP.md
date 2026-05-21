@@ -5,3 +5,5 @@
 - Add live protected route search with mandatory filters and 50-route sample cap.
 - Add CI tests once a test runner is introduced for API and frontend packages.
 - Wire compliance/pre-check jobs to persisted discovery snapshots and confidence warnings.
+- Formalize audit/report retention and export policies.
+- Keep provisioning apply locked behind an explicit safety flag until safe allowlisted apply steps are designed and tested.

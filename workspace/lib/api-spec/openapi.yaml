@@ -23,6 +23,10 @@ tags:
     description: VPN provisioning jobs
   - name: collected-configs
     description: Collected device configurations
+  - name: snmp-snapshots
+    description: SNMP polling history
+  - name: netops-readonly
+    description: Read-only NetOps operational views
 
 paths:
   /healthz:
@@ -773,6 +777,468 @@ paths:
               schema:
                 $ref: "#/components/schemas/CollectedConfig"
 
+  # -- SNMP SNAPSHOTS ----------------------------------------------------------
+  /snmp-snapshots:
+    get:
+      operationId: listSnmpSnapshots
+      tags: [snmp-snapshots]
+      summary: List SNMP polling snapshots
+      parameters:
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+        - name: success
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 200
+      responses:
+        "200":
+          description: SNMP snapshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SnmpSnapshot"
+
+  # -- NETOPS READ-ONLY --------------------------------------------------------
+  /netops/devices/{id}/summary:
+    get:
+      operationId: getNetopsDeviceSummary
+      tags: [netops-readonly]
+      summary: Get read-only NetOps device summary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Device summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetopsDeviceSummary"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/interfaces:
+    get:
+      operationId: listNetopsDeviceInterfaces
+      tags: [netops-readonly]
+      summary: List read-only NetOps interfaces
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Interfaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NetopsInterface"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/bgp-peers:
+    get:
+      operationId: listNetopsDeviceBgpPeers
+      tags: [netops-readonly]
+      summary: List read-only NetOps BGP peers
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [provider, customer, cdn, ix, cdn_ix, ibgp, unknown]
+        - name: af
+          in: query
+          schema:
+            type: string
+            enum: [ipv4, ipv6]
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [Established, Active, Idle, Connect, Unknown, Down]
+      responses:
+        "200":
+          description: BGP peers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NetopsBgpPeer"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/bgp-peer-role-overrides:
+    get:
+      operationId: listNetopsDeviceBgpPeerRoleOverrides
+      tags: [netops-readonly]
+      summary: List local BGP peer role overrides
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Local role overrides
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NetopsBgpPeerRoleOverride"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/collect/read-only:
+    post:
+      operationId: collectNetopsDeviceReadOnly
+      tags: [netops-readonly]
+      summary: Start read-only NetOps collection safety stub
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: Read-only collection accepted or blocked by phase policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetopsReadonlyCollectionResult"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/collection-status:
+    get:
+      operationId: getNetopsDeviceCollectionStatus
+      tags: [netops-readonly]
+      summary: Get read-only NetOps collection status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Collection status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetopsCollectionStatus"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/bgp-peers/{peerIp}:
+    get:
+      operationId: getNetopsDeviceBgpPeer
+      tags: [netops-readonly]
+      summary: Get read-only BGP peer details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: BGP peer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetopsBgpPeer"
+        "404":
+          description: Device or peer not found
+
+  /netops/devices/{id}/bgp-peers/{peerIp}/role:
+    put:
+      operationId: updateNetopsDeviceBgpPeerRole
+      tags: [netops-readonly]
+      summary: Save local BGP peer role override
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NetopsBgpPeerRoleOverrideInput"
+      responses:
+        "200":
+          description: Override saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetopsBgpPeerRoleOverrideResult"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/bgp-peers/{peerIp}/received-prefixes:
+    get:
+      operationId: listNetopsDeviceBgpPeerReceivedPrefixes
+      tags: [netops-readonly]
+      summary: List read-only BGP received prefixes for peer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Received prefixes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NetopsBgpPrefixEntry"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/bgp-peers/{peerIp}/advertised-prefixes:
+    get:
+      operationId: listNetopsDeviceBgpPeerAdvertisedPrefixes
+      tags: [netops-readonly]
+      summary: List read-only BGP advertised prefixes for peer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Advertised prefixes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NetopsBgpPrefixEntry"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/bgp-peers/{peerIp}/policies:
+    get:
+      operationId: getNetopsDeviceBgpPeerPolicies
+      tags: [netops-readonly]
+      summary: Get read-only BGP policies for peer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Peer policies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetopsBgpPolicies"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/bgp-peers/{peerIp}/communities:
+    get:
+      operationId: getNetopsDeviceBgpPeerCommunities
+      tags: [netops-readonly]
+      summary: Get read-only BGP communities for peer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Peer communities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetopsBgpCommunities"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/bgp-peers/{peerIp}/diagnostics:
+    get:
+      operationId: getNetopsDeviceBgpPeerDiagnostics
+      tags: [netops-readonly]
+      summary: Get read-only BGP diagnostics for peer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Peer diagnostics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetopsBgpDiagnostics"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/filters:
+    get:
+      operationId: listNetopsDeviceFilters
+      tags: [netops-readonly]
+      summary: List read-only NetOps filters
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Filters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NetopsFilter"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/communities:
+    get:
+      operationId: listNetopsDeviceCommunities
+      tags: [netops-readonly]
+      summary: List read-only NetOps communities
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Communities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NetopsCommunity"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/logs:
+    get:
+      operationId: listNetopsDeviceLogs
+      tags: [netops-readonly]
+      summary: List read-only NetOps operational logs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NetopsLogEntry"
+        "404":
+          description: Device not found
+
+  /netops/devices/{id}/snmp-snapshots/latest:
+    get:
+      operationId: getNetopsDeviceLatestSnmpSnapshot
+      tags: [netops-readonly]
+      summary: Get latest read-only SNMP snapshot for device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest SNMP snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetopsLatestSnmpSnapshot"
+        "404":
+          description: Device not found
+
 components:
   schemas:
     HealthStatus:
@@ -1434,3 +1900,416 @@ components:
           items:
             type: string
           description: "Optional specific commands; defaults to full config collection"
+
+    # -- SNMP SNAPSHOTS --------------------------------------------------------
+    SnmpSnapshot:
+      type: object
+      required: [id, deviceId, success, collectedAt]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        deviceHostname:
+          type: ["string", "null"]
+        success:
+          type: boolean
+        errorMessage:
+          type: ["string", "null"]
+        interfacesJson:
+          type: ["string", "null"]
+          description: "JSON array of collected interface objects"
+        bgpPeersJson:
+          type: ["string", "null"]
+          description: "JSON array of collected BGP peer objects"
+        vrfsJson:
+          type: ["string", "null"]
+          description: "JSON array of collected VRF objects"
+        collectedAt:
+          type: string
+
+    # -- NETOPS READ-ONLY ------------------------------------------------------
+    NetopsSafeDevice:
+      type: object
+      required: [id, hostname, ipAddress, vendor, platform, site, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        hostname:
+          type: string
+        ipAddress:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+        site:
+          type: string
+        role:
+          type: ["string", "null"]
+        status:
+          type: string
+        lastSeen:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    NetopsCounters:
+      type: object
+      required: [interfaces, bgpPeers, bgpEstablished, bgpDown, filters, communities]
+      properties:
+        interfaces:
+          type: integer
+        bgpPeers:
+          type: integer
+        bgpEstablished:
+          type: integer
+        bgpDown:
+          type: integer
+        filters:
+          type: integer
+        communities:
+          type: integer
+
+    NetopsDeviceSummary:
+      type: object
+      required: [device, counters]
+      properties:
+        device:
+          $ref: "#/components/schemas/NetopsSafeDevice"
+        counters:
+          $ref: "#/components/schemas/NetopsCounters"
+        lastSnapshotAt:
+          type: ["string", "null"]
+
+    NetopsInterface:
+      type: object
+      required: [name, adminStatus, operStatus, ipv4, ipv6, source]
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        adminStatus:
+          type: string
+          enum: [up, down, unknown]
+        operStatus:
+          type: string
+          enum: [up, down, unknown]
+        ipv4:
+          type: array
+          items:
+            type: string
+        ipv6:
+          type: array
+          items:
+            type: string
+        vlan:
+          type: ["integer", "null"]
+        vrf:
+          type: ["string", "null"]
+        source:
+          type: string
+          enum: [snmp, ssh, snapshot, mock, db]
+
+    NetopsBgpPeer:
+      type: object
+      required: [peerIp, state, role, roleSource, addressFamily, sessionType, source]
+      properties:
+        peerIp:
+          type: string
+        remoteAs:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        name:
+          type: ["string", "null"]
+        state:
+          type: string
+          enum: [Established, Idle, Active, Connect, Unknown]
+        role:
+          type: string
+          enum: [provider, customer, cdn, ix, cdn_ix, ibgp, unknown]
+        roleSource:
+          type: string
+          enum: [manual_override, classifier, snapshot, unknown]
+        addressFamily:
+          type: string
+          enum: [ipv4, ipv6, unknown]
+        sessionType:
+          type: string
+          enum: [iBGP, eBGP, unknown]
+        vrf:
+          type: ["string", "null"]
+        importPolicy:
+          type: ["string", "null"]
+        exportPolicy:
+          type: ["string", "null"]
+        receivedPrefixes:
+          type: ["integer", "null"]
+        advertisedPrefixes:
+          type: ["integer", "null"]
+        activePrefixes:
+          type: ["integer", "null"]
+        uptime:
+          type: ["string", "null"]
+        source:
+          type: string
+          enum: [snmp, ssh, snapshot, mock, db]
+
+    NetopsFilter:
+      type: object
+      required: [name, type, entries, source]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [ip-prefix, prefix-list, route-policy, acl, unknown]
+        entries:
+          type: array
+          items: {}
+        source:
+          type: string
+          enum: [snmp, ssh, snapshot, mock, db]
+
+    NetopsCommunity:
+      type: object
+      required: [name, type, entries, source]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [community-filter, community-list, set, unknown]
+        entries:
+          type: array
+          items: {}
+        source:
+          type: string
+          enum: [snmp, ssh, snapshot, mock, db]
+
+    NetopsCollectionStatus:
+      type: object
+      required: [deviceId, status, active, lastSnapshotAt, message]
+      properties:
+        deviceId:
+          type: integer
+        status:
+          type: string
+          enum: [idle, ready, blocked, error]
+        active:
+          type: boolean
+        lastSnapshotAt:
+          type: ["string", "null"]
+        message:
+          type: string
+
+    NetopsReadonlyCommandCheck:
+      type: object
+      required: [command, allowed, reason]
+      properties:
+        command:
+          type: string
+        allowed:
+          type: boolean
+        reason:
+          type: ["string", "null"]
+
+    NetopsReadonlyCollectionResult:
+      type: object
+      required: [deviceId, status, executed, message, commandChecks]
+      properties:
+        deviceId:
+          type: integer
+        status:
+          type: string
+          enum: [idle, ready, blocked, error]
+        executed:
+          type: boolean
+        message:
+          type: string
+        commandChecks:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetopsReadonlyCommandCheck"
+
+    NetopsBgpPrefixEntry:
+      type: object
+      required: [prefix, nextHop, asPath, localPreference, med, source]
+      properties:
+        prefix:
+          type: string
+        nextHop:
+          type: ["string", "null"]
+        asPath:
+          type: ["string", "null"]
+        localPreference:
+          type: ["integer", "null"]
+        med:
+          type: ["integer", "null"]
+        source:
+          type: string
+          enum: [snmp, ssh, snapshot, mock, db]
+
+    NetopsBgpPolicies:
+      type: object
+      required: [peerIp, importPolicy, exportPolicy, filters, source, message]
+      properties:
+        peerIp:
+          type: string
+        importPolicy:
+          type: ["string", "null"]
+        exportPolicy:
+          type: ["string", "null"]
+        filters:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetopsFilter"
+        source:
+          type: string
+          enum: [snmp, ssh, snapshot, mock, db]
+        message:
+          type: string
+
+    NetopsBgpCommunities:
+      type: object
+      required: [peerIp, communities, source, message]
+      properties:
+        peerIp:
+          type: string
+        communities:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetopsCommunity"
+        source:
+          type: string
+          enum: [snmp, ssh, snapshot, mock, db]
+        message:
+          type: string
+
+    NetopsDiagnosticCheck:
+      type: object
+      required: [name, level, message]
+      properties:
+        name:
+          type: string
+        level:
+          type: string
+          enum: [INFO, WARN, ERROR, SUCCESS]
+        message:
+          type: string
+
+    NetopsBgpDiagnostics:
+      type: object
+      required: [peerIp, checks, source]
+      properties:
+        peerIp:
+          type: string
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetopsDiagnosticCheck"
+        source:
+          type: string
+          enum: [snmp, ssh, snapshot, mock, db]
+
+    NetopsBgpPeerRoleOverride:
+      type: object
+      required: [id, deviceId, peerIp, addressFamily, role, source, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        peerIp:
+          type: string
+        remoteAs:
+          type: ["integer", "null"]
+        addressFamily:
+          type: string
+          enum: [ipv4, ipv6, unknown]
+        role:
+          type: string
+          enum: [provider, customer, cdn, ix, cdn_ix, ibgp, unknown]
+        label:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        source:
+          type: string
+          enum: [manual_override]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        createdBy:
+          type: ["string", "null"]
+        updatedBy:
+          type: ["string", "null"]
+
+    NetopsBgpPeerRoleOverrideInput:
+      type: object
+      required: [addressFamily, remoteAs, role]
+      properties:
+        addressFamily:
+          type: string
+          enum: [ipv4, ipv6, unknown]
+        remoteAs:
+          type: ["integer", "null"]
+        role:
+          type: string
+          enum: [provider, customer, cdn, ix, cdn_ix, ibgp, unknown]
+        label:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    NetopsBgpPeerRoleOverrideResult:
+      type: object
+      required: [ok, peerIp, role, source]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        peerIp:
+          type: string
+        role:
+          type: string
+          enum: [provider, customer, cdn, ix, cdn_ix, ibgp, unknown]
+        source:
+          type: string
+          enum: [manual_override]
+
+    NetopsLogEntry:
+      type: object
+      required: [timestamp, level, scope, message, source]
+      properties:
+        timestamp:
+          type: string
+        level:
+          type: string
+          enum: [INFO, WARN, ERROR, SUCCESS]
+        scope:
+          type: string
+          enum: [SNMP, SSH, BGP, INTERFACE, SYSTEM]
+        message:
+          type: string
+        source:
+          type: string
+          enum: [system, local]
+
+    NetopsLatestSnmpSnapshot:
+      type: object
+      required: [deviceId, snapshot, message]
+      properties:
+        deviceId:
+          type: integer
+        snapshot:
+          anyOf:
+            - $ref: "#/components/schemas/SnmpSnapshot"
+            - type: "null"
+        message:
+          type: string

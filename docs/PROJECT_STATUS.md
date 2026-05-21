@@ -46,6 +46,7 @@
 ### Validação de conectividade
 
 - teste de conexão SSH por dispositivo
+- autenticação SSH com `keyboard-interactive` primário e `password` como fallback
 - atualização de status do dispositivo:
   - `active`
   - `unreachable`
@@ -87,6 +88,48 @@
   - interfaces
   - peers BGP
   - VRFs
+- API explícita para consulta de histórico SNMP em `/api/snmp-snapshots`
+- tela dedicada `SNMP History` para consultar snapshots persistidos
+
+### Operacao NetOps
+
+- baseline UX documentado em `reports/frontend/UX_BASELINE.md`
+- guardrails de design documentados em `docs/frontend/UX_GUARDRAILS.md`
+- mapeamento funcional do `60-bgp_manager` documentado em `reports/migration/60_BGP_MANAGER_FEATURE_MAP.md`
+- TODOs de fases futuras em `reports/migration/FUTURE_PHASE_TODOS.md`
+- arvore operacional adicionada em `/netops-operations`
+- placeholders funcionais para:
+  - Device
+  - Interfaces
+  - BGP
+  - BGP Operadoras
+  - BGP Clientes
+  - BGP CDN/IX
+  - Filters
+  - Communities
+- skill local do projeto em `.codex/skills/netops-migration/SKILL.md`
+- tool local `tools/netops-audit.sh`
+- FASE 3 concluida:
+  - APIs read-only NetOps em `/api/netops/devices/:id/*`
+  - `/netops-operations` consumindo APIs
+  - endpoint de snapshot SNMP latest
+- FASE 4 concluida:
+  - safety guard de comandos Huawei VRP read-only
+  - adapters SNMP/SSH read-only em modo stub seguro
+  - parsers Huawei VRP iniciais
+  - normalizador BGP com roles, IPv4/IPv6 e campos operacionais
+  - botoes BGP read-only por peer
+  - endpoints stub para detalhes, prefixos, policies, communities e diagnostico
+
+### CI
+
+- workflow GitHub Actions em `.github/workflows/ci.yml`
+- validação de:
+  - instalação PNPM com lockfile congelado
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `docker compose config`
+  - `docker build`
 
 ## Estado Atual Validado
 
@@ -97,6 +140,9 @@
   - `netops-web`
 - healthchecks OK para API, banco e frontend
 - `pnpm run typecheck` OK
+- `BASE_PATH=/ PORT=5000 pnpm run build` OK
+- `docker compose config` OK
+- `docker build --pull --no-cache -t netops-manager-ci .` OK
 - conexão SSH validada no dispositivo cadastrado `4WNET-BVA-BRT-RX`
 
 ## Dados Relevantes do Modelo
@@ -145,25 +191,34 @@
 
 ### Produto
 
-- falta tela dedicada para consultar histórico SNMP persistido
-- falta API explícita para leitura de snapshots SNMP
 - falta agendamento configurável por UI
 - falta feedback visual no frontend para:
   - status da coleta SNMP
   - última coleta SNMP
   - erro da última coleta SNMP
+- falta ligar botoes BGP a modais/drawers reais
+- falta habilitar coleta SNMP/SSH real controlada read-only na FASE 5
+- falta substituir placeholders restantes por paineis reais completos na FASE 6
 
 ### Operação
 
-- remoto git ainda precisava ser configurado no repositório local
-- falta pipeline CI/CD
+- falta pipeline CD/deploy
 - falta secrets management formal para ambientes fora do Docker local
 - falta definir estratégia de backup do PostgreSQL
+- se SSH ainda falhar com `SSH authentication failed`, validar credencial, AAA no equipamento e se o usuario VRP permite login SSH por `keyboard-interactive`
+
+## Issues Técnicas Abertas
+
+- GitHub #1: Expor histórico SNMP persistido via API e tela dedicada
+- GitHub #2: Expandir coleta SNMP multi-vendor e normalização de OIDs
+- GitHub #3: Adicionar controle operacional para agendamento e status da coleta SNMP
+- GitHub #4: Formalizar operação: secrets management e backup PostgreSQL
+- GitHub #5: Definir pipeline CD e estratégia de deploy
 
 ## Próximos Passos Recomendados
 
-1. Preencher `snmp_community` do dispositivo real e forçar coleta de teste.
-2. Expor endpoint para consulta de `snmp_snapshots`.
-3. Criar tela no frontend para interfaces, BGP peers e VRFs coletadas por SNMP.
-4. Expandir mapeamento SNMP para mais vendors e tabelas.
-5. Adicionar CI para `typecheck`, build e smoke tests Docker.
+1. FASE 4.1: migrar favicon/icone K3G do `60-bgp_manager`.
+2. FASE 5: habilitar coleta SNMP/SSH real controlada read-only atras de flag/config.
+3. Validar histórico SNMP com snapshots reais do ambiente.
+4. FASE 6: ligar botoes BGP a modais/drawers e paineis completos.
+5. Definir CD/deploy, secrets e backup/restore testável.

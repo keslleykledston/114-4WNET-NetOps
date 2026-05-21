@@ -6,6 +6,8 @@ import complianceRouter from "./compliance.js";
 import templatesRouter from "./templates.js";
 import provisioningRouter from "./provisioning.js";
 import collectedConfigsRouter from "./collected_configs.js";
+import snmpSnapshotsRouter from "./snmp_snapshots.js";
+import netopsRouter from "../modules/netops/routes.js";
 
 const router: IRouter = Router();
 
@@ -16,5 +18,7 @@ router.use(complianceRouter);
 router.use(templatesRouter);
 router.use(provisioningRouter);
 router.use(collectedConfigsRouter);
+router.use(snmpSnapshotsRouter);
+router.use(netopsRouter);
 
 export default router;

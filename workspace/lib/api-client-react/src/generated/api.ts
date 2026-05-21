@@ -45,11 +45,30 @@ import type {
   ListComplianceJobsParams,
   ListConfigTemplatesParams,
   ListDevicesParams,
+  ListNetopsDeviceBgpPeersParams,
   ListProvisioningJobsParams,
+  ListSnmpSnapshotsParams,
+  NetopsBgpCommunities,
+  NetopsBgpDiagnostics,
+  NetopsBgpPeer,
+  NetopsBgpPeerRoleOverride,
+  NetopsBgpPeerRoleOverrideInput,
+  NetopsBgpPeerRoleOverrideResult,
+  NetopsBgpPolicies,
+  NetopsBgpPrefixEntry,
+  NetopsCollectionStatus,
+  NetopsCommunity,
+  NetopsDeviceSummary,
+  NetopsFilter,
+  NetopsInterface,
+  NetopsLatestSnmpSnapshot,
+  NetopsLogEntry,
+  NetopsReadonlyCollectionResult,
   ProvisioningJob,
   ProvisioningJobDetail,
   ProvisioningJobInput,
   ProvisioningStats,
+  SnmpSnapshot,
   TemplateRenderInput,
   TemplateRenderResult,
   ValidationResult
@@ -3040,6 +3059,1431 @@ export function useGetCollectedConfig<TData = Awaited<ReturnType<typeof getColle
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetCollectedConfigQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListSnmpSnapshotsUrl = (params?: ListSnmpSnapshotsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/snmp-snapshots?${stringifiedParams}` : `/api/snmp-snapshots`
+}
+
+/**
+ * @summary List SNMP polling snapshots
+ */
+export const listSnmpSnapshots = async (params?: ListSnmpSnapshotsParams, options?: RequestInit): Promise<SnmpSnapshot[]> => {
+
+  return customFetch<SnmpSnapshot[]>(getListSnmpSnapshotsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSnmpSnapshotsQueryKey = (params?: ListSnmpSnapshotsParams,) => {
+    return [
+    `/api/snmp-snapshots`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSnmpSnapshotsQueryOptions = <TData = Awaited<ReturnType<typeof listSnmpSnapshots>>, TError = ErrorType<unknown>>(params?: ListSnmpSnapshotsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSnmpSnapshots>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSnmpSnapshotsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSnmpSnapshots>>> = ({ signal }) => listSnmpSnapshots(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSnmpSnapshots>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSnmpSnapshotsQueryResult = NonNullable<Awaited<ReturnType<typeof listSnmpSnapshots>>>
+export type ListSnmpSnapshotsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List SNMP polling snapshots
+ */
+
+export function useListSnmpSnapshots<TData = Awaited<ReturnType<typeof listSnmpSnapshots>>, TError = ErrorType<unknown>>(
+ params?: ListSnmpSnapshotsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSnmpSnapshots>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSnmpSnapshotsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetNetopsDeviceSummaryUrl = (id: number,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/summary`
+}
+
+/**
+ * @summary Get read-only NetOps device summary
+ */
+export const getNetopsDeviceSummary = async (id: number, options?: RequestInit): Promise<NetopsDeviceSummary> => {
+
+  return customFetch<NetopsDeviceSummary>(getGetNetopsDeviceSummaryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetopsDeviceSummaryQueryKey = (id: number,) => {
+    return [
+    `/api/netops/devices/${id}/summary`
+    ] as const;
+    }
+
+
+export const getGetNetopsDeviceSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getNetopsDeviceSummary>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetopsDeviceSummaryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetopsDeviceSummary>>> = ({ signal }) => getNetopsDeviceSummary(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetopsDeviceSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getNetopsDeviceSummary>>>
+export type GetNetopsDeviceSummaryQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get read-only NetOps device summary
+ */
+
+export function useGetNetopsDeviceSummary<TData = Awaited<ReturnType<typeof getNetopsDeviceSummary>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetopsDeviceSummaryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetopsDeviceInterfacesUrl = (id: number,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/interfaces`
+}
+
+/**
+ * @summary List read-only NetOps interfaces
+ */
+export const listNetopsDeviceInterfaces = async (id: number, options?: RequestInit): Promise<NetopsInterface[]> => {
+
+  return customFetch<NetopsInterface[]>(getListNetopsDeviceInterfacesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetopsDeviceInterfacesQueryKey = (id: number,) => {
+    return [
+    `/api/netops/devices/${id}/interfaces`
+    ] as const;
+    }
+
+
+export const getListNetopsDeviceInterfacesQueryOptions = <TData = Awaited<ReturnType<typeof listNetopsDeviceInterfaces>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceInterfaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetopsDeviceInterfacesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetopsDeviceInterfaces>>> = ({ signal }) => listNetopsDeviceInterfaces(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceInterfaces>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetopsDeviceInterfacesQueryResult = NonNullable<Awaited<ReturnType<typeof listNetopsDeviceInterfaces>>>
+export type ListNetopsDeviceInterfacesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List read-only NetOps interfaces
+ */
+
+export function useListNetopsDeviceInterfaces<TData = Awaited<ReturnType<typeof listNetopsDeviceInterfaces>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceInterfaces>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetopsDeviceInterfacesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetopsDeviceBgpPeersUrl = (id: number,
+    params?: ListNetopsDeviceBgpPeersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/netops/devices/${id}/bgp-peers?${stringifiedParams}` : `/api/netops/devices/${id}/bgp-peers`
+}
+
+/**
+ * @summary List read-only NetOps BGP peers
+ */
+export const listNetopsDeviceBgpPeers = async (id: number,
+    params?: ListNetopsDeviceBgpPeersParams, options?: RequestInit): Promise<NetopsBgpPeer[]> => {
+
+  return customFetch<NetopsBgpPeer[]>(getListNetopsDeviceBgpPeersUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetopsDeviceBgpPeersQueryKey = (id: number,
+    params?: ListNetopsDeviceBgpPeersParams,) => {
+    return [
+    `/api/netops/devices/${id}/bgp-peers`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListNetopsDeviceBgpPeersQueryOptions = <TData = Awaited<ReturnType<typeof listNetopsDeviceBgpPeers>>, TError = ErrorType<void>>(id: number,
+    params?: ListNetopsDeviceBgpPeersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetopsDeviceBgpPeersQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetopsDeviceBgpPeers>>> = ({ signal }) => listNetopsDeviceBgpPeers(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetopsDeviceBgpPeersQueryResult = NonNullable<Awaited<ReturnType<typeof listNetopsDeviceBgpPeers>>>
+export type ListNetopsDeviceBgpPeersQueryError = ErrorType<void>
+
+
+/**
+ * @summary List read-only NetOps BGP peers
+ */
+
+export function useListNetopsDeviceBgpPeers<TData = Awaited<ReturnType<typeof listNetopsDeviceBgpPeers>>, TError = ErrorType<void>>(
+ id: number,
+    params?: ListNetopsDeviceBgpPeersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetopsDeviceBgpPeersQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetopsDeviceBgpPeerRoleOverridesUrl = (id: number,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/bgp-peer-role-overrides`
+}
+
+/**
+ * @summary List local BGP peer role overrides
+ */
+export const listNetopsDeviceBgpPeerRoleOverrides = async (id: number, options?: RequestInit): Promise<NetopsBgpPeerRoleOverride[]> => {
+
+  return customFetch<NetopsBgpPeerRoleOverride[]>(getListNetopsDeviceBgpPeerRoleOverridesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetopsDeviceBgpPeerRoleOverridesQueryKey = (id: number,) => {
+    return [
+    `/api/netops/devices/${id}/bgp-peer-role-overrides`
+    ] as const;
+    }
+
+
+export const getListNetopsDeviceBgpPeerRoleOverridesQueryOptions = <TData = Awaited<ReturnType<typeof listNetopsDeviceBgpPeerRoleOverrides>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerRoleOverrides>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetopsDeviceBgpPeerRoleOverridesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerRoleOverrides>>> = ({ signal }) => listNetopsDeviceBgpPeerRoleOverrides(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerRoleOverrides>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetopsDeviceBgpPeerRoleOverridesQueryResult = NonNullable<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerRoleOverrides>>>
+export type ListNetopsDeviceBgpPeerRoleOverridesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List local BGP peer role overrides
+ */
+
+export function useListNetopsDeviceBgpPeerRoleOverrides<TData = Awaited<ReturnType<typeof listNetopsDeviceBgpPeerRoleOverrides>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerRoleOverrides>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetopsDeviceBgpPeerRoleOverridesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCollectNetopsDeviceReadOnlyUrl = (id: number,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/collect/read-only`
+}
+
+/**
+ * @summary Start read-only NetOps collection safety stub
+ */
+export const collectNetopsDeviceReadOnly = async (id: number, options?: RequestInit): Promise<NetopsReadonlyCollectionResult> => {
+
+  return customFetch<NetopsReadonlyCollectionResult>(getCollectNetopsDeviceReadOnlyUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCollectNetopsDeviceReadOnlyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof collectNetopsDeviceReadOnly>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof collectNetopsDeviceReadOnly>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['collectNetopsDeviceReadOnly'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof collectNetopsDeviceReadOnly>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  collectNetopsDeviceReadOnly(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CollectNetopsDeviceReadOnlyMutationResult = NonNullable<Awaited<ReturnType<typeof collectNetopsDeviceReadOnly>>>
+
+    export type CollectNetopsDeviceReadOnlyMutationError = ErrorType<void>
+
+    /**
+ * @summary Start read-only NetOps collection safety stub
+ */
+export const useCollectNetopsDeviceReadOnly = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof collectNetopsDeviceReadOnly>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof collectNetopsDeviceReadOnly>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCollectNetopsDeviceReadOnlyMutationOptions(options));
+    }
+
+export const getGetNetopsDeviceCollectionStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/collection-status`
+}
+
+/**
+ * @summary Get read-only NetOps collection status
+ */
+export const getNetopsDeviceCollectionStatus = async (id: number, options?: RequestInit): Promise<NetopsCollectionStatus> => {
+
+  return customFetch<NetopsCollectionStatus>(getGetNetopsDeviceCollectionStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetopsDeviceCollectionStatusQueryKey = (id: number,) => {
+    return [
+    `/api/netops/devices/${id}/collection-status`
+    ] as const;
+    }
+
+
+export const getGetNetopsDeviceCollectionStatusQueryOptions = <TData = Awaited<ReturnType<typeof getNetopsDeviceCollectionStatus>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceCollectionStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetopsDeviceCollectionStatusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetopsDeviceCollectionStatus>>> = ({ signal }) => getNetopsDeviceCollectionStatus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceCollectionStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetopsDeviceCollectionStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getNetopsDeviceCollectionStatus>>>
+export type GetNetopsDeviceCollectionStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get read-only NetOps collection status
+ */
+
+export function useGetNetopsDeviceCollectionStatus<TData = Awaited<ReturnType<typeof getNetopsDeviceCollectionStatus>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceCollectionStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetopsDeviceCollectionStatusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetNetopsDeviceBgpPeerUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/bgp-peers/${peerIp}`
+}
+
+/**
+ * @summary Get read-only BGP peer details
+ */
+export const getNetopsDeviceBgpPeer = async (id: number,
+    peerIp: string, options?: RequestInit): Promise<NetopsBgpPeer> => {
+
+  return customFetch<NetopsBgpPeer>(getGetNetopsDeviceBgpPeerUrl(id,peerIp),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetopsDeviceBgpPeerQueryKey = (id: number,
+    peerIp: string,) => {
+    return [
+    `/api/netops/devices/${id}/bgp-peers/${peerIp}`
+    ] as const;
+    }
+
+
+export const getGetNetopsDeviceBgpPeerQueryOptions = <TData = Awaited<ReturnType<typeof getNetopsDeviceBgpPeer>>, TError = ErrorType<void>>(id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetopsDeviceBgpPeerQueryKey(id,peerIp);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetopsDeviceBgpPeer>>> = ({ signal }) => getNetopsDeviceBgpPeer(id,peerIp, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && peerIp), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeer>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetopsDeviceBgpPeerQueryResult = NonNullable<Awaited<ReturnType<typeof getNetopsDeviceBgpPeer>>>
+export type GetNetopsDeviceBgpPeerQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get read-only BGP peer details
+ */
+
+export function useGetNetopsDeviceBgpPeer<TData = Awaited<ReturnType<typeof getNetopsDeviceBgpPeer>>, TError = ErrorType<void>>(
+ id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetopsDeviceBgpPeerQueryOptions(id,peerIp,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateNetopsDeviceBgpPeerRoleUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/bgp-peers/${peerIp}/role`
+}
+
+/**
+ * @summary Save local BGP peer role override
+ */
+export const updateNetopsDeviceBgpPeerRole = async (id: number,
+    peerIp: string,
+    netopsBgpPeerRoleOverrideInput: NetopsBgpPeerRoleOverrideInput, options?: RequestInit): Promise<NetopsBgpPeerRoleOverrideResult> => {
+
+  return customFetch<NetopsBgpPeerRoleOverrideResult>(getUpdateNetopsDeviceBgpPeerRoleUrl(id,peerIp),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      netopsBgpPeerRoleOverrideInput,)
+  }
+);}
+
+
+
+
+export const getUpdateNetopsDeviceBgpPeerRoleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateNetopsDeviceBgpPeerRole>>, TError,{id: number;peerIp: string;data: BodyType<NetopsBgpPeerRoleOverrideInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateNetopsDeviceBgpPeerRole>>, TError,{id: number;peerIp: string;data: BodyType<NetopsBgpPeerRoleOverrideInput>}, TContext> => {
+
+const mutationKey = ['updateNetopsDeviceBgpPeerRole'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateNetopsDeviceBgpPeerRole>>, {id: number;peerIp: string;data: BodyType<NetopsBgpPeerRoleOverrideInput>}> = (props) => {
+          const {id,peerIp,data} = props ?? {};
+
+          return  updateNetopsDeviceBgpPeerRole(id,peerIp,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateNetopsDeviceBgpPeerRoleMutationResult = NonNullable<Awaited<ReturnType<typeof updateNetopsDeviceBgpPeerRole>>>
+    export type UpdateNetopsDeviceBgpPeerRoleMutationBody = BodyType<NetopsBgpPeerRoleOverrideInput>
+    export type UpdateNetopsDeviceBgpPeerRoleMutationError = ErrorType<void>
+
+    /**
+ * @summary Save local BGP peer role override
+ */
+export const useUpdateNetopsDeviceBgpPeerRole = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateNetopsDeviceBgpPeerRole>>, TError,{id: number;peerIp: string;data: BodyType<NetopsBgpPeerRoleOverrideInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateNetopsDeviceBgpPeerRole>>,
+        TError,
+        {id: number;peerIp: string;data: BodyType<NetopsBgpPeerRoleOverrideInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateNetopsDeviceBgpPeerRoleMutationOptions(options));
+    }
+
+export const getListNetopsDeviceBgpPeerReceivedPrefixesUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/bgp-peers/${peerIp}/received-prefixes`
+}
+
+/**
+ * @summary List read-only BGP received prefixes for peer
+ */
+export const listNetopsDeviceBgpPeerReceivedPrefixes = async (id: number,
+    peerIp: string, options?: RequestInit): Promise<NetopsBgpPrefixEntry[]> => {
+
+  return customFetch<NetopsBgpPrefixEntry[]>(getListNetopsDeviceBgpPeerReceivedPrefixesUrl(id,peerIp),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetopsDeviceBgpPeerReceivedPrefixesQueryKey = (id: number,
+    peerIp: string,) => {
+    return [
+    `/api/netops/devices/${id}/bgp-peers/${peerIp}/received-prefixes`
+    ] as const;
+    }
+
+
+export const getListNetopsDeviceBgpPeerReceivedPrefixesQueryOptions = <TData = Awaited<ReturnType<typeof listNetopsDeviceBgpPeerReceivedPrefixes>>, TError = ErrorType<void>>(id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerReceivedPrefixes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetopsDeviceBgpPeerReceivedPrefixesQueryKey(id,peerIp);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerReceivedPrefixes>>> = ({ signal }) => listNetopsDeviceBgpPeerReceivedPrefixes(id,peerIp, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && peerIp), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerReceivedPrefixes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetopsDeviceBgpPeerReceivedPrefixesQueryResult = NonNullable<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerReceivedPrefixes>>>
+export type ListNetopsDeviceBgpPeerReceivedPrefixesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List read-only BGP received prefixes for peer
+ */
+
+export function useListNetopsDeviceBgpPeerReceivedPrefixes<TData = Awaited<ReturnType<typeof listNetopsDeviceBgpPeerReceivedPrefixes>>, TError = ErrorType<void>>(
+ id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerReceivedPrefixes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetopsDeviceBgpPeerReceivedPrefixesQueryOptions(id,peerIp,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetopsDeviceBgpPeerAdvertisedPrefixesUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/bgp-peers/${peerIp}/advertised-prefixes`
+}
+
+/**
+ * @summary List read-only BGP advertised prefixes for peer
+ */
+export const listNetopsDeviceBgpPeerAdvertisedPrefixes = async (id: number,
+    peerIp: string, options?: RequestInit): Promise<NetopsBgpPrefixEntry[]> => {
+
+  return customFetch<NetopsBgpPrefixEntry[]>(getListNetopsDeviceBgpPeerAdvertisedPrefixesUrl(id,peerIp),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetopsDeviceBgpPeerAdvertisedPrefixesQueryKey = (id: number,
+    peerIp: string,) => {
+    return [
+    `/api/netops/devices/${id}/bgp-peers/${peerIp}/advertised-prefixes`
+    ] as const;
+    }
+
+
+export const getListNetopsDeviceBgpPeerAdvertisedPrefixesQueryOptions = <TData = Awaited<ReturnType<typeof listNetopsDeviceBgpPeerAdvertisedPrefixes>>, TError = ErrorType<void>>(id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerAdvertisedPrefixes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetopsDeviceBgpPeerAdvertisedPrefixesQueryKey(id,peerIp);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerAdvertisedPrefixes>>> = ({ signal }) => listNetopsDeviceBgpPeerAdvertisedPrefixes(id,peerIp, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && peerIp), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerAdvertisedPrefixes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetopsDeviceBgpPeerAdvertisedPrefixesQueryResult = NonNullable<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerAdvertisedPrefixes>>>
+export type ListNetopsDeviceBgpPeerAdvertisedPrefixesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List read-only BGP advertised prefixes for peer
+ */
+
+export function useListNetopsDeviceBgpPeerAdvertisedPrefixes<TData = Awaited<ReturnType<typeof listNetopsDeviceBgpPeerAdvertisedPrefixes>>, TError = ErrorType<void>>(
+ id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceBgpPeerAdvertisedPrefixes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetopsDeviceBgpPeerAdvertisedPrefixesQueryOptions(id,peerIp,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetNetopsDeviceBgpPeerPoliciesUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/bgp-peers/${peerIp}/policies`
+}
+
+/**
+ * @summary Get read-only BGP policies for peer
+ */
+export const getNetopsDeviceBgpPeerPolicies = async (id: number,
+    peerIp: string, options?: RequestInit): Promise<NetopsBgpPolicies> => {
+
+  return customFetch<NetopsBgpPolicies>(getGetNetopsDeviceBgpPeerPoliciesUrl(id,peerIp),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetopsDeviceBgpPeerPoliciesQueryKey = (id: number,
+    peerIp: string,) => {
+    return [
+    `/api/netops/devices/${id}/bgp-peers/${peerIp}/policies`
+    ] as const;
+    }
+
+
+export const getGetNetopsDeviceBgpPeerPoliciesQueryOptions = <TData = Awaited<ReturnType<typeof getNetopsDeviceBgpPeerPolicies>>, TError = ErrorType<void>>(id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetopsDeviceBgpPeerPoliciesQueryKey(id,peerIp);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerPolicies>>> = ({ signal }) => getNetopsDeviceBgpPeerPolicies(id,peerIp, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && peerIp), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerPolicies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetopsDeviceBgpPeerPoliciesQueryResult = NonNullable<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerPolicies>>>
+export type GetNetopsDeviceBgpPeerPoliciesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get read-only BGP policies for peer
+ */
+
+export function useGetNetopsDeviceBgpPeerPolicies<TData = Awaited<ReturnType<typeof getNetopsDeviceBgpPeerPolicies>>, TError = ErrorType<void>>(
+ id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetopsDeviceBgpPeerPoliciesQueryOptions(id,peerIp,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetNetopsDeviceBgpPeerCommunitiesUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/bgp-peers/${peerIp}/communities`
+}
+
+/**
+ * @summary Get read-only BGP communities for peer
+ */
+export const getNetopsDeviceBgpPeerCommunities = async (id: number,
+    peerIp: string, options?: RequestInit): Promise<NetopsBgpCommunities> => {
+
+  return customFetch<NetopsBgpCommunities>(getGetNetopsDeviceBgpPeerCommunitiesUrl(id,peerIp),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetopsDeviceBgpPeerCommunitiesQueryKey = (id: number,
+    peerIp: string,) => {
+    return [
+    `/api/netops/devices/${id}/bgp-peers/${peerIp}/communities`
+    ] as const;
+    }
+
+
+export const getGetNetopsDeviceBgpPeerCommunitiesQueryOptions = <TData = Awaited<ReturnType<typeof getNetopsDeviceBgpPeerCommunities>>, TError = ErrorType<void>>(id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerCommunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetopsDeviceBgpPeerCommunitiesQueryKey(id,peerIp);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerCommunities>>> = ({ signal }) => getNetopsDeviceBgpPeerCommunities(id,peerIp, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && peerIp), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerCommunities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetopsDeviceBgpPeerCommunitiesQueryResult = NonNullable<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerCommunities>>>
+export type GetNetopsDeviceBgpPeerCommunitiesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get read-only BGP communities for peer
+ */
+
+export function useGetNetopsDeviceBgpPeerCommunities<TData = Awaited<ReturnType<typeof getNetopsDeviceBgpPeerCommunities>>, TError = ErrorType<void>>(
+ id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerCommunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetopsDeviceBgpPeerCommunitiesQueryOptions(id,peerIp,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetNetopsDeviceBgpPeerDiagnosticsUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/bgp-peers/${peerIp}/diagnostics`
+}
+
+/**
+ * @summary Get read-only BGP diagnostics for peer
+ */
+export const getNetopsDeviceBgpPeerDiagnostics = async (id: number,
+    peerIp: string, options?: RequestInit): Promise<NetopsBgpDiagnostics> => {
+
+  return customFetch<NetopsBgpDiagnostics>(getGetNetopsDeviceBgpPeerDiagnosticsUrl(id,peerIp),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetopsDeviceBgpPeerDiagnosticsQueryKey = (id: number,
+    peerIp: string,) => {
+    return [
+    `/api/netops/devices/${id}/bgp-peers/${peerIp}/diagnostics`
+    ] as const;
+    }
+
+
+export const getGetNetopsDeviceBgpPeerDiagnosticsQueryOptions = <TData = Awaited<ReturnType<typeof getNetopsDeviceBgpPeerDiagnostics>>, TError = ErrorType<void>>(id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerDiagnostics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetopsDeviceBgpPeerDiagnosticsQueryKey(id,peerIp);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerDiagnostics>>> = ({ signal }) => getNetopsDeviceBgpPeerDiagnostics(id,peerIp, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && peerIp), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerDiagnostics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetopsDeviceBgpPeerDiagnosticsQueryResult = NonNullable<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerDiagnostics>>>
+export type GetNetopsDeviceBgpPeerDiagnosticsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get read-only BGP diagnostics for peer
+ */
+
+export function useGetNetopsDeviceBgpPeerDiagnostics<TData = Awaited<ReturnType<typeof getNetopsDeviceBgpPeerDiagnostics>>, TError = ErrorType<void>>(
+ id: number,
+    peerIp: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceBgpPeerDiagnostics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetopsDeviceBgpPeerDiagnosticsQueryOptions(id,peerIp,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetopsDeviceFiltersUrl = (id: number,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/filters`
+}
+
+/**
+ * @summary List read-only NetOps filters
+ */
+export const listNetopsDeviceFilters = async (id: number, options?: RequestInit): Promise<NetopsFilter[]> => {
+
+  return customFetch<NetopsFilter[]>(getListNetopsDeviceFiltersUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetopsDeviceFiltersQueryKey = (id: number,) => {
+    return [
+    `/api/netops/devices/${id}/filters`
+    ] as const;
+    }
+
+
+export const getListNetopsDeviceFiltersQueryOptions = <TData = Awaited<ReturnType<typeof listNetopsDeviceFilters>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceFilters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetopsDeviceFiltersQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetopsDeviceFilters>>> = ({ signal }) => listNetopsDeviceFilters(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceFilters>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetopsDeviceFiltersQueryResult = NonNullable<Awaited<ReturnType<typeof listNetopsDeviceFilters>>>
+export type ListNetopsDeviceFiltersQueryError = ErrorType<void>
+
+
+/**
+ * @summary List read-only NetOps filters
+ */
+
+export function useListNetopsDeviceFilters<TData = Awaited<ReturnType<typeof listNetopsDeviceFilters>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceFilters>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetopsDeviceFiltersQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetopsDeviceCommunitiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/communities`
+}
+
+/**
+ * @summary List read-only NetOps communities
+ */
+export const listNetopsDeviceCommunities = async (id: number, options?: RequestInit): Promise<NetopsCommunity[]> => {
+
+  return customFetch<NetopsCommunity[]>(getListNetopsDeviceCommunitiesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetopsDeviceCommunitiesQueryKey = (id: number,) => {
+    return [
+    `/api/netops/devices/${id}/communities`
+    ] as const;
+    }
+
+
+export const getListNetopsDeviceCommunitiesQueryOptions = <TData = Awaited<ReturnType<typeof listNetopsDeviceCommunities>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceCommunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetopsDeviceCommunitiesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetopsDeviceCommunities>>> = ({ signal }) => listNetopsDeviceCommunities(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceCommunities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetopsDeviceCommunitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listNetopsDeviceCommunities>>>
+export type ListNetopsDeviceCommunitiesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List read-only NetOps communities
+ */
+
+export function useListNetopsDeviceCommunities<TData = Awaited<ReturnType<typeof listNetopsDeviceCommunities>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceCommunities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetopsDeviceCommunitiesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetopsDeviceLogsUrl = (id: number,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/logs`
+}
+
+/**
+ * @summary List read-only NetOps operational logs
+ */
+export const listNetopsDeviceLogs = async (id: number, options?: RequestInit): Promise<NetopsLogEntry[]> => {
+
+  return customFetch<NetopsLogEntry[]>(getListNetopsDeviceLogsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetopsDeviceLogsQueryKey = (id: number,) => {
+    return [
+    `/api/netops/devices/${id}/logs`
+    ] as const;
+    }
+
+
+export const getListNetopsDeviceLogsQueryOptions = <TData = Awaited<ReturnType<typeof listNetopsDeviceLogs>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetopsDeviceLogsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetopsDeviceLogs>>> = ({ signal }) => listNetopsDeviceLogs(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceLogs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetopsDeviceLogsQueryResult = NonNullable<Awaited<ReturnType<typeof listNetopsDeviceLogs>>>
+export type ListNetopsDeviceLogsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List read-only NetOps operational logs
+ */
+
+export function useListNetopsDeviceLogs<TData = Awaited<ReturnType<typeof listNetopsDeviceLogs>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetopsDeviceLogs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetopsDeviceLogsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetNetopsDeviceLatestSnmpSnapshotUrl = (id: number,) => {
+
+
+
+
+  return `/api/netops/devices/${id}/snmp-snapshots/latest`
+}
+
+/**
+ * @summary Get latest read-only SNMP snapshot for device
+ */
+export const getNetopsDeviceLatestSnmpSnapshot = async (id: number, options?: RequestInit): Promise<NetopsLatestSnmpSnapshot> => {
+
+  return customFetch<NetopsLatestSnmpSnapshot>(getGetNetopsDeviceLatestSnmpSnapshotUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetopsDeviceLatestSnmpSnapshotQueryKey = (id: number,) => {
+    return [
+    `/api/netops/devices/${id}/snmp-snapshots/latest`
+    ] as const;
+    }
+
+
+export const getGetNetopsDeviceLatestSnmpSnapshotQueryOptions = <TData = Awaited<ReturnType<typeof getNetopsDeviceLatestSnmpSnapshot>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceLatestSnmpSnapshot>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetopsDeviceLatestSnmpSnapshotQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetopsDeviceLatestSnmpSnapshot>>> = ({ signal }) => getNetopsDeviceLatestSnmpSnapshot(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceLatestSnmpSnapshot>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetopsDeviceLatestSnmpSnapshotQueryResult = NonNullable<Awaited<ReturnType<typeof getNetopsDeviceLatestSnmpSnapshot>>>
+export type GetNetopsDeviceLatestSnmpSnapshotQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get latest read-only SNMP snapshot for device
+ */
+
+export function useGetNetopsDeviceLatestSnmpSnapshot<TData = Awaited<ReturnType<typeof getNetopsDeviceLatestSnmpSnapshot>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetopsDeviceLatestSnmpSnapshot>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetopsDeviceLatestSnmpSnapshotQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -413,6 +413,552 @@ export interface CollectConfigInput {
   commands?: string[];
 }
 
+export interface SnmpSnapshot {
+  id: number;
+  deviceId: number;
+  /** @nullable */
+  deviceHostname?: string | null;
+  success: boolean;
+  /** @nullable */
+  errorMessage?: string | null;
+  /**
+     * JSON array of collected interface objects
+     * @nullable
+     */
+  interfacesJson?: string | null;
+  /**
+     * JSON array of collected BGP peer objects
+     * @nullable
+     */
+  bgpPeersJson?: string | null;
+  /**
+     * JSON array of collected VRF objects
+     * @nullable
+     */
+  vrfsJson?: string | null;
+  collectedAt: string;
+}
+
+export interface NetopsSafeDevice {
+  id: number;
+  hostname: string;
+  ipAddress: string;
+  vendor: string;
+  platform: string;
+  site: string;
+  /** @nullable */
+  role?: string | null;
+  status: string;
+  /** @nullable */
+  lastSeen?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NetopsCounters {
+  interfaces: number;
+  bgpPeers: number;
+  bgpEstablished: number;
+  bgpDown: number;
+  filters: number;
+  communities: number;
+}
+
+export interface NetopsDeviceSummary {
+  device: NetopsSafeDevice;
+  counters: NetopsCounters;
+  /** @nullable */
+  lastSnapshotAt?: string | null;
+}
+
+export type NetopsInterfaceAdminStatus = typeof NetopsInterfaceAdminStatus[keyof typeof NetopsInterfaceAdminStatus];
+
+
+export const NetopsInterfaceAdminStatus = {
+  up: 'up',
+  down: 'down',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsInterfaceOperStatus = typeof NetopsInterfaceOperStatus[keyof typeof NetopsInterfaceOperStatus];
+
+
+export const NetopsInterfaceOperStatus = {
+  up: 'up',
+  down: 'down',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsInterfaceSource = typeof NetopsInterfaceSource[keyof typeof NetopsInterfaceSource];
+
+
+export const NetopsInterfaceSource = {
+  snmp: 'snmp',
+  ssh: 'ssh',
+  snapshot: 'snapshot',
+  mock: 'mock',
+  db: 'db',
+} as const;
+
+export interface NetopsInterface {
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  adminStatus: NetopsInterfaceAdminStatus;
+  operStatus: NetopsInterfaceOperStatus;
+  ipv4: string[];
+  ipv6: string[];
+  /** @nullable */
+  vlan?: number | null;
+  /** @nullable */
+  vrf?: string | null;
+  source: NetopsInterfaceSource;
+}
+
+export type NetopsBgpPeerState = typeof NetopsBgpPeerState[keyof typeof NetopsBgpPeerState];
+
+
+export const NetopsBgpPeerState = {
+  Established: 'Established',
+  Idle: 'Idle',
+  Active: 'Active',
+  Connect: 'Connect',
+  Unknown: 'Unknown',
+} as const;
+
+export type NetopsBgpPeerRole = typeof NetopsBgpPeerRole[keyof typeof NetopsBgpPeerRole];
+
+
+export const NetopsBgpPeerRole = {
+  provider: 'provider',
+  customer: 'customer',
+  cdn: 'cdn',
+  ix: 'ix',
+  cdn_ix: 'cdn_ix',
+  ibgp: 'ibgp',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsBgpPeerRoleSource = typeof NetopsBgpPeerRoleSource[keyof typeof NetopsBgpPeerRoleSource];
+
+
+export const NetopsBgpPeerRoleSource = {
+  manual_override: 'manual_override',
+  classifier: 'classifier',
+  snapshot: 'snapshot',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsBgpPeerAddressFamily = typeof NetopsBgpPeerAddressFamily[keyof typeof NetopsBgpPeerAddressFamily];
+
+
+export const NetopsBgpPeerAddressFamily = {
+  ipv4: 'ipv4',
+  ipv6: 'ipv6',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsBgpPeerSessionType = typeof NetopsBgpPeerSessionType[keyof typeof NetopsBgpPeerSessionType];
+
+
+export const NetopsBgpPeerSessionType = {
+  iBGP: 'iBGP',
+  eBGP: 'eBGP',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsBgpPeerSource = typeof NetopsBgpPeerSource[keyof typeof NetopsBgpPeerSource];
+
+
+export const NetopsBgpPeerSource = {
+  snmp: 'snmp',
+  ssh: 'ssh',
+  snapshot: 'snapshot',
+  mock: 'mock',
+  db: 'db',
+} as const;
+
+export interface NetopsBgpPeer {
+  peerIp: string;
+  /** @nullable */
+  remoteAs?: number | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  name?: string | null;
+  state: NetopsBgpPeerState;
+  role: NetopsBgpPeerRole;
+  roleSource: NetopsBgpPeerRoleSource;
+  addressFamily: NetopsBgpPeerAddressFamily;
+  sessionType: NetopsBgpPeerSessionType;
+  /** @nullable */
+  vrf?: string | null;
+  /** @nullable */
+  importPolicy?: string | null;
+  /** @nullable */
+  exportPolicy?: string | null;
+  /** @nullable */
+  receivedPrefixes?: number | null;
+  /** @nullable */
+  advertisedPrefixes?: number | null;
+  /** @nullable */
+  activePrefixes?: number | null;
+  /** @nullable */
+  uptime?: string | null;
+  source: NetopsBgpPeerSource;
+}
+
+export type NetopsFilterType = typeof NetopsFilterType[keyof typeof NetopsFilterType];
+
+
+export const NetopsFilterType = {
+  'ip-prefix': 'ip-prefix',
+  'prefix-list': 'prefix-list',
+  'route-policy': 'route-policy',
+  acl: 'acl',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsFilterSource = typeof NetopsFilterSource[keyof typeof NetopsFilterSource];
+
+
+export const NetopsFilterSource = {
+  snmp: 'snmp',
+  ssh: 'ssh',
+  snapshot: 'snapshot',
+  mock: 'mock',
+  db: 'db',
+} as const;
+
+export interface NetopsFilter {
+  name: string;
+  type: NetopsFilterType;
+  entries: unknown[];
+  source: NetopsFilterSource;
+}
+
+export type NetopsCommunityType = typeof NetopsCommunityType[keyof typeof NetopsCommunityType];
+
+
+export const NetopsCommunityType = {
+  'community-filter': 'community-filter',
+  'community-list': 'community-list',
+  set: 'set',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsCommunitySource = typeof NetopsCommunitySource[keyof typeof NetopsCommunitySource];
+
+
+export const NetopsCommunitySource = {
+  snmp: 'snmp',
+  ssh: 'ssh',
+  snapshot: 'snapshot',
+  mock: 'mock',
+  db: 'db',
+} as const;
+
+export interface NetopsCommunity {
+  name: string;
+  type: NetopsCommunityType;
+  entries: unknown[];
+  source: NetopsCommunitySource;
+}
+
+export type NetopsCollectionStatusStatus = typeof NetopsCollectionStatusStatus[keyof typeof NetopsCollectionStatusStatus];
+
+
+export const NetopsCollectionStatusStatus = {
+  idle: 'idle',
+  ready: 'ready',
+  blocked: 'blocked',
+  error: 'error',
+} as const;
+
+export interface NetopsCollectionStatus {
+  deviceId: number;
+  status: NetopsCollectionStatusStatus;
+  active: boolean;
+  /** @nullable */
+  lastSnapshotAt: string | null;
+  message: string;
+}
+
+export interface NetopsReadonlyCommandCheck {
+  command: string;
+  allowed: boolean;
+  /** @nullable */
+  reason: string | null;
+}
+
+export type NetopsReadonlyCollectionResultStatus = typeof NetopsReadonlyCollectionResultStatus[keyof typeof NetopsReadonlyCollectionResultStatus];
+
+
+export const NetopsReadonlyCollectionResultStatus = {
+  idle: 'idle',
+  ready: 'ready',
+  blocked: 'blocked',
+  error: 'error',
+} as const;
+
+export interface NetopsReadonlyCollectionResult {
+  deviceId: number;
+  status: NetopsReadonlyCollectionResultStatus;
+  executed: boolean;
+  message: string;
+  commandChecks: NetopsReadonlyCommandCheck[];
+}
+
+export type NetopsBgpPrefixEntrySource = typeof NetopsBgpPrefixEntrySource[keyof typeof NetopsBgpPrefixEntrySource];
+
+
+export const NetopsBgpPrefixEntrySource = {
+  snmp: 'snmp',
+  ssh: 'ssh',
+  snapshot: 'snapshot',
+  mock: 'mock',
+  db: 'db',
+} as const;
+
+export interface NetopsBgpPrefixEntry {
+  prefix: string;
+  /** @nullable */
+  nextHop: string | null;
+  /** @nullable */
+  asPath: string | null;
+  /** @nullable */
+  localPreference: number | null;
+  /** @nullable */
+  med: number | null;
+  source: NetopsBgpPrefixEntrySource;
+}
+
+export type NetopsBgpPoliciesSource = typeof NetopsBgpPoliciesSource[keyof typeof NetopsBgpPoliciesSource];
+
+
+export const NetopsBgpPoliciesSource = {
+  snmp: 'snmp',
+  ssh: 'ssh',
+  snapshot: 'snapshot',
+  mock: 'mock',
+  db: 'db',
+} as const;
+
+export interface NetopsBgpPolicies {
+  peerIp: string;
+  /** @nullable */
+  importPolicy: string | null;
+  /** @nullable */
+  exportPolicy: string | null;
+  filters: NetopsFilter[];
+  source: NetopsBgpPoliciesSource;
+  message: string;
+}
+
+export type NetopsBgpCommunitiesSource = typeof NetopsBgpCommunitiesSource[keyof typeof NetopsBgpCommunitiesSource];
+
+
+export const NetopsBgpCommunitiesSource = {
+  snmp: 'snmp',
+  ssh: 'ssh',
+  snapshot: 'snapshot',
+  mock: 'mock',
+  db: 'db',
+} as const;
+
+export interface NetopsBgpCommunities {
+  peerIp: string;
+  communities: NetopsCommunity[];
+  source: NetopsBgpCommunitiesSource;
+  message: string;
+}
+
+export type NetopsDiagnosticCheckLevel = typeof NetopsDiagnosticCheckLevel[keyof typeof NetopsDiagnosticCheckLevel];
+
+
+export const NetopsDiagnosticCheckLevel = {
+  INFO: 'INFO',
+  WARN: 'WARN',
+  ERROR: 'ERROR',
+  SUCCESS: 'SUCCESS',
+} as const;
+
+export interface NetopsDiagnosticCheck {
+  name: string;
+  level: NetopsDiagnosticCheckLevel;
+  message: string;
+}
+
+export type NetopsBgpDiagnosticsSource = typeof NetopsBgpDiagnosticsSource[keyof typeof NetopsBgpDiagnosticsSource];
+
+
+export const NetopsBgpDiagnosticsSource = {
+  snmp: 'snmp',
+  ssh: 'ssh',
+  snapshot: 'snapshot',
+  mock: 'mock',
+  db: 'db',
+} as const;
+
+export interface NetopsBgpDiagnostics {
+  peerIp: string;
+  checks: NetopsDiagnosticCheck[];
+  source: NetopsBgpDiagnosticsSource;
+}
+
+export type NetopsBgpPeerRoleOverrideAddressFamily = typeof NetopsBgpPeerRoleOverrideAddressFamily[keyof typeof NetopsBgpPeerRoleOverrideAddressFamily];
+
+
+export const NetopsBgpPeerRoleOverrideAddressFamily = {
+  ipv4: 'ipv4',
+  ipv6: 'ipv6',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsBgpPeerRoleOverrideRole = typeof NetopsBgpPeerRoleOverrideRole[keyof typeof NetopsBgpPeerRoleOverrideRole];
+
+
+export const NetopsBgpPeerRoleOverrideRole = {
+  provider: 'provider',
+  customer: 'customer',
+  cdn: 'cdn',
+  ix: 'ix',
+  cdn_ix: 'cdn_ix',
+  ibgp: 'ibgp',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsBgpPeerRoleOverrideSource = typeof NetopsBgpPeerRoleOverrideSource[keyof typeof NetopsBgpPeerRoleOverrideSource];
+
+
+export const NetopsBgpPeerRoleOverrideSource = {
+  manual_override: 'manual_override',
+} as const;
+
+export interface NetopsBgpPeerRoleOverride {
+  id: number;
+  deviceId: number;
+  peerIp: string;
+  /** @nullable */
+  remoteAs?: number | null;
+  addressFamily: NetopsBgpPeerRoleOverrideAddressFamily;
+  role: NetopsBgpPeerRoleOverrideRole;
+  /** @nullable */
+  label?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  source: NetopsBgpPeerRoleOverrideSource;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  createdBy?: string | null;
+  /** @nullable */
+  updatedBy?: string | null;
+}
+
+export type NetopsBgpPeerRoleOverrideInputAddressFamily = typeof NetopsBgpPeerRoleOverrideInputAddressFamily[keyof typeof NetopsBgpPeerRoleOverrideInputAddressFamily];
+
+
+export const NetopsBgpPeerRoleOverrideInputAddressFamily = {
+  ipv4: 'ipv4',
+  ipv6: 'ipv6',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsBgpPeerRoleOverrideInputRole = typeof NetopsBgpPeerRoleOverrideInputRole[keyof typeof NetopsBgpPeerRoleOverrideInputRole];
+
+
+export const NetopsBgpPeerRoleOverrideInputRole = {
+  provider: 'provider',
+  customer: 'customer',
+  cdn: 'cdn',
+  ix: 'ix',
+  cdn_ix: 'cdn_ix',
+  ibgp: 'ibgp',
+  unknown: 'unknown',
+} as const;
+
+export interface NetopsBgpPeerRoleOverrideInput {
+  addressFamily: NetopsBgpPeerRoleOverrideInputAddressFamily;
+  /** @nullable */
+  remoteAs: number | null;
+  role: NetopsBgpPeerRoleOverrideInputRole;
+  /** @nullable */
+  label?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export type NetopsBgpPeerRoleOverrideResultRole = typeof NetopsBgpPeerRoleOverrideResultRole[keyof typeof NetopsBgpPeerRoleOverrideResultRole];
+
+
+export const NetopsBgpPeerRoleOverrideResultRole = {
+  provider: 'provider',
+  customer: 'customer',
+  cdn: 'cdn',
+  ix: 'ix',
+  cdn_ix: 'cdn_ix',
+  ibgp: 'ibgp',
+  unknown: 'unknown',
+} as const;
+
+export type NetopsBgpPeerRoleOverrideResultSource = typeof NetopsBgpPeerRoleOverrideResultSource[keyof typeof NetopsBgpPeerRoleOverrideResultSource];
+
+
+export const NetopsBgpPeerRoleOverrideResultSource = {
+  manual_override: 'manual_override',
+} as const;
+
+export interface NetopsBgpPeerRoleOverrideResult {
+  ok: true;
+  peerIp: string;
+  role: NetopsBgpPeerRoleOverrideResultRole;
+  source: NetopsBgpPeerRoleOverrideResultSource;
+}
+
+export type NetopsLogEntryLevel = typeof NetopsLogEntryLevel[keyof typeof NetopsLogEntryLevel];
+
+
+export const NetopsLogEntryLevel = {
+  INFO: 'INFO',
+  WARN: 'WARN',
+  ERROR: 'ERROR',
+  SUCCESS: 'SUCCESS',
+} as const;
+
+export type NetopsLogEntryScope = typeof NetopsLogEntryScope[keyof typeof NetopsLogEntryScope];
+
+
+export const NetopsLogEntryScope = {
+  SNMP: 'SNMP',
+  SSH: 'SSH',
+  BGP: 'BGP',
+  INTERFACE: 'INTERFACE',
+  SYSTEM: 'SYSTEM',
+} as const;
+
+export type NetopsLogEntrySource = typeof NetopsLogEntrySource[keyof typeof NetopsLogEntrySource];
+
+
+export const NetopsLogEntrySource = {
+  system: 'system',
+  local: 'local',
+} as const;
+
+export interface NetopsLogEntry {
+  timestamp: string;
+  level: NetopsLogEntryLevel;
+  scope: NetopsLogEntryScope;
+  message: string;
+  source: NetopsLogEntrySource;
+}
+
+export interface NetopsLatestSnmpSnapshot {
+  deviceId: number;
+  snapshot: SnmpSnapshot | null;
+  message: string;
+}
+
 export type ListDevicesParams = {
 status?: string;
 vendor?: string;
@@ -437,4 +983,53 @@ type?: string;
 export type ListCollectedConfigsParams = {
 deviceId?: number;
 };
+
+export type ListSnmpSnapshotsParams = {
+deviceId?: number;
+success?: boolean;
+/**
+ * @minimum 1
+ * @maximum 500
+ */
+limit?: number;
+};
+
+export type ListNetopsDeviceBgpPeersParams = {
+role?: ListNetopsDeviceBgpPeersRole;
+af?: ListNetopsDeviceBgpPeersAf;
+state?: ListNetopsDeviceBgpPeersState;
+};
+
+export type ListNetopsDeviceBgpPeersRole = typeof ListNetopsDeviceBgpPeersRole[keyof typeof ListNetopsDeviceBgpPeersRole];
+
+
+export const ListNetopsDeviceBgpPeersRole = {
+  provider: 'provider',
+  customer: 'customer',
+  cdn: 'cdn',
+  ix: 'ix',
+  cdn_ix: 'cdn_ix',
+  ibgp: 'ibgp',
+  unknown: 'unknown',
+} as const;
+
+export type ListNetopsDeviceBgpPeersAf = typeof ListNetopsDeviceBgpPeersAf[keyof typeof ListNetopsDeviceBgpPeersAf];
+
+
+export const ListNetopsDeviceBgpPeersAf = {
+  ipv4: 'ipv4',
+  ipv6: 'ipv6',
+} as const;
+
+export type ListNetopsDeviceBgpPeersState = typeof ListNetopsDeviceBgpPeersState[keyof typeof ListNetopsDeviceBgpPeersState];
+
+
+export const ListNetopsDeviceBgpPeersState = {
+  Established: 'Established',
+  Active: 'Active',
+  Idle: 'Idle',
+  Connect: 'Connect',
+  Unknown: 'Unknown',
+  Down: 'Down',
+} as const;
 

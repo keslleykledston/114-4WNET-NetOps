@@ -8,7 +8,9 @@ import {
   DownloadCloud, 
   LayoutDashboard,
   Settings,
-  Activity
+  Activity,
+  RadioTower,
+  Workflow
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
@@ -22,6 +24,8 @@ const navItems = [
   { href: "/templates", icon: FileCode, label: "Templates" },
   { href: "/policies", icon: ScrollText, label: "Policies" },
   { href: "/config-collection", icon: DownloadCloud, label: "Config Collection" },
+  { href: "/snmp-history", icon: RadioTower, label: "SNMP History" },
+  { href: "/netops-operations", icon: Workflow, label: "NetOps Operations" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

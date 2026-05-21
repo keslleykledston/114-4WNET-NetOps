@@ -1,4 +1,5 @@
 import { Client } from "ssh2";
+import type { AnyAuthMethod, ConnectConfig, KeyboardInteractiveCallback, Prompt } from "ssh2";
 
 export interface SSHConfig {
   host: string;
@@ -11,6 +12,52 @@ export interface SSHCommandResult {
   command: string;
   output: string;
   error?: string;
+}
+
+function buildConnectConfig(config: SSHConfig, readyTimeout: number): ConnectConfig {
+  const authHandler: AnyAuthMethod[] = [
+    {
+      type: "keyboard-interactive",
+      username: config.username,
+      prompt: (...args) => answerKeyboardInteractive(config.password, ...args),
+    },
+    {
+      type: "password",
+      username: config.username,
+      password: config.password,
+    },
+  ];
+
+  return {
+    host: config.host,
+    port: config.port,
+    username: config.username,
+    password: config.password,
+    readyTimeout,
+    tryKeyboard: true,
+    authHandler,
+  };
+}
+
+function answerKeyboardInteractive(
+  password: string,
+  _name: string,
+  _instructions: string,
+  _lang: string,
+  prompts: Prompt[],
+  finish: KeyboardInteractiveCallback,
+): void {
+  finish(prompts.map(() => password));
+}
+
+function normalizeSSHErrorMessage(message: string): string {
+  if (/all configured authentication methods failed/i.test(message)) {
+    return [
+      "SSH authentication failed.",
+      "Check username/password and whether the device allows password or keyboard-interactive SSH login.",
+    ].join(" ");
+  }
+  return message;
 }
 
 export async function testSSHConnection(config: SSHConfig): Promise<{ success: boolean; latencyMs: number | null; hostname: string | null; message: string }> {
@@ -37,21 +84,19 @@ export async function testSSHConnection(config: SSHConfig): Promise<{ success: b
       }
     });
 
+    conn.on("keyboard-interactive", (...args) => {
+      answerKeyboardInteractive(config.password, ...args);
+    });
+
     conn.on("error", (err) => {
       if (!resolved) {
         resolved = true;
         clearTimeout(timeout);
-        resolve({ success: false, latencyMs: null, hostname: null, message: err.message });
+        resolve({ success: false, latencyMs: null, hostname: null, message: normalizeSSHErrorMessage(err.message) });
       }
     });
 
-    conn.connect({
-      host: config.host,
-      port: config.port,
-      username: config.username,
-      password: config.password,
-      readyTimeout: 9000,
-    });
+    conn.connect(buildConnectConfig(config, 9000));
   });
 }
 
@@ -87,21 +132,19 @@ export async function runSSHCommands(config: SSHConfig, commands: string[]): Pro
       }
     });
 
+    conn.on("keyboard-interactive", (...args) => {
+      answerKeyboardInteractive(config.password, ...args);
+    });
+
     conn.on("error", (err) => {
       if (!resolved) {
         resolved = true;
         clearTimeout(timeout);
-        reject(err);
+        reject(new Error(normalizeSSHErrorMessage(err.message)));
       }
     });
 
-    conn.connect({
-      host: config.host,
-      port: config.port,
-      username: config.username,
-      password: config.password,
-      readyTimeout: 15000,
-    });
+    conn.connect(buildConnectConfig(config, 15000));
   });
 }
 

@@ -1,0 +1,67 @@
+# 60-bgp_manager Feature Map
+
+## Existe no 60-bgp_manager
+
+- Arvore operacional por empresa/cliente e dispositivo.
+- Subviews por dispositivo: Interfaces, BGP, Operadoras, Clientes, CDN/IX, Filtros, Communities.
+- Coleta SNMP completa de interfaces, BGP peers e VRFs.
+- Refresh SNMP leve para admin/oper de interfaces e estado/counters BGP.
+- SSH Huawei VRP para coleta de running-config e consultas operacionais.
+- Parsers Huawei VRP para interfaces, BGP, VRFs, route-policy e communities.
+- Classificacao BGP por papel: operadora, cliente, CDN/IX, iBGP/eBGP.
+- Painel de logs operacionais com eventos SNMP, SSH, startup, warning/error/success.
+- Fluxos sensiveis de communities e policies com preview antes de aplicar.
+
+## Ja existe no 114-4WNET-NetOps
+
+- Frontend React/Vite/Wouter com shadcn/ui e tema dark.
+- Inventario de dispositivos.
+- Cadastro/edicao com SSH e `snmpCommunity`.
+- Teste SSH.
+- Coleta SSH de configuracao e parsing inicial.
+- Tabela `snmp_snapshots`.
+- Poller SNMP persistindo interfaces, BGP peers e VRFs em JSON.
+- API e tela de historico SNMP: `/api/snmp-snapshots` e `SNMP History`.
+- OpenAPI, Orval e Zod.
+- CI com typecheck, build e smoke Docker.
+
+## Sera portado/adaptado depois
+
+- API read-only por device:
+  - `GET /api/devices/:id/interfaces`
+  - `GET /api/devices/:id/bgp-peers`
+  - `GET /api/devices/:id/bgp-peers?role=provider`
+  - `GET /api/devices/:id/bgp-peers?role=customer`
+  - `GET /api/devices/:id/bgp-peers?role=cdn_ix`
+  - `GET /api/devices/:id/communities`
+  - `GET /api/devices/:id/filters`
+  - `GET /api/devices/:id/snmp-snapshots/latest`
+- Modulos TypeScript separados para SNMP, SSH, Huawei VRP, BGP, interfaces e communities.
+- Parsers Huawei VRP mais completos.
+- Classificacao BGP por papel, preservando schema atual ate haver migracao controlada.
+- Logs operacionais normalizados.
+- Paineis reais ligados nas APIs read-only.
+
+## Descartado nesta etapa
+
+- Copia literal do frontend do 60.
+- Copia direta de Python para backend TypeScript.
+- Operacoes write/apply de route-policy ou communities.
+- Mudanca de tema, spacing, tokens, sidebar global ou design system.
+- Migracao de banco para tabelas novas.
+- SNMP/SSH runtime novo.
+
+## Riscos
+
+- 60 usa Python/FastAPI/SQLAlchemy; 114 usa Express/TypeScript/Drizzle.
+- 60 tem modelo persistido rico para interfaces/BGP; 114 hoje usa snapshots JSON.
+- Classificacao BGP precisa regra defensiva para evitar papel incorreto.
+- Huawei VRP tem saidas variantes por plataforma e versao.
+- APIs read-only devem nascer sem quebrar contratos existentes.
+- UI operacional pode crescer demais; precisa manter densidade e padrao visual atual.
+
+## Proxima etapa implementada agora
+
+- Arvore operacional visual dentro do layout atual.
+- Placeholders funcionais para Interfaces, BGP, Operadoras, Clientes, CDN/IX, Filters e Communities.
+- Nenhuma integracao SNMP/SSH nova nesta etapa.

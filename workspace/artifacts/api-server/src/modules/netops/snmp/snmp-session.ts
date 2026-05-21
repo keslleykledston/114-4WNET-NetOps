@@ -1,0 +1,145 @@
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const snmp = require("net-snmp") as {
+  Version2c: number;
+  createSession: (target: string, community: string, options?: Record<string, unknown>) => SnmpSession;
+};
+
+export interface SnmpSession {
+  close: () => void;
+  subtree: (
+    oid: string,
+    maxRepetitions: number,
+    feedCallback: (error: Error | null, varbinds?: SnmpVarbind[]) => void,
+    doneCallback: (error: Error | null) => void,
+  ) => void;
+}
+
+export interface SnmpVarbind {
+  oid: string;
+  type: number;
+  value: unknown;
+}
+
+export function createSnmpSession(ipAddress: string, community: string): SnmpSession {
+  return snmp.createSession(ipAddress, community, {
+    version: snmp.Version2c,
+    timeout: 5000,
+    retries: 1,
+    idBitsSize: 32,
+  });
+}
+
+export function snmpWalk(session: SnmpSession, columnOid: string): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    const rows: Record<string, unknown> = {};
+
+    session.subtree(columnOid, 20, (error, varbinds) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      for (const varbind of varbinds ?? []) {
+        const index = indexFromOid(varbind.oid, columnOid);
+        if (index) {
+          rows[index] = varbind.value;
+        }
+      }
+    }, (error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(rows);
+    });
+  });
+}
+
+function indexFromOid(fullOid: string, columnOid: string): string | null {
+  const prefix = `${columnOid}.`;
+  if (!fullOid.startsWith(prefix)) return null;
+  return fullOid.slice(prefix.length);
+}
+
+export function decodeSnmpString(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (Buffer.isBuffer(value)) {
+    const utf8 = value.toString("utf8").replace(/\0/g, "").trim();
+    return utf8.length > 0 ? utf8 : null;
+  }
+  return String(value);
+}
+
+export function decodeSnmpAddress(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(trimmed)) return trimmed;
+    if (trimmed.includes(":")) return trimmed;
+    if (/^[0-9a-f]+$/i.test(trimmed) && trimmed.length % 2 === 0) {
+      return decodeHexAsciiIp(trimmed);
+    }
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (!Buffer.isBuffer(value)) return String(value);
+  if (value.length === 4) return Array.from(value.values()).join(".");
+  if (value.length === 16) {
+    const groups: string[] = [];
+    for (let index = 0; index < value.length; index += 2) {
+      groups.push(value.readUInt16BE(index).toString(16));
+    }
+    return groups.join(":");
+  }
+  return value.toString("hex");
+}
+
+function decodeHexAsciiIp(hex: string): string | null {
+  try {
+    const decoded = Buffer.from(hex, "hex").toString("utf8").replace(/\0/g, "").trim();
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(decoded)) return decoded;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function decodeSnmpMac(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(trimmed)) return trimmed.toLowerCase();
+    if (/^[0-9a-f]{12}$/i.test(trimmed)) {
+      return trimmed.match(/.{1,2}/g)?.join(":").toLowerCase() ?? null;
+    }
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (!Buffer.isBuffer(value) || value.length === 0) return null;
+  return Array.from(value.values()).map((byte) => byte.toString(16).padStart(2, "0")).join(":");
+}
+
+export function toSnmpNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+export function peerIpFromIndex(index: string): string {
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(index)) return index;
+  if (/^[0-9a-f]+$/i.test(index) && index.length % 2 === 0) {
+    return decodeHexAsciiIp(index) ?? index;
+  }
+  const dotted = index.split(".").map((part) => Number(part));
+  if (dotted.length === 4 && dotted.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)) {
+    return dotted.join(".");
+  }
+  return index;
+}

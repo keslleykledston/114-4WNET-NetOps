@@ -830,3 +830,396 @@ export const GetCollectedConfigResponse = zod.object({
 })
 
 
+/**
+ * @summary List SNMP polling snapshots
+ */
+export const listSnmpSnapshotsQueryLimitDefault = 200;
+export const listSnmpSnapshotsQueryLimitMax = 500;
+
+
+
+export const ListSnmpSnapshotsQueryParams = zod.object({
+  "deviceId": zod.coerce.number().optional(),
+  "success": zod.coerce.boolean().optional(),
+  "limit": zod.coerce.number().min(1).max(listSnmpSnapshotsQueryLimitMax).default(listSnmpSnapshotsQueryLimitDefault)
+})
+
+export const ListSnmpSnapshotsResponseItem = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "deviceHostname": zod.string().nullish(),
+  "success": zod.boolean(),
+  "errorMessage": zod.string().nullish(),
+  "interfacesJson": zod.string().nullish().describe('JSON array of collected interface objects'),
+  "bgpPeersJson": zod.string().nullish().describe('JSON array of collected BGP peer objects'),
+  "vrfsJson": zod.string().nullish().describe('JSON array of collected VRF objects'),
+  "collectedAt": zod.string()
+})
+export const ListSnmpSnapshotsResponse = zod.array(ListSnmpSnapshotsResponseItem)
+
+
+/**
+ * @summary Get read-only NetOps device summary
+ */
+export const GetNetopsDeviceSummaryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetNetopsDeviceSummaryResponse = zod.object({
+  "device": zod.object({
+  "id": zod.number(),
+  "hostname": zod.string(),
+  "ipAddress": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string(),
+  "site": zod.string(),
+  "role": zod.string().nullish(),
+  "status": zod.string(),
+  "lastSeen": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "counters": zod.object({
+  "interfaces": zod.number(),
+  "bgpPeers": zod.number(),
+  "bgpEstablished": zod.number(),
+  "bgpDown": zod.number(),
+  "filters": zod.number(),
+  "communities": zod.number()
+}),
+  "lastSnapshotAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary List read-only NetOps interfaces
+ */
+export const ListNetopsDeviceInterfacesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListNetopsDeviceInterfacesResponseItem = zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "adminStatus": zod.enum(['up', 'down', 'unknown']),
+  "operStatus": zod.enum(['up', 'down', 'unknown']),
+  "ipv4": zod.array(zod.string()),
+  "ipv6": zod.array(zod.string()),
+  "vlan": zod.number().nullish(),
+  "vrf": zod.string().nullish(),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})
+export const ListNetopsDeviceInterfacesResponse = zod.array(ListNetopsDeviceInterfacesResponseItem)
+
+
+/**
+ * @summary List read-only NetOps BGP peers
+ */
+export const ListNetopsDeviceBgpPeersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListNetopsDeviceBgpPeersQueryParams = zod.object({
+  "role": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']).optional(),
+  "af": zod.enum(['ipv4', 'ipv6']).optional(),
+  "state": zod.enum(['Established', 'Active', 'Idle', 'Connect', 'Unknown', 'Down']).optional()
+})
+
+export const ListNetopsDeviceBgpPeersResponseItem = zod.object({
+  "peerIp": zod.string(),
+  "remoteAs": zod.number().nullish(),
+  "description": zod.string().nullish(),
+  "name": zod.string().nullish(),
+  "state": zod.enum(['Established', 'Idle', 'Active', 'Connect', 'Unknown']),
+  "role": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "roleSource": zod.enum(['manual_override', 'classifier', 'snapshot', 'unknown']),
+  "addressFamily": zod.enum(['ipv4', 'ipv6', 'unknown']),
+  "sessionType": zod.enum(['iBGP', 'eBGP', 'unknown']),
+  "vrf": zod.string().nullish(),
+  "importPolicy": zod.string().nullish(),
+  "exportPolicy": zod.string().nullish(),
+  "receivedPrefixes": zod.number().nullish(),
+  "advertisedPrefixes": zod.number().nullish(),
+  "activePrefixes": zod.number().nullish(),
+  "uptime": zod.string().nullish(),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})
+export const ListNetopsDeviceBgpPeersResponse = zod.array(ListNetopsDeviceBgpPeersResponseItem)
+
+
+/**
+ * @summary List local BGP peer role overrides
+ */
+export const ListNetopsDeviceBgpPeerRoleOverridesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListNetopsDeviceBgpPeerRoleOverridesResponseItem = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "peerIp": zod.string(),
+  "remoteAs": zod.number().nullish(),
+  "addressFamily": zod.enum(['ipv4', 'ipv6', 'unknown']),
+  "role": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "label": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "source": zod.enum(['manual_override']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish()
+})
+export const ListNetopsDeviceBgpPeerRoleOverridesResponse = zod.array(ListNetopsDeviceBgpPeerRoleOverridesResponseItem)
+
+
+/**
+ * @summary Start read-only NetOps collection safety stub
+ */
+export const CollectNetopsDeviceReadOnlyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get read-only NetOps collection status
+ */
+export const GetNetopsDeviceCollectionStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetNetopsDeviceCollectionStatusResponse = zod.object({
+  "deviceId": zod.number(),
+  "status": zod.enum(['idle', 'ready', 'blocked', 'error']),
+  "active": zod.boolean(),
+  "lastSnapshotAt": zod.string().nullable(),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Get read-only BGP peer details
+ */
+export const GetNetopsDeviceBgpPeerParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const GetNetopsDeviceBgpPeerResponse = zod.object({
+  "peerIp": zod.string(),
+  "remoteAs": zod.number().nullish(),
+  "description": zod.string().nullish(),
+  "name": zod.string().nullish(),
+  "state": zod.enum(['Established', 'Idle', 'Active', 'Connect', 'Unknown']),
+  "role": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "roleSource": zod.enum(['manual_override', 'classifier', 'snapshot', 'unknown']),
+  "addressFamily": zod.enum(['ipv4', 'ipv6', 'unknown']),
+  "sessionType": zod.enum(['iBGP', 'eBGP', 'unknown']),
+  "vrf": zod.string().nullish(),
+  "importPolicy": zod.string().nullish(),
+  "exportPolicy": zod.string().nullish(),
+  "receivedPrefixes": zod.number().nullish(),
+  "advertisedPrefixes": zod.number().nullish(),
+  "activePrefixes": zod.number().nullish(),
+  "uptime": zod.string().nullish(),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})
+
+
+/**
+ * @summary Save local BGP peer role override
+ */
+export const UpdateNetopsDeviceBgpPeerRoleParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const UpdateNetopsDeviceBgpPeerRoleBody = zod.object({
+  "addressFamily": zod.enum(['ipv4', 'ipv6', 'unknown']),
+  "remoteAs": zod.number().nullable(),
+  "role": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "label": zod.string().nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const UpdateNetopsDeviceBgpPeerRoleResponse = zod.object({
+  "ok": zod.literal(true),
+  "peerIp": zod.string(),
+  "role": zod.enum(['provider', 'customer', 'cdn', 'ix', 'cdn_ix', 'ibgp', 'unknown']),
+  "source": zod.enum(['manual_override'])
+})
+
+
+/**
+ * @summary List read-only BGP received prefixes for peer
+ */
+export const ListNetopsDeviceBgpPeerReceivedPrefixesParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const ListNetopsDeviceBgpPeerReceivedPrefixesResponseItem = zod.object({
+  "prefix": zod.string(),
+  "nextHop": zod.string().nullable(),
+  "asPath": zod.string().nullable(),
+  "localPreference": zod.number().nullable(),
+  "med": zod.number().nullable(),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})
+export const ListNetopsDeviceBgpPeerReceivedPrefixesResponse = zod.array(ListNetopsDeviceBgpPeerReceivedPrefixesResponseItem)
+
+
+/**
+ * @summary List read-only BGP advertised prefixes for peer
+ */
+export const ListNetopsDeviceBgpPeerAdvertisedPrefixesParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const ListNetopsDeviceBgpPeerAdvertisedPrefixesResponseItem = zod.object({
+  "prefix": zod.string(),
+  "nextHop": zod.string().nullable(),
+  "asPath": zod.string().nullable(),
+  "localPreference": zod.number().nullable(),
+  "med": zod.number().nullable(),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})
+export const ListNetopsDeviceBgpPeerAdvertisedPrefixesResponse = zod.array(ListNetopsDeviceBgpPeerAdvertisedPrefixesResponseItem)
+
+
+/**
+ * @summary Get read-only BGP policies for peer
+ */
+export const GetNetopsDeviceBgpPeerPoliciesParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const GetNetopsDeviceBgpPeerPoliciesResponse = zod.object({
+  "peerIp": zod.string(),
+  "importPolicy": zod.string().nullable(),
+  "exportPolicy": zod.string().nullable(),
+  "filters": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['ip-prefix', 'prefix-list', 'route-policy', 'acl', 'unknown']),
+  "entries": zod.array(zod.unknown()),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db']),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Get read-only BGP communities for peer
+ */
+export const GetNetopsDeviceBgpPeerCommunitiesParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const GetNetopsDeviceBgpPeerCommunitiesResponse = zod.object({
+  "peerIp": zod.string(),
+  "communities": zod.array(zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['community-filter', 'community-list', 'set', 'unknown']),
+  "entries": zod.array(zod.unknown()),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db']),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Get read-only BGP diagnostics for peer
+ */
+export const GetNetopsDeviceBgpPeerDiagnosticsParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const GetNetopsDeviceBgpPeerDiagnosticsResponse = zod.object({
+  "peerIp": zod.string(),
+  "checks": zod.array(zod.object({
+  "name": zod.string(),
+  "level": zod.enum(['INFO', 'WARN', 'ERROR', 'SUCCESS']),
+  "message": zod.string()
+})),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})
+
+
+/**
+ * @summary List read-only NetOps filters
+ */
+export const ListNetopsDeviceFiltersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListNetopsDeviceFiltersResponseItem = zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['ip-prefix', 'prefix-list', 'route-policy', 'acl', 'unknown']),
+  "entries": zod.array(zod.unknown()),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})
+export const ListNetopsDeviceFiltersResponse = zod.array(ListNetopsDeviceFiltersResponseItem)
+
+
+/**
+ * @summary List read-only NetOps communities
+ */
+export const ListNetopsDeviceCommunitiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListNetopsDeviceCommunitiesResponseItem = zod.object({
+  "name": zod.string(),
+  "type": zod.enum(['community-filter', 'community-list', 'set', 'unknown']),
+  "entries": zod.array(zod.unknown()),
+  "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db'])
+})
+export const ListNetopsDeviceCommunitiesResponse = zod.array(ListNetopsDeviceCommunitiesResponseItem)
+
+
+/**
+ * @summary List read-only NetOps operational logs
+ */
+export const ListNetopsDeviceLogsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListNetopsDeviceLogsResponseItem = zod.object({
+  "timestamp": zod.string(),
+  "level": zod.enum(['INFO', 'WARN', 'ERROR', 'SUCCESS']),
+  "scope": zod.enum(['SNMP', 'SSH', 'BGP', 'INTERFACE', 'SYSTEM']),
+  "message": zod.string(),
+  "source": zod.enum(['system', 'local'])
+})
+export const ListNetopsDeviceLogsResponse = zod.array(ListNetopsDeviceLogsResponseItem)
+
+
+/**
+ * @summary Get latest read-only SNMP snapshot for device
+ */
+export const GetNetopsDeviceLatestSnmpSnapshotParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetNetopsDeviceLatestSnmpSnapshotResponse = zod.object({
+  "deviceId": zod.number(),
+  "snapshot": zod.union([zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "deviceHostname": zod.string().nullish(),
+  "success": zod.boolean(),
+  "errorMessage": zod.string().nullish(),
+  "interfacesJson": zod.string().nullish().describe('JSON array of collected interface objects'),
+  "bgpPeersJson": zod.string().nullish().describe('JSON array of collected BGP peer objects'),
+  "vrfsJson": zod.string().nullish().describe('JSON array of collected VRF objects'),
+  "collectedAt": zod.string()
+}),zod.null()]),
+  "message": zod.string()
+})
+
+

@@ -48,6 +48,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-netops}:${POSTGRES_PASSWORD:-netops}@db:5432/${POSTGRES_DB:-netops}
       SESSION_SECRET: ${SESSION_SECRET:-netops-default-secret-key-32bytes}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      NETOPS_SNMP_REAL_ENABLED: ${NETOPS_SNMP_REAL_ENABLED:-false}
     healthcheck:
       test:
         [

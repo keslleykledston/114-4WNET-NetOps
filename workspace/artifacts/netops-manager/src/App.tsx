@@ -12,6 +12,8 @@ import Provisioning from "@/pages/provisioning";
 import Templates from "@/pages/templates";
 import Policies from "@/pages/policies";
 import ConfigCollection from "@/pages/config-collection";
+import SnmpHistory from "@/pages/snmp-history";
+import NetopsOperations from "@/pages/netops-operations";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -35,6 +37,8 @@ function Router() {
         <Route path="/templates" component={Templates} />
         <Route path="/policies" component={Policies} />
         <Route path="/config-collection" component={ConfigCollection} />
+        <Route path="/snmp-history" component={SnmpHistory} />
+        <Route path="/netops-operations" component={NetopsOperations} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

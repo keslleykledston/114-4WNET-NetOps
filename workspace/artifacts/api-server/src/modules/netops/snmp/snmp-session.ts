@@ -22,11 +22,11 @@ export interface SnmpVarbind {
   value: unknown;
 }
 
-export function createSnmpSession(ipAddress: string, community: string): SnmpSession {
+export function createSnmpSession(ipAddress: string, community: string, options?: { timeout?: number; retries?: number }): SnmpSession {
   return snmp.createSession(ipAddress, community, {
     version: snmp.Version2c,
-    timeout: 5000,
-    retries: 1,
+    timeout: options?.timeout ?? 30000,
+    retries: options?.retries ?? 3,
     idBitsSize: 32,
   });
 }
@@ -55,6 +55,52 @@ export function snmpWalk(session: SnmpSession, columnOid: string): Promise<Recor
       resolve(rows);
     });
   });
+}
+
+export interface OidWalkResult {
+  oid: string;
+  status: "ok" | "empty" | "timeout" | "noSuchObject" | "noSuchName" | "authFailure" | "accessDenied" | "unsupported" | "error";
+  count: number;
+  rows: Record<string, unknown>;
+  error?: Error;
+}
+
+export async function snmpWalkWithDiagnostics(session: SnmpSession, columnOid: string): Promise<OidWalkResult> {
+  try {
+    const rows = await snmpWalk(session, columnOid);
+    const count = Object.keys(rows).length;
+    return {
+      oid: columnOid,
+      status: count === 0 ? "empty" : "ok",
+      count,
+      rows,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    let status: OidWalkResult["status"] = "error";
+
+    if (message.includes("timeout") || message.includes("Timeout")) {
+      status = "timeout";
+    } else if (message.includes("noSuchObject")) {
+      status = "noSuchObject";
+    } else if (message.includes("noSuchName")) {
+      status = "noSuchName";
+    } else if (message.includes("authorizationError") || message.includes("authentication")) {
+      status = "authFailure";
+    } else if (message.includes("accessDenied") || message.includes("access denied")) {
+      status = "accessDenied";
+    } else if (message.includes("unsupported") || message.includes("Unsupported")) {
+      status = "unsupported";
+    }
+
+    return {
+      oid: columnOid,
+      status,
+      count: 0,
+      rows: {},
+      error: error instanceof Error ? error : new Error(message),
+    };
+  }
 }
 
 function indexFromOid(fullOid: string, columnOid: string): string | null {

@@ -7,10 +7,12 @@ import {
   decodeSnmpString,
   peerIpFromIndex,
   snmpWalk,
+  snmpWalkWithDiagnostics,
   toSnmpNumber,
+  type OidWalkResult,
   type SnmpSession,
 } from "./snmp-session.js";
-import type { SnmpCollectedBgpPeer, SnmpCollectedInterface, SnmpReadonlyCollectPayload } from "./types.js";
+import type { OidDiagnostic, SnmpCollectedBgpPeer, SnmpCollectedInterface, SnmpReadonlyCollectPayload } from "./types.js";
 
 export function isNetopsSnmpRealEnabled(): boolean {
   return process.env["NETOPS_SNMP_REAL_ENABLED"]?.trim().toLowerCase() === "true";
@@ -19,20 +21,31 @@ export function isNetopsSnmpRealEnabled(): boolean {
 export async function collectSnmpReadonly(device: Device, community: string): Promise<SnmpReadonlyCollectPayload> {
   const collectedAt = new Date().toISOString();
   const errors: string[] = [];
-  const session = createSnmpSession(device.ipAddress, community);
+  const warnings: string[] = [];
+  const oidDiagnostics: Record<string, OidDiagnostic> = {};
+  const session = createSnmpSession(device.ipAddress, community, { timeout: 15000, retries: 2 });
 
   try {
-    const interfaces = await collectInterfaces(session, errors);
-    const bgpPeers = await collectBgp4Peers(session, errors);
+    const { interfaces, ifMibDiagnostics } = await collectInterfaces(session, errors, warnings);
+    Object.assign(oidDiagnostics, ifMibDiagnostics);
+
+    const { bgpPeers, bgpDiagnostics } = await collectBgp4Peers(session, errors, warnings);
+    Object.assign(oidDiagnostics, bgpDiagnostics);
+
+    if (interfaces.length === 0 && Object.values(ifMibDiagnostics).some((d) => d.status !== "ok" && d.status !== "empty")) {
+      warnings.push(`IF-MIB incomplete. Check SNMP view for 1.3.6.1.2.1.2 and 1.3.6.1.2.1.31 OID access.`);
+    }
 
     return {
       success: errors.length === 0,
       errorMessage: errors.length > 0 ? errors.join("; ") : null,
       errors,
+      warnings: warnings.length > 0 ? warnings : undefined,
       interfaces,
       bgpPeers,
       collectedAt,
       source: "snmp",
+      oidDiagnostics: Object.keys(oidDiagnostics).length > 0 ? oidDiagnostics : undefined,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "SNMP collection failed";
@@ -50,114 +63,157 @@ export async function collectSnmpReadonly(device: Device, community: string): Pr
   }
 }
 
-async function collectInterfaces(session: SnmpSession, errors: string[]): Promise<SnmpCollectedInterface[]> {
+async function collectInterfaces(
+  session: SnmpSession,
+  errors: string[],
+  warnings: string[],
+): Promise<{ interfaces: SnmpCollectedInterface[]; ifMibDiagnostics: Record<string, OidDiagnostic> }> {
+  const ifMibDiagnostics: Record<string, OidDiagnostic> = {};
+
   try {
-    const [
-      descr,
-      type,
-      mtu,
-      speed,
-      mac,
-      admin,
-      oper,
-      ifName,
-      alias,
-      inOctets,
-      outOctets,
-    ] = await Promise.all([
-      snmpWalk(session, SNMP_OIDS.ifDescr),
-      snmpWalk(session, SNMP_OIDS.ifType),
-      snmpWalk(session, SNMP_OIDS.ifMtu),
-      snmpWalk(session, SNMP_OIDS.ifSpeed),
-      snmpWalk(session, SNMP_OIDS.ifPhysAddress),
-      snmpWalk(session, SNMP_OIDS.ifAdminStatus),
-      snmpWalk(session, SNMP_OIDS.ifOperStatus),
-      snmpWalk(session, SNMP_OIDS.ifName),
-      snmpWalk(session, SNMP_OIDS.ifAlias),
-      snmpWalk(session, SNMP_OIDS.ifHCInOctets),
-      snmpWalk(session, SNMP_OIDS.ifHCOutOctets),
-    ]);
+    const descrResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifDescr);
+    ifMibDiagnostics.ifDescr = { oid: descrResult.oid, status: descrResult.status, count: descrResult.count };
+    if (descrResult.error) {
+      warnings.push(`ifDescr (1.3.6.1.2.1.2.2.1.2) failed: ${descrResult.error.message}`);
+    }
+
+    const ifNameResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifName);
+    ifMibDiagnostics.ifName = { oid: ifNameResult.oid, status: ifNameResult.status, count: ifNameResult.count };
+    if (ifNameResult.error) {
+      warnings.push(`ifName (1.3.6.1.2.1.31.1.1.1.1) failed: ${ifNameResult.error.message}`);
+    }
+
+    const ifAliasResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifAlias);
+    ifMibDiagnostics.ifAlias = { oid: ifAliasResult.oid, status: ifAliasResult.status, count: ifAliasResult.count };
+
+    const typeResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifType);
+    ifMibDiagnostics.ifType = { oid: typeResult.oid, status: typeResult.status, count: typeResult.count };
+
+    const mtuResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifMtu);
+    ifMibDiagnostics.ifMtu = { oid: mtuResult.oid, status: mtuResult.status, count: mtuResult.count };
+
+    const speedResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifSpeed);
+    ifMibDiagnostics.ifSpeed = { oid: speedResult.oid, status: speedResult.status, count: speedResult.count };
+
+    const macResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifPhysAddress);
+    ifMibDiagnostics.ifPhysAddress = { oid: macResult.oid, status: macResult.status, count: macResult.count };
+
+    const adminResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifAdminStatus);
+    ifMibDiagnostics.ifAdminStatus = { oid: adminResult.oid, status: adminResult.status, count: adminResult.count };
+
+    const operResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifOperStatus);
+    ifMibDiagnostics.ifOperStatus = { oid: operResult.oid, status: operResult.status, count: operResult.count };
+
+    const inOctetsResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifHCInOctets);
+    ifMibDiagnostics.ifHCInOctets = { oid: inOctetsResult.oid, status: inOctetsResult.status, count: inOctetsResult.count };
+
+    const outOctetsResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifHCOutOctets);
+    ifMibDiagnostics.ifHCOutOctets = { oid: outOctetsResult.oid, status: outOctetsResult.status, count: outOctetsResult.count };
 
     const indexes = new Set<string>([
-      ...Object.keys(descr),
-      ...Object.keys(ifName),
+      ...Object.keys(descrResult.rows),
+      ...Object.keys(ifNameResult.rows),
     ]);
 
-    return [...indexes]
+    if (indexes.size === 0) {
+      return { interfaces: [], ifMibDiagnostics };
+    }
+
+    const interfaces = [...indexes]
       .sort(compareIfIndexes)
       .map((index) => {
         const ifIndex = Number(index);
-        const description = decodeSnmpString(descr[index]);
-        const name = decodeSnmpString(ifName[index]) ?? description ?? `ifIndex-${index}`;
-        const adminCode = toSnmpNumber(admin[index]);
-        const operCode = toSnmpNumber(oper[index]);
+        const description = decodeSnmpString(descrResult.rows[index]);
+        const name = decodeSnmpString(ifNameResult.rows[index]) ?? description ?? `ifIndex-${index}`;
+        const adminCode = toSnmpNumber(adminResult.rows[index]);
+        const operCode = toSnmpNumber(operResult.rows[index]);
 
         return {
           ifIndex: Number.isFinite(ifIndex) ? ifIndex : Number(index) || 0,
           name,
           description,
-          alias: decodeSnmpString(alias[index]),
+          alias: decodeSnmpString(ifAliasResult.rows[index]),
           adminStatus: IF_ADMIN_STATUS[String(adminCode ?? "")] ?? "unknown",
           operStatus: IF_OPER_STATUS[String(operCode ?? "")] ?? "unknown",
-          type: toSnmpNumber(type[index]),
-          mtu: toSnmpNumber(mtu[index]),
-          speed: toSnmpNumber(speed[index]),
-          mac: decodeSnmpMac(mac[index]),
-          inOctets: toSnmpNumber(inOctets[index]),
-          outOctets: toSnmpNumber(outOctets[index]),
+          type: toSnmpNumber(typeResult.rows[index]),
+          mtu: toSnmpNumber(mtuResult.rows[index]),
+          speed: toSnmpNumber(speedResult.rows[index]),
+          mac: decodeSnmpMac(macResult.rows[index]),
+          inOctets: toSnmpNumber(inOctetsResult.rows[index]),
+          outOctets: toSnmpNumber(outOctetsResult.rows[index]),
           source: "snmp" as const,
         };
       });
+
+    return { interfaces, ifMibDiagnostics };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "IF-MIB walk failed";
+    const message = error instanceof Error ? error.message : "IF-MIB collection failed";
     errors.push(message);
-    return [];
+    return { interfaces: [], ifMibDiagnostics };
   }
 }
 
-async function collectBgp4Peers(session: SnmpSession, errors: string[]): Promise<SnmpCollectedBgpPeer[]> {
+async function collectBgp4Peers(
+  session: SnmpSession,
+  errors: string[],
+  warnings: string[],
+): Promise<{ bgpPeers: SnmpCollectedBgpPeer[]; bgpDiagnostics: Record<string, OidDiagnostic> }> {
+  const bgpDiagnostics: Record<string, OidDiagnostic> = {};
+
   try {
-    const [stateRaw, remoteAddrRaw, remoteAsRaw, inUpdatesRaw, outUpdatesRaw, uptimeRaw] = await Promise.all([
-      snmpWalk(session, SNMP_OIDS.bgpPeerState),
-      snmpWalk(session, SNMP_OIDS.bgpPeerRemoteAddr),
-      snmpWalk(session, SNMP_OIDS.bgpPeerRemoteAs),
-      snmpWalk(session, SNMP_OIDS.bgpPeerInUpdates),
-      snmpWalk(session, SNMP_OIDS.bgpPeerOutUpdates),
-      snmpWalk(session, SNMP_OIDS.bgpPeerFsmEstablishedTime),
-    ]);
+    const stateResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.bgpPeerState);
+    bgpDiagnostics.bgpPeerState = { oid: stateResult.oid, status: stateResult.status, count: stateResult.count };
+    if (stateResult.error) {
+      warnings.push(`bgpPeerState (1.3.6.1.2.1.15.3.1.2) failed: ${stateResult.error.message}`);
+    }
+
+    const remoteAddrResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.bgpPeerRemoteAddr);
+    bgpDiagnostics.bgpPeerRemoteAddr = { oid: remoteAddrResult.oid, status: remoteAddrResult.status, count: remoteAddrResult.count };
+
+    const remoteAsResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.bgpPeerRemoteAs);
+    bgpDiagnostics.bgpPeerRemoteAs = { oid: remoteAsResult.oid, status: remoteAsResult.status, count: remoteAsResult.count };
+
+    const inUpdatesResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.bgpPeerInUpdates);
+    bgpDiagnostics.bgpPeerInUpdates = { oid: inUpdatesResult.oid, status: inUpdatesResult.status, count: inUpdatesResult.count };
+
+    const outUpdatesResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.bgpPeerOutUpdates);
+    bgpDiagnostics.bgpPeerOutUpdates = { oid: outUpdatesResult.oid, status: outUpdatesResult.status, count: outUpdatesResult.count };
+
+    const uptimeResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.bgpPeerFsmEstablishedTime);
+    bgpDiagnostics.bgpPeerFsmEstablishedTime = { oid: uptimeResult.oid, status: uptimeResult.status, count: uptimeResult.count };
 
     const peerIndexes = new Set<string>([
-      ...Object.keys(stateRaw),
-      ...Object.keys(remoteAddrRaw),
-      ...Object.keys(remoteAsRaw),
+      ...Object.keys(stateResult.rows),
+      ...Object.keys(remoteAddrResult.rows),
+      ...Object.keys(remoteAsResult.rows),
     ]);
 
     const peers: SnmpCollectedBgpPeer[] = [];
 
     for (const index of peerIndexes) {
-      const remoteFromColumn = decodeSnmpAddress(remoteAddrRaw[index]);
+      const remoteFromColumn = decodeSnmpAddress(remoteAddrResult.rows[index]);
       const peerIp = remoteFromColumn ?? peerIpFromIndex(index);
-      const stateCode = toSnmpNumber(stateRaw[index]);
+      const stateCode = toSnmpNumber(stateResult.rows[index]);
       const state = BGP_STATE_BY_CODE[String(stateCode ?? "")] ?? "unknown";
-      const uptimeTicks = toSnmpNumber(uptimeRaw[index]);
+      const uptimeTicks = toSnmpNumber(uptimeResult.rows[index]);
 
       peers.push({
         peerIp,
-        remoteAs: toSnmpNumber(remoteAsRaw[index]),
+        remoteAs: toSnmpNumber(remoteAsResult.rows[index]),
         state,
         uptimeSecs: uptimeTicks != null ? Math.floor(uptimeTicks / 100) : null,
-        inUpdates: toSnmpNumber(inUpdatesRaw[index]),
-        outUpdates: toSnmpNumber(outUpdatesRaw[index]),
+        inUpdates: toSnmpNumber(inUpdatesResult.rows[index]),
+        outUpdates: toSnmpNumber(outUpdatesResult.rows[index]),
         addressFamily: classifyPeerAddressFamily(peerIp),
         source: "snmp",
       });
     }
 
-    return peers.sort((left, right) => left.peerIp.localeCompare(right.peerIp));
+    return { bgpPeers: peers.sort((left, right) => left.peerIp.localeCompare(right.peerIp)), bgpDiagnostics };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "BGP4-MIB walk failed";
+    const message = error instanceof Error ? error.message : "BGP4-MIB collection failed";
     errors.push(message);
-    return [];
+    return { bgpPeers: [], bgpDiagnostics };
   }
 }
 

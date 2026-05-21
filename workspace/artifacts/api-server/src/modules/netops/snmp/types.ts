@@ -25,12 +25,21 @@ export interface SnmpCollectedBgpPeer {
   source: "snmp";
 }
 
+export interface OidDiagnostic {
+  oid: string;
+  status: "ok" | "empty" | "timeout" | "noSuchObject" | "noSuchName" | "authFailure" | "accessDenied" | "unsupported" | "error";
+  count: number;
+  message?: string;
+}
+
 export interface SnmpReadonlyCollectPayload {
   success: boolean;
   errorMessage: string | null;
   errors: string[];
+  warnings?: string[];
   interfaces: SnmpCollectedInterface[];
   bgpPeers: SnmpCollectedBgpPeer[];
   collectedAt: string;
   source: "snmp";
+  oidDiagnostics?: Record<string, OidDiagnostic>;
 }

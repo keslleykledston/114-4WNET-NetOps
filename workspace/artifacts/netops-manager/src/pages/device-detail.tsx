@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRoute } from "wouter";
-import { 
+import {
   useGetDevice, getGetDeviceQueryKey, getListDevicesQueryKey,
   useGetDeviceCollectedConfig, getGetDeviceCollectedConfigQueryKey,
   useListComplianceJobs,
@@ -14,11 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Server, Activity, ShieldCheck, Rocket, Terminal, History, ChevronRight, Pencil } from "lucide-react";
+import { Server, Activity, ShieldCheck, Rocket, Terminal, History, ChevronRight, Pencil, Network } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
 import { DiscoveryPanel } from "@/features/device-discovery/discovery-panel";
+import { CommunityLibraryTab } from "@/features/bgp/community-library-tab";
+import { CommunitySetsTab } from "@/features/bgp/community-sets-tab";
 
 export default function DeviceDetail() {
   const [, params] = useRoute("/devices/:id");
@@ -121,9 +123,11 @@ export default function DeviceDetail() {
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
+        <TabsList className="grid w-full grid-cols-6 lg:w-[600px]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="config">Config</TabsTrigger>
+          <TabsTrigger value="communities">Communities</TabsTrigger>
+          <TabsTrigger value="filters">Filters</TabsTrigger>
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
           <TabsTrigger value="provisioning">Provisioning</TabsTrigger>
         </TabsList>
@@ -217,6 +221,34 @@ export default function DeviceDetail() {
                   <p>No configuration collected yet.</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="communities" className="mt-6">
+          <Card className="border-border">
+            <CardHeader className="border-b bg-muted/30">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Network className="h-5 w-5" />
+                Community Sets
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <CommunitySetsTab deviceId={device.id} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="filters" className="mt-6">
+          <Card className="border-border">
+            <CardHeader className="border-b bg-muted/30">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Network className="h-5 w-5" />
+                Community Filters Library
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <CommunityLibraryTab deviceId={device.id} />
             </CardContent>
           </Card>
         </TabsContent>

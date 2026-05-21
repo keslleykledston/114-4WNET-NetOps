@@ -63,13 +63,6 @@ export function BgpPeerDetailModal({
             <p className="font-mono text-sm text-slate-200">{peer.peerIp}</p>
           </div>
 
-          {/* Local Address */}
-          <div className="rounded-lg bg-slate-900/50 border border-slate-800 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-              Local IP
-            </p>
-            <p className="font-mono text-sm text-slate-200">{peer.localAddress || "—"}</p>
-          </div>
 
           {/* Received Routes / Inbound Updates */}
           <div className="rounded-lg bg-slate-900/50 border border-slate-800 p-3">

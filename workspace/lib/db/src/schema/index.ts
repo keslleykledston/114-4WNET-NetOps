@@ -6,3 +6,4 @@ export * from "./collected_configs";
 export * from "./snmp_snapshots";
 export * from "./bgp_peer_role_overrides";
 export * from "./discovery";
+export * from "./communities";

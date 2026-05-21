@@ -1413,6 +1413,181 @@ export interface NetopsLatestSnmpSnapshot {
   message: string;
 }
 
+export type CommunityLibraryItemMatchType = typeof CommunityLibraryItemMatchType[keyof typeof CommunityLibraryItemMatchType];
+
+
+export const CommunityLibraryItemMatchType = {
+  basic: 'basic',
+  advanced: 'advanced',
+} as const;
+
+export type CommunityLibraryItemAction = typeof CommunityLibraryItemAction[keyof typeof CommunityLibraryItemAction];
+
+
+export const CommunityLibraryItemAction = {
+  permit: 'permit',
+  deny: 'deny',
+} as const;
+
+export type CommunityLibraryItemOrigin = typeof CommunityLibraryItemOrigin[keyof typeof CommunityLibraryItemOrigin];
+
+
+export const CommunityLibraryItemOrigin = {
+  discovered_running_config: 'discovered_running_config',
+  discovered_live: 'discovered_live',
+  manual: 'manual',
+} as const;
+
+/**
+ * @nullable
+ */
+export type CommunityLibraryItemTagsJson = { [key: string]: unknown } | null;
+
+export interface CommunityLibraryItem {
+  id: number;
+  deviceId: number;
+  companyId: number;
+  filterName: string;
+  communityValue: string;
+  matchType: CommunityLibraryItemMatchType;
+  action: CommunityLibraryItemAction;
+  /** @nullable */
+  indexOrder?: number | null;
+  origin: CommunityLibraryItemOrigin;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  tagsJson?: CommunityLibraryItemTagsJson;
+  isSystem: boolean;
+  isActive: boolean;
+  usageCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommunitySetMember {
+  /** @nullable */
+  id?: number | null;
+  position?: number;
+  communityValue?: string;
+  /** @nullable */
+  linkedLibraryItemId?: number | null;
+  missingInLibrary?: boolean;
+  linkedFilterName?: string;
+  /** @nullable */
+  valueDescription?: string | null;
+}
+
+export type CommunitySetOrigin = typeof CommunitySetOrigin[keyof typeof CommunitySetOrigin];
+
+
+export const CommunitySetOrigin = {
+  app_created: 'app_created',
+  discovered_running_config: 'discovered_running_config',
+} as const;
+
+export type CommunitySetStatus = typeof CommunitySetStatus[keyof typeof CommunitySetStatus];
+
+
+export const CommunitySetStatus = {
+  draft: 'draft',
+  ready: 'ready',
+  applied: 'applied',
+} as const;
+
+export interface CommunitySet {
+  id: number;
+  deviceId: number;
+  companyId: number;
+  name: string;
+  slug: string;
+  vrpObjectName: string;
+  origin: CommunitySetOrigin;
+  /** @nullable */
+  discoveredMembersJson?: string[] | null;
+  /** @nullable */
+  impliedConfigPreview?: string | null;
+  /** @nullable */
+  description?: string | null;
+  status: CommunitySetStatus;
+  /** @nullable */
+  createdBy?: number | null;
+  /** @nullable */
+  updatedBy?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  members: CommunitySetMember[];
+  membersTotal: number;
+  membersResolved: number;
+  membersMissing: number;
+}
+
+export interface CommunityPreviewResponse {
+  candidateConfigText: string;
+  candidateSha256: string;
+  warnings: string[];
+  membersMissingLibrary: number;
+  missingCommunityValues: string[];
+}
+
+export interface CommunityApplyRequest {
+  confirm: boolean;
+  expectedCandidateSha256: string;
+  acknowledgeMissingLibraryRefs: boolean;
+}
+
+export type CommunityApplyResponseStatus = typeof CommunityApplyResponseStatus[keyof typeof CommunityApplyResponseStatus];
+
+
+export const CommunityApplyResponseStatus = {
+  success: 'success',
+  error: 'error',
+  pending: 'pending',
+} as const;
+
+export interface CommunityApplyResponse {
+  ok: boolean;
+  status: CommunityApplyResponseStatus;
+  message: string;
+  /** @nullable */
+  deviceResponseExcerpt?: string | null;
+}
+
+export type CommunityChangeAuditAction = typeof CommunityChangeAuditAction[keyof typeof CommunityChangeAuditAction];
+
+
+export const CommunityChangeAuditAction = {
+  preview: 'preview',
+  apply: 'apply',
+  rollback: 'rollback',
+} as const;
+
+export type CommunityChangeAuditStatus = typeof CommunityChangeAuditStatus[keyof typeof CommunityChangeAuditStatus];
+
+
+export const CommunityChangeAuditStatus = {
+  success: 'success',
+  error: 'error',
+  pending: 'pending',
+} as const;
+
+export interface CommunityChangeAudit {
+  id: number;
+  deviceId: number;
+  /** @nullable */
+  communitySetId?: number | null;
+  /** @nullable */
+  userId?: number | null;
+  action: CommunityChangeAuditAction;
+  candidateConfigText: string;
+  /** @nullable */
+  commandSentText?: string | null;
+  /** @nullable */
+  deviceResponseText?: string | null;
+  status: CommunityChangeAuditStatus;
+  createdAt: string;
+}
+
 export type ListDevicesParams = {
 status?: string;
 vendor?: string;
@@ -1503,4 +1678,18 @@ export const ListDeviceBgpPeersCategory = {
   ibgp: 'ibgp',
   unknown: 'unknown',
 } as const;
+
+export type CreateCommunitySetBody = {
+  name: string;
+  slug?: string;
+  vrpObjectName?: string;
+  description?: string;
+};
+
+export type UpdateCommunitySetBody = {
+  name?: string;
+  slug?: string;
+  vrpObjectName?: string;
+  description?: string;
+};
 

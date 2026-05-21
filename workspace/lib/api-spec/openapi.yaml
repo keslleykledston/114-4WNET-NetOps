@@ -1365,6 +1365,235 @@ paths:
               schema:
                 $ref: "#/components/schemas/RouteQueryResponse"
 
+  /devices/{id}/communities/library:
+    get:
+      operationId: getCommunitiesLibrary
+      tags: [netops-readonly]
+      summary: List community filters from library
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Community library items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommunityLibraryItem"
+
+  /devices/{id}/community-sets:
+    get:
+      operationId: listCommunitySets
+      tags: [netops-readonly]
+      summary: List community sets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Community sets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommunitySet"
+    post:
+      operationId: createCommunitySet
+      tags: [netops-readonly]
+      summary: Create a new community set
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                vrpObjectName:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "201":
+          description: Created community set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunitySet"
+
+  /devices/{id}/community-sets/{setId}:
+    get:
+      operationId: getCommunitySetDetails
+      tags: [netops-readonly]
+      summary: Get community set details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Community set details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunitySet"
+    put:
+      operationId: updateCommunitySet
+      tags: [netops-readonly]
+      summary: Update community set
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                vrpObjectName:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "200":
+          description: Updated community set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunitySet"
+    delete:
+      operationId: deleteCommunitySet
+      tags: [netops-readonly]
+      summary: Delete community set
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /devices/{id}/community-sets/{setId}/preview:
+    post:
+      operationId: previewCommunitySet
+      tags: [netops-readonly]
+      summary: Preview community set configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Preview result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityPreviewResponse"
+
+  /devices/{id}/community-sets/{setId}/apply:
+    post:
+      operationId: applyCommunitySet
+      tags: [netops-readonly]
+      summary: Apply community set to device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: setId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommunityApplyRequest"
+      responses:
+        "200":
+          description: Apply result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityApplyResponse"
+
+  /devices/{id}/community-change-audit:
+    get:
+      operationId: getCommunityChangeAudit
+      tags: [netops-readonly]
+      summary: Get community change audit trail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit trail
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommunityChangeAudit"
+
 components:
   schemas:
     HealthStatus:
@@ -2892,4 +3121,182 @@ components:
             - $ref: "#/components/schemas/SnmpSnapshot"
             - type: "null"
         message:
+          type: string
+
+    CommunityLibraryItem:
+      type: object
+      required: [id, deviceId, companyId, filterName, communityValue, matchType, action, origin, isSystem, isActive, usageCount, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        companyId:
+          type: integer
+        filterName:
+          type: string
+        communityValue:
+          type: string
+        matchType:
+          type: string
+          enum: [basic, advanced]
+        action:
+          type: string
+          enum: [permit, deny]
+        indexOrder:
+          type: ["integer", "null"]
+        origin:
+          type: string
+          enum: [discovered_running_config, discovered_live, manual]
+        description:
+          type: ["string", "null"]
+        tagsJson:
+          type: ["object", "null"]
+        isSystem:
+          type: boolean
+        isActive:
+          type: boolean
+        usageCount:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    CommunitySetMember:
+      type: object
+      properties:
+        id:
+          type: ["integer", "null"]
+        position:
+          type: integer
+        communityValue:
+          type: string
+        linkedLibraryItemId:
+          type: ["integer", "null"]
+        missingInLibrary:
+          type: boolean
+        linkedFilterName:
+          type: string
+        valueDescription:
+          type: ["string", "null"]
+
+    CommunitySet:
+      type: object
+      required: [id, deviceId, companyId, name, slug, vrpObjectName, origin, status, createdAt, updatedAt, members, membersTotal, membersResolved, membersMissing]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        companyId:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        vrpObjectName:
+          type: string
+        origin:
+          type: string
+          enum: [app_created, discovered_running_config]
+        discoveredMembersJson:
+          type: ["array", "null"]
+          items:
+            type: string
+        impliedConfigPreview:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, ready, applied]
+        createdBy:
+          type: ["integer", "null"]
+        updatedBy:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommunitySetMember"
+        membersTotal:
+          type: integer
+        membersResolved:
+          type: integer
+        membersMissing:
+          type: integer
+
+    CommunityPreviewResponse:
+      type: object
+      required: [candidateConfigText, candidateSha256, warnings, membersMissingLibrary, missingCommunityValues]
+      properties:
+        candidateConfigText:
+          type: string
+        candidateSha256:
+          type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        membersMissingLibrary:
+          type: integer
+        missingCommunityValues:
+          type: array
+          items:
+            type: string
+
+    CommunityApplyRequest:
+      type: object
+      required: [confirm, expectedCandidateSha256, acknowledgeMissingLibraryRefs]
+      properties:
+        confirm:
+          type: boolean
+        expectedCandidateSha256:
+          type: string
+        acknowledgeMissingLibraryRefs:
+          type: boolean
+
+    CommunityApplyResponse:
+      type: object
+      required: [ok, status, message]
+      properties:
+        ok:
+          type: boolean
+        status:
+          type: string
+          enum: [success, error, pending]
+        message:
+          type: string
+        deviceResponseExcerpt:
+          type: ["string", "null"]
+
+    CommunityChangeAudit:
+      type: object
+      required: [id, deviceId, action, candidateConfigText, status, createdAt]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        communitySetId:
+          type: ["integer", "null"]
+        userId:
+          type: ["integer", "null"]
+        action:
+          type: string
+          enum: [preview, apply, rollback]
+        candidateConfigText:
+          type: string
+        commandSentText:
+          type: ["string", "null"]
+        deviceResponseText:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [success, error, pending]
+        createdAt:
           type: string

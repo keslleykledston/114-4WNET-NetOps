@@ -1574,3 +1574,242 @@ export const QueryDeviceBgpPeerRoutesResponse = zod.object({
 })
 
 
+/**
+ * @summary List community filters from library
+ */
+export const GetCommunitiesLibraryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetCommunitiesLibraryResponseItem = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "companyId": zod.number(),
+  "filterName": zod.string(),
+  "communityValue": zod.string(),
+  "matchType": zod.enum(['basic', 'advanced']),
+  "action": zod.enum(['permit', 'deny']),
+  "indexOrder": zod.number().nullish(),
+  "origin": zod.enum(['discovered_running_config', 'discovered_live', 'manual']),
+  "description": zod.string().nullish(),
+  "tagsJson": zod.object({
+
+}).passthrough().nullish(),
+  "isSystem": zod.boolean(),
+  "isActive": zod.boolean(),
+  "usageCount": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const GetCommunitiesLibraryResponse = zod.array(GetCommunitiesLibraryResponseItem)
+
+
+/**
+ * @summary List community sets
+ */
+export const ListCommunitySetsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCommunitySetsResponseItem = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "vrpObjectName": zod.string(),
+  "origin": zod.enum(['app_created', 'discovered_running_config']),
+  "discoveredMembersJson": zod.array(zod.string()).nullish(),
+  "impliedConfigPreview": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['draft', 'ready', 'applied']),
+  "createdBy": zod.number().nullish(),
+  "updatedBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "members": zod.array(zod.object({
+  "id": zod.number().nullish(),
+  "position": zod.number().optional(),
+  "communityValue": zod.string().optional(),
+  "linkedLibraryItemId": zod.number().nullish(),
+  "missingInLibrary": zod.boolean().optional(),
+  "linkedFilterName": zod.string().optional(),
+  "valueDescription": zod.string().nullish()
+})),
+  "membersTotal": zod.number(),
+  "membersResolved": zod.number(),
+  "membersMissing": zod.number()
+})
+export const ListCommunitySetsResponse = zod.array(ListCommunitySetsResponseItem)
+
+
+/**
+ * @summary Create a new community set
+ */
+export const CreateCommunitySetParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateCommunitySetBody = zod.object({
+  "name": zod.string(),
+  "slug": zod.string().optional(),
+  "vrpObjectName": zod.string().optional(),
+  "description": zod.string().optional()
+})
+
+
+/**
+ * @summary Get community set details
+ */
+export const GetCommunitySetDetailsParams = zod.object({
+  "id": zod.coerce.number(),
+  "setId": zod.coerce.number()
+})
+
+export const GetCommunitySetDetailsResponse = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "vrpObjectName": zod.string(),
+  "origin": zod.enum(['app_created', 'discovered_running_config']),
+  "discoveredMembersJson": zod.array(zod.string()).nullish(),
+  "impliedConfigPreview": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['draft', 'ready', 'applied']),
+  "createdBy": zod.number().nullish(),
+  "updatedBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "members": zod.array(zod.object({
+  "id": zod.number().nullish(),
+  "position": zod.number().optional(),
+  "communityValue": zod.string().optional(),
+  "linkedLibraryItemId": zod.number().nullish(),
+  "missingInLibrary": zod.boolean().optional(),
+  "linkedFilterName": zod.string().optional(),
+  "valueDescription": zod.string().nullish()
+})),
+  "membersTotal": zod.number(),
+  "membersResolved": zod.number(),
+  "membersMissing": zod.number()
+})
+
+
+/**
+ * @summary Update community set
+ */
+export const UpdateCommunitySetParams = zod.object({
+  "id": zod.coerce.number(),
+  "setId": zod.coerce.number()
+})
+
+export const UpdateCommunitySetBody = zod.object({
+  "name": zod.string().optional(),
+  "slug": zod.string().optional(),
+  "vrpObjectName": zod.string().optional(),
+  "description": zod.string().optional()
+})
+
+export const UpdateCommunitySetResponse = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string(),
+  "vrpObjectName": zod.string(),
+  "origin": zod.enum(['app_created', 'discovered_running_config']),
+  "discoveredMembersJson": zod.array(zod.string()).nullish(),
+  "impliedConfigPreview": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['draft', 'ready', 'applied']),
+  "createdBy": zod.number().nullish(),
+  "updatedBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "members": zod.array(zod.object({
+  "id": zod.number().nullish(),
+  "position": zod.number().optional(),
+  "communityValue": zod.string().optional(),
+  "linkedLibraryItemId": zod.number().nullish(),
+  "missingInLibrary": zod.boolean().optional(),
+  "linkedFilterName": zod.string().optional(),
+  "valueDescription": zod.string().nullish()
+})),
+  "membersTotal": zod.number(),
+  "membersResolved": zod.number(),
+  "membersMissing": zod.number()
+})
+
+
+/**
+ * @summary Delete community set
+ */
+export const DeleteCommunitySetParams = zod.object({
+  "id": zod.coerce.number(),
+  "setId": zod.coerce.number()
+})
+
+
+/**
+ * @summary Preview community set configuration
+ */
+export const PreviewCommunitySetParams = zod.object({
+  "id": zod.coerce.number(),
+  "setId": zod.coerce.number()
+})
+
+export const PreviewCommunitySetResponse = zod.object({
+  "candidateConfigText": zod.string(),
+  "candidateSha256": zod.string(),
+  "warnings": zod.array(zod.string()),
+  "membersMissingLibrary": zod.number(),
+  "missingCommunityValues": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Apply community set to device
+ */
+export const ApplyCommunitySetParams = zod.object({
+  "id": zod.coerce.number(),
+  "setId": zod.coerce.number()
+})
+
+export const ApplyCommunitySetBody = zod.object({
+  "confirm": zod.boolean(),
+  "expectedCandidateSha256": zod.string(),
+  "acknowledgeMissingLibraryRefs": zod.boolean()
+})
+
+export const ApplyCommunitySetResponse = zod.object({
+  "ok": zod.boolean(),
+  "status": zod.enum(['success', 'error', 'pending']),
+  "message": zod.string(),
+  "deviceResponseExcerpt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Get community change audit trail
+ */
+export const GetCommunityChangeAuditParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetCommunityChangeAuditResponseItem = zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "communitySetId": zod.number().nullish(),
+  "userId": zod.number().nullish(),
+  "action": zod.enum(['preview', 'apply', 'rollback']),
+  "candidateConfigText": zod.string(),
+  "commandSentText": zod.string().nullish(),
+  "deviceResponseText": zod.string().nullish(),
+  "status": zod.enum(['success', 'error', 'pending']),
+  "createdAt": zod.string()
+})
+export const GetCommunityChangeAuditResponse = zod.array(GetCommunityChangeAuditResponseItem)
+
+

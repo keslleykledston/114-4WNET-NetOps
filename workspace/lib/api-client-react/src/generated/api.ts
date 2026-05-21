@@ -24,6 +24,12 @@ import type {
   BgpPeerSummary,
   CollectConfigInput,
   CollectedConfig,
+  CommunityApplyRequest,
+  CommunityApplyResponse,
+  CommunityChangeAudit,
+  CommunityLibraryItem,
+  CommunityPreviewResponse,
+  CommunitySet,
   ComplianceJob,
   ComplianceJobDetail,
   ComplianceJobInput,
@@ -35,6 +41,7 @@ import type {
   ConfigTemplateInput,
   ConfigTemplateUpdate,
   ConnectionTestResult,
+  CreateCommunitySetBody,
   Device,
   DeviceDiscoveryRequest,
   DeviceDiscoverySnapshot,
@@ -78,6 +85,7 @@ import type {
   SnmpSnapshot,
   TemplateRenderInput,
   TemplateRenderResult,
+  UpdateCommunitySetBody,
   ValidationResult
 } from './api.schemas';
 
@@ -4896,4 +4904,681 @@ export const useQueryDeviceBgpPeerRoutes = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getQueryDeviceBgpPeerRoutesMutationOptions(options));
     }
+
+export const getGetCommunitiesLibraryUrl = (id: number,) => {
+
+
+
+
+  return `/api/devices/${id}/communities/library`
+}
+
+/**
+ * @summary List community filters from library
+ */
+export const getCommunitiesLibrary = async (id: number, options?: RequestInit): Promise<CommunityLibraryItem[]> => {
+
+  return customFetch<CommunityLibraryItem[]>(getGetCommunitiesLibraryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCommunitiesLibraryQueryKey = (id: number,) => {
+    return [
+    `/api/devices/${id}/communities/library`
+    ] as const;
+    }
+
+
+export const getGetCommunitiesLibraryQueryOptions = <TData = Awaited<ReturnType<typeof getCommunitiesLibrary>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunitiesLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCommunitiesLibraryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCommunitiesLibrary>>> = ({ signal }) => getCommunitiesLibrary(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCommunitiesLibrary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCommunitiesLibraryQueryResult = NonNullable<Awaited<ReturnType<typeof getCommunitiesLibrary>>>
+export type GetCommunitiesLibraryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List community filters from library
+ */
+
+export function useGetCommunitiesLibrary<TData = Awaited<ReturnType<typeof getCommunitiesLibrary>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunitiesLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCommunitiesLibraryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListCommunitySetsUrl = (id: number,) => {
+
+
+
+
+  return `/api/devices/${id}/community-sets`
+}
+
+/**
+ * @summary List community sets
+ */
+export const listCommunitySets = async (id: number, options?: RequestInit): Promise<CommunitySet[]> => {
+
+  return customFetch<CommunitySet[]>(getListCommunitySetsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCommunitySetsQueryKey = (id: number,) => {
+    return [
+    `/api/devices/${id}/community-sets`
+    ] as const;
+    }
+
+
+export const getListCommunitySetsQueryOptions = <TData = Awaited<ReturnType<typeof listCommunitySets>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCommunitySets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCommunitySetsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCommunitySets>>> = ({ signal }) => listCommunitySets(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCommunitySets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCommunitySetsQueryResult = NonNullable<Awaited<ReturnType<typeof listCommunitySets>>>
+export type ListCommunitySetsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List community sets
+ */
+
+export function useListCommunitySets<TData = Awaited<ReturnType<typeof listCommunitySets>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCommunitySets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCommunitySetsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateCommunitySetUrl = (id: number,) => {
+
+
+
+
+  return `/api/devices/${id}/community-sets`
+}
+
+/**
+ * @summary Create a new community set
+ */
+export const createCommunitySet = async (id: number,
+    createCommunitySetBody: CreateCommunitySetBody, options?: RequestInit): Promise<CommunitySet> => {
+
+  return customFetch<CommunitySet>(getCreateCommunitySetUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createCommunitySetBody,)
+  }
+);}
+
+
+
+
+export const getCreateCommunitySetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCommunitySet>>, TError,{id: number;data: BodyType<CreateCommunitySetBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCommunitySet>>, TError,{id: number;data: BodyType<CreateCommunitySetBody>}, TContext> => {
+
+const mutationKey = ['createCommunitySet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCommunitySet>>, {id: number;data: BodyType<CreateCommunitySetBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createCommunitySet(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCommunitySetMutationResult = NonNullable<Awaited<ReturnType<typeof createCommunitySet>>>
+    export type CreateCommunitySetMutationBody = BodyType<CreateCommunitySetBody>
+    export type CreateCommunitySetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a new community set
+ */
+export const useCreateCommunitySet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCommunitySet>>, TError,{id: number;data: BodyType<CreateCommunitySetBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCommunitySet>>,
+        TError,
+        {id: number;data: BodyType<CreateCommunitySetBody>},
+        TContext
+      > => {
+      return useMutation(getCreateCommunitySetMutationOptions(options));
+    }
+
+export const getGetCommunitySetDetailsUrl = (id: number,
+    setId: number,) => {
+
+
+
+
+  return `/api/devices/${id}/community-sets/${setId}`
+}
+
+/**
+ * @summary Get community set details
+ */
+export const getCommunitySetDetails = async (id: number,
+    setId: number, options?: RequestInit): Promise<CommunitySet> => {
+
+  return customFetch<CommunitySet>(getGetCommunitySetDetailsUrl(id,setId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCommunitySetDetailsQueryKey = (id: number,
+    setId: number,) => {
+    return [
+    `/api/devices/${id}/community-sets/${setId}`
+    ] as const;
+    }
+
+
+export const getGetCommunitySetDetailsQueryOptions = <TData = Awaited<ReturnType<typeof getCommunitySetDetails>>, TError = ErrorType<unknown>>(id: number,
+    setId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunitySetDetails>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCommunitySetDetailsQueryKey(id,setId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCommunitySetDetails>>> = ({ signal }) => getCommunitySetDetails(id,setId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id && setId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCommunitySetDetails>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCommunitySetDetailsQueryResult = NonNullable<Awaited<ReturnType<typeof getCommunitySetDetails>>>
+export type GetCommunitySetDetailsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get community set details
+ */
+
+export function useGetCommunitySetDetails<TData = Awaited<ReturnType<typeof getCommunitySetDetails>>, TError = ErrorType<unknown>>(
+ id: number,
+    setId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunitySetDetails>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCommunitySetDetailsQueryOptions(id,setId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateCommunitySetUrl = (id: number,
+    setId: number,) => {
+
+
+
+
+  return `/api/devices/${id}/community-sets/${setId}`
+}
+
+/**
+ * @summary Update community set
+ */
+export const updateCommunitySet = async (id: number,
+    setId: number,
+    updateCommunitySetBody: UpdateCommunitySetBody, options?: RequestInit): Promise<CommunitySet> => {
+
+  return customFetch<CommunitySet>(getUpdateCommunitySetUrl(id,setId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateCommunitySetBody,)
+  }
+);}
+
+
+
+
+export const getUpdateCommunitySetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCommunitySet>>, TError,{id: number;setId: number;data: BodyType<UpdateCommunitySetBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCommunitySet>>, TError,{id: number;setId: number;data: BodyType<UpdateCommunitySetBody>}, TContext> => {
+
+const mutationKey = ['updateCommunitySet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCommunitySet>>, {id: number;setId: number;data: BodyType<UpdateCommunitySetBody>}> = (props) => {
+          const {id,setId,data} = props ?? {};
+
+          return  updateCommunitySet(id,setId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCommunitySetMutationResult = NonNullable<Awaited<ReturnType<typeof updateCommunitySet>>>
+    export type UpdateCommunitySetMutationBody = BodyType<UpdateCommunitySetBody>
+    export type UpdateCommunitySetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update community set
+ */
+export const useUpdateCommunitySet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCommunitySet>>, TError,{id: number;setId: number;data: BodyType<UpdateCommunitySetBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCommunitySet>>,
+        TError,
+        {id: number;setId: number;data: BodyType<UpdateCommunitySetBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateCommunitySetMutationOptions(options));
+    }
+
+export const getDeleteCommunitySetUrl = (id: number,
+    setId: number,) => {
+
+
+
+
+  return `/api/devices/${id}/community-sets/${setId}`
+}
+
+/**
+ * @summary Delete community set
+ */
+export const deleteCommunitySet = async (id: number,
+    setId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteCommunitySetUrl(id,setId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCommunitySetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCommunitySet>>, TError,{id: number;setId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCommunitySet>>, TError,{id: number;setId: number}, TContext> => {
+
+const mutationKey = ['deleteCommunitySet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCommunitySet>>, {id: number;setId: number}> = (props) => {
+          const {id,setId} = props ?? {};
+
+          return  deleteCommunitySet(id,setId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCommunitySetMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCommunitySet>>>
+
+    export type DeleteCommunitySetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete community set
+ */
+export const useDeleteCommunitySet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCommunitySet>>, TError,{id: number;setId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCommunitySet>>,
+        TError,
+        {id: number;setId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCommunitySetMutationOptions(options));
+    }
+
+export const getPreviewCommunitySetUrl = (id: number,
+    setId: number,) => {
+
+
+
+
+  return `/api/devices/${id}/community-sets/${setId}/preview`
+}
+
+/**
+ * @summary Preview community set configuration
+ */
+export const previewCommunitySet = async (id: number,
+    setId: number, options?: RequestInit): Promise<CommunityPreviewResponse> => {
+
+  return customFetch<CommunityPreviewResponse>(getPreviewCommunitySetUrl(id,setId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPreviewCommunitySetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewCommunitySet>>, TError,{id: number;setId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewCommunitySet>>, TError,{id: number;setId: number}, TContext> => {
+
+const mutationKey = ['previewCommunitySet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewCommunitySet>>, {id: number;setId: number}> = (props) => {
+          const {id,setId} = props ?? {};
+
+          return  previewCommunitySet(id,setId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewCommunitySetMutationResult = NonNullable<Awaited<ReturnType<typeof previewCommunitySet>>>
+
+    export type PreviewCommunitySetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Preview community set configuration
+ */
+export const usePreviewCommunitySet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewCommunitySet>>, TError,{id: number;setId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewCommunitySet>>,
+        TError,
+        {id: number;setId: number},
+        TContext
+      > => {
+      return useMutation(getPreviewCommunitySetMutationOptions(options));
+    }
+
+export const getApplyCommunitySetUrl = (id: number,
+    setId: number,) => {
+
+
+
+
+  return `/api/devices/${id}/community-sets/${setId}/apply`
+}
+
+/**
+ * @summary Apply community set to device
+ */
+export const applyCommunitySet = async (id: number,
+    setId: number,
+    communityApplyRequest: CommunityApplyRequest, options?: RequestInit): Promise<CommunityApplyResponse> => {
+
+  return customFetch<CommunityApplyResponse>(getApplyCommunitySetUrl(id,setId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      communityApplyRequest,)
+  }
+);}
+
+
+
+
+export const getApplyCommunitySetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyCommunitySet>>, TError,{id: number;setId: number;data: BodyType<CommunityApplyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyCommunitySet>>, TError,{id: number;setId: number;data: BodyType<CommunityApplyRequest>}, TContext> => {
+
+const mutationKey = ['applyCommunitySet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyCommunitySet>>, {id: number;setId: number;data: BodyType<CommunityApplyRequest>}> = (props) => {
+          const {id,setId,data} = props ?? {};
+
+          return  applyCommunitySet(id,setId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyCommunitySetMutationResult = NonNullable<Awaited<ReturnType<typeof applyCommunitySet>>>
+    export type ApplyCommunitySetMutationBody = BodyType<CommunityApplyRequest>
+    export type ApplyCommunitySetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Apply community set to device
+ */
+export const useApplyCommunitySet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyCommunitySet>>, TError,{id: number;setId: number;data: BodyType<CommunityApplyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyCommunitySet>>,
+        TError,
+        {id: number;setId: number;data: BodyType<CommunityApplyRequest>},
+        TContext
+      > => {
+      return useMutation(getApplyCommunitySetMutationOptions(options));
+    }
+
+export const getGetCommunityChangeAuditUrl = (id: number,) => {
+
+
+
+
+  return `/api/devices/${id}/community-change-audit`
+}
+
+/**
+ * @summary Get community change audit trail
+ */
+export const getCommunityChangeAudit = async (id: number, options?: RequestInit): Promise<CommunityChangeAudit[]> => {
+
+  return customFetch<CommunityChangeAudit[]>(getGetCommunityChangeAuditUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCommunityChangeAuditQueryKey = (id: number,) => {
+    return [
+    `/api/devices/${id}/community-change-audit`
+    ] as const;
+    }
+
+
+export const getGetCommunityChangeAuditQueryOptions = <TData = Awaited<ReturnType<typeof getCommunityChangeAudit>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunityChangeAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCommunityChangeAuditQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCommunityChangeAudit>>> = ({ signal }) => getCommunityChangeAudit(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCommunityChangeAudit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCommunityChangeAuditQueryResult = NonNullable<Awaited<ReturnType<typeof getCommunityChangeAudit>>>
+export type GetCommunityChangeAuditQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get community change audit trail
+ */
+
+export function useGetCommunityChangeAudit<TData = Awaited<ReturnType<typeof getCommunityChangeAudit>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCommunityChangeAudit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCommunityChangeAuditQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

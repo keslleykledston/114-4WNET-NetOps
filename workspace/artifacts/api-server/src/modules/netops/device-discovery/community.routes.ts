@@ -1,12 +1,5 @@
 import { Router } from "express";
 import {
-  discoverDevice,
-  getDiscoveryBgpPeers,
-  getDiscoveryPeerDetails,
-  getDiscoverySnapshot,
-  postDiscoveryRouteQuery,
-} from "./discovery.controller.js";
-import {
   getCommunitiesLibrary,
   getCommunitySets,
   getCommunitySetDetails,
@@ -20,24 +13,21 @@ import {
 
 const router = Router();
 
-// Discovery
-router.post("/devices/:id/discover", discoverDevice);
-router.get("/devices/:id/discovery-snapshot", getDiscoverySnapshot);
-
-// BGP
-router.get("/devices/:id/bgp/peers", getDiscoveryBgpPeers);
-router.get("/devices/:id/bgp/peers/:peerIp/details", getDiscoveryPeerDetails);
-router.post("/devices/:id/bgp/peers/:peerIp/routes/query", postDiscoveryRouteQuery);
-
-// Communities
+// Library (community-filters)
 router.get("/devices/:id/communities/library", getCommunitiesLibrary);
+
+// Sets (community-lists)
 router.get("/devices/:id/community-sets", getCommunitySets);
 router.get("/devices/:id/community-sets/:setId", getCommunitySetDetails);
 router.post("/devices/:id/community-sets", postCreateCommunitySet);
 router.put("/devices/:id/community-sets/:setId", putUpdateCommunitySet);
 router.delete("/devices/:id/community-sets/:setId", deleteCommunityset);
+
+// Apply workflow
 router.post("/devices/:id/community-sets/:setId/preview", postPreviewCommunitySet);
 router.post("/devices/:id/community-sets/:setId/apply", postApplyCommunitySet);
+
+// Audit
 router.get("/devices/:id/community-change-audit", getCommunityChangeAudit);
 
 export default router;

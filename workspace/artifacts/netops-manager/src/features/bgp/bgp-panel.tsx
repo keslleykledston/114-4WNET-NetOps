@@ -26,9 +26,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Activity, FileSearch, ListTree, Network, Route, Save, Search, ShieldCheck } from "lucide-react";
+import { Activity, FileSearch, ListTree, Network, Route, Save, Search, ShieldCheck, X } from "lucide-react";
 import { BgpPeerSheet, type BgpPeerActionKind } from "./bgp-peer-sheet";
 import { CollectSnmpButton } from "@/features/device-inventory/collect-snmp-button";
+import { toggleArrayFilter, matchesStateFilter, matchesRoleFilter, matchesAddressFamilyFilter } from "./filter-helpers";
 
 interface BgpPanelProps {
   device: Device;
@@ -92,10 +93,18 @@ const peerActions: Array<{ kind: BgpPeerActionKind; label: string; icon: typeof 
 
 interface StoredBgpFilters {
   search: string;
-  stateFilter: StateFilter;
-  roleFilter: RoleFilter;
-  afFilter: AfFilter;
+  selectedStates: string[];
+  selectedRoles: string[];
+  selectedAddressFamilies: string[];
   includeIbgp: boolean;
+}
+
+interface LegacyStoredBgpFilters {
+  search?: string;
+  stateFilter?: StateFilter;
+  roleFilter?: RoleFilter;
+  afFilter?: AfFilter;
+  includeIbgp?: boolean;
 }
 
 function peerEditKey(peer: Pick<NetopsBgpPeer, "peerIp" | "addressFamily">): string {
@@ -120,7 +129,21 @@ function loadStoredFilters(deviceId: number): StoredBgpFilters | null {
   try {
     const raw = localStorage.getItem(`${STORAGE_PREFIX}${deviceId}`);
     if (!raw) return null;
-    return JSON.parse(raw) as StoredBgpFilters;
+    const data = JSON.parse(raw);
+
+    // Migration from old format
+    if ("stateFilter" in data || "roleFilter" in data || "afFilter" in data) {
+      const legacy = data as LegacyStoredBgpFilters;
+      return {
+        search: legacy.search ?? "",
+        selectedStates: legacy.stateFilter && legacy.stateFilter !== "all" ? [legacy.stateFilter] : [],
+        selectedRoles: legacy.roleFilter && legacy.roleFilter !== "all" ? [legacy.roleFilter] : [],
+        selectedAddressFamilies: legacy.afFilter && legacy.afFilter !== "all" ? [legacy.afFilter] : [],
+        includeIbgp: legacy.includeIbgp ?? false,
+      };
+    }
+
+    return data as StoredBgpFilters;
   } catch {
     return null;
   }
@@ -128,13 +151,17 @@ function loadStoredFilters(deviceId: number): StoredBgpFilters | null {
 
 function buildListParams(
   role: ListNetopsDeviceBgpPeersParams["role"] | undefined,
-  stateFilter: StateFilter,
-  afFilter: AfFilter,
+  selectedStates: string[],
+  selectedAddressFamilies: string[],
 ): ListNetopsDeviceBgpPeersParams | undefined {
   const params: ListNetopsDeviceBgpPeersParams = {};
   if (role) params.role = role;
-  if (stateFilter !== "all") params.state = stateFilter;
-  if (afFilter === "ipv4" || afFilter === "ipv6") params.af = afFilter;
+  if (selectedStates.length === 1 && selectedStates[0] !== "Down") {
+    params.state = selectedStates[0] as any;
+  }
+  if (selectedAddressFamilies.length === 1 && (selectedAddressFamilies[0] === "ipv4" || selectedAddressFamilies[0] === "ipv6")) {
+    params.af = selectedAddressFamilies[0] as any;
+  }
   return Object.keys(params).length ? params : undefined;
 }
 
@@ -142,9 +169,9 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const [stateFilter, setStateFilter] = useState<StateFilter>("all");
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>(role ?? "all");
-  const [afFilter, setAfFilter] = useState<AfFilter>("all");
+  const [selectedStates, setSelectedStates] = useState<string[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [selectedAddressFamilies, setSelectedAddressFamilies] = useState<string[]>([]);
   const [includeIbgp, setIncludeIbgp] = useState(role === "ibgp");
   const [editedRoles, setEditedRoles] = useState<Record<string, NetopsBgpPeerRole>>({});
   const [savingPeer, setSavingPeer] = useState<string | null>(null);
@@ -153,37 +180,36 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const listParams = useMemo(
-    () => buildListParams(role, stateFilter, afFilter),
-    [afFilter, role, stateFilter],
+    () => buildListParams(role, selectedStates, selectedAddressFamilies),
+    [role, selectedStates, selectedAddressFamilies],
   );
 
   const { data: peers, isLoading, isError } = useListNetopsDeviceBgpPeers(device.id, listParams);
 
   useEffect(() => {
     if (role) {
-      setRoleFilter(role);
       if (role === "ibgp") setIncludeIbgp(true);
       return;
     }
     const stored = loadStoredFilters(device.id);
     if (!stored) return;
     setSearch(stored.search ?? "");
-    setStateFilter(stored.stateFilter ?? "all");
-    setRoleFilter(stored.roleFilter ?? "all");
-    setAfFilter(stored.afFilter ?? "all");
+    setSelectedStates(stored.selectedStates ?? []);
+    setSelectedRoles(stored.selectedRoles ?? []);
+    setSelectedAddressFamilies(stored.selectedAddressFamilies ?? []);
     setIncludeIbgp(stored.includeIbgp ?? false);
   }, [device.id, role]);
 
   useEffect(() => {
     const payload: StoredBgpFilters = {
       search,
-      stateFilter,
-      roleFilter: role ?? roleFilter,
-      afFilter,
+      selectedStates,
+      selectedRoles: role ? [] : selectedRoles,
+      selectedAddressFamilies,
       includeIbgp,
     };
     localStorage.setItem(`${STORAGE_PREFIX}${device.id}`, JSON.stringify(payload));
-  }, [afFilter, device.id, includeIbgp, role, roleFilter, search, stateFilter]);
+  }, [device.id, includeIbgp, role, search, selectedAddressFamilies, selectedRoles, selectedStates]);
 
   const updateRole = useUpdateNetopsDeviceBgpPeerRole({
     mutation: {
@@ -212,19 +238,12 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
     return (peers ?? []).filter((peer) => {
       const selectedRole = editedRoles[peerEditKey(peer)] ?? peer.role;
       if (!includeIbgp && selectedRole === "ibgp") return false;
-      if (!role && roleFilter !== "all" && selectedRole !== roleFilter) return false;
-      if (afFilter === "unknown" && peer.addressFamily !== "unknown") return false;
-      if (stateFilter === "Down" && peer.state === "Established") return false;
-      if (
-        stateFilter !== "all" &&
-        stateFilter !== "Down" &&
-        peer.state !== stateFilter
-      ) {
-        return false;
-      }
+      if (!role && !matchesRoleFilter(selectedRole, selectedRoles)) return false;
+      if (!matchesAddressFamilyFilter(peer.addressFamily, selectedAddressFamilies)) return false;
+      if (!matchesStateFilter(peer.state, selectedStates)) return false;
       return peerMatchesSearch(peer, search);
     });
-  }, [afFilter, editedRoles, includeIbgp, peers, role, roleFilter, search, stateFilter]);
+  }, [editedRoles, includeIbgp, peers, role, selectedAddressFamilies, selectedRoles, selectedStates, search]);
 
   const counters = useMemo(() => {
     const base = (peers ?? []).filter((peer) => includeIbgp || (editedRoles[peerEditKey(peer)] ?? peer.role) !== "ibgp");
@@ -283,7 +302,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 lg:grid-cols-[minmax(200px,1fr)_160px_160px_160px_auto]">
+        <div className="flex flex-col gap-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -293,44 +312,106 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
               className="pl-9"
             />
           </div>
-          <Select value={stateFilter} onValueChange={(value) => setStateFilter(value as StateFilter)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Estado" />
-            </SelectTrigger>
-            <SelectContent>
-              {stateOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+
+          <div className="space-y-2">
+            <div className="text-[11px] font-semibold uppercase text-muted-foreground">Estado</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedStates([])}
+                className={`h-8 rounded-md px-3 text-sm transition-colors ${
+                  selectedStates.length === 0
+                    ? "bg-primary text-primary-foreground"
+                    : "border bg-muted/20 hover:bg-muted/40"
+                }`}
+              >
+                Todos
+              </button>
+              {stateOptions.slice(1).map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSelectedStates(toggleArrayFilter(selectedStates, option.value))}
+                  className={`h-8 rounded-md px-3 text-sm transition-colors flex items-center gap-1.5 ${
+                    selectedStates.includes(option.value)
+                      ? "bg-primary text-primary-foreground"
+                      : "border bg-muted/20 hover:bg-muted/40"
+                  }`}
+                >
+                  {option.label}
+                  {selectedStates.includes(option.value) && <X className="h-3 w-3" />}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-          <Select value={afFilter} onValueChange={(value) => setAfFilter(value as AfFilter)}>
-            <SelectTrigger>
-              <SelectValue placeholder="AF" />
-            </SelectTrigger>
-            <SelectContent>
-              {afOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="text-[11px] font-semibold uppercase text-muted-foreground">Família de endereço</div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedAddressFamilies([])}
+                className={`h-8 rounded-md px-3 text-sm transition-colors ${
+                  selectedAddressFamilies.length === 0
+                    ? "bg-primary text-primary-foreground"
+                    : "border bg-muted/20 hover:bg-muted/40"
+                }`}
+              >
+                Todos
+              </button>
+              {afOptions.slice(1).map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSelectedAddressFamilies(toggleArrayFilter(selectedAddressFamilies, option.value))}
+                  className={`h-8 rounded-md px-3 text-sm transition-colors flex items-center gap-1.5 ${
+                    selectedAddressFamilies.includes(option.value)
+                      ? "bg-primary text-primary-foreground"
+                      : "border bg-muted/20 hover:bg-muted/40"
+                  }`}
+                >
+                  {option.label}
+                  {selectedAddressFamilies.includes(option.value) && <X className="h-3 w-3" />}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={roleFilter}
-            onValueChange={(value) => setRoleFilter(value as RoleFilter)}
-            disabled={!!role}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Papel" />
-            </SelectTrigger>
-            <SelectContent>
-              {roleOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-semibold uppercase text-muted-foreground">Papel</div>
+              {!role && (
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Checkbox checked={includeIbgp} onCheckedChange={(checked) => setIncludeIbgp(checked === true)} />
+                  Incluir iBGP
+                </label>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedRoles([])}
+                disabled={!!role}
+                className={`h-8 rounded-md px-3 text-sm transition-colors disabled:opacity-50 ${
+                  selectedRoles.length === 0
+                    ? "bg-primary text-primary-foreground"
+                    : "border bg-muted/20 hover:bg-muted/40"
+                }`}
+              >
+                Todos
+              </button>
+              {roleOptions.slice(1, includeIbgp ? undefined : -1).map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSelectedRoles(toggleArrayFilter(selectedRoles, option.value))}
+                  disabled={!!role}
+                  className={`h-8 rounded-md px-3 text-sm transition-colors disabled:opacity-50 flex items-center gap-1.5 ${
+                    selectedRoles.includes(option.value)
+                      ? "bg-primary text-primary-foreground"
+                      : "border bg-muted/20 hover:bg-muted/40"
+                  }`}
+                >
+                  {option.label}
+                  {selectedRoles.includes(option.value) && <X className="h-3 w-3" />}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
-          <label className="flex h-9 items-center gap-2 rounded-md border px-3 text-sm text-muted-foreground">
-            <Checkbox checked={includeIbgp} onCheckedChange={(checked) => setIncludeIbgp(checked === true)} />
-            Incluir iBGP
-          </label>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-12">

@@ -73,22 +73,60 @@ function extractVlan(name: string): number | null {
 function normalizeInterfaces(snapshot: SnmpSnapshot): NetopsInterface[] {
   return parseJsonArray(snapshot.interfacesJson).map((item) => {
     const row = asRecord(item);
-    const name = text(row["name"]) ?? text(row["description"]) ?? text(row["index"]) ?? "unknown";
+    const name = text(row["name"]) ?? text(row["rawDescr"]) ?? text(row["description"]) ?? text(row["index"]) ?? "unknown";
     const rowSource = text(row["source"]);
     const source = rowSource === "snmp" ? "snmp" : "snapshot";
+    const ifIndexVal = numberValue(row["ifIndex"]);
+    const alias = text(row["alias"]);
+    const rawDescr = text(row["rawDescr"]);
+    const description = alias || rawDescr || text(row["description"]);
 
-    return {
+    let kind = text(row["kind"]) as any;
+    if (!kind) {
+      kind = extractKind(name);
+    }
+
+    let vlanId = numberValue(row["vlanId"]);
+    if (!vlanId) {
+      vlanId = extractVlan(name);
+    }
+
+    const result: NetopsInterface = {
       name,
-      description: text(row["description"]) ?? text(row["alias"]),
+      description,
       adminStatus: normalizeStatus(row["adminStatus"] ?? row["admin_status"]),
       operStatus: normalizeStatus(row["operStatus"] ?? row["oper_status"] ?? row["status"]),
       ipv4: stringArray(row["ipv4"] ?? row["ipv4Addresses"] ?? row["ip_addresses"]),
       ipv6: stringArray(row["ipv6"] ?? row["ipv6Addresses"] ?? row["ipv6_addresses"]),
-      vlan: numberValue(row["vlan"]) ?? numberValue(row["ifIndex"]) ?? extractVlan(name),
+      vlan: vlanId,
       vrf: text(row["vrf"]) ?? text(row["vrfName"]) ?? text(row["vrf_name"]),
       source,
     };
+
+    if (alias !== null) result.alias = alias;
+    if (rawDescr !== null) result.rawDescr = rawDescr;
+    if (ifIndexVal !== null) result.ifIndex = ifIndexVal;
+    if (kind) result.kind = kind as any;
+    const parentIfText = text(row["parentInterface"]);
+    if (parentIfText) result.parentInterface = parentIfText;
+    if (vlanId) result.vlanId = vlanId;
+    const encapText = text(row["encapsulation"]);
+    if (encapText) result.encapsulation = encapText;
+
+    return result;
   });
+}
+
+function extractKind(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.includes("loopback") || lower.match(/^lo\d+$/)) return "loopback";
+  if (lower.includes("tunnel") || lower.match(/^tunnel\d+$/)) return "tunnel";
+  if (lower.match(/^vlan\d+$/i) || lower.match(/^vlanif\d+$/i)) return "vlanif";
+  if (lower.includes("virtual-template") || lower.match(/^virtual-template\d+$/i)) return "virtual_template";
+  if (lower === "null" || lower.includes("null0")) return "null";
+  if (lower.includes("eth-trunk") || lower.includes("bundle")) return "aggregate";
+  if (lower.match(/\.\d+$/)) return "subinterface";
+  return "physical";
 }
 
 function normalizeBgpPeers(snapshot: SnmpSnapshot): NetopsBgpPeer[] {

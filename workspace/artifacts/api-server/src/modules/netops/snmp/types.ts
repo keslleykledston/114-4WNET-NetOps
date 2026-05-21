@@ -3,6 +3,7 @@ export interface SnmpCollectedInterface {
   name: string;
   description: string | null;
   alias: string | null;
+  rawDescr: string | null;
   adminStatus: string;
   operStatus: string;
   type: number | null;

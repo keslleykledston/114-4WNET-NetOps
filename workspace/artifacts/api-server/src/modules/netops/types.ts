@@ -35,11 +35,14 @@ export interface NetopsDeviceSummary {
   device: NetopsSafeDevice;
   counters: NetopsCounters;
   lastSnapshotAt: string | null;
+  deviceKind: "router" | "switch" | "unknown";
 }
 
 export interface NetopsInterface {
   name: string;
   description: string | null;
+  alias?: string | null;
+  rawDescr?: string | null;
   adminStatus: "up" | "down" | "unknown";
   operStatus: "up" | "down" | "unknown";
   ipv4: string[];
@@ -47,6 +50,11 @@ export interface NetopsInterface {
   vlan: number | null;
   vrf: string | null;
   source: NetopsSource;
+  ifIndex?: number;
+  kind?: "physical" | "aggregate" | "subinterface" | "vlanif" | "loopback" | "tunnel" | "virtual_template" | "null" | "other";
+  parentInterface?: string;
+  vlanId?: number;
+  encapsulation?: string;
 }
 
 export interface NetopsBgpPeer {

@@ -26,6 +26,8 @@ export function parseHuaweiInterfaces(output: string): NetopsInterface[] {
     interfaces.push({
       name,
       description: rest?.trim() || null,
+      alias: undefined,
+      rawDescr: undefined,
       adminStatus: normalizeStatus(admin),
       operStatus: normalizeStatus(oper),
       ipv4: [],

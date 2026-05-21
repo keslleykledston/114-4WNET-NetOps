@@ -25,6 +25,8 @@ function payloadToInterfaces(payload: SnmpReadonlyCollectPayload): NetopsInterfa
   return payload.interfaces.map((iface) => ({
     name: iface.name,
     description: iface.description ?? iface.alias,
+    alias: iface.alias,
+    rawDescr: iface.rawDescr,
     adminStatus: iface.adminStatus === "up" ? "up" : iface.adminStatus === "down" ? "down" : "unknown",
     operStatus: iface.operStatus === "up" ? "up" : iface.operStatus === "down" ? "down" : "unknown",
     ipv4: [],
@@ -32,6 +34,7 @@ function payloadToInterfaces(payload: SnmpReadonlyCollectPayload): NetopsInterfa
     vlan: null,
     vrf: null,
     source: "snmp",
+    ifIndex: iface.ifIndex,
   }));
 }
 

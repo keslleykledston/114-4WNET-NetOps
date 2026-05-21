@@ -125,8 +125,11 @@ async function collectInterfaces(
       .sort(compareIfIndexes)
       .map((index) => {
         const ifIndex = Number(index);
-        const description = decodeSnmpString(descrResult.rows[index]);
-        const name = decodeSnmpString(ifNameResult.rows[index]) ?? description ?? `ifIndex-${index}`;
+        const rawDescr = decodeSnmpString(descrResult.rows[index]);
+        const ifName = decodeSnmpString(ifNameResult.rows[index]);
+        const ifAlias = decodeSnmpString(ifAliasResult.rows[index]);
+        const name = ifName ?? rawDescr ?? `ifIndex-${index}`;
+        const description = ifAlias || rawDescr || null;
         const adminCode = toSnmpNumber(adminResult.rows[index]);
         const operCode = toSnmpNumber(operResult.rows[index]);
 
@@ -134,7 +137,8 @@ async function collectInterfaces(
           ifIndex: Number.isFinite(ifIndex) ? ifIndex : Number(index) || 0,
           name,
           description,
-          alias: decodeSnmpString(ifAliasResult.rows[index]),
+          alias: ifAlias,
+          rawDescr,
           adminStatus: IF_ADMIN_STATUS[String(adminCode ?? "")] ?? "unknown",
           operStatus: IF_OPER_STATUS[String(operCode ?? "")] ?? "unknown",
           type: toSnmpNumber(typeResult.rows[index]),

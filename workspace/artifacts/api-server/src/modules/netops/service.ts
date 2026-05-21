@@ -1,6 +1,7 @@
 import { bgpPeerRoleOverridesTable, db, devicesTable, snmpSnapshotsTable } from "@workspace/db";
 import { desc, eq, sql } from "drizzle-orm";
 import { snapshotToNetopsData } from "./adapters/snapshot-adapter.js";
+import { deriveDeviceKind } from "./device-profile/device-profile-resolver.js";
 import { snmpReadonlyAdapter } from "./adapters/snmp-readonly-adapter.js";
 import type {
   NetopsAddressFamilyFilter,
@@ -59,6 +60,7 @@ export async function getNetopsSummary(deviceId: number): Promise<NetopsDeviceSu
       communities: data.communities.length,
     },
     lastSnapshotAt: data.snapshot?.collectedAt.toISOString() ?? null,
+    deviceKind: deriveDeviceKind(device),
   };
 }
 

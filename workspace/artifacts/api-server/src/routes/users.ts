@@ -81,6 +81,102 @@ router.patch("/users/:id", async (req, res) => {
   res.json(toPublicUser(updated));
 });
 
+router.get("/users/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!user) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  res.json(toPublicUser(user));
+});
+
+router.post("/users/:id/disable", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const [updated] = await db.update(usersTable).set({ enabled: false, updatedAt: new Date() }).where(eq(usersTable.id, id)).returning();
+  if (!updated) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  await logAuditEvent({
+    action: "user_disable",
+    objectType: "user",
+    objectId: String(id),
+    metadata: { name: updated.name, email: updated.email },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  res.json({ message: "User disabled" });
+});
+
+router.post("/users/:id/enable", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const [updated] = await db.update(usersTable).set({ enabled: true, updatedAt: new Date() }).where(eq(usersTable.id, id)).returning();
+  if (!updated) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  await logAuditEvent({
+    action: "user_enable",
+    objectType: "user",
+    objectId: String(id),
+    metadata: { name: updated.name, email: updated.email },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  res.json(toPublicUser(updated));
+});
+
+router.post("/users/:id/reset-password", async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const body = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
+  const newPassword = typeof body.password === "string" ? body.password.trim() : "";
+
+  if (!newPassword || newPassword.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+  const [updated] = await db.update(usersTable).set({ passwordHash: hashPassword(newPassword), updatedAt: new Date() }).where(eq(usersTable.id, id)).returning();
+  if (!updated) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  await logAuditEvent({
+    action: "user_password_reset",
+    objectType: "user",
+    objectId: String(id),
+    metadata: { email: updated.email },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  res.json({ message: "Password reset successfully. User can login with new password." });
+});
+
 router.delete("/users/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) {

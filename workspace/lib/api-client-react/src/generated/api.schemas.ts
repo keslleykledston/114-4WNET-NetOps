@@ -2120,6 +2120,77 @@ export type ScheduledJobListResponse = ScheduledJob[];
 
 export type ScheduledJobRunListResponse = ScheduledJobRun[];
 
+export type UserPermissionsDevices = {
+  read?: boolean;
+  write?: boolean;
+  import?: boolean;
+  export?: boolean;
+};
+
+export type UserPermissionsCompliance = {
+  read?: boolean;
+  run?: boolean;
+  export?: boolean;
+};
+
+export type UserPermissionsScheduler = {
+  read?: boolean;
+  write?: boolean;
+};
+
+export type UserPermissionsIntegrations = {
+  read?: boolean;
+  write?: boolean;
+};
+
+export type UserPermissionsUsers = {
+  read?: boolean;
+  write?: boolean;
+};
+
+export type UserPermissionsAudit = {
+  read?: boolean;
+};
+
+export interface UserPermissions {
+  devices?: UserPermissionsDevices;
+  compliance?: UserPermissionsCompliance;
+  scheduler?: UserPermissionsScheduler;
+  integrations?: UserPermissionsIntegrations;
+  users?: UserPermissionsUsers;
+  audit?: UserPermissionsAudit;
+}
+
+export interface UserSession {
+  id: number;
+  userId: number;
+  expiresAt: string;
+  createdAt: string;
+  /** @nullable */
+  revokedAt?: string | null;
+}
+
+export interface UserSessionListResponse {
+  sessions: UserSession[];
+}
+
+export interface ResetPasswordRequest {
+  /** @minLength 8 */
+  password: string;
+}
+
+export interface EffectivePermissionsResponse {
+  effectivePermissions: UserPermissions;
+}
+
+export type DisableUser200 = {
+  message?: string;
+};
+
+export type ResetUserPassword200 = {
+  message?: string;
+};
+
 export type ListScheduledJobRunsParams = {
 scheduledJobId?: number;
 };

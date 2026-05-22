@@ -6,6 +6,15 @@ import { userSessionsTable, usersTable, type UserRole } from "@workspace/db";
 import { env } from "./env.js";
 import { setRequestUser } from "./request-context.js";
 
+export type UserPermissions = {
+  devices?: { read?: boolean; write?: boolean; import?: boolean; export?: boolean };
+  compliance?: { read?: boolean; run?: boolean; export?: boolean };
+  scheduler?: { read?: boolean; write?: boolean };
+  integrations?: { read?: boolean; write?: boolean };
+  users?: { read?: boolean; write?: boolean };
+  audit?: { read?: boolean };
+};
+
 export const AUTH_COOKIE_NAME = "netops_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
@@ -278,4 +287,72 @@ export async function findUserByEmail(email: string) {
   const normalized = email.trim().toLowerCase();
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, normalized));
   return user ?? null;
+}
+
+export function getDefaultPermissions(role: UserRole): UserPermissions {
+  if (role === "admin") {
+    return {
+      devices: { read: true, write: true, import: true, export: true },
+      compliance: { read: true, run: true, export: true },
+      scheduler: { read: true, write: true },
+      integrations: { read: true, write: true },
+      users: { read: true, write: true },
+      audit: { read: true },
+    };
+  }
+  if (role === "operator") {
+    return {
+      devices: { read: true, write: true, import: true, export: true },
+      compliance: { read: true, run: true, export: true },
+      scheduler: { read: true, write: true },
+      integrations: { read: true, write: false },
+      users: { read: true, write: false },
+      audit: { read: true },
+    };
+  }
+  // viewer
+  return {
+    devices: { read: true, write: false, import: false, export: true },
+    compliance: { read: true, run: false, export: false },
+    scheduler: { read: true, write: false },
+    integrations: { read: true, write: false },
+    users: { read: true, write: false },
+    audit: { read: true },
+  };
+}
+
+export function checkPermission(user: { role: UserRole; permissionsJson: UserPermissions | null }, permission: string): boolean {
+  const [module, action] = permission.split(".");
+  if (!module || !action) return false;
+
+  // Use override permissions if present, otherwise fall back to role defaults
+  const effectivePerms = user.permissionsJson ?? getDefaultPermissions(user.role);
+  const modulePerms = effectivePerms[module as keyof UserPermissions];
+  if (!modulePerms) return false;
+
+  const actionValue = modulePerms[action as keyof typeof modulePerms];
+  return actionValue === true;
+}
+
+export function requirePermission(permission: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    void (async () => {
+      const user = await getSessionUserFromRequest(req);
+      if (!user) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+
+      const hasPermission = checkPermission(user as any, permission);
+      if (!hasPermission) {
+        res.status(403).json({ error: `Permission denied: ${permission}` });
+        return;
+      }
+
+      setRequestUser(publicAuthUser(user));
+      next();
+    })().catch((error) => {
+      res.status(500).json({ error: error instanceof Error ? error.message : "Authorization failed" });
+    });
+  };
 }

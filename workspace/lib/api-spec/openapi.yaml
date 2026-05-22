@@ -126,6 +126,23 @@ paths:
                 $ref: "#/components/schemas/User"
 
   /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
     patch:
       operationId: updateUser
       tags: [users]
@@ -162,6 +179,116 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /users/{id}/disable:
+    post:
+      operationId: disableUser
+      tags: [users]
+      summary: Disable user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /users/{id}/enable:
+    post:
+      operationId: enableUser
+      tags: [users]
+      summary: Enable user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Enabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}/reset-password:
+    post:
+      operationId: resetUserPassword
+      tags: [users]
+      summary: Reset user password
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
+  /auth/sessions:
+    get:
+      operationId: listAuthSessions
+      tags: [auth]
+      summary: List my sessions
+      responses:
+        "200":
+          description: Sessions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserSessionListResponse"
+
+  /auth/sessions/{id}:
+    delete:
+      operationId: revokeAuthSession
+      tags: [auth]
+      summary: Revoke session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Revoked
+
+  /auth/me/permissions:
+    get:
+      operationId: getMyPermissions
+      tags: [auth]
+      summary: Get my permissions
+      responses:
+        "200":
+          description: Permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EffectivePermissionsResponse"
 
   /scheduled-jobs:
     get:
@@ -4773,3 +4900,95 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/ScheduledJobRun"
+
+    UserPermissions:
+      type: object
+      properties:
+        devices:
+          type: object
+          properties:
+            read:
+              type: boolean
+            write:
+              type: boolean
+            import:
+              type: boolean
+            export:
+              type: boolean
+        compliance:
+          type: object
+          properties:
+            read:
+              type: boolean
+            run:
+              type: boolean
+            export:
+              type: boolean
+        scheduler:
+          type: object
+          properties:
+            read:
+              type: boolean
+            write:
+              type: boolean
+        integrations:
+          type: object
+          properties:
+            read:
+              type: boolean
+            write:
+              type: boolean
+        users:
+          type: object
+          properties:
+            read:
+              type: boolean
+            write:
+              type: boolean
+        audit:
+          type: object
+          properties:
+            read:
+              type: boolean
+
+    UserSession:
+      type: object
+      required: [id, userId, expiresAt, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    UserSessionListResponse:
+      type: object
+      required: [sessions]
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserSession"
+
+    ResetPasswordRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 8
+
+    EffectivePermissionsResponse:
+      type: object
+      required: [effectivePermissions]
+      properties:
+        effectivePermissions:
+          $ref: "#/components/schemas/UserPermissions"

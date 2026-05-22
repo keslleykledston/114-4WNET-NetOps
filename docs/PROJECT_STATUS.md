@@ -213,6 +213,7 @@
 - RBAC local básico entregue com login, cookies seguros e proteção por role
 - scheduler local básico entregue com run-now e histórico
 - NetBox read-only sync entregue com status, test connection, preview e sync local
+- Compliance profundo v0.2.4 entregue com source/confidence/evidence sanitizada
 
 ## Pendências
 
@@ -258,6 +259,15 @@
 - `/integrations` mostra readiness, test/list/preview e sync local admin-only.
 - sync local cria/atualiza devices locais sem sobrescrever credenciais.
 - validacao real fica pendente ate existir `NETBOX_ENABLED=true`, `NETBOX_URL` e `NETBOX_TOKEN`.
+
+### v0.2.4 Compliance Profundo
+
+- Compliance usa `discovery_snapshot` persistido como fonte principal.
+- Findings incluem `source`, `confidence`, objeto, recomendação e evidence sanitizada.
+- Checks Huawei VRP cobrem security, NTP, interface, VRF/L3VPN, BGP e L2VPN.
+- Sem snapshot gera `unknown`/`warning` controlado.
+- Scheduler compliance reutiliza a engine nova.
+- UI `/compliance` ganhou filtros por status, severity, contexto, source, confidence e device.
 
 ### MVP Closure
 

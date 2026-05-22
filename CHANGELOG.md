@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.4 Compliance Profundo
+
+- Added structured compliance engine based on persisted `discovery_snapshot`.
+- Added enriched compliance findings with source, confidence, object, recommendation, and sanitized evidence.
+- Added Huawei VRP default checks for security, NTP, interfaces, VRF/L3VPN, BGP, and L2VPN.
+- Updated scheduled compliance to reuse the new engine and handle missing snapshots with controlled warnings.
+- Added `/compliance-findings`, OpenAPI/Orval support, improved `/compliance` UI, and deep compliance selftest.
+
 ## v0.2.3 NetBox Read-Only Sync
 
 - Added NetBox read-only status, connection test, list, preview, and local sync endpoints.

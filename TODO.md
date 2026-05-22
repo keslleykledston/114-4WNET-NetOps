@@ -6,7 +6,8 @@
 - Keep `CONFIG_APPLY_ENABLED=false` by default and require explicit approval before any real apply path.
 - Expand audit/report UI filters and add export/download flows.
 - Move `tools/device-discovery-selftest.mjs` checks into the formal test runner when one is added.
-- Wire compliance jobs to discovery confidence warnings.
+- Add threshold configuration for BGP route counters in compliance v2.
+- Add more Huawei VRP fixtures for VRF/L2VPN edge cases in compliance v2.
 - Add password reset / disable user / session revoke UX for local RBAC.
 - Decide whether `cron_expression` becomes live in the next release or stays metadata only.
 - Test v0.2.3 NetBox read-only sync with a real NetBox lab.

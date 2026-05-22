@@ -13,6 +13,9 @@ export interface ComplianceSummary {
   passed: number;
   failed: number;
   running: number;
+  warningFindings?: number;
+  unknownFindings?: number;
+  criticalFindings?: number;
   recentJobs: ComplianceJob[];
   failuresByContext: CountByKey[];
   failuresBySeverity: CountByKey[];

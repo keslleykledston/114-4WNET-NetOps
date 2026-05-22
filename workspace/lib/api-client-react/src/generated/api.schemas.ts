@@ -920,6 +920,8 @@ export interface ComplianceJobInput {
   contexts: string[];
 }
 
+export type ComplianceFindingMetadataJson = { [key: string]: unknown };
+
 export interface ComplianceFinding {
   id: number;
   jobId: number;
@@ -933,6 +935,39 @@ export interface ComplianceFinding {
   detail?: string | null;
   /** @nullable */
   evidence?: string | null;
+  /**
+     * pass, fail, warning, unknown
+     * @nullable
+     */
+  status?: string | null;
+  /** @nullable */
+  message?: string | null;
+  /** @nullable */
+  recommendation?: string | null;
+  blocking?: boolean;
+  /** @nullable */
+  source?: string | null;
+  /** @nullable */
+  confidence?: string | null;
+  /** @nullable */
+  objectType?: string | null;
+  /** @nullable */
+  objectId?: string | null;
+  /** @nullable */
+  objectName?: string | null;
+  /** @nullable */
+  ruleId?: string | null;
+  /** @nullable */
+  ruleName?: string | null;
+  /** @nullable */
+  rawReference?: string | null;
+  metadataJson?: ComplianceFindingMetadataJson;
+  /** @nullable */
+  deviceId?: number | null;
+  /** @nullable */
+  deviceHostname?: string | null;
+  /** @nullable */
+  jobCreatedAt?: string | null;
 }
 
 export interface ComplianceJobDetail {
@@ -959,6 +994,9 @@ export interface ComplianceSummary {
   passed: number;
   failed: number;
   running: number;
+  warningFindings?: number;
+  unknownFindings?: number;
+  criticalFindings?: number;
   recentJobs: ComplianceJob[];
   failuresByContext: CountByKey[];
   failuresBySeverity: CountByKey[];
@@ -2030,6 +2068,15 @@ site?: string;
 export type ListComplianceJobsParams = {
 deviceId?: number;
 status?: string;
+};
+
+export type ListComplianceFindingsParams = {
+status?: string;
+severity?: string;
+context?: string;
+confidence?: string;
+source?: string;
+deviceId?: number;
 };
 
 export type ListConfigTemplatesParams = {

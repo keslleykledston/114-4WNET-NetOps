@@ -807,6 +807,9 @@ export const GetComplianceSummaryResponse = zod.object({
   "passed": zod.number(),
   "failed": zod.number(),
   "running": zod.number(),
+  "warningFindings": zod.number().optional(),
+  "unknownFindings": zod.number().optional(),
+  "criticalFindings": zod.number().optional(),
   "recentJobs": zod.array(zod.object({
   "id": zod.number(),
   "deviceId": zod.number(),
@@ -829,6 +832,50 @@ export const GetComplianceSummaryResponse = zod.object({
   "count": zod.number()
 }))
 })
+
+
+/**
+ * @summary List enriched compliance findings
+ */
+export const ListComplianceFindingsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "severity": zod.coerce.string().optional(),
+  "context": zod.coerce.string().optional(),
+  "confidence": zod.coerce.string().optional(),
+  "source": zod.coerce.string().optional(),
+  "deviceId": zod.coerce.number().optional()
+})
+
+export const ListComplianceFindingsResponseItem = zod.object({
+  "id": zod.number(),
+  "jobId": zod.number(),
+  "policyId": zod.number(),
+  "policyName": zod.string(),
+  "severity": zod.string(),
+  "context": zod.string(),
+  "result": zod.string().describe('pass, fail, error'),
+  "detail": zod.string().nullish(),
+  "evidence": zod.string().nullish(),
+  "status": zod.string().nullish().describe('pass, fail, warning, unknown'),
+  "message": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "blocking": zod.boolean().optional(),
+  "source": zod.string().nullish(),
+  "confidence": zod.string().nullish(),
+  "objectType": zod.string().nullish(),
+  "objectId": zod.string().nullish(),
+  "objectName": zod.string().nullish(),
+  "ruleId": zod.string().nullish(),
+  "ruleName": zod.string().nullish(),
+  "rawReference": zod.string().nullish(),
+  "metadataJson": zod.object({
+
+}).passthrough().optional(),
+  "deviceId": zod.number().nullish(),
+  "deviceHostname": zod.string().nullish(),
+  "jobCreatedAt": zod.string().nullish()
+})
+export const ListComplianceFindingsResponse = zod.array(ListComplianceFindingsResponseItem)
 
 
 /**
@@ -859,7 +906,25 @@ export const GetComplianceJobResponse = zod.object({
   "context": zod.string(),
   "result": zod.string().describe('pass, fail, error'),
   "detail": zod.string().nullish(),
-  "evidence": zod.string().nullish()
+  "evidence": zod.string().nullish(),
+  "status": zod.string().nullish().describe('pass, fail, warning, unknown'),
+  "message": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "blocking": zod.boolean().optional(),
+  "source": zod.string().nullish(),
+  "confidence": zod.string().nullish(),
+  "objectType": zod.string().nullish(),
+  "objectId": zod.string().nullish(),
+  "objectName": zod.string().nullish(),
+  "ruleId": zod.string().nullish(),
+  "ruleName": zod.string().nullish(),
+  "rawReference": zod.string().nullish(),
+  "metadataJson": zod.object({
+
+}).passthrough().optional(),
+  "deviceId": zod.number().nullish(),
+  "deviceHostname": zod.string().nullish(),
+  "jobCreatedAt": zod.string().nullish()
 }))
 })
 
@@ -892,7 +957,25 @@ export const ExecuteComplianceJobResponse = zod.object({
   "context": zod.string(),
   "result": zod.string().describe('pass, fail, error'),
   "detail": zod.string().nullish(),
-  "evidence": zod.string().nullish()
+  "evidence": zod.string().nullish(),
+  "status": zod.string().nullish().describe('pass, fail, warning, unknown'),
+  "message": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "blocking": zod.boolean().optional(),
+  "source": zod.string().nullish(),
+  "confidence": zod.string().nullish(),
+  "objectType": zod.string().nullish(),
+  "objectId": zod.string().nullish(),
+  "objectName": zod.string().nullish(),
+  "ruleId": zod.string().nullish(),
+  "ruleName": zod.string().nullish(),
+  "rawReference": zod.string().nullish(),
+  "metadataJson": zod.object({
+
+}).passthrough().optional(),
+  "deviceId": zod.number().nullish(),
+  "deviceHostname": zod.string().nullish(),
+  "jobCreatedAt": zod.string().nullish()
 }))
 })
 

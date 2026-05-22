@@ -33,6 +33,7 @@ import type {
   CommunityLibraryItem,
   CommunityPreviewResponse,
   CommunitySet,
+  ComplianceFinding,
   ComplianceJob,
   ComplianceJobDetail,
   ComplianceJobInput,
@@ -60,6 +61,7 @@ import type {
   IntegrationSetting,
   ListAuditLogsParams,
   ListCollectedConfigsParams,
+  ListComplianceFindingsParams,
   ListComplianceJobsParams,
   ListConfigTemplatesParams,
   ListDeviceBgpPeersParams,
@@ -3081,6 +3083,90 @@ export function useGetComplianceSummary<TData = Awaited<ReturnType<typeof getCom
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetComplianceSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListComplianceFindingsUrl = (params?: ListComplianceFindingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compliance-findings?${stringifiedParams}` : `/api/compliance-findings`
+}
+
+/**
+ * @summary List enriched compliance findings
+ */
+export const listComplianceFindings = async (params?: ListComplianceFindingsParams, options?: RequestInit): Promise<ComplianceFinding[]> => {
+
+  return customFetch<ComplianceFinding[]>(getListComplianceFindingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListComplianceFindingsQueryKey = (params?: ListComplianceFindingsParams,) => {
+    return [
+    `/api/compliance-findings`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListComplianceFindingsQueryOptions = <TData = Awaited<ReturnType<typeof listComplianceFindings>>, TError = ErrorType<unknown>>(params?: ListComplianceFindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listComplianceFindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListComplianceFindingsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listComplianceFindings>>> = ({ signal }) => listComplianceFindings(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listComplianceFindings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListComplianceFindingsQueryResult = NonNullable<Awaited<ReturnType<typeof listComplianceFindings>>>
+export type ListComplianceFindingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List enriched compliance findings
+ */
+
+export function useListComplianceFindings<TData = Awaited<ReturnType<typeof listComplianceFindings>>, TError = ErrorType<unknown>>(
+ params?: ListComplianceFindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listComplianceFindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListComplianceFindingsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

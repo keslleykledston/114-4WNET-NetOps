@@ -751,6 +751,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/ComplianceSummary"
 
+  /compliance-findings:
+    get:
+      operationId: listComplianceFindings
+      tags: [compliance-jobs]
+      summary: List enriched compliance findings
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: context
+          in: query
+          schema:
+            type: string
+        - name: confidence
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Findings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ComplianceFinding"
+
   /compliance-jobs/{id}:
     get:
       operationId: getComplianceJob
@@ -3392,6 +3432,39 @@ components:
           type: ["string", "null"]
         evidence:
           type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+          description: "pass, fail, warning, unknown"
+        message:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        blocking:
+          type: boolean
+        source:
+          type: ["string", "null"]
+        confidence:
+          type: ["string", "null"]
+        objectType:
+          type: ["string", "null"]
+        objectId:
+          type: ["string", "null"]
+        objectName:
+          type: ["string", "null"]
+        ruleId:
+          type: ["string", "null"]
+        ruleName:
+          type: ["string", "null"]
+        rawReference:
+          type: ["string", "null"]
+        metadataJson:
+          type: object
+        deviceId:
+          type: ["integer", "null"]
+        deviceHostname:
+          type: ["string", "null"]
+        jobCreatedAt:
+          type: ["string", "null"]
 
     ComplianceSummary:
       type: object
@@ -3404,6 +3477,12 @@ components:
         failed:
           type: integer
         running:
+          type: integer
+        warningFindings:
+          type: integer
+        unknownFindings:
+          type: integer
+        criticalFindings:
           type: integer
         recentJobs:
           type: array

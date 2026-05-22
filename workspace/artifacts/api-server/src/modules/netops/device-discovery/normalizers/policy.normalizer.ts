@@ -1,6 +1,7 @@
 import type { CommunityFilter, CommunityList, PrefixList, RoutePolicySummary } from "../discovery.types.js";
 import { sourceConfidence } from "../source-priority.js";
 import type { NetopsCommunity, NetopsFilter } from "../../types.js";
+import type { RoutePolicyMatchDetail } from "../../huawei-vrp/parsers/policy-parser.js";
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -23,6 +24,13 @@ export function normalizeDiscoveryPolicies(filters: NetopsFilter[]): {
             sequence: typeof row.sequence === "number" ? row.sequence : null,
             action: typeof row.action === "string" ? row.action : null,
             matches: Array.isArray(row.matches) ? row.matches.filter((item): item is string => typeof item === "string") : [],
+            matchDetails: Array.isArray(row.matchDetails) ? row.matchDetails.filter((item): item is RoutePolicyMatchDetail => {
+              return Boolean(item)
+                && typeof item === "object"
+                && typeof (item as Record<string, unknown>).type === "string"
+                && typeof (item as Record<string, unknown>).name === "string"
+                && typeof (item as Record<string, unknown>).raw === "string";
+            }) : [],
             applies: Array.isArray(row.applies) ? row.applies.filter((item): item is string => typeof item === "string") : [],
             evidence: { source: "ssh_running_config" as const, confidence: sourceConfidence("ssh_running_config"), evidence: `route-policy ${filter.name}` },
           };
@@ -30,6 +38,7 @@ export function normalizeDiscoveryPolicies(filters: NetopsFilter[]): {
           sequence: null,
           action: null,
           matches: [],
+          matchDetails: [],
           applies: [],
           evidence: { source: "ssh_running_config" as const, confidence: sourceConfidence("ssh_running_config"), evidence: `route-policy ${filter.name}` },
         }],

@@ -11,7 +11,7 @@ export interface DiscoveryCommunityFilter {
   communityValue: string;
   matchType: "basic" | "advanced";
   action: "permit" | "deny";
-  indexOrder: number;
+  indexOrder: number | null;
   origin: "discovered_running_config";
   usageCount: number;
 }

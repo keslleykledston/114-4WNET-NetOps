@@ -1,11 +1,12 @@
 // Extract community-filter and community-list definitions from Huawei VRP running-config
 
 import type { NetopsCommunity } from "../../types.js";
+import { normalizePolicyLookupKey, normalizePolicyObjectName } from "./policy-utils.js";
 
 export interface CommunityFilterEntry {
   matchType: "basic" | "advanced";
   name: string;
-  index: number;
+  index: number | null;
   action: "permit" | "deny";
   value: string;
 }
@@ -21,6 +22,19 @@ export interface RoutePolicyCommunityFilterRef {
   routePolicy: string;
   node: string;
   filterName: string;
+}
+
+export interface CommunityFilterDisplayEntry {
+  action: "permit" | "deny";
+  value: string;
+  index: number | null;
+}
+
+export interface CommunityFilterDisplayBlock {
+  matchType: "basic" | "advanced";
+  name: string;
+  listId: number | null;
+  entries: CommunityFilterDisplayEntry[];
 }
 
 export interface RoutePolicyCommunityListRef {
@@ -43,7 +57,9 @@ export interface ParsedRunningConfigCommunities {
   routePolicyApplyCommunity: RoutePolicyApplyCommunity[];
 }
 
-const RE_FILTER = /^\s*ip\s+community-filter\s+(basic|advanced)\s+(\S+)\s+index\s+(\d+)\s+(permit|deny)\s+(.+?)\s*$/i;
+const RE_FILTER = /^\s*ip\s+community-filter\s+(basic|advanced)\s+(\S+)\s+(?:index\s+(\d+)\s+)?(permit|deny)\s+(.+?)\s*$/i;
+const RE_FILTER_DISPLAY_HEADER = /^\s*Named\s+Community\s+(basic|advanced)\s+filter:\s+(\S+)\s+\(ListID\s*=\s*(\d+)\)\s*$/i;
+const RE_FILTER_DISPLAY_LINE = /^\s*(?:index\s+(\d+)\s+)?(permit|deny)\s+(.+?)\s*$/i;
 const RE_LIST_HEADER = /^\s*ip\s+community-list\s+(\S+)\s*$/i;
 const RE_LIST_LINE = /^\s*community\s+(\S+)(?:\s+(.*))?$/i;
 const RE_RP_HEADER = /^\s*route-policy\s+(\S+)\s+(permit|deny)\s+node\s+(\d+)\s*$/i;
@@ -71,9 +87,9 @@ function dedupeFilters(items: CommunityFilterEntry[]): CommunityFilterEntry[] {
   for (const it of items) {
     const key = [
       it.matchType,
-      it.name.toLowerCase(),
+      normalizePolicyLookupKey(it.name),
       it.value.trim(),
-      it.index,
+      it.index ?? "",
       it.action.toLowerCase(),
     ].join("|");
     if (seen.has(key)) continue;
@@ -110,6 +126,25 @@ function splitApplyValues(blob: string): string[] {
   return vals;
 }
 
+function buildFilterLine(filter: CommunityFilterEntry): string {
+  const prefix = `ip community-filter ${filter.matchType} ${filter.name}`;
+  const indexPart = filter.index === null ? "" : ` index ${filter.index}`;
+  return `${prefix}${indexPart} ${filter.action} ${filter.value}`;
+}
+
+function pushFilterEntry(
+  out: ParsedRunningConfigCommunities,
+  entry: CommunityFilterEntry,
+): void {
+  out.communityFilters.push({
+    matchType: entry.matchType,
+    name: normalizePolicyObjectName(entry.name),
+    index: entry.index,
+    action: entry.action,
+    value: entry.value,
+  });
+}
+
 export function parseRunningConfigCommunities(configText: string): ParsedRunningConfigCommunities {
   const lines = normLines(configText);
   const out: ParsedRunningConfigCommunities = {
@@ -126,24 +161,70 @@ export function parseRunningConfigCommunities(configText: string): ParsedRunning
 
   let rpName: string | null = null;
   let rpNode: string | null = null;
+  let displayFilter: CommunityFilterDisplayBlock | null = null;
+
+  const flushDisplayFilter = (): void => {
+    if (!displayFilter) return;
+    for (const displayEntry of displayFilter.entries) {
+      pushFilterEntry(out, {
+        matchType: displayFilter.matchType,
+        name: displayFilter.name,
+        index: displayEntry.index,
+        action: displayEntry.action,
+        value: displayEntry.value,
+      });
+    }
+    displayFilter = null;
+  };
 
   for (const raw of lines) {
     const isIndented = raw && (raw[0] === " " || raw[0] === "\t");
     const line = stripInlineComment(raw);
     if (!line) continue;
 
+    const mDisplayHeader = RE_FILTER_DISPLAY_HEADER.exec(line);
+    if (mDisplayHeader) {
+      flushDisplayFilter();
+      displayFilter = {
+        matchType: (mDisplayHeader[1] || "basic").toLowerCase() as "basic" | "advanced",
+        name: normalizePolicyObjectName(mDisplayHeader[2]),
+        listId: mDisplayHeader[3] ? Number(mDisplayHeader[3]) : null,
+        entries: [],
+      };
+      currentList = null;
+      rpName = null;
+      rpNode = null;
+      continue;
+    }
+
+    if (displayFilter) {
+      const mDisplayLine = RE_FILTER_DISPLAY_LINE.exec(line);
+      if (mDisplayLine) {
+        const idx = mDisplayLine[1] ? Number(mDisplayLine[1]) : null;
+        const action = (mDisplayLine[2] || "permit").toLowerCase() as "permit" | "deny";
+        const value = normalizePolicyObjectName(mDisplayLine[3]);
+        if (value) {
+          displayFilter.entries.push({ index: Number.isFinite(idx ?? NaN) ? idx : null, action, value });
+        }
+        continue;
+      }
+      if (!isIndented && !/^\s*$/.test(raw)) {
+        flushDisplayFilter();
+      }
+    }
+
     // Match community-filter
     const mF = RE_FILTER.exec(line);
     if (mF) {
       const [, mt, name, idxS, act, val] = mF;
-      const idx = parseInt(idxS, 10);
+      const idx = idxS ? parseInt(idxS, 10) : null;
       if (!name || !val) continue;
       const mtL = (mt || "").toLowerCase();
       const matchType: "basic" | "advanced" = mtL === "advanced" ? "advanced" : "basic";
-      out.communityFilters.push({
+      pushFilterEntry(out, {
         matchType,
-        name: name.trim(),
-        index: idx,
+        name,
+        index: Number.isFinite(idx ?? NaN) ? idx : null,
         action: act.toLowerCase() as "permit" | "deny",
         value: (val || "").trim(),
       });
@@ -244,6 +325,8 @@ export function parseRunningConfigCommunities(configText: string): ParsedRunning
     }
   }
 
+  flushDisplayFilter();
+
   out.communityFilters = dedupeFilters(out.communityFilters);
   out.communityLists = dedupeLists(out.communityLists);
 
@@ -313,19 +396,39 @@ export function parseHuaweiCommunities(output: string): NetopsCommunity[] {
   const parsed = parseRunningConfigCommunities(output);
   const communities: NetopsCommunity[] = [];
 
+  const groupedFilters = new Map<string, { name: string; matchType: "basic" | "advanced"; entries: Array<{ index: number | null; action: "permit" | "deny"; value: string; line: string }> }>();
+  const seenFilterEntries = new Set<string>();
+
+  const addFilter = (filter: CommunityFilterEntry) => {
+    const key = `${normalizePolicyLookupKey(filter.name)}|${filter.matchType}`;
+    const current = groupedFilters.get(key) ?? { name: normalizePolicyObjectName(filter.name), matchType: filter.matchType, entries: [] };
+    const entryKey = `${key}|${filter.index ?? ""}|${filter.action}|${filter.value.trim()}`;
+    if (seenFilterEntries.has(entryKey)) return;
+    seenFilterEntries.add(entryKey);
+    current.entries.push({
+      index: filter.index,
+      action: filter.action,
+      value: filter.value,
+      line: buildFilterLine(filter),
+    });
+    groupedFilters.set(key, current);
+  };
+
   // Convert filters to NetopsCommunity format
   for (const filter of parsed.communityFilters) {
+    addFilter(filter);
+  }
+
+  for (const group of groupedFilters.values()) {
     communities.push({
-      name: filter.name,
+      name: group.name,
       type: "community-filter",
-      entries: [
-        {
-          index: filter.index,
-          action: filter.action,
-          value: filter.value,
-          line: `ip community-filter ${filter.matchType} ${filter.name} index ${filter.index} ${filter.action} ${filter.value}`,
-        },
-      ],
+      entries: group.entries.map((entry) => ({
+        index: entry.index,
+        action: entry.action,
+        value: entry.value,
+        line: entry.line,
+      })),
       source: "ssh",
     });
   }

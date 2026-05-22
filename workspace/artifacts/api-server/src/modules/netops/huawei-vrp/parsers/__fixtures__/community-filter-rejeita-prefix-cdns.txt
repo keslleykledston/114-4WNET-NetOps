@@ -1,0 +1,5 @@
+ip community-filter basic REJEITA-PREFIX-CDNS permit 64777:10064
+route-policy AS268707-4WNET-BRT-RX-Export-V6 permit node 10
+ if-match community-filter REJEITA-PREFIX-CDNS
+ apply community 64777:10064 additive
+

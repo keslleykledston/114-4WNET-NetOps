@@ -1,0 +1,4 @@
+display ip community-filter REJEITA-PREFIX-CDNS
+Named Community basic filter: REJEITA-PREFIX-CDNS (ListID = 314)
+ permit 64777:10064
+

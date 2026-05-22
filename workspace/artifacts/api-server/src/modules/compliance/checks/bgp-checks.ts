@@ -1,13 +1,51 @@
 import type { BgpPeerSummary, RoutePolicySummary } from "../../netops/device-discovery/discovery.types.js";
 import type { ComplianceContext, StructuredFinding } from "../compliance-context.js";
 import type { ComplianceSource } from "../confidence.js";
+import { normalizePolicyLookupKey, normalizePolicyObjectName } from "../../netops/huawei-vrp/parsers/policy-utils.js";
 
 function policyRefs(policy: RoutePolicySummary): string[] {
   return policy.nodes.flatMap((node) => [...node.matches, ...node.applies]).filter(Boolean);
 }
 
-function hasReference(refs: string[], name: string): boolean {
-  return refs.some((ref) => ref.toLowerCase().includes(name.toLowerCase()));
+function policyCommunityRefs(policy: RoutePolicySummary): Array<{ name: string; raw: string }> {
+  const refs: Array<{ name: string; raw: string }> = [];
+  const seen = new Set<string>();
+  for (const node of policy.nodes) {
+    for (const detail of node.matchDetails ?? []) {
+      if (detail.type === "community-filter" || detail.type === "community-list") {
+        const name = normalizePolicyObjectName(detail.name);
+        const key = `${normalizePolicyLookupKey(name)}|${detail.raw}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        refs.push({ name, raw: detail.raw });
+      }
+    }
+    for (const ref of node.matches) {
+      const communityMatch = ref.match(/community-(?:filter|list)(?:\s+(?:basic|advanced))?\s+([A-Za-z0-9_.:-]+)/i);
+      if (communityMatch?.[1]) {
+        const name = normalizePolicyObjectName(communityMatch[1]);
+        const key = `${normalizePolicyLookupKey(name)}|${ref}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        refs.push({ name, raw: ref });
+      }
+    }
+  }
+  return refs;
+}
+
+function namedLookupSet(snapshot: Record<string, unknown>, keys: string[]): Set<string> {
+  const out = new Set<string>();
+  for (const key of keys) {
+    const value = snapshot[key];
+    if (!Array.isArray(value)) continue;
+    for (const item of value) {
+      if (!item || typeof item !== "object") continue;
+      const name = normalizePolicyObjectName(String((item as Record<string, unknown>).name ?? ""));
+      if (name) out.add(normalizePolicyLookupKey(name));
+    }
+  }
+  return out;
 }
 
 function categoryOf(peer: BgpPeerSummary): string {
@@ -62,7 +100,11 @@ export function runBgpChecks(ctx: ComplianceContext): StructuredFinding[] {
   const policies = snapshot.policies ?? [];
   const policyNames = new Set(policies.map((policy) => policy.name));
   const prefixNames = new Set((snapshot.prefixLists ?? []).map((item) => item.name));
-  const communityNames = new Set([...(snapshot.communities ?? []), ...(snapshot.communityLists ?? [])].map((item) => item.name));
+  const snapshotRecord = snapshot as unknown as Record<string, unknown>;
+  const communityFilterNames = namedLookupSet(snapshotRecord, ["communities", "communityFilters"]);
+  const communityListNames = namedLookupSet(snapshotRecord, ["communityLists"]);
+  const communitySetNames = namedLookupSet(snapshotRecord, ["communitySets"]);
+  const hasAnyCommunityCatalog = communityFilterNames.size > 0 || communityListNames.size > 0 || communitySetNames.size > 0;
   const findings: StructuredFinding[] = [];
 
   for (const peer of peers) {
@@ -207,6 +249,7 @@ export function runBgpChecks(ctx: ComplianceContext): StructuredFinding[] {
 
   for (const policy of policies) {
     const refs = policyRefs(policy);
+    const communityRefs = policyCommunityRefs(policy);
     for (const ref of refs) {
       const prefixMatch = ref.match(/ip-prefix\s+([A-Za-z0-9_.:-]+)/i);
       if (prefixMatch?.[1] && !prefixNames.has(prefixMatch[1])) {
@@ -225,21 +268,43 @@ export function runBgpChecks(ctx: ComplianceContext): StructuredFinding[] {
           evidence: ref,
         });
       }
-      const communityMatch = ref.match(/community-(?:filter|list)\s+([A-Za-z0-9_.:-]+)/i);
-      if (communityMatch?.[1] && !communityNames.has(communityMatch[1])) {
+    }
+
+    if (!hasAnyCommunityCatalog && communityRefs.length > 0) {
+      findings.push({
+        policyKey: "huawei-route-policy-community-exists",
+        policyName: "Community-filter/list referenciada existe",
+        context: "bgp",
+        status: "unknown",
+        severity: "low",
+        message: `Não foi possível comprovar community-filters no snapshot para ${policy.name}.`,
+        source: ctx.source,
+        confidence: ctx.confidence,
+        objectType: "route_policy",
+        objectId: policy.name,
+        objectName: policy.name,
+        evidence: communityRefs[0]?.raw ?? policy.name,
+      });
+      continue;
+    }
+
+    for (const ref of communityRefs) {
+      const key = normalizePolicyLookupKey(ref.name);
+      const exists = communityFilterNames.has(key) || communityListNames.has(key) || communitySetNames.has(key);
+      if (!exists) {
         findings.push({
           policyKey: "huawei-route-policy-community-exists",
           policyName: "Community-filter/list referenciada existe",
           context: "bgp",
           status: "fail",
           severity: "medium",
-          message: `Route-policy ${policy.name} referencia community ausente: ${communityMatch[1]}`,
+          message: `Route-policy ${policy.name} referencia community ausente: ${ref.name}`,
           source: ctx.source,
           confidence: policy.confidence,
           objectType: "route_policy",
           objectId: policy.name,
           objectName: policy.name,
-          evidence: ref,
+          evidence: ref.raw,
         });
       }
     }

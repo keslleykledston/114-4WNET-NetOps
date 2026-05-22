@@ -281,7 +281,7 @@ export async function executeComplianceJob(jobId: number) {
   const findings: StructuredFinding[] = [];
   if (isRequested(ctx.contexts, ["security", "snmp", "ntp"])) findings.push(...runSecurityChecks(ctx));
   if (isRequested(ctx.contexts, ["interface", "interfaces"])) findings.push(...runInterfaceChecks(ctx));
-  if (isRequested(ctx.contexts, ["bgp"])) findings.push(...runBgpChecks(ctx));
+  if (isRequested(ctx.contexts, ["bgp"])) findings.push(...await runBgpChecks(ctx));
   if (isRequested(ctx.contexts, ["l3vpn", "vrf", "vrfs"])) findings.push(...runVrfChecks(ctx));
   if (isRequested(ctx.contexts, ["l2vpn"])) findings.push(...runL2vpnChecks(ctx));
 

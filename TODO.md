@@ -1,5 +1,17 @@
 # TODO
 
+## v0.3.4 — Operational Pilot NOC (In Development)
+
+- [ ] TAREFA 1: Select pilot devices (3 devices, create device matrix) — ✅ DONE
+- [ ] TAREFA 2: Full operational workflow per device (test, discover, BGP, compliance, export)
+- [ ] TAREFA 3: Operational health dashboard (total devices, SSH OK, SNMP OK, recent activity)
+- [ ] TAREFA 4: NOC operational checklist (pre-shift, daily ops, handoff) — ✅ DONE
+- [ ] TAREFA 5: Incident runbook (7 categories, 20+ scenarios) — ✅ DONE
+- [ ] TAREFA 6: UX feedback checklist (rating template, pain points, suggestions) — ✅ DONE
+- [ ] TAREFA 7: Operational pilot smoke test (validate workflow end-to-end) — ✅ DONE
+- [ ] TAREFA 8: Documentation final (update README, CHANGELOG, ROADMAP, PROJECT_STATUS) — 🔄 IN PROGRESS
+- [ ] TAREFA 9: Final validation (typecheck, build, docker, all selftests) — PENDING
+
 ## ✅ v0.3.3 — Compliance Report Export (Completed)
 
 - ✅ Botão download na UI compliance.

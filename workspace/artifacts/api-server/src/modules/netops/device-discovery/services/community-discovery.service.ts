@@ -1,86 +1,129 @@
 import type { Device } from "@workspace/db";
-import {
-  parseRunningConfigCommunities,
-  usageCountsForLibraryNames,
-  type CommunityFilterEntry,
-  type CommunityListEntry,
-} from "../../huawei-vrp/parsers/community-parser.js";
+import { decrypt } from "../../../../lib/crypto.js";
+import { runSSHCommands, type SSHCommandResult, type SSHConfig } from "../../../../lib/ssh.js";
+import { validateReadonlyCommand } from "../../huawei-vrp/commands.js";
+import { parseHuaweiCommunityFilterDisplay } from "../../huawei-vrp/parsers/community-parser.js";
+import { normalizePolicyObjectName } from "../../huawei-vrp/parsers/policy-utils.js";
+import { sanitizeEvidence } from "../../../compliance/evidence-builder.js";
 
-export interface DiscoveryCommunityFilter {
-  filterName: string;
-  communityValue: string;
-  matchType: "basic" | "advanced";
-  action: "permit" | "deny";
-  indexOrder: number | null;
-  origin: "discovered_running_config";
-  usageCount: number;
+export interface CommunityFilterVerificationEntry {
+  action: string;
+  value: string;
+  index?: number | null;
 }
 
-export interface DiscoveryCommunityListMember {
-  communityValue: string;
-  valueDescription?: string | null;
+export interface CommunityFilterVerificationResult {
+  name: string;
+  exists: boolean | null;
+  source: "snapshot" | "ssh_display" | "unknown";
+  confidence: "high" | "medium" | "low" | "unknown";
+  entries: CommunityFilterVerificationEntry[];
+  listId?: number | null;
+  rawEvidence?: string;
+  error?: string;
 }
 
-export interface DiscoveryCommunityList {
-  listName: string;
-  members: DiscoveryCommunityListMember[];
-  origin: "discovered_running_config";
+export interface CommunityFilterVerificationOptions {
+  password?: string;
+  executor?: (config: SSHConfig, commands: string[]) => Promise<SSHCommandResult[]>;
 }
 
-export interface DiscoveryCommunitySnapshot {
-  filters: DiscoveryCommunityFilter[];
-  lists: DiscoveryCommunityList[];
-  totalFilterCount: number;
-  totalListCount: number;
-  totalMemberCount: number;
+const SAFE_COMMUNITY_FILTER_NAME = /^[A-Za-z0-9_.:-]+$/;
+
+function normalizeOutputText(value: string): string {
+  return value
+    .replace(/\u001b\[[0-9;]*[A-Za-z]/g, "")
+    .replace(/\r/g, "")
+    .trim()
+    .slice(0, 2000);
 }
 
-export function queryDiscoveryCommunities(
-  _device: Device,
-  runningConfig: string
-): DiscoveryCommunitySnapshot {
-  const parsed = parseRunningConfigCommunities(runningConfig);
-  const usageCounts = usageCountsForLibraryNames(parsed);
+function validateCommunityFilterName(name: string): string | null {
+  const normalized = normalizePolicyObjectName(name);
+  if (!normalized || !SAFE_COMMUNITY_FILTER_NAME.test(normalized)) return null;
+  return normalized;
+}
 
-  // Convert filters
-  const filters: DiscoveryCommunityFilter[] = parsed.communityFilters.map(
-    (f: CommunityFilterEntry) => ({
-      filterName: f.name,
-      communityValue: f.value,
-      matchType: f.matchType,
-      action: f.action,
-      indexOrder: f.index,
-      origin: "discovered_running_config" as const,
-      usageCount: usageCounts[f.name] || 0,
-    })
-  );
+function buildUnknownResult(name: string, message: unknown, rawEvidence?: string): CommunityFilterVerificationResult {
+  const text = message instanceof Error ? message.message : typeof message === "string" ? message : String(message ?? "");
+  return {
+    name,
+    exists: null,
+    source: "unknown",
+    confidence: "unknown",
+    entries: [],
+    rawEvidence: rawEvidence ? normalizeOutputText(rawEvidence) : undefined,
+    error: sanitizeEvidence(text, 300),
+  };
+}
 
-  // Group community-list members by name
-  const listsByName: Record<string, DiscoveryCommunityListMember[]> = {};
-  for (const entry of parsed.communityLists) {
-    if (!listsByName[entry.listName]) {
-      listsByName[entry.listName] = [];
-    }
-    listsByName[entry.listName].push({
-      communityValue: entry.value,
-      valueDescription: entry.valueDescription,
-    });
+export async function verifyCommunityFilterByName(
+  device: Device,
+  name: string,
+  options: CommunityFilterVerificationOptions = {},
+): Promise<CommunityFilterVerificationResult> {
+  const normalizedName = validateCommunityFilterName(name);
+  if (!normalizedName) {
+    return buildUnknownResult(normalizePolicyObjectName(name), "invalid community-filter name");
   }
 
-  // Convert lists
-  const lists: DiscoveryCommunityList[] = Object.entries(listsByName).map(([listName, members]) => ({
-    listName,
-    members,
-    origin: "discovered_running_config" as const,
-  }));
+  const command = `display ip community-filter ${normalizedName}`;
+  const commandCheck = validateReadonlyCommand(command);
+  if (!commandCheck.allowed) {
+    return buildUnknownResult(normalizedName, commandCheck.reason ?? "command blocked");
+  }
 
-  const totalMemberCount = lists.reduce((acc, list) => acc + list.members.length, 0);
+  try {
+    const password = options.password ?? decrypt(device.passwordEncrypted);
+    const executor = options.executor ?? runSSHCommands;
+    const results = await executor(
+      {
+        host: device.ipAddress,
+        port: device.sshPort,
+        username: device.username,
+        password,
+      },
+      [command],
+    );
+    const result = results[0];
+    const rawOutput = normalizeOutputText(result?.output ?? "");
 
-  return {
-    filters,
-    lists,
-    totalFilterCount: filters.length,
-    totalListCount: lists.length,
-    totalMemberCount,
-  };
+    if (result?.error) {
+      return buildUnknownResult(normalizedName, result.error, rawOutput);
+    }
+
+    const parsed = parseHuaweiCommunityFilterDisplay(result?.output ?? "", normalizedName);
+    if (parsed.exists === true) {
+      return {
+        name: parsed.name,
+        exists: true,
+        source: "ssh_display",
+        confidence: "high",
+        entries: parsed.entries.map((entry) => ({
+          action: entry.action,
+          value: entry.value,
+          index: entry.index ?? null,
+        })),
+        listId: parsed.listId,
+        rawEvidence: parsed.rawEvidence,
+      };
+    }
+
+    if (parsed.exists === false) {
+      return {
+        name: normalizedName,
+        exists: false,
+        source: "ssh_display",
+        confidence: "high",
+        entries: [],
+        listId: null,
+        rawEvidence: parsed.rawEvidence,
+        error: sanitizeEvidence(parsed.error ?? `community-filter ${normalizedName} not found`, 300),
+      };
+    }
+
+    return buildUnknownResult(normalizedName, parsed.error ?? "unable to parse community-filter display output", rawOutput);
+  } catch (error) {
+    return buildUnknownResult(normalizedName, error, "");
+  }
 }

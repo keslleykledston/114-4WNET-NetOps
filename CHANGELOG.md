@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.3.4 — Operational Pilot NOC (Planned)
+
+- NOC operational readiness validation with 3 pilot devices.
+- Device connectivity test (SSH + SNMP health check).
+- Device discovery full workflow with interface/BGP/VLAN parsing.
+- BGP peer inspection and route query on live peers.
+- Compliance scan with balanced profile and findings export.
+- Report download in markdown/JSON/CSV for compliance documentation.
+- Audit log verification showing all operational actions.
+- NOC operational checklist (pre-shift, daily ops, end-of-shift).
+- Incident runbook covering connectivity, discovery, BGP, compliance, export issues.
+- UX feedback checklist for operator satisfaction scoring.
+- Operational pilot smoke test validating full workflow.
+- Documentation: checklists, runbooks, feedback templates.
+- Status: ✅ In Development
+
 ## v0.3.3 — Compliance Report Export
 
 - Added compliance report download in Markdown, JSON, CSV formats for job reports.

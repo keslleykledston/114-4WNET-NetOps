@@ -2,13 +2,14 @@ import type { BgpPeerSummary, RoutePolicySummary } from "../../netops/device-dis
 import type { ComplianceContext, StructuredFinding } from "../compliance-context.js";
 import type { ComplianceSource } from "../confidence.js";
 import { normalizePolicyLookupKey, normalizePolicyObjectName } from "../../netops/huawei-vrp/parsers/policy-utils.js";
+import { verifyCommunityFilterByName } from "../../netops/device-discovery/services/community-discovery.service.js";
 
 function policyRefs(policy: RoutePolicySummary): string[] {
   return policy.nodes.flatMap((node) => [...node.matches, ...node.applies]).filter(Boolean);
 }
 
-function policyCommunityRefs(policy: RoutePolicySummary): Array<{ name: string; raw: string }> {
-  const refs: Array<{ name: string; raw: string }> = [];
+function policyCommunityRefs(policy: RoutePolicySummary): Array<{ type: "community-filter" | "community-list"; name: string; raw: string }> {
+  const refs: Array<{ type: "community-filter" | "community-list"; name: string; raw: string }> = [];
   const seen = new Set<string>();
   for (const node of policy.nodes) {
     for (const detail of node.matchDetails ?? []) {
@@ -17,7 +18,7 @@ function policyCommunityRefs(policy: RoutePolicySummary): Array<{ name: string; 
         const key = `${normalizePolicyLookupKey(name)}|${detail.raw}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        refs.push({ name, raw: detail.raw });
+        refs.push({ type: detail.type, name, raw: detail.raw });
       }
     }
     for (const ref of node.matches) {
@@ -27,7 +28,11 @@ function policyCommunityRefs(policy: RoutePolicySummary): Array<{ name: string; 
         const key = `${normalizePolicyLookupKey(name)}|${ref}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        refs.push({ name, raw: ref });
+        refs.push({
+          type: /community-filter/i.test(ref) ? "community-filter" : "community-list",
+          name,
+          raw: ref,
+        });
       }
     }
   }
@@ -77,7 +82,33 @@ function policyValue(peer: BgpPeerSummary, key: "import" | "export"): string | n
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-export function runBgpChecks(ctx: ComplianceContext): StructuredFinding[] {
+const MAX_COMMUNITY_PROOFS_PER_JOB = 50;
+
+function buildCommunityUnknownFinding(ctx: ComplianceContext, policy: RoutePolicySummary, ref: { type: "community-filter" | "community-list"; name: string; raw: string }, message: string, confidence: StructuredFinding["confidence"] = "low"): StructuredFinding {
+  return {
+    policyKey: "huawei-route-policy-community-exists",
+    policyName: "Community-filter/list referenciada existe",
+    context: "bgp",
+    status: "unknown",
+    severity: "warning",
+    message,
+    source: ctx.source,
+    confidence,
+    objectType: "route_policy",
+    objectId: policy.name,
+    objectName: policy.name,
+    evidence: { policy: policy.name, reference: ref.name, referenceType: ref.type, rawReference: ref.raw },
+    metadata: { verification: "unavailable" },
+  };
+}
+
+export interface BgpCheckOptions {
+  verifyCommunityFilterByName?: typeof verifyCommunityFilterByName;
+  allowLiveProof?: boolean;
+  maxCommunityProofs?: number;
+}
+
+export async function runBgpChecks(ctx: ComplianceContext, options: BgpCheckOptions = {}): Promise<StructuredFinding[]> {
   const snapshot = ctx.snapshot;
   if (!snapshot) {
     return [{
@@ -106,6 +137,21 @@ export function runBgpChecks(ctx: ComplianceContext): StructuredFinding[] {
   const communitySetNames = namedLookupSet(snapshotRecord, ["communitySets"]);
   const hasAnyCommunityCatalog = communityFilterNames.size > 0 || communityListNames.size > 0 || communitySetNames.size > 0;
   const findings: StructuredFinding[] = [];
+  const verificationCache = new Map<string, Promise<Awaited<ReturnType<typeof verifyCommunityFilterByName>>>>();
+  const verifier = options.verifyCommunityFilterByName ?? verifyCommunityFilterByName;
+  const maxCommunityProofs = options.maxCommunityProofs ?? MAX_COMMUNITY_PROOFS_PER_JOB;
+  const canLiveProof = options.allowLiveProof ?? (String(ctx.device.vendor ?? "").toLowerCase().includes("huawei") && Boolean(ctx.device.username) && Boolean((ctx.device as unknown as Record<string, unknown>).passwordEncrypted));
+  let proofLimitWarningAdded = false;
+
+  const getCommunityProof = (name: string) => {
+    const key = normalizePolicyLookupKey(name);
+    const cached = verificationCache.get(key);
+    if (cached) return cached;
+    if (verificationCache.size >= maxCommunityProofs) return null;
+    const promise = verifier(ctx.device, name);
+    verificationCache.set(key, promise);
+    return promise;
+  };
 
   for (const peer of peers) {
     const peerIp = peer.peerIp;
@@ -270,28 +316,91 @@ export function runBgpChecks(ctx: ComplianceContext): StructuredFinding[] {
       }
     }
 
-    if (!hasAnyCommunityCatalog && communityRefs.length > 0) {
-      findings.push({
-        policyKey: "huawei-route-policy-community-exists",
-        policyName: "Community-filter/list referenciada existe",
-        context: "bgp",
-        status: "unknown",
-        severity: "low",
-        message: `Não foi possível comprovar community-filters no snapshot para ${policy.name}.`,
-        source: ctx.source,
-        confidence: ctx.confidence,
-        objectType: "route_policy",
-        objectId: policy.name,
-        objectName: policy.name,
-        evidence: communityRefs[0]?.raw ?? policy.name,
-      });
-      continue;
-    }
-
     for (const ref of communityRefs) {
       const key = normalizePolicyLookupKey(ref.name);
-      const exists = communityFilterNames.has(key) || communityListNames.has(key) || communitySetNames.has(key);
-      if (!exists) {
+      const existsInSnapshot = ref.type === "community-filter"
+        ? (communityFilterNames.has(key) || communityListNames.has(key) || communitySetNames.has(key))
+        : (communityListNames.has(key) || communitySetNames.has(key));
+      if (existsInSnapshot) {
+        continue;
+      }
+
+      if (!hasAnyCommunityCatalog && ref.type === "community-list") {
+        findings.push(buildCommunityUnknownFinding(ctx, policy, ref, `Community-list ${ref.name} referenciada, mas catálogo não foi coletado no snapshot.`));
+        continue;
+      }
+
+      if (ref.type === "community-filter" && canLiveProof) {
+        const proof = getCommunityProof(ref.name);
+        if (!proof) {
+          if (!proofLimitWarningAdded) {
+            findings.push({
+              policyKey: "huawei-route-policy-community-exists",
+              policyName: "Community-filter/list referenciada existe",
+              context: "bgp",
+              status: "warning",
+              severity: "warning",
+              message: `Limite de ${maxCommunityProofs} provas SSH para community-filter atingido.`,
+              source: ctx.source,
+              confidence: "low",
+              objectType: "device",
+              objectId: String(ctx.device.id),
+              objectName: ctx.device.hostname,
+              metadata: { limit: maxCommunityProofs },
+            });
+            proofLimitWarningAdded = true;
+          }
+          findings.push(buildCommunityUnknownFinding(ctx, policy, ref, `Community-filter ${ref.name} referenciada, mas o limite de provas SSH foi atingido.`));
+          continue;
+        }
+
+        const result = await proof;
+        if (result.exists === true) {
+          continue;
+        }
+        if (result.exists === false) {
+          findings.push({
+            policyKey: "huawei-route-policy-community-exists",
+            policyName: "Community-filter/list referenciada existe",
+            context: "bgp",
+            status: "fail",
+            severity: "medium",
+            message: `Route-policy ${policy.name} referencia community-filter inexistente: ${ref.name}`,
+            source: ctx.source,
+            confidence: "high",
+            objectType: "route_policy",
+            objectId: policy.name,
+            objectName: policy.name,
+            evidence: {
+              policy: policy.name,
+              reference: ref.name,
+              referenceType: ref.type,
+              verifiedBy: "ssh_display",
+              command: `display ip community-filter ${ref.name}`,
+              listId: result.listId ?? null,
+              entries: result.entries,
+              rawEvidence: result.rawEvidence,
+            },
+            metadata: { verifiedBy: result.source },
+          });
+          continue;
+        }
+
+        findings.push(buildCommunityUnknownFinding(ctx, policy, ref, `Community-filter ${ref.name} referenciada, mas a prova SSH falhou ou retornou resposta ambígua.`, result.confidence));
+        continue;
+      }
+
+      if (ref.type === "community-filter" && !canLiveProof) {
+        findings.push(buildCommunityUnknownFinding(ctx, policy, ref, `Community-filter ${ref.name} referenciada, mas catálogo não foi coletado no snapshot.`));
+        continue;
+      }
+
+      if (!hasAnyCommunityCatalog) {
+        findings.push(buildCommunityUnknownFinding(ctx, policy, ref, `Community-filter ${ref.name} referenciada, mas catálogo não foi coletado no snapshot.`));
+        continue;
+      }
+
+      if (!existsInSnapshot) {
         findings.push({
           policyKey: "huawei-route-policy-community-exists",
           policyName: "Community-filter/list referenciada existe",

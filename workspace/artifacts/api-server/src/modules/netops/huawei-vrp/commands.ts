@@ -47,7 +47,7 @@ const ALLOWED_COMMANDS = [
   /^display vsi$/i,
   /^display route-policy$/i,
   /^display ip ip-prefix$/i,
-  /^display ip community-filter$/i,
+  /^display ip community-filter(?:\s+[A-Za-z0-9_.:-]+)?$/i,
   /^display ip community-list$/i,
   /^show bgp peer$/i,
   /^show bgp ipv6 peer$/i,
@@ -84,6 +84,7 @@ export const HUAWEI_VRP_READONLY_COMMANDS = [
   "display route-policy",
   "display ip ip-prefix",
   "display ip community-filter",
+  "display ip community-filter <NAME>",
   "display ip community-list",
 ] as const;
 

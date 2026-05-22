@@ -1,5 +1,20 @@
 # Roadmap
 
+## v0.3.4 — Operational Pilot NOC (In Development)
+
+- 🔄 Validate full operational workflow with 3 pilot Huawei VRP devices
+- 🔄 Device connectivity test (SSH + SNMP health)
+- 🔄 Device discovery full cycle (interfaces, BGP, VLANs)
+- 🔄 BGP peer inspection and live route query
+- 🔄 Compliance scan with findings and report export
+- 🔄 Audit log verification
+- 🔄 NOC operational checklist (pre-shift, daily, end-of-shift)
+- 🔄 Incident runbook (7 incident categories, 20+ scenarios)
+- 🔄 UX feedback survey for operator satisfaction
+- 🔄 Operational pilot smoke test
+- 🔄 Readiness validation report
+- **Target:** Complete operational validation, UX refinement, production readiness
+
 ## ✅ v0.3.3 — Compliance Report Export (Completed)
 
 - ✅ Download compliance por job (Markdown/JSON/CSV).

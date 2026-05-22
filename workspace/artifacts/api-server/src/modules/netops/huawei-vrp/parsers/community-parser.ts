@@ -1,6 +1,7 @@
 // Extract community-filter and community-list definitions from Huawei VRP running-config
 
 import type { NetopsCommunity } from "../../types.js";
+import { classifyHuaweiConfigBlock, splitHuaweiConfigBlocks } from "./config-blocks.js";
 import { normalizePolicyLookupKey, normalizePolicyObjectName } from "./policy-utils.js";
 
 export interface CommunityFilterEntry {
@@ -35,6 +36,16 @@ export interface CommunityFilterDisplayBlock {
   name: string;
   listId: number | null;
   entries: CommunityFilterDisplayEntry[];
+}
+
+export interface CommunityFilterDisplayParseResult {
+  exists: boolean | null;
+  name: string;
+  type: "basic" | "advanced" | null;
+  listId: number | null;
+  entries: CommunityFilterDisplayEntry[];
+  rawEvidence: string;
+  error?: string;
 }
 
 export interface RoutePolicyCommunityListRef {
@@ -75,9 +86,7 @@ function normLines(text: string): string[] {
 
 function stripInlineComment(line: string): string {
   const s = line.trim();
-  if (s.includes("#")) {
-    return s.split("#", 1)[0].trim();
-  }
+  if (s === "#") return "";
   return s;
 }
 
@@ -145,8 +154,112 @@ function pushFilterEntry(
   });
 }
 
+function parseDisplayHeader(line: string): CommunityFilterDisplayBlock | null {
+  const header = RE_FILTER_DISPLAY_HEADER.exec(line);
+  if (!header) return null;
+  return {
+    matchType: (header[1] || "basic").toLowerCase() as "basic" | "advanced",
+    name: normalizePolicyObjectName(header[2]),
+    listId: header[3] ? Number(header[3]) : null,
+    entries: [],
+  };
+}
+
+function parseDisplayResultFromOutput(
+  output: string,
+  requestedName?: string,
+): CommunityFilterDisplayParseResult {
+  const lines = normLines(output);
+  const requestedKey = normalizePolicyLookupKey(requestedName ?? "");
+  const rawEvidence = output.replace(/\r/g, "").trim();
+  let current: CommunityFilterDisplayBlock | null = null;
+  let matchedCurrent = false;
+  let explicitMissing = false;
+  let explicitError: string | undefined;
+
+  for (const raw of lines) {
+    const line = stripInlineComment(raw);
+    if (!line) continue;
+
+    const header = parseDisplayHeader(line);
+    if (header) {
+      if (!requestedKey || normalizePolicyLookupKey(header.name) === requestedKey) {
+        current = header;
+        matchedCurrent = true;
+      }
+      continue;
+    }
+
+    if (current) {
+      const entry = RE_FILTER_DISPLAY_LINE.exec(line);
+      if (entry) {
+        const index = entry[1] ? Number(entry[1]) : null;
+        const action = (entry[2] || "permit").toLowerCase() as "permit" | "deny";
+        const value = normalizePolicyObjectName(entry[3]);
+        if (value) {
+          current.entries.push({ index: Number.isFinite(index ?? NaN) ? index : null, action, value });
+        }
+        continue;
+      }
+    }
+
+    if (/\bdoes not exist\b/i.test(line) || /\bnot\s+exist\b/i.test(line) || /\bnot\s+found\b/i.test(line)) {
+      explicitMissing = true;
+      explicitError = line;
+    }
+  }
+
+  if (current && (matchedCurrent || !requestedKey)) {
+    return {
+      exists: true,
+      name: current.name,
+      type: current.matchType,
+      listId: current.listId,
+      entries: current.entries,
+      rawEvidence,
+    };
+  }
+
+  if (explicitMissing) {
+    return {
+      exists: false,
+      name: requestedName ? normalizePolicyObjectName(requestedName) : "",
+      type: null,
+      listId: null,
+      entries: [],
+      rawEvidence,
+      error: explicitError,
+    };
+  }
+
+  if (rawEvidence.length === 0) {
+    return {
+      exists: null,
+      name: requestedName ? normalizePolicyObjectName(requestedName) : "",
+      type: null,
+      listId: null,
+      entries: [],
+      rawEvidence,
+      error: "empty output",
+    };
+  }
+
+  return {
+    exists: null,
+    name: requestedName ? normalizePolicyObjectName(requestedName) : "",
+    type: null,
+    listId: null,
+    entries: [],
+    rawEvidence,
+    error: rawEvidence.slice(0, 300),
+  };
+}
+
+export function parseHuaweiCommunityFilterDisplay(output: string, requestedName?: string): CommunityFilterDisplayParseResult {
+  return parseDisplayResultFromOutput(output, requestedName);
+}
+
 export function parseRunningConfigCommunities(configText: string): ParsedRunningConfigCommunities {
-  const lines = normLines(configText);
   const out: ParsedRunningConfigCommunities = {
     communityFilters: [],
     communityLists: [],
@@ -155,15 +268,9 @@ export function parseRunningConfigCommunities(configText: string): ParsedRunning
     routePolicyApplyCommunity: [],
   };
 
-  let currentList: string | null = null;
-  let listOrder = 0;
-  const listHeaderOrder: string[] = [];
+  const blocks = splitHuaweiConfigBlocks(configText);
 
-  let rpName: string | null = null;
-  let rpNode: string | null = null;
-  let displayFilter: CommunityFilterDisplayBlock | null = null;
-
-  const flushDisplayFilter = (): void => {
+  const flushDisplayFilter = (displayFilter: CommunityFilterDisplayBlock | null): void => {
     if (!displayFilter) return;
     for (const displayEntry of displayFilter.entries) {
       pushFilterEntry(out, {
@@ -174,158 +281,158 @@ export function parseRunningConfigCommunities(configText: string): ParsedRunning
         value: displayEntry.value,
       });
     }
-    displayFilter = null;
   };
 
-  for (const raw of lines) {
-    const isIndented = raw && (raw[0] === " " || raw[0] === "\t");
-    const line = stripInlineComment(raw);
-    if (!line) continue;
+  const listHeaderOrder: string[] = [];
 
-    const mDisplayHeader = RE_FILTER_DISPLAY_HEADER.exec(line);
-    if (mDisplayHeader) {
-      flushDisplayFilter();
-      displayFilter = {
-        matchType: (mDisplayHeader[1] || "basic").toLowerCase() as "basic" | "advanced",
-        name: normalizePolicyObjectName(mDisplayHeader[2]),
-        listId: mDisplayHeader[3] ? Number(mDisplayHeader[3]) : null,
-        entries: [],
-      };
-      currentList = null;
-      rpName = null;
-      rpNode = null;
-      continue;
-    }
+  for (const block of blocks.length > 0 ? blocks : [{ type: "unknown", header: "", lines: normLines(configText), raw: configText, startLine: 1, endLine: normLines(configText).length }]) {
+    const blockType = classifyHuaweiConfigBlock(block);
+    let currentList: string | null = null;
+    let listOrder = 0;
+    let rpName: string | null = null;
+    let rpNode: string | null = null;
+    let displayFilter: CommunityFilterDisplayBlock | null = null;
 
-    if (displayFilter) {
-      const mDisplayLine = RE_FILTER_DISPLAY_LINE.exec(line);
-      if (mDisplayLine) {
-        const idx = mDisplayLine[1] ? Number(mDisplayLine[1]) : null;
-        const action = (mDisplayLine[2] || "permit").toLowerCase() as "permit" | "deny";
-        const value = normalizePolicyObjectName(mDisplayLine[3]);
-        if (value) {
-          displayFilter.entries.push({ index: Number.isFinite(idx ?? NaN) ? idx : null, action, value });
-        }
-        continue;
-      }
-      if (!isIndented && !/^\s*$/.test(raw)) {
-        flushDisplayFilter();
-      }
-    }
+    for (const raw of block.lines) {
+      const isIndented = raw && (raw[0] === " " || raw[0] === "\t");
+      const line = stripInlineComment(raw);
+      if (!line) continue;
 
-    // Match community-filter
-    const mF = RE_FILTER.exec(line);
-    if (mF) {
-      const [, mt, name, idxS, act, val] = mF;
-      const idx = idxS ? parseInt(idxS, 10) : null;
-      if (!name || !val) continue;
-      const mtL = (mt || "").toLowerCase();
-      const matchType: "basic" | "advanced" = mtL === "advanced" ? "advanced" : "basic";
-      pushFilterEntry(out, {
-        matchType,
-        name,
-        index: Number.isFinite(idx ?? NaN) ? idx : null,
-        action: act.toLowerCase() as "permit" | "deny",
-        value: (val || "").trim(),
-      });
-      currentList = null;
-      continue;
-    }
-
-    // Match community-list header
-    const mLh = RE_LIST_HEADER.exec(line);
-    if (mLh) {
-      currentList = mLh[1].trim();
-      listOrder = 0;
-      if (currentList) {
-        listHeaderOrder.push(currentList);
-      }
-      continue;
-    }
-
-    // Match community list members
-    if (currentList) {
-      const mLl = RE_LIST_LINE.exec(line);
-      if (mLl) {
-        const val = (mLl[1] || "").trim();
-        const extra = (mLl[2] || "").trim();
-        const desc = extra || null;
-        if (val) {
-          listOrder += 1;
-          out.communityLists.push({
-            listName: currentList,
-            value: val,
-            lineOrder: listOrder,
-            valueDescription: desc,
-          });
-        }
-        continue;
-      }
-      // Exit list on non-indented line
-      if (!isIndented) {
+      const mDisplayHeader = RE_FILTER_DISPLAY_HEADER.exec(line);
+      if (mDisplayHeader) {
+        flushDisplayFilter(displayFilter);
+        displayFilter = {
+          matchType: (mDisplayHeader[1] || "basic").toLowerCase() as "basic" | "advanced",
+          name: normalizePolicyObjectName(mDisplayHeader[2]),
+          listId: mDisplayHeader[3] ? Number(mDisplayHeader[3]) : null,
+          entries: [],
+        };
         currentList = null;
-      }
-    }
-
-    // Match route-policy header
-    const mRp = RE_RP_HEADER.exec(line);
-    if (mRp) {
-      rpName = mRp[1];
-      rpNode = mRp[2] || mRp[3] || null;
-      currentList = null;
-      continue;
-    }
-
-    // Match if-match and apply within route-policy
-    if (rpName && rpNode) {
-      const mIf = RE_IF_MATCH_CF.exec(line);
-      if (mIf) {
-        const fn = (mIf[1] || "").trim();
-        if (fn) {
-          out.routePolicyIfMatch.push({
-            routePolicy: rpName,
-            node: rpNode,
-            filterName: fn,
-          });
-        }
+        rpName = null;
+        rpNode = null;
         continue;
       }
 
-      const mIfList = /^\s*if-match\s+community-list\s+(\S+)\s*$/i.exec(line);
-      if (mIfList) {
-        const listName = (mIfList[1] || "").trim();
-        if (listName) {
-          out.routePolicyIfMatchCommunityLists.push({
-            routePolicy: rpName,
-            node: rpNode,
-            listName,
-          });
+      if (displayFilter) {
+        const mDisplayLine = RE_FILTER_DISPLAY_LINE.exec(line);
+        if (mDisplayLine) {
+          const idx = mDisplayLine[1] ? Number(mDisplayLine[1]) : null;
+          const action = (mDisplayLine[2] || "permit").toLowerCase() as "permit" | "deny";
+          const value = normalizePolicyObjectName(mDisplayLine[3]);
+          if (value) {
+            displayFilter.entries.push({ index: Number.isFinite(idx ?? NaN) ? idx : null, action, value });
+          }
+          continue;
         }
+        if (!isIndented) {
+          flushDisplayFilter(displayFilter);
+          displayFilter = null;
+        }
+      }
+
+      const mF = RE_FILTER.exec(line);
+      if (mF) {
+        const [, mt, name, idxS, act, val] = mF;
+        const idx = idxS ? parseInt(idxS, 10) : null;
+        if (!name || !val) continue;
+        const mtL = (mt || "").toLowerCase();
+        const matchType: "basic" | "advanced" = mtL === "advanced" ? "advanced" : "basic";
+        pushFilterEntry(out, {
+          matchType,
+          name,
+          index: Number.isFinite(idx ?? NaN) ? idx : null,
+          action: act.toLowerCase() as "permit" | "deny",
+          value: (val || "").trim(),
+        });
+        currentList = null;
         continue;
       }
 
-      const mAp = RE_APPLY_COMM.exec(line);
-      if (mAp) {
-        const vals = splitApplyValues(mAp[1]);
-        if (vals.length > 0) {
-          out.routePolicyApplyCommunity.push({
-            routePolicy: rpName,
-            node: rpNode,
-            communities: vals,
-          });
-        }
+      const mLh = RE_LIST_HEADER.exec(line);
+      if (mLh) {
+        currentList = mLh[1].trim();
+        listOrder = 0;
+        if (currentList) listHeaderOrder.push(currentList);
         continue;
+      }
+
+      if (currentList) {
+        const mLl = RE_LIST_LINE.exec(line);
+        if (mLl) {
+          const val = (mLl[1] || "").trim();
+          const extra = (mLl[2] || "").trim();
+          const desc = extra || null;
+          if (val) {
+            listOrder += 1;
+            out.communityLists.push({
+              listName: currentList,
+              value: val,
+              lineOrder: listOrder,
+              valueDescription: desc,
+            });
+          }
+          continue;
+        }
+        if (!isIndented) currentList = null;
+      }
+
+      const mRp = RE_RP_HEADER.exec(line);
+      if (mRp) {
+        rpName = mRp[1];
+        rpNode = mRp[2] || mRp[3] || null;
+        currentList = null;
+        continue;
+      }
+
+      if (rpName && rpNode) {
+        const mIf = RE_IF_MATCH_CF.exec(line);
+        if (mIf) {
+          const fn = (mIf[1] || "").trim();
+          if (fn) {
+            out.routePolicyIfMatch.push({
+              routePolicy: rpName,
+              node: rpNode,
+              filterName: fn,
+            });
+          }
+          continue;
+        }
+
+        const mIfList = /^\s*if-match\s+community-list\s+(\S+)\s*$/i.exec(line);
+        if (mIfList) {
+          const listName = (mIfList[1] || "").trim();
+          if (listName) {
+            out.routePolicyIfMatchCommunityLists.push({
+              routePolicy: rpName,
+              node: rpNode,
+              listName,
+            });
+          }
+          continue;
+        }
+
+        const mAp = RE_APPLY_COMM.exec(line);
+        if (mAp) {
+          const vals = splitApplyValues(mAp[1]);
+          if (vals.length > 0) {
+            out.routePolicyApplyCommunity.push({
+              routePolicy: rpName,
+              node: rpNode,
+              communities: vals,
+            });
+          }
+          continue;
+        }
+      }
+
+      if (rpName && !isIndented && !line.startsWith("#")) {
+        rpName = null;
+        rpNode = null;
       }
     }
 
-    // Exit route-policy context on non-indented line
-    if (rpName && !isIndented && !line.startsWith("#")) {
-      rpName = null;
-      rpNode = null;
-    }
+    flushDisplayFilter(displayFilter);
   }
-
-  flushDisplayFilter();
 
   out.communityFilters = dedupeFilters(out.communityFilters);
   out.communityLists = dedupeLists(out.communityLists);

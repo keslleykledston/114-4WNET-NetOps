@@ -318,13 +318,22 @@
 8. ✅ Selftest suite (16/16 tests).
 **Status:** ✅ Completed (v0.3.3) — Production Ready
 
-### v0.3.4 — Pilot operacional NOC (Planned)
+### v0.3.4 — Pilot operacional NOC (In Development)
 
-1. Validação com operadores reais.
-2. Feedback de UX, performance, operabilidade.
-3. Dashboard de uptime e alerts críticos.
-4. Streaming de relatórios para datasets grandes.
-5. Email delivery de relatórios.
+1. ✅ Selection of 3 pilot devices (BVA-BRT-RX, BVA-BRT-RA, BVA-CDS-RX)
+2. 🔄 Full operational workflow validation:
+   - Device connectivity test (SSH + SNMP)
+   - Device discovery (interfaces, BGP, VLANs)
+   - BGP peer inspection and route query
+   - Compliance scan with findings export
+   - Report download (markdown/JSON/CSV)
+   - Audit log verification
+3. ✅ NOC operational checklist (pre-shift, daily, end-of-shift)
+4. ✅ Incident runbook (7 categories, 20+ scenarios)
+5. ✅ UX feedback checklist for operator satisfaction
+6. ✅ Operational pilot smoke test
+7. 🔄 Operational readiness validation report
+8. 🔄 Future enhancements identified (dashboard, alerts, streaming)
 
 ### Fases Futuras (v0.2.9+ contínuo)
 

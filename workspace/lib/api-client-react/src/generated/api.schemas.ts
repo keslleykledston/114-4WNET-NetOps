@@ -918,6 +918,7 @@ export interface ComplianceJob {
 export interface ComplianceJobInput {
   deviceId: number;
   contexts: string[];
+  policyProfileName?: string;
 }
 
 export type ComplianceFindingMetadataJson = { [key: string]: unknown };
@@ -959,6 +960,8 @@ export interface ComplianceFinding {
   ruleId?: string | null;
   /** @nullable */
   ruleName?: string | null;
+  /** @nullable */
+  operationalCategory?: string | null;
   /** @nullable */
   rawReference?: string | null;
   metadataJson?: ComplianceFindingMetadataJson;

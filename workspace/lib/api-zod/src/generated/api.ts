@@ -868,6 +868,7 @@ export const ListComplianceFindingsResponseItem = zod.object({
   "objectName": zod.string().nullish(),
   "ruleId": zod.string().nullish(),
   "ruleName": zod.string().nullish(),
+  "operationalCategory": zod.string().nullish(),
   "rawReference": zod.string().nullish(),
   "metadataJson": zod.object({
 

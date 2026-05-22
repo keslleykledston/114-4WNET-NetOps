@@ -1,4 +1,5 @@
 import type { NetopsInterface } from "../../types.js";
+import { isHuaweiInterfaceName } from "../../../compliance/interface-identifiers.js";
 
 function normalizeStatus(value: string | undefined): NetopsInterface["operStatus"] {
   const normalized = value?.toLowerCase();
@@ -33,7 +34,7 @@ export function parseHuaweiInterfaces(output: string): NetopsInterface[] {
     }
 
     const header = trimmed.match(/^interface\s+(\S+)/i);
-    if (header) {
+    if (header && isHuaweiInterfaceName(header[1])) {
       current = {
         name: header[1],
         description: null,
@@ -49,6 +50,10 @@ export function parseHuaweiInterfaces(output: string): NetopsInterface[] {
         kind: inferKind(header[1]),
       };
       interfaces.push(current);
+      continue;
+    }
+    if (header) {
+      current = null;
       continue;
     }
 
@@ -85,6 +90,8 @@ export function parseHuaweiInterfaces(output: string): NetopsInterface[] {
     if (!brief) continue;
 
     const [, name, admin, oper, rest] = brief;
+    if (!isHuaweiInterfaceName(name)) continue;
+
     interfaces.push({
       name,
       description: rest?.trim() || null,

@@ -1,4 +1,5 @@
 import type { ComplianceContext, StructuredFinding } from "../compliance-context.js";
+import { isHuaweiInterfaceName, isHuaweiSubinterfaceName } from "../interface-identifiers.js";
 
 export function runInterfaceChecks(ctx: ComplianceContext): StructuredFinding[] {
   const interfaces = ctx.snapshot?.interfaces ?? [];
@@ -23,8 +24,8 @@ export function runInterfaceChecks(ctx: ComplianceContext): StructuredFinding[] 
   const names = new Set<string>();
   for (const item of interfaces) {
     const row = item as unknown as Record<string, unknown>;
-    const name = item.name ?? (typeof row.ifName === "string" ? row.ifName : null);
-    if (!name) continue;
+    const name = typeof item.name === "string" ? item.name : (typeof row.ifName === "string" ? row.ifName : null);
+    if (!name || !isHuaweiInterfaceName(name)) continue;
     if (names.has(name)) {
       findings.push({
         policyKey: "huawei-interface-duplicate",
@@ -63,7 +64,7 @@ export function runInterfaceChecks(ctx: ComplianceContext): StructuredFinding[] 
       });
     }
 
-    const isSubinterface = name.includes(".");
+    const isSubinterface = isHuaweiSubinterfaceName(name);
     const hasDot1q = /dot1q|vlan-type|qinq/i.test(String(item.evidence ?? "") + "\n" + ctx.rawConfig.match(new RegExp(`interface\\s+${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]{0,500}`, "i"))?.[0]);
     if (isSubinterface && !hasDot1q) {
       findings.push({
@@ -79,7 +80,12 @@ export function runInterfaceChecks(ctx: ComplianceContext): StructuredFinding[] 
         objectType: "interface",
         objectId: name,
         objectName: name,
-        evidence: item.evidence ?? item,
+        evidence: {
+          interfaceName: name,
+          ipAddresses: [...(item.ipv4 ?? []), ...(item.ipv6 ?? [])],
+          dot1q: null,
+          sourceEvidence: item.evidence,
+        },
       });
     }
   }

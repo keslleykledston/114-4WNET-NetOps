@@ -1,9 +1,12 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider, useAuth } from "@/components/auth-provider";
 import { Layout } from "@/components/layout";
+import LoginPage from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Devices from "@/pages/devices";
 import DeviceDetail from "@/pages/device-detail";
@@ -29,6 +32,30 @@ const queryClient = new QueryClient({
 });
 
 function Router() {
+  const { user, loading } = useAuth();
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!loading && !user && location !== "/login") {
+      setLocation("/login");
+    }
+    if (!loading && user && location === "/login") {
+      setLocation("/");
+    }
+  }, [loading, location, setLocation, user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        Carregando sessão...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
     <Layout>
       <Switch>
@@ -54,14 +81,16 @@ function Router() {
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="netops-theme">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

@@ -115,12 +115,149 @@ export interface IntegrationSetting {
   id: number;
   name: string;
   enabled: boolean;
+  /** future, partial, ready */
+  readiness: string;
+  /** @nullable */
+  lastConnectionStatus?: string | null;
+  /** @nullable */
+  lastConnectionAt?: string | null;
   configJson: IntegrationSettingConfigJson;
   createdAt: string;
   updatedAt: string;
 }
 
 export type IntegrationListResponse = IntegrationSetting[];
+
+export interface NetBoxStatus {
+  enabled: boolean;
+  /** @nullable */
+  baseUrl?: string | null;
+  tokenConfigured: boolean;
+  skipTlsVerify: boolean;
+  timeoutMs: number;
+  pageSize: number;
+  /** disabled, partial, ready */
+  readiness: string;
+  /** @nullable */
+  lastConnectionStatus: string | null;
+  /** @nullable */
+  lastConnectionAt: string | null;
+  baseUrlConfigured: boolean;
+}
+
+export interface NetBoxConnectionTestResponse {
+  status: string;
+  message: string;
+  readiness: string;
+  baseUrlConfigured: boolean;
+  tokenConfigured: boolean;
+  skipTlsVerify: boolean;
+  testedAt: string;
+  /** @nullable */
+  version?: string | null;
+}
+
+export interface NetBoxSimpleItem {
+  id: number;
+  name: string;
+  /** @nullable */
+  slug?: string | null;
+  displayName: string;
+}
+
+export interface NetBoxSimpleListResponse {
+  count: number;
+  /** @nullable */
+  next: string | null;
+  /** @nullable */
+  previous: string | null;
+  items: NetBoxSimpleItem[];
+}
+
+export interface NetBoxDevice {
+  id: number;
+  name: string;
+  displayName: string;
+  /** @nullable */
+  ipAddress?: string | null;
+  /** @nullable */
+  siteId?: number | null;
+  /** @nullable */
+  siteName?: string | null;
+  /** @nullable */
+  tenantId?: number | null;
+  /** @nullable */
+  tenantName?: string | null;
+  /** @nullable */
+  roleId?: number | null;
+  /** @nullable */
+  roleName?: string | null;
+  /** @nullable */
+  vendor?: string | null;
+  /** @nullable */
+  platform?: string | null;
+  /** @nullable */
+  status?: string | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  comments?: string | null;
+}
+
+export interface NetBoxDeviceListResponse {
+  count: number;
+  /** @nullable */
+  next: string | null;
+  /** @nullable */
+  previous: string | null;
+  items: NetBoxDevice[];
+}
+
+export interface NetBoxSyncPreviewRequest {
+  pageSize?: number;
+}
+
+export interface NetBoxSyncPreviewItem {
+  netboxDeviceId: number;
+  hostname: string;
+  /** @nullable */
+  ipAddress?: string | null;
+  /** @nullable */
+  site?: string | null;
+  /** @nullable */
+  role?: string | null;
+  /** @nullable */
+  vendor?: string | null;
+  /** @nullable */
+  platform?: string | null;
+  action: string;
+  /** @nullable */
+  matchedLocalDeviceId: number | null;
+  warnings: string[];
+}
+
+export type NetBoxSyncPreviewResponseSummary = {
+  totalFromNetBox: number;
+  matchedByNetboxId: number;
+  matchedByHostname: number;
+  toCreate: number;
+  toUpdate: number;
+  toSkip: number;
+  warnings: number;
+};
+
+export interface NetBoxSyncPreviewResponse {
+  summary: NetBoxSyncPreviewResponseSummary;
+  items: NetBoxSyncPreviewItem[];
+}
+
+export type NetBoxSyncResult = NetBoxSyncPreviewResponse & {
+  durationMs: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  warningsList: string[];
+};
 
 export type DiscoveryStatus = typeof DiscoveryStatus[keyof typeof DiscoveryStatus];
 

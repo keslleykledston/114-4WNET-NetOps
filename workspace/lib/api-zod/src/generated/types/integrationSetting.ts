@@ -11,6 +11,12 @@ export interface IntegrationSetting {
   id: number;
   name: string;
   enabled: boolean;
+  /** future, partial, ready */
+  readiness: string;
+  /** @nullable */
+  lastConnectionStatus?: string | null;
+  /** @nullable */
+  lastConnectionAt?: Date | null;
   configJson: IntegrationSettingConfigJson;
   createdAt: Date;
   updatedAt: Date;

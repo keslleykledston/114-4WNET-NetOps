@@ -2298,6 +2298,9 @@ export const ListIntegrationsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "enabled": zod.boolean(),
+  "readiness": zod.string().describe('future, partial, ready'),
+  "lastConnectionStatus": zod.string().nullish(),
+  "lastConnectionAt": zod.coerce.date().nullish(),
   "configJson": zod.record(zod.string(), zod.unknown()),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -2316,6 +2319,9 @@ export const GetIntegrationResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "enabled": zod.boolean(),
+  "readiness": zod.string().describe('future, partial, ready'),
+  "lastConnectionStatus": zod.string().nullish(),
+  "lastConnectionAt": zod.coerce.date().nullish(),
   "configJson": zod.record(zod.string(), zod.unknown()),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -2338,9 +2344,213 @@ export const UpdateIntegrationResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "enabled": zod.boolean(),
+  "readiness": zod.string().describe('future, partial, ready'),
+  "lastConnectionStatus": zod.string().nullish(),
+  "lastConnectionAt": zod.coerce.date().nullish(),
   "configJson": zod.record(zod.string(), zod.unknown()),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
+
+
+/**
+ * @summary Get NetBox readiness status
+ */
+export const GetNetBoxStatusResponse = zod.object({
+  "enabled": zod.boolean(),
+  "baseUrl": zod.string().nullish(),
+  "tokenConfigured": zod.boolean(),
+  "skipTlsVerify": zod.boolean(),
+  "timeoutMs": zod.number(),
+  "pageSize": zod.number(),
+  "readiness": zod.string().describe('disabled, partial, ready'),
+  "lastConnectionStatus": zod.string().nullable(),
+  "lastConnectionAt": zod.coerce.date().nullable(),
+  "baseUrlConfigured": zod.boolean()
+})
+
+
+/**
+ * @summary Test NetBox connection
+ */
+export const TestNetBoxConnectionResponse = zod.object({
+  "status": zod.string(),
+  "message": zod.string(),
+  "readiness": zod.string(),
+  "baseUrlConfigured": zod.boolean(),
+  "tokenConfigured": zod.boolean(),
+  "skipTlsVerify": zod.boolean(),
+  "testedAt": zod.coerce.date(),
+  "version": zod.string().nullish()
+})
+
+
+/**
+ * @summary List NetBox devices
+ */
+export const ListNetBoxDevicesResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "displayName": zod.string(),
+  "ipAddress": zod.string().nullish(),
+  "siteId": zod.number().nullish(),
+  "siteName": zod.string().nullish(),
+  "tenantId": zod.number().nullish(),
+  "tenantName": zod.string().nullish(),
+  "roleId": zod.number().nullish(),
+  "roleName": zod.string().nullish(),
+  "vendor": zod.string().nullish(),
+  "platform": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "comments": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary List NetBox sites
+ */
+export const ListNetBoxSitesResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary List NetBox tenants
+ */
+export const ListNetBoxTenantsResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary List NetBox device roles
+ */
+export const ListNetBoxDeviceRolesResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary List NetBox manufacturers
+ */
+export const ListNetBoxManufacturersResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary List NetBox platforms
+ */
+export const ListNetBoxPlatformsResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary Preview read-only sync from NetBox
+ */
+export const PreviewNetBoxDeviceSyncResponse = zod.object({
+  "summary": zod.object({
+  "totalFromNetBox": zod.number(),
+  "matchedByNetboxId": zod.number(),
+  "matchedByHostname": zod.number(),
+  "toCreate": zod.number(),
+  "toUpdate": zod.number(),
+  "toSkip": zod.number(),
+  "warnings": zod.number()
+}),
+  "items": zod.array(zod.object({
+  "netboxDeviceId": zod.number(),
+  "hostname": zod.string(),
+  "ipAddress": zod.string().nullish(),
+  "site": zod.string().nullish(),
+  "role": zod.string().nullish(),
+  "vendor": zod.string().nullish(),
+  "platform": zod.string().nullish(),
+  "action": zod.string(),
+  "matchedLocalDeviceId": zod.number().nullable(),
+  "warnings": zod.array(zod.string())
+}))
+})
+
+
+/**
+ * @summary Sync NetBox devices to local inventory
+ */
+export const SyncNetBoxDevicesLocalResponse = zod.object({
+  "summary": zod.object({
+  "totalFromNetBox": zod.number(),
+  "matchedByNetboxId": zod.number(),
+  "matchedByHostname": zod.number(),
+  "toCreate": zod.number(),
+  "toUpdate": zod.number(),
+  "toSkip": zod.number(),
+  "warnings": zod.number()
+}),
+  "items": zod.array(zod.object({
+  "netboxDeviceId": zod.number(),
+  "hostname": zod.string(),
+  "ipAddress": zod.string().nullish(),
+  "site": zod.string().nullish(),
+  "role": zod.string().nullish(),
+  "vendor": zod.string().nullish(),
+  "platform": zod.string().nullish(),
+  "action": zod.string(),
+  "matchedLocalDeviceId": zod.number().nullable(),
+  "warnings": zod.array(zod.string())
+}))
+}).and(zod.object({
+  "durationMs": zod.number(),
+  "created": zod.number(),
+  "updated": zod.number(),
+  "skipped": zod.number(),
+  "warningsList": zod.array(zod.string())
+}))
 
 

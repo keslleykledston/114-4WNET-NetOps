@@ -68,6 +68,12 @@ import type {
   ListProvisioningJobsParams,
   ListScheduledJobRunsParams,
   ListSnmpSnapshotsParams,
+  NetBoxConnectionTestResponse,
+  NetBoxDeviceListResponse,
+  NetBoxSimpleListResponse,
+  NetBoxStatus,
+  NetBoxSyncPreviewResponse,
+  NetBoxSyncResult,
   NetopsBgpCommunities,
   NetopsBgpDiagnostics,
   NetopsBgpPeer,
@@ -7459,5 +7465,754 @@ export const useUpdateIntegration = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateIntegrationMutationOptions(options));
+    }
+
+export const getGetNetBoxStatusUrl = () => {
+
+
+
+
+  return `/api/netbox/status`
+}
+
+/**
+ * @summary Get NetBox readiness status
+ */
+export const getNetBoxStatus = async ( options?: RequestInit): Promise<NetBoxStatus> => {
+
+  return customFetch<NetBoxStatus>(getGetNetBoxStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNetBoxStatusQueryKey = () => {
+    return [
+    `/api/netbox/status`
+    ] as const;
+    }
+
+
+export const getGetNetBoxStatusQueryOptions = <TData = Awaited<ReturnType<typeof getNetBoxStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetBoxStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNetBoxStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNetBoxStatus>>> = ({ signal }) => getNetBoxStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNetBoxStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNetBoxStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getNetBoxStatus>>>
+export type GetNetBoxStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get NetBox readiness status
+ */
+
+export function useGetNetBoxStatus<TData = Awaited<ReturnType<typeof getNetBoxStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNetBoxStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNetBoxStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getTestNetBoxConnectionUrl = () => {
+
+
+
+
+  return `/api/netbox/test-connection`
+}
+
+/**
+ * @summary Test NetBox connection
+ */
+export const testNetBoxConnection = async ( options?: RequestInit): Promise<NetBoxConnectionTestResponse> => {
+
+  return customFetch<NetBoxConnectionTestResponse>(getTestNetBoxConnectionUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTestNetBoxConnectionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testNetBoxConnection>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof testNetBoxConnection>>, TError,void, TContext> => {
+
+const mutationKey = ['testNetBoxConnection'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof testNetBoxConnection>>, void> = () => {
+
+
+          return  testNetBoxConnection(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TestNetBoxConnectionMutationResult = NonNullable<Awaited<ReturnType<typeof testNetBoxConnection>>>
+
+    export type TestNetBoxConnectionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Test NetBox connection
+ */
+export const useTestNetBoxConnection = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testNetBoxConnection>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof testNetBoxConnection>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getTestNetBoxConnectionMutationOptions(options));
+    }
+
+export const getListNetBoxDevicesUrl = () => {
+
+
+
+
+  return `/api/netbox/devices`
+}
+
+/**
+ * @summary List NetBox devices
+ */
+export const listNetBoxDevices = async ( options?: RequestInit): Promise<NetBoxDeviceListResponse> => {
+
+  return customFetch<NetBoxDeviceListResponse>(getListNetBoxDevicesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetBoxDevicesQueryKey = () => {
+    return [
+    `/api/netbox/devices`
+    ] as const;
+    }
+
+
+export const getListNetBoxDevicesQueryOptions = <TData = Awaited<ReturnType<typeof listNetBoxDevices>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetBoxDevicesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetBoxDevices>>> = ({ signal }) => listNetBoxDevices({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetBoxDevices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetBoxDevicesQueryResult = NonNullable<Awaited<ReturnType<typeof listNetBoxDevices>>>
+export type ListNetBoxDevicesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List NetBox devices
+ */
+
+export function useListNetBoxDevices<TData = Awaited<ReturnType<typeof listNetBoxDevices>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetBoxDevicesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetBoxSitesUrl = () => {
+
+
+
+
+  return `/api/netbox/sites`
+}
+
+/**
+ * @summary List NetBox sites
+ */
+export const listNetBoxSites = async ( options?: RequestInit): Promise<NetBoxSimpleListResponse> => {
+
+  return customFetch<NetBoxSimpleListResponse>(getListNetBoxSitesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetBoxSitesQueryKey = () => {
+    return [
+    `/api/netbox/sites`
+    ] as const;
+    }
+
+
+export const getListNetBoxSitesQueryOptions = <TData = Awaited<ReturnType<typeof listNetBoxSites>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxSites>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetBoxSitesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetBoxSites>>> = ({ signal }) => listNetBoxSites({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetBoxSites>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetBoxSitesQueryResult = NonNullable<Awaited<ReturnType<typeof listNetBoxSites>>>
+export type ListNetBoxSitesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List NetBox sites
+ */
+
+export function useListNetBoxSites<TData = Awaited<ReturnType<typeof listNetBoxSites>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxSites>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetBoxSitesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetBoxTenantsUrl = () => {
+
+
+
+
+  return `/api/netbox/tenants`
+}
+
+/**
+ * @summary List NetBox tenants
+ */
+export const listNetBoxTenants = async ( options?: RequestInit): Promise<NetBoxSimpleListResponse> => {
+
+  return customFetch<NetBoxSimpleListResponse>(getListNetBoxTenantsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetBoxTenantsQueryKey = () => {
+    return [
+    `/api/netbox/tenants`
+    ] as const;
+    }
+
+
+export const getListNetBoxTenantsQueryOptions = <TData = Awaited<ReturnType<typeof listNetBoxTenants>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxTenants>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetBoxTenantsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetBoxTenants>>> = ({ signal }) => listNetBoxTenants({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetBoxTenants>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetBoxTenantsQueryResult = NonNullable<Awaited<ReturnType<typeof listNetBoxTenants>>>
+export type ListNetBoxTenantsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List NetBox tenants
+ */
+
+export function useListNetBoxTenants<TData = Awaited<ReturnType<typeof listNetBoxTenants>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxTenants>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetBoxTenantsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetBoxDeviceRolesUrl = () => {
+
+
+
+
+  return `/api/netbox/device-roles`
+}
+
+/**
+ * @summary List NetBox device roles
+ */
+export const listNetBoxDeviceRoles = async ( options?: RequestInit): Promise<NetBoxSimpleListResponse> => {
+
+  return customFetch<NetBoxSimpleListResponse>(getListNetBoxDeviceRolesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetBoxDeviceRolesQueryKey = () => {
+    return [
+    `/api/netbox/device-roles`
+    ] as const;
+    }
+
+
+export const getListNetBoxDeviceRolesQueryOptions = <TData = Awaited<ReturnType<typeof listNetBoxDeviceRoles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxDeviceRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetBoxDeviceRolesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetBoxDeviceRoles>>> = ({ signal }) => listNetBoxDeviceRoles({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetBoxDeviceRoles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetBoxDeviceRolesQueryResult = NonNullable<Awaited<ReturnType<typeof listNetBoxDeviceRoles>>>
+export type ListNetBoxDeviceRolesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List NetBox device roles
+ */
+
+export function useListNetBoxDeviceRoles<TData = Awaited<ReturnType<typeof listNetBoxDeviceRoles>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxDeviceRoles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetBoxDeviceRolesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetBoxManufacturersUrl = () => {
+
+
+
+
+  return `/api/netbox/manufacturers`
+}
+
+/**
+ * @summary List NetBox manufacturers
+ */
+export const listNetBoxManufacturers = async ( options?: RequestInit): Promise<NetBoxSimpleListResponse> => {
+
+  return customFetch<NetBoxSimpleListResponse>(getListNetBoxManufacturersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetBoxManufacturersQueryKey = () => {
+    return [
+    `/api/netbox/manufacturers`
+    ] as const;
+    }
+
+
+export const getListNetBoxManufacturersQueryOptions = <TData = Awaited<ReturnType<typeof listNetBoxManufacturers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxManufacturers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetBoxManufacturersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetBoxManufacturers>>> = ({ signal }) => listNetBoxManufacturers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetBoxManufacturers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetBoxManufacturersQueryResult = NonNullable<Awaited<ReturnType<typeof listNetBoxManufacturers>>>
+export type ListNetBoxManufacturersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List NetBox manufacturers
+ */
+
+export function useListNetBoxManufacturers<TData = Awaited<ReturnType<typeof listNetBoxManufacturers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxManufacturers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetBoxManufacturersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListNetBoxPlatformsUrl = () => {
+
+
+
+
+  return `/api/netbox/platforms`
+}
+
+/**
+ * @summary List NetBox platforms
+ */
+export const listNetBoxPlatforms = async ( options?: RequestInit): Promise<NetBoxSimpleListResponse> => {
+
+  return customFetch<NetBoxSimpleListResponse>(getListNetBoxPlatformsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNetBoxPlatformsQueryKey = () => {
+    return [
+    `/api/netbox/platforms`
+    ] as const;
+    }
+
+
+export const getListNetBoxPlatformsQueryOptions = <TData = Awaited<ReturnType<typeof listNetBoxPlatforms>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxPlatforms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNetBoxPlatformsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNetBoxPlatforms>>> = ({ signal }) => listNetBoxPlatforms({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNetBoxPlatforms>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNetBoxPlatformsQueryResult = NonNullable<Awaited<ReturnType<typeof listNetBoxPlatforms>>>
+export type ListNetBoxPlatformsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List NetBox platforms
+ */
+
+export function useListNetBoxPlatforms<TData = Awaited<ReturnType<typeof listNetBoxPlatforms>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNetBoxPlatforms>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNetBoxPlatformsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPreviewNetBoxDeviceSyncUrl = () => {
+
+
+
+
+  return `/api/netbox/devices/preview-sync`
+}
+
+/**
+ * @summary Preview read-only sync from NetBox
+ */
+export const previewNetBoxDeviceSync = async ( options?: RequestInit): Promise<NetBoxSyncPreviewResponse> => {
+
+  return customFetch<NetBoxSyncPreviewResponse>(getPreviewNetBoxDeviceSyncUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPreviewNetBoxDeviceSyncMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewNetBoxDeviceSync>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewNetBoxDeviceSync>>, TError,void, TContext> => {
+
+const mutationKey = ['previewNetBoxDeviceSync'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewNetBoxDeviceSync>>, void> = () => {
+
+
+          return  previewNetBoxDeviceSync(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewNetBoxDeviceSyncMutationResult = NonNullable<Awaited<ReturnType<typeof previewNetBoxDeviceSync>>>
+
+    export type PreviewNetBoxDeviceSyncMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Preview read-only sync from NetBox
+ */
+export const usePreviewNetBoxDeviceSync = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewNetBoxDeviceSync>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewNetBoxDeviceSync>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getPreviewNetBoxDeviceSyncMutationOptions(options));
+    }
+
+export const getSyncNetBoxDevicesLocalUrl = () => {
+
+
+
+
+  return `/api/netbox/devices/sync-local`
+}
+
+/**
+ * @summary Sync NetBox devices to local inventory
+ */
+export const syncNetBoxDevicesLocal = async ( options?: RequestInit): Promise<NetBoxSyncResult> => {
+
+  return customFetch<NetBoxSyncResult>(getSyncNetBoxDevicesLocalUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSyncNetBoxDevicesLocalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncNetBoxDevicesLocal>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncNetBoxDevicesLocal>>, TError,void, TContext> => {
+
+const mutationKey = ['syncNetBoxDevicesLocal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncNetBoxDevicesLocal>>, void> = () => {
+
+
+          return  syncNetBoxDevicesLocal(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncNetBoxDevicesLocalMutationResult = NonNullable<Awaited<ReturnType<typeof syncNetBoxDevicesLocal>>>
+
+    export type SyncNetBoxDevicesLocalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Sync NetBox devices to local inventory
+ */
+export const useSyncNetBoxDevicesLocal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncNetBoxDevicesLocal>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncNetBoxDevicesLocal>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSyncNetBoxDevicesLocalMutationOptions(options));
     }
 

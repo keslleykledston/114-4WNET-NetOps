@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { auditLogsTable, db } from "@workspace/db";
+import { usersTable } from "@workspace/db";
 
 const router = Router();
 
@@ -33,12 +34,34 @@ router.get("/audit-logs", async (req, res) => {
   if (dateTo && !Number.isNaN(dateTo.getTime())) filters.push(lte(auditLogsTable.createdAt, dateTo));
 
   const where = filters.length ? and(...filters) : undefined;
-  const rows = await db.select().from(auditLogsTable).where(where).orderBy(desc(auditLogsTable.createdAt)).limit(limit).offset(offset);
+  const rows = await db
+    .select({
+      id: auditLogsTable.id,
+      actorId: auditLogsTable.actorId,
+      action: auditLogsTable.action,
+      objectType: auditLogsTable.objectType,
+      objectId: auditLogsTable.objectId,
+      metadataJson: auditLogsTable.metadataJson,
+      sourceIp: auditLogsTable.sourceIp,
+      createdAt: auditLogsTable.createdAt,
+      actorName: usersTable.name,
+      actorEmail: usersTable.email,
+      actorRole: usersTable.role,
+    })
+    .from(auditLogsTable)
+    .leftJoin(usersTable, eq(auditLogsTable.actorId, usersTable.id))
+    .where(where)
+    .orderBy(desc(auditLogsTable.createdAt))
+    .limit(limit)
+    .offset(offset);
 
   res.json(rows.map((row) => ({
     id: row.id,
     actorId: row.actorId,
-    actor: row.actorId ? `user:${row.actorId}` : "local",
+    actor: row.actorId ? `${row.actorName ?? `user:${row.actorId}`} <${row.actorEmail ?? "unknown"}>` : "local",
+    actorName: row.actorName ?? null,
+    actorEmail: row.actorEmail ?? null,
+    actorRole: row.actorRole ?? null,
     action: row.action,
     objectType: row.objectType,
     objectId: row.objectId,
@@ -49,4 +72,3 @@ router.get("/audit-logs", async (req, res) => {
 });
 
 export default router;
-

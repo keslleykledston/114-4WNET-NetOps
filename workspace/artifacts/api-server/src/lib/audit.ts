@@ -1,5 +1,6 @@
 import type { Request } from "express";
 import { auditLogsTable, db } from "@workspace/db";
+import { getRequestContext } from "./request-context.js";
 
 type Metadata = Record<string, unknown> | undefined;
 
@@ -49,8 +50,9 @@ export async function logAuditEvent(input: {
   sourceIp?: string | null;
 }) {
   try {
+    const context = getRequestContext();
     await db.insert(auditLogsTable).values({
-      actorId: input.actorId ?? null,
+      actorId: input.actorId ?? context?.actorId ?? null,
       action: input.action,
       objectType: input.objectType,
       objectId: input.objectId,
@@ -69,4 +71,3 @@ export function getRequestSourceIp(req: Request): string | null {
   }
   return req.ip || null;
 }
-

@@ -1,5 +1,7 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health.js";
+import authRouter from "./auth.js";
+import usersRouter from "./users.js";
 import devicesRouter from "./devices.js";
 import deviceGroupsRouter from "./device_groups.js";
 import complianceRouter from "./compliance.js";
@@ -12,10 +14,16 @@ import collectedConfigsRouter from "./collected_configs.js";
 import snmpSnapshotsRouter from "./snmp_snapshots.js";
 import netopsRouter from "../modules/netops/routes.js";
 import discoveryRouter from "../modules/netops/device-discovery/discovery.routes.js";
+import { authorizeRequest } from "../lib/auth.js";
+import { requestContextMiddleware } from "../lib/request-context.js";
 
 const router: IRouter = Router();
 
+router.use(requestContextMiddleware);
 router.use(healthRouter);
+router.use(authRouter);
+router.use(authorizeRequest);
+router.use(usersRouter);
 router.use(devicesRouter);
 router.use(deviceGroupsRouter);
 router.use(complianceRouter);

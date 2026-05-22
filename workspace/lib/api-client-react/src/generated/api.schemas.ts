@@ -2120,6 +2120,115 @@ export type ScheduledJobListResponse = ScheduledJob[];
 
 export type ScheduledJobRunListResponse = ScheduledJobRun[];
 
+export type DeviceExportRequestFormat = typeof DeviceExportRequestFormat[keyof typeof DeviceExportRequestFormat];
+
+
+export const DeviceExportRequestFormat = {
+  csv: 'csv',
+  xlsx: 'xlsx',
+  json: 'json',
+} as const;
+
+export interface DeviceExportRequest {
+  /** @minItems 1 */
+  ids: number[];
+  format: DeviceExportRequestFormat;
+}
+
+export type DeviceImportItemAction = typeof DeviceImportItemAction[keyof typeof DeviceImportItemAction];
+
+
+export const DeviceImportItemAction = {
+  create: 'create',
+  update: 'update',
+  skip: 'skip',
+  invalid: 'invalid',
+} as const;
+
+export interface ParsedDevice {
+  hostname: string;
+  /** @nullable */
+  ipAddress?: string | null;
+  /** @nullable */
+  vendor?: string | null;
+  /** @nullable */
+  platform?: string | null;
+  /** @nullable */
+  role?: string | null;
+  /** @nullable */
+  site?: string | null;
+  /** @nullable */
+  status?: string | null;
+  /** @nullable */
+  sshPort?: number | null;
+  /** @nullable */
+  snmpVersion?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface DeviceImportItem {
+  rowNumber: number;
+  action: DeviceImportItemAction;
+  parsed?: ParsedDevice;
+  /** @nullable */
+  matchedDeviceId?: number | null;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface DeviceImportSummary {
+  totalRows: number;
+  validRows: number;
+  invalidRows: number;
+  toCreate: number;
+  toUpdate: number;
+  toSkip: number;
+  duplicates: number;
+  warnings: number;
+}
+
+export interface DeviceImportPreviewResponse {
+  summary: DeviceImportSummary;
+  items: DeviceImportItem[];
+  previewToken: string;
+  fileHash: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export type DeviceImportApplyRequestMode = typeof DeviceImportApplyRequestMode[keyof typeof DeviceImportApplyRequestMode];
+
+
+export const DeviceImportApplyRequestMode = {
+  create_only: 'create_only',
+  update_existing: 'update_existing',
+  upsert: 'upsert',
+} as const;
+
+export interface DeviceImportApplyRequest {
+  previewToken: string;
+  mode: DeviceImportApplyRequestMode;
+}
+
+export type DeviceImportApplyResponseSummary = {
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+};
+
+export type DeviceImportApplyResponseErrorsItem = {
+  rowNumber: number;
+  message: string;
+};
+
+export interface DeviceImportApplyResponse {
+  success: boolean;
+  summary: DeviceImportApplyResponseSummary;
+  errors: DeviceImportApplyResponseErrorsItem[];
+}
+
 export type UserPermissionsDevices = {
   read?: boolean;
   write?: boolean;
@@ -2199,6 +2308,10 @@ export type ListDevicesParams = {
 status?: string;
 vendor?: string;
 site?: string;
+};
+
+export type PreviewDeviceImportBody = {
+  file: Blob;
 };
 
 export type ListComplianceJobsParams = {

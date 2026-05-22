@@ -733,6 +733,85 @@ export const GetDeviceCollectedConfigResponse = zod.object({
 
 
 /**
+ * @summary Export devices to CSV, XLSX, or JSON
+ */
+
+
+
+export const ExportDevicesBody = zod.object({
+  "ids": zod.array(zod.number()).min(1),
+  "format": zod.enum(['csv', 'xlsx', 'json'])
+})
+
+
+/**
+ * @summary Preview device import from file
+ */
+export const PreviewDeviceImportBody = zod.object({
+  "file": zod.any()
+})
+
+export const PreviewDeviceImportResponse = zod.object({
+  "summary": zod.object({
+  "totalRows": zod.number(),
+  "validRows": zod.number(),
+  "invalidRows": zod.number(),
+  "toCreate": zod.number(),
+  "toUpdate": zod.number(),
+  "toSkip": zod.number(),
+  "duplicates": zod.number(),
+  "warnings": zod.number()
+}),
+  "items": zod.array(zod.object({
+  "rowNumber": zod.number(),
+  "action": zod.enum(['create', 'update', 'skip', 'invalid']),
+  "parsed": zod.object({
+  "hostname": zod.string(),
+  "ipAddress": zod.string().nullish(),
+  "vendor": zod.string().nullish(),
+  "platform": zod.string().nullish(),
+  "role": zod.string().nullish(),
+  "site": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "sshPort": zod.number().nullish(),
+  "snmpVersion": zod.string().nullish(),
+  "notes": zod.string().nullish()
+}).optional(),
+  "matchedDeviceId": zod.number().nullish(),
+  "errors": zod.array(zod.string()),
+  "warnings": zod.array(zod.string())
+})),
+  "previewToken": zod.string(),
+  "fileHash": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Apply device import
+ */
+export const ApplyDeviceImportBody = zod.object({
+  "previewToken": zod.string(),
+  "mode": zod.enum(['create_only', 'update_existing', 'upsert'])
+})
+
+export const ApplyDeviceImportResponse = zod.object({
+  "success": zod.boolean(),
+  "summary": zod.object({
+  "created": zod.number(),
+  "updated": zod.number(),
+  "skipped": zod.number(),
+  "failed": zod.number()
+}),
+  "errors": zod.array(zod.object({
+  "rowNumber": zod.number(),
+  "message": zod.string()
+}))
+})
+
+
+/**
  * @summary List device groups
  */
 export const ListDeviceGroupsResponseItem = zod.object({

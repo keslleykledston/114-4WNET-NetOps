@@ -81,3 +81,10 @@ Alteracao permitida:
 - Alertas de compliance/confianca devem usar `Alert` compacto e manter densidade NOC.
 - Empty state de BGP sem snapshot deve orientar "Execute discovery para carregar peers BGP."
 - Snapshot vindo de cache persistido deve aparecer como aviso operacional, nao como erro visual.
+
+## Compliance grouping UI
+
+- Agrupamento de findings deve consumir `/api/compliance-findings-groups`; nao calcular grupos como fonte primaria se o endpoint existir.
+- Drawer de grupo deve listar objetos afetados e evidencias individuais sanitizadas, sem `rawReference` ou payload bruto.
+- Actionable only deve incluir apenas `BLOCKER_REAL`, `RISCO_OPERACIONAL`, `PADRONIZACAO` e `CUSTOMIZACAO`.
+- Categorias operacionais devem usar labels em portugues na UI e codigos canonicos na API.

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Device } from "@workspace/api-client-react";
 import type { DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
 import { useDiscoveryBgpPeerRoutes } from "@/features/device-discovery/discovery-api";
@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { AsPathTokens } from "@/components/AsPathTokens";
+
+const PAGE_SIZE = 200;
 
 interface BgpPeerRoutesModalProps {
   device: Device;
@@ -29,12 +31,18 @@ export function BgpPeerRoutesModal({
   const deviceId = device.id;
   const fetchEnabled = isOpen && !!peer;
 
+  useEffect(() => {
+    if (isOpen) {
+      setPage(1);
+    }
+  }, [isOpen, peerIp, direction]);
+
   const { data: routesData, isLoading } = useDiscoveryBgpPeerRoutes(
     deviceId,
     peerIp,
     direction,
     page,
-    200,
+    PAGE_SIZE,
     fetchEnabled
   );
 
@@ -54,9 +62,12 @@ export function BgpPeerRoutesModal({
     setPage(p => p + 1);
   };
 
-  const startIdx = (page - 1) * 200 + 1;
-  const endIdx = Math.min(page * 200, routesData?.total ?? 0);
-  const pageRange = `${startIdx}–${endIdx} de ${routesData?.total ?? 0}`;
+  const effectiveLimit = routesData?.limit ?? PAGE_SIZE;
+  const totalRoutes = routesData?.total ?? 0;
+  const currentPage = routesData?.page ?? page;
+  const startIdx = totalRoutes > 0 ? (currentPage - 1) * effectiveLimit + 1 : 0;
+  const endIdx = Math.min(currentPage * effectiveLimit, totalRoutes);
+  const pageRange = `${startIdx}–${endIdx} de ${totalRoutes}`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

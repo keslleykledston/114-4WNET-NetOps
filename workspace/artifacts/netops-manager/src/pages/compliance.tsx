@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   getListComplianceFindingsQueryKey,
   getListComplianceJobsQueryKey,
   useCreateComplianceJob,
   useGetComplianceSummary,
   useListComplianceFindings,
+  useListComplianceFindingsGroups,
   useListComplianceJobs,
   useListDevices,
   type ComplianceFinding,
+  type ComplianceFindingGroup,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,15 +19,20 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, CheckCircle2, Clock, Eye, Plus, ShieldAlert, ShieldCheck, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
+import { ComplianceFindingGroupDrawer } from "@/features/compliance/compliance-finding-group-drawer";
+import { ComplianceFindingGroupTable } from "@/features/compliance/compliance-finding-group-table";
+import { OperationalCategoryBadge, operationalCategoryLabel } from "@/features/compliance/operational-category-badge";
 
 const ALL_CONTEXTS = ["security", "ntp", "snmp", "interface", "bgp", "l2vpn", "l3vpn"];
 const FILTER_ALL = "all";
 const OPERATIONAL_CATEGORIES = ["BLOCKER_REAL", "RISCO_OPERACIONAL", "PADRONIZACAO", "CUSTOMIZACAO", "INFORMATIVO", "FALSO_POSITIVO"];
 const ACTIONABLE_CATEGORIES = ["BLOCKER_REAL", "RISCO_OPERACIONAL", "PADRONIZACAO", "CUSTOMIZACAO"];
 const POLICY_PROFILES = ["huawei-vrp-edge-balanced", "huawei-vrp-edge-strict", "huawei-vrp-observe-only"];
+type ViewMode = "findings" | "groups";
 
 function badgeClass(value: string | null | undefined) {
   if (value === "pass" || value === "passed" || value === "high") return "bg-green-500/10 text-green-400 border-green-500/20";
@@ -37,6 +44,46 @@ function badgeClass(value: string | null | undefined) {
 
 function param(value: string) {
   return value === FILTER_ALL ? undefined : value;
+}
+
+interface GroupSummaryCardProps {
+  title: string;
+  description: string;
+  groups: ComplianceFindingGroup[];
+  emptyLabel: string;
+  onSelectGroup: (group: ComplianceFindingGroup) => void;
+}
+
+function GroupSummaryCard({ title, description, groups, emptyLabel, onSelectGroup }: GroupSummaryCardProps) {
+  const total = groups.reduce((sum, group) => sum + group.count, 0);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="text-2xl font-bold">{total}</div>
+        {groups.length === 0 ? (
+          <div className="text-xs text-muted-foreground">{emptyLabel}</div>
+        ) : groups.map((group) => (
+          <button
+            key={`${title}-${group.ruleId}-${group.context}-${group.severity}-${group.operationalCategory}-${group.message}`}
+            type="button"
+            onClick={() => onSelectGroup(group)}
+            className="block w-full rounded-md border bg-background p-2 text-left transition-colors hover:bg-muted"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate font-mono text-xs">{group.ruleId}</span>
+              <Badge variant="secondary" className="shrink-0">{group.count}</Badge>
+            </div>
+            <div className="mt-1 truncate text-xs text-muted-foreground">{group.message}</div>
+          </button>
+        ))}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function Compliance() {
@@ -61,7 +108,9 @@ export default function Compliance() {
   const [deviceFilter, setDeviceFilter] = useState(FILTER_ALL);
   const [operationalCategoryFilter, setOperationalCategoryFilter] = useState(FILTER_ALL);
   const [onlyActionable, setOnlyActionable] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("findings");
   const [selectedFinding, setSelectedFinding] = useState<ComplianceFinding | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<ComplianceFindingGroup | null>(null);
 
   const findingParams = {
     status: param(statusFilter),
@@ -69,15 +118,40 @@ export default function Compliance() {
     context: param(contextFilter),
     confidence: param(confidenceFilter),
     source: param(sourceFilter),
+    operationalCategory: param(operationalCategoryFilter),
     deviceId: deviceFilter === FILTER_ALL ? undefined : Number(deviceFilter),
   };
   const { data: allFindings, isLoading: findingsLoading } = useListComplianceFindings(findingParams);
+  const { data: allGroups, isLoading: groupsLoading } = useListComplianceFindingsGroups(findingParams);
 
   const findings = allFindings?.filter((finding: ComplianceFinding) => {
-    if (operationalCategoryFilter !== FILTER_ALL && finding.operationalCategory !== operationalCategoryFilter) return false;
     if (onlyActionable && !ACTIONABLE_CATEGORIES.includes(finding.operationalCategory || "")) return false;
     return true;
   });
+  const groups = allGroups?.filter((group: ComplianceFindingGroup) => {
+    if (onlyActionable && !ACTIONABLE_CATEGORIES.includes(group.operationalCategory || "")) return false;
+    return true;
+  });
+
+  const topCriticalGroups = useMemo(() => (
+    [...(groups ?? [])]
+      .filter((group) => group.severity === "critical")
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+  ), [groups]);
+  const topCountGroups = useMemo(() => [...(groups ?? [])].sort((a, b) => b.count - a.count).slice(0, 3), [groups]);
+  const blockerGroups = useMemo(() => (
+    [...(groups ?? [])]
+      .filter((group) => group.operationalCategory === "BLOCKER_REAL")
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+  ), [groups]);
+  const riskGroups = useMemo(() => (
+    [...(groups ?? [])]
+      .filter((group) => group.operationalCategory === "RISCO_OPERACIONAL")
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+  ), [groups]);
 
   const passFindings = findings?.filter((finding: ComplianceFinding) => (finding.status ?? finding.result) === "pass").length ?? 0;
   const failFindings = findings?.filter((finding: ComplianceFinding) => (finding.status ?? finding.result) === "fail").length ?? 0;
@@ -195,6 +269,37 @@ export default function Compliance() {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex justify-between">Critical <ShieldCheck className="h-4 w-4 text-red-500" /></CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{criticalFindings}</div></CardContent></Card>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+        <GroupSummaryCard
+          title="Top grupos críticos"
+          description="Critical agrupado por regra"
+          groups={topCriticalGroups}
+          emptyLabel="Sem grupos críticos"
+          onSelectGroup={setSelectedGroup}
+        />
+        <GroupSummaryCard
+          title="Top grupos por quantidade"
+          description="Maior volume filtrado"
+          groups={topCountGroups}
+          emptyLabel="Sem grupos"
+          onSelectGroup={setSelectedGroup}
+        />
+        <GroupSummaryCard
+          title="Blockers reais"
+          description="Bloqueadores reais acionáveis"
+          groups={blockerGroups}
+          emptyLabel="Sem bloqueadores reais"
+          onSelectGroup={setSelectedGroup}
+        />
+        <GroupSummaryCard
+          title="Riscos operacionais"
+          description="Riscos que afetam operação"
+          groups={riskGroups}
+          emptyLabel="Sem riscos operacionais"
+          onSelectGroup={setSelectedGroup}
+        />
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -219,60 +324,89 @@ export default function Compliance() {
           <Select value={contextFilter} onValueChange={setContextFilter}><SelectTrigger><SelectValue placeholder="Context" /></SelectTrigger><SelectContent>{[FILTER_ALL, ...ALL_CONTEXTS].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
           <Select value={confidenceFilter} onValueChange={setConfidenceFilter}><SelectTrigger><SelectValue placeholder="Confidence" /></SelectTrigger><SelectContent>{[FILTER_ALL, "high", "medium", "low", "unknown"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
           <Select value={sourceFilter} onValueChange={setSourceFilter}><SelectTrigger><SelectValue placeholder="Source" /></SelectTrigger><SelectContent>{[FILTER_ALL, "ssh_live", "ssh_running_config", "snmp_snapshot", "cached_config", "discovery_snapshot", "local_db"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
-          <Select value={operationalCategoryFilter} onValueChange={setOperationalCategoryFilter}><SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger><SelectContent>{[FILTER_ALL, ...OPERATIONAL_CATEGORIES].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
+          <Select value={operationalCategoryFilter} onValueChange={setOperationalCategoryFilter}><SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger><SelectContent><SelectItem value={FILTER_ALL}>all</SelectItem>{OPERATIONAL_CATEGORIES.map((item) => <SelectItem key={item} value={item}>{operationalCategoryLabel(item)}</SelectItem>)}</SelectContent></Select>
           <Select value={deviceFilter} onValueChange={setDeviceFilter}><SelectTrigger><SelectValue placeholder="Device" /></SelectTrigger><SelectContent><SelectItem value={FILTER_ALL}>all</SelectItem>{devices?.map((device: any) => <SelectItem key={device.id} value={String(device.id)}>{device.hostname}</SelectItem>)}</SelectContent></Select>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Findings</CardTitle>
-          <CardDescription>Achados enriquecidos por source/confidence</CardDescription>
-        </CardHeader>
-        <div className="border-t">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Severity</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Context</TableHead>
-                <TableHead>Objeto</TableHead>
-                <TableHead>Mensagem</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Confidence</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {findingsLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8">Loading...</TableCell></TableRow>
-              ) : findings?.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No findings.</TableCell></TableRow>
-              ) : findings?.map((finding: ComplianceFinding) => (
-                <TableRow key={finding.id}>
-                  <TableCell><Badge variant="outline" className={badgeClass(finding.severity)}>{finding.severity}</Badge></TableCell>
-                  <TableCell><Badge variant="outline" className={badgeClass(finding.status ?? finding.result)}>{finding.status ?? finding.result}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs"><Badge variant="outline">{finding.operationalCategory ?? "unknown"}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs">{finding.context}</TableCell>
-                  <TableCell>
-                    <div className="text-sm">{finding.objectName ?? finding.deviceHostname ?? "-"}</div>
-                    <div className="text-[11px] text-muted-foreground">{finding.objectType ?? "device"}</div>
-                  </TableCell>
-                  <TableCell className="max-w-[420px] truncate">{finding.message ?? finding.detail ?? "-"}</TableCell>
-                  <TableCell className="font-mono text-xs">{finding.source ?? "-"}</TableCell>
-                  <TableCell><Badge variant="outline" className={badgeClass(finding.confidence)}>{finding.confidence ?? "-"}</Badge></TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedFinding(finding)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="findings">Lista de findings</TabsTrigger>
+            <TabsTrigger value="groups">Grupos de findings</TabsTrigger>
+          </TabsList>
+          <div className="text-xs text-muted-foreground">
+            {findings?.length ?? 0} findings · {groups?.length ?? 0} grupos
+          </div>
         </div>
-      </Card>
+
+        <TabsContent value="findings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Findings</CardTitle>
+              <CardDescription>Achados enriquecidos por source/confidence</CardDescription>
+            </CardHeader>
+            <div className="border-t">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Context</TableHead>
+                    <TableHead>Objeto</TableHead>
+                    <TableHead>Mensagem</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Confidence</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {findingsLoading ? (
+                    <TableRow><TableCell colSpan={9} className="text-center py-8">Loading...</TableCell></TableRow>
+                  ) : findings?.length === 0 ? (
+                    <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No findings.</TableCell></TableRow>
+                  ) : findings?.map((finding: ComplianceFinding) => (
+                    <TableRow key={finding.id}>
+                      <TableCell><Badge variant="outline" className={badgeClass(finding.severity)}>{finding.severity}</Badge></TableCell>
+                      <TableCell><Badge variant="outline" className={badgeClass(finding.status ?? finding.result)}>{finding.status ?? finding.result}</Badge></TableCell>
+                      <TableCell><OperationalCategoryBadge value={finding.operationalCategory} /></TableCell>
+                      <TableCell className="font-mono text-xs">{finding.context}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">{finding.objectName ?? finding.deviceHostname ?? "-"}</div>
+                        <div className="text-[11px] text-muted-foreground">{finding.objectType ?? "device"}</div>
+                      </TableCell>
+                      <TableCell className="max-w-[420px] truncate">{finding.message ?? finding.detail ?? "-"}</TableCell>
+                      <TableCell className="font-mono text-xs">{finding.source ?? "-"}</TableCell>
+                      <TableCell><Badge variant="outline" className={badgeClass(finding.confidence)}>{finding.confidence ?? "-"}</Badge></TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedFinding(finding)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="groups">
+          <Card>
+            <CardHeader>
+              <CardTitle>Grupos de findings</CardTitle>
+              <CardDescription>Agregação por ruleId, contexto, severidade, categoria operacional e mensagem normalizada</CardDescription>
+            </CardHeader>
+            <ComplianceFindingGroupTable
+              groups={groups}
+              isLoading={groupsLoading}
+              badgeClass={badgeClass}
+              onSelectGroup={setSelectedGroup}
+            />
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Card>
         <CardHeader>
@@ -323,7 +457,7 @@ export default function Compliance() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                 <div><div className="text-muted-foreground">Status</div><Badge variant="outline" className={badgeClass(selectedFinding.status ?? selectedFinding.result)}>{selectedFinding.status ?? selectedFinding.result}</Badge></div>
                 <div><div className="text-muted-foreground">Severity</div><Badge variant="outline" className={badgeClass(selectedFinding.severity)}>{selectedFinding.severity}</Badge></div>
-                <div><div className="text-muted-foreground">Category</div><Badge variant="outline">{selectedFinding.operationalCategory ?? "unknown"}</Badge></div>
+                <div><div className="text-muted-foreground">Category</div><OperationalCategoryBadge value={selectedFinding.operationalCategory} /></div>
                 <div><div className="text-muted-foreground">Source</div><div className="font-mono text-xs">{selectedFinding.source ?? "-"}</div></div>
                 <div><div className="text-muted-foreground">Confidence</div><div className="font-mono text-xs">{selectedFinding.confidence ?? "-"}</div></div>
               </div>
@@ -337,7 +471,7 @@ export default function Compliance() {
               </div>
               <div className="rounded-md bg-muted p-3">
                 <div className="text-sm text-muted-foreground mb-2">Evidence</div>
-                <pre className="whitespace-pre-wrap text-xs">{selectedFinding.evidence ?? selectedFinding.rawReference ?? "-"}</pre>
+                <pre className="whitespace-pre-wrap text-xs">{selectedFinding.evidence ?? "Sem evidence sanitizada"}</pre>
               </div>
               <div className="text-xs text-muted-foreground space-y-1">
                 <div>Rule: {selectedFinding.ruleName ?? selectedFinding.policyName} {selectedFinding.ruleId ? `(${selectedFinding.ruleId})` : ""}</div>
@@ -347,6 +481,14 @@ export default function Compliance() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ComplianceFindingGroupDrawer
+        group={selectedGroup}
+        findings={findings ?? []}
+        open={!!selectedGroup}
+        onOpenChange={(open) => !open && setSelectedGroup(null)}
+        badgeClass={badgeClass}
+      />
     </div>
   );
 }

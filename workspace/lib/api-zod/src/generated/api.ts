@@ -844,6 +844,7 @@ export const ListComplianceFindingsQueryParams = zod.object({
   "context": zod.coerce.string().optional(),
   "confidence": zod.coerce.string().optional(),
   "source": zod.coerce.string().optional(),
+  "operationalCategory": zod.coerce.string().optional(),
   "deviceId": zod.coerce.number().optional()
 })
 
@@ -878,6 +879,34 @@ export const ListComplianceFindingsResponseItem = zod.object({
   "jobCreatedAt": zod.string().nullish()
 })
 export const ListComplianceFindingsResponse = zod.array(ListComplianceFindingsResponseItem)
+
+
+/**
+ * @summary List enriched compliance findings grouped by rule, context, severity and operational category
+ */
+export const ListComplianceFindingsGroupsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "severity": zod.coerce.string().optional(),
+  "context": zod.coerce.string().optional(),
+  "confidence": zod.coerce.string().optional(),
+  "source": zod.coerce.string().optional(),
+  "operationalCategory": zod.coerce.string().optional(),
+  "deviceId": zod.coerce.number().optional()
+})
+
+export const ListComplianceFindingsGroupsResponseItem = zod.object({
+  "ruleId": zod.string(),
+  "ruleName": zod.string().nullish(),
+  "policyName": zod.string().nullish(),
+  "severity": zod.string(),
+  "context": zod.string(),
+  "operationalCategory": zod.string(),
+  "count": zod.number(),
+  "sampleFindingIds": zod.array(zod.string()),
+  "exampleFindingIds": zod.array(zod.string()).optional(),
+  "message": zod.string()
+})
+export const ListComplianceFindingsGroupsResponse = zod.array(ListComplianceFindingsGroupsResponseItem)
 
 
 /**
@@ -920,6 +949,7 @@ export const GetComplianceJobResponse = zod.object({
   "objectName": zod.string().nullish(),
   "ruleId": zod.string().nullish(),
   "ruleName": zod.string().nullish(),
+  "operationalCategory": zod.string().nullish(),
   "rawReference": zod.string().nullish(),
   "metadataJson": zod.object({
 
@@ -971,6 +1001,7 @@ export const ExecuteComplianceJobResponse = zod.object({
   "objectName": zod.string().nullish(),
   "ruleId": zod.string().nullish(),
   "ruleName": zod.string().nullish(),
+  "operationalCategory": zod.string().nullish(),
   "rawReference": zod.string().nullish(),
   "metadataJson": zod.object({
 

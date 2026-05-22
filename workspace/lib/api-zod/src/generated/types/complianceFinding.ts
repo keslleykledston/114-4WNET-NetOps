@@ -45,6 +45,8 @@ export interface ComplianceFinding {
   /** @nullable */
   ruleName?: string | null;
   /** @nullable */
+  operationalCategory?: string | null;
+  /** @nullable */
   rawReference?: string | null;
   metadataJson?: ComplianceFindingMetadataJson;
   /** @nullable */

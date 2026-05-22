@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListComplianceFindingsParams = {
+export type ListComplianceFindingsGroupsParams = {
 status?: string;
 severity?: string;
 context?: string;

@@ -76,8 +76,16 @@
 - `GET /api/devices/:id/bgp/peers?category=customer`
 - `GET /api/devices/:id/bgp/peers/:peerIp/details`
 - `POST /api/devices/:id/bgp/peers/:peerIp/routes/query`
+  - Consulta SSH viva de prefixos recebidos/anunciados com limite maximo de 200 itens por pagina, suporte a `page` e `offset`, aviso de alto volume e persistencia de historico.
 - Frontend BGP passa a consumir objetos estruturados de discovery.
 - Persistencia local adicionada em `discovery_runs`, `discovery_snapshots` e `discovery_evidence`.
 - OpenAPI/Orval atualizado para os endpoints de discovery.
 - Parser Huawei VRP cobre primeira melhoria de route-policy nodes, community-filter/list e L2VC/VSI basico.
-- Ainda pendente: parser Huawei VRP completo e busca viva protegida de rotas.
+- Ainda pendente: parser Huawei VRP completo para variantes adicionais de plataforma/versao.
+
+## Compliance grouping UI v0.2.8
+
+- `/compliance` consome `GET /api/compliance-findings-groups` via cliente OpenAPI/Orval.
+- UI alterna entre lista de findings e grupos de findings.
+- Cards de agrupamento destacam top criticos, top por quantidade, bloqueadores reais e riscos operacionais.
+- Drawer de grupo mostra findings associados, objetos afetados e evidencias sanitizadas.

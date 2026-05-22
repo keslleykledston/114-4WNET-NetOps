@@ -395,6 +395,7 @@ router.get("/compliance-findings", async (req, res) => {
     if (req.query.context && row.context !== String(req.query.context)) return false;
     if (req.query.confidence && row.confidence !== String(req.query.confidence)) return false;
     if (req.query.source && row.source !== String(req.query.source)) return false;
+    if (req.query.operationalCategory && row.operationalCategory !== String(req.query.operationalCategory)) return false;
     if (req.query.deviceId && row.deviceId !== Number(req.query.deviceId)) return false;
     return true;
   });
@@ -450,18 +451,52 @@ router.get("/compliance-findings-groups", async (req, res) => {
     policyName: complianceFindingsTable.policyName,
     severity: complianceFindingsTable.severity,
     context: complianceFindingsTable.context,
+    message: complianceFindingsTable.message,
+    detail: complianceFindingsTable.detail,
     status: complianceFindingsTable.status,
+    result: complianceFindingsTable.result,
+    source: complianceFindingsTable.source,
+    confidence: complianceFindingsTable.confidence,
+    ruleId: complianceFindingsTable.ruleId,
+    ruleName: complianceFindingsTable.ruleName,
     operationalCategory: complianceFindingsTable.operationalCategory,
+    deviceId: complianceJobsTable.deviceId,
   })
     .from(complianceFindingsTable)
+    .leftJoin(complianceJobsTable, eq(complianceFindingsTable.jobId, complianceJobsTable.id))
     .orderBy(desc(complianceFindingsTable.id))
     .limit(500);
 
-  const groups = new Map<string, { count: number; examples: string[] }>();
-  for (const row of rows) {
-    const key = `${row.severity}|${row.context}|${row.operationalCategory}|${row.policyName}`;
+  const filtered = rows.filter((row) => {
+    if (req.query.status && (row.status ?? row.result) !== String(req.query.status)) return false;
+    if (req.query.severity && row.severity !== String(req.query.severity)) return false;
+    if (req.query.context && row.context !== String(req.query.context)) return false;
+    if (req.query.confidence && row.confidence !== String(req.query.confidence)) return false;
+    if (req.query.source && row.source !== String(req.query.source)) return false;
+    if (req.query.deviceId && row.deviceId !== Number(req.query.deviceId)) return false;
+    if (req.query.operationalCategory && row.operationalCategory !== String(req.query.operationalCategory)) return false;
+    return true;
+  });
+
+  const groups = new Map<string, {
+    count: number;
+    examples: string[];
+    ruleName: string | null;
+    policyName: string | null;
+    message: string;
+  }>();
+  for (const row of filtered) {
+    const ruleId = row.ruleId ?? row.policyName ?? "unknown";
+    const message = row.message ?? row.detail ?? "Sem mensagem normalizada";
+    const key = `${ruleId}|${row.severity}|${row.context}|${row.operationalCategory ?? "unknown"}|${message}`;
     if (!groups.has(key)) {
-      groups.set(key, { count: 0, examples: [] });
+      groups.set(key, {
+        count: 0,
+        examples: [],
+        ruleName: row.ruleName,
+        policyName: row.policyName,
+        message,
+      });
     }
     const group = groups.get(key)!;
     group.count++;
@@ -469,14 +504,18 @@ router.get("/compliance-findings-groups", async (req, res) => {
   }
 
   const result = Array.from(groups.entries()).map(([key, data]) => {
-    const [severity, context, category, policyName] = key.split("|");
+    const [ruleId, severity, context, category] = key.split("|");
     return {
+      ruleId,
+      ruleName: data.ruleName,
       severity,
       context,
       operationalCategory: category,
-      policyName,
+      policyName: data.policyName,
       count: data.count,
+      sampleFindingIds: data.examples,
       exampleFindingIds: data.examples,
+      message: data.message,
     };
   }).sort((a, b) => b.count - a.count);
 

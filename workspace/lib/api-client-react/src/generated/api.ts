@@ -34,6 +34,7 @@ import type {
   CommunityPreviewResponse,
   CommunitySet,
   ComplianceFinding,
+  ComplianceFindingGroup,
   ComplianceJob,
   ComplianceJobDetail,
   ComplianceJobInput,
@@ -61,6 +62,7 @@ import type {
   IntegrationSetting,
   ListAuditLogsParams,
   ListCollectedConfigsParams,
+  ListComplianceFindingsGroupsParams,
   ListComplianceFindingsParams,
   ListComplianceJobsParams,
   ListConfigTemplatesParams,
@@ -3167,6 +3169,90 @@ export function useListComplianceFindings<TData = Awaited<ReturnType<typeof list
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListComplianceFindingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListComplianceFindingsGroupsUrl = (params?: ListComplianceFindingsGroupsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compliance-findings-groups?${stringifiedParams}` : `/api/compliance-findings-groups`
+}
+
+/**
+ * @summary List enriched compliance findings grouped by rule, context, severity and operational category
+ */
+export const listComplianceFindingsGroups = async (params?: ListComplianceFindingsGroupsParams, options?: RequestInit): Promise<ComplianceFindingGroup[]> => {
+
+  return customFetch<ComplianceFindingGroup[]>(getListComplianceFindingsGroupsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListComplianceFindingsGroupsQueryKey = (params?: ListComplianceFindingsGroupsParams,) => {
+    return [
+    `/api/compliance-findings-groups`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListComplianceFindingsGroupsQueryOptions = <TData = Awaited<ReturnType<typeof listComplianceFindingsGroups>>, TError = ErrorType<unknown>>(params?: ListComplianceFindingsGroupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listComplianceFindingsGroups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListComplianceFindingsGroupsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listComplianceFindingsGroups>>> = ({ signal }) => listComplianceFindingsGroups(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listComplianceFindingsGroups>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListComplianceFindingsGroupsQueryResult = NonNullable<Awaited<ReturnType<typeof listComplianceFindingsGroups>>>
+export type ListComplianceFindingsGroupsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List enriched compliance findings grouped by rule, context, severity and operational category
+ */
+
+export function useListComplianceFindingsGroups<TData = Awaited<ReturnType<typeof listComplianceFindingsGroups>>, TError = ErrorType<unknown>>(
+ params?: ListComplianceFindingsGroupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listComplianceFindingsGroups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListComplianceFindingsGroupsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

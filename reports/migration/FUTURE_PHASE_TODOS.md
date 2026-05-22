@@ -343,6 +343,7 @@ ip community-filter ...
 - BGP separado por Cliente, Operadora, CDN, IX.
 - IPv4 e IPv6 identificados.
 - Botoes de prefixos recebidos e exportados aparecem.
+- Modal de prefixos pagina resultados reais em blocos de ate 200 itens, sem truncar a navegacao apos a primeira pagina.
 - Se ainda nao houver backend real, mostrar estado vazio amigavel.
 - Nenhum comando altera estado.
 - Design atual preservado.
@@ -595,6 +596,14 @@ Objetivo: migrar favicon/icone K3G do `60-bgp_manager` sem trocar layout, tema o
 - [ ] `BASE_PATH=/ PORT=5000 pnpm run build`.
 - [ ] `docker compose config`.
 - [ ] `docker build --pull --no-cache -t netops-manager-ci .`.
+
+## v0.2.8 Compliance findings grouping UI
+
+- [x] Consumir endpoint de grupos de findings no frontend.
+- [x] Alternar `/compliance` entre lista e grupos.
+- [x] Exibir cards de top criticos, top por quantidade, bloqueadores reais e riscos operacionais.
+- [x] Abrir drawer read-only com findings do grupo, objetos afetados e evidencias sanitizadas.
+- [x] Manter filtros por actionable, severity, context, operationalCategory, source e confidence.
 
 ## FASE 7 - Pre-check de servico
 

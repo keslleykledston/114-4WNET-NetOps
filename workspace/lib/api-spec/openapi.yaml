@@ -777,6 +777,10 @@ paths:
           in: query
           schema:
             type: string
+        - name: operationalCategory
+          in: query
+          schema:
+            type: string
         - name: deviceId
           in: query
           schema:
@@ -790,6 +794,50 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ComplianceFinding"
+
+  /compliance-findings-groups:
+    get:
+      operationId: listComplianceFindingsGroups
+      tags: [compliance-jobs]
+      summary: List enriched compliance findings grouped by rule, context, severity and operational category
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: context
+          in: query
+          schema:
+            type: string
+        - name: confidence
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: operationalCategory
+          in: query
+          schema:
+            type: string
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Finding groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ComplianceFindingGroup"
 
   /compliance-jobs/{id}:
     get:
@@ -3375,6 +3423,8 @@ components:
           type: array
           items:
             type: string
+        policyProfileName:
+          type: string
 
     ComplianceJobDetail:
       type: object
@@ -3455,6 +3505,8 @@ components:
           type: ["string", "null"]
         ruleName:
           type: ["string", "null"]
+        operationalCategory:
+          type: ["string", "null"]
         rawReference:
           type: ["string", "null"]
         metadataJson:
@@ -3465,6 +3517,35 @@ components:
           type: ["string", "null"]
         jobCreatedAt:
           type: ["string", "null"]
+
+    ComplianceFindingGroup:
+      type: object
+      required: [ruleId, severity, context, operationalCategory, count, sampleFindingIds, message]
+      properties:
+        ruleId:
+          type: string
+        ruleName:
+          type: ["string", "null"]
+        policyName:
+          type: ["string", "null"]
+        severity:
+          type: string
+        context:
+          type: string
+        operationalCategory:
+          type: string
+        count:
+          type: integer
+        sampleFindingIds:
+          type: array
+          items:
+            type: string
+        exampleFindingIds:
+          type: array
+          items:
+            type: string
+        message:
+          type: string
 
     ComplianceSummary:
       type: object

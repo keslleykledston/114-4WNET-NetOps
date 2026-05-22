@@ -992,6 +992,21 @@ export interface ComplianceJobDetail {
   findings: ComplianceFinding[];
 }
 
+export interface ComplianceFindingGroup {
+  ruleId: string;
+  /** @nullable */
+  ruleName?: string | null;
+  /** @nullable */
+  policyName?: string | null;
+  severity: string;
+  context: string;
+  operationalCategory: string;
+  count: number;
+  sampleFindingIds: string[];
+  exampleFindingIds?: string[];
+  message: string;
+}
+
 export interface ComplianceSummary {
   totalJobs: number;
   passed: number;
@@ -2079,6 +2094,17 @@ severity?: string;
 context?: string;
 confidence?: string;
 source?: string;
+operationalCategory?: string;
+deviceId?: number;
+};
+
+export type ListComplianceFindingsGroupsParams = {
+status?: string;
+severity?: string;
+context?: string;
+confidence?: string;
+source?: string;
+operationalCategory?: string;
 deviceId?: number;
 };
 

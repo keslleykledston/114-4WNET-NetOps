@@ -37,6 +37,11 @@ import { parseHuaweiRoutes } from ${JSON.stringify(pathToFileURL(path.join(rootD
 import { MAX_DISPLAY_ROUTES, buildRouteCommands, queryBgpRoutes } from ${JSON.stringify(pathToFileURL(path.join(rootDir, "workspace/artifacts/api-server/src/modules/netops/device-discovery/services/bgp-routes.service.ts")).href)};
 
 const fixture = ${JSON.stringify(fixture)};
+const manyRoutes = Array.from({ length: 450 }, (_, i) => {
+  const second = Math.floor(i / 256);
+  const third = i % 256;
+  return \`*> 10.\${second}.\${third}.0/24 192.0.2.1 0 100 0 65000 64512i\`;
+}).join("\\n");
 
 async function main() {
   assert.equal(MAX_DISPLAY_ROUTES, 200);
@@ -89,8 +94,52 @@ async function main() {
   assert.equal(second.items.length, 1);
   assert.equal(second.hasNextPage, false);
 
+  const manyFirst = await queryBgpRoutes(
+    device,
+    "10.20.1.5",
+    "C35-BGP-BVA-MNS",
+    "received",
+    null,
+    { receivedRoutes: 450, advertisedRoutes: 10 },
+    { limit: 200, page: 1 },
+    async () => manyRoutes,
+  );
+  assert.equal(manyFirst.total, 450);
+  assert.equal(manyFirst.items.length, 200);
+  assert.equal(manyFirst.hasNextPage, true);
+  assert.equal(manyFirst.items[0].prefix, "10.0.0.0/24");
+
+  const manyOffset = await queryBgpRoutes(
+    device,
+    "10.20.1.5",
+    "C35-BGP-BVA-MNS",
+    "received",
+    null,
+    { receivedRoutes: 450, advertisedRoutes: 10 },
+    { limit: 200, offset: 200 },
+    async () => manyRoutes,
+  );
+  assert.equal(manyOffset.page, 2);
+  assert.equal(manyOffset.items.length, 200);
+  assert.equal(manyOffset.hasPreviousPage, true);
+  assert.equal(manyOffset.hasNextPage, true);
+  assert.equal(manyOffset.items[0].prefix, "10.0.200.0/24");
+
+  const manyLast = await queryBgpRoutes(
+    device,
+    "10.20.1.5",
+    "C35-BGP-BVA-MNS",
+    "received",
+    null,
+    { receivedRoutes: 450, advertisedRoutes: 10 },
+    { limit: 200, page: 3 },
+    async () => manyRoutes,
+  );
+  assert.equal(manyLast.items.length, 50);
+  assert.equal(manyLast.hasNextPage, false);
+
   const after = await db.select().from(bgpRouteHistoryTable).where(eq(bgpRouteHistoryTable.deviceId, device.id));
-  assert.equal(after.length, before.length + 2);
+  assert.equal(after.length, before.length + 5);
 
   console.log("bgp-prefix-routes selftest passed");
 }

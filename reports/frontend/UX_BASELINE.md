@@ -62,3 +62,10 @@
 - Modal de peer mantem desenho escuro redesenhado e adiciona source/confidence/evidence curta.
 - Discovery panel mostra status persistido, fontes SSH/SNMP/cache, data do ultimo run e contadores de interfaces, peers, VRFs, L2VPN e policies.
 - Quando nao ha snapshot persistido, BGP mostra empty state pedindo discovery em vez de tentar interpretar CLI.
+
+## Baseline v0.2.8 compliance grouping
+
+- `/compliance` mantem layout atual, RBAC de execucao e fluxo read-only para findings.
+- Findings podem alternar entre lista detalhada e grupos agregados por regra/contexto/severidade/categoria.
+- Grupos usam cards compactos, tabela densa e drawer lateral; evidencias exibidas continuam sanitizadas e individuais.
+- Labels de categoria operacional devem aparecer em portugues, preservando os codigos no contrato de API.

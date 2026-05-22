@@ -27,6 +27,7 @@
 | Reports Markdown | PASS | `/api/reports` + download md | - |
 | Audit logs | PASS | `/api/audit-logs` + export | - |
 | Integrations readiness | PASS | `/api/integrations` | - |
+| Scheduler | PASS | `/api/scheduled-jobs` + `/scheduler` | - |
 | OpenAPI | PASS | `api-spec codegen` | - |
 | Orval | PASS | regenerated | - |
 | Build | PASS | `BASE_PATH=/ PORT=5000 pnpm -C workspace run build` | - |

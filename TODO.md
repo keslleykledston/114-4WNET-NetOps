@@ -8,3 +8,4 @@
 - Move `tools/device-discovery-selftest.mjs` checks into the formal test runner when one is added.
 - Wire compliance jobs to discovery confidence warnings.
 - Add password reset / disable user / session revoke UX for local RBAC.
+- Decide whether `cron_expression` becomes live in the next release or stays metadata only.

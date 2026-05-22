@@ -16,6 +16,9 @@
 | Provisioning approve | no | no | yes |
 | Integrations update | no | no | yes |
 | Users CRUD | no | no | yes |
+| Scheduler view | yes | yes | yes |
+| Scheduler run now | no | yes | yes |
+| Scheduler create / edit / delete | no | no | yes |
 | Audit / reports / integrations read | yes | yes | yes |
 | Apply real | no | no | no |
 | Rollback real | no | no | no |
@@ -25,4 +28,3 @@
 - backend is source of truth
 - frontend only hides buttons
 - security lives in API middleware
-

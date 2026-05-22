@@ -30,3 +30,10 @@
 - Added `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, and admin-only user management endpoints.
 - Added request authorization middleware and actor-aware audit logs.
 - Added frontend login/logout flow with protected routes.
+
+## v0.2.2 Scheduler
+
+- Added local scheduler for discovery, compliance, and health checks.
+- Added `scheduled_jobs`, `scheduled_job_runs`, and `scheduled_job_run_items`.
+- Added scheduler API, audit trail, and frontend `/scheduler` page.
+- Added OpenAPI/Orval coverage for scheduled jobs and runs.

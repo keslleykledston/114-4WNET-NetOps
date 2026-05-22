@@ -8,3 +8,4 @@
 - Formalize audit/report retention and export policies.
 - Keep provisioning apply locked behind an explicit safety flag until safe allowlisted apply steps are designed and tested.
 - Finish RBAC hardening: session expiry policy, password reset flow, and richer permission UI.
+- Expand scheduler support later with cron parser and richer run history filters.

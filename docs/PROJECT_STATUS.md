@@ -78,6 +78,21 @@
 - middleware backend protege rotas sensíveis
 - auditoria registra actor real quando autenticado
 
+### Scheduler local
+
+- jobs agendados em banco
+- tipos:
+  - discovery
+  - compliance
+  - health_check
+- alvo:
+  - device
+  - device_group
+  - all_devices
+- UI em `/scheduler`
+- execução tolerante a falhas por device
+- audit trail por run
+
 ### Coleta via SSH
 
 - coleta de configuração de dispositivo
@@ -196,6 +211,7 @@
 - índices faltantes aplicados no banco vivo
 - rebuild Docker estabilizado com `.dockerignore` enxuto e install PNPM por manifesto
 - RBAC local básico entregue com login, cookies seguros e proteção por role
+- scheduler local básico entregue com run-now e histórico
 
 ## Pendências
 
@@ -239,6 +255,7 @@
 - apply real continua bloqueado por padrão
 - NetBox permanece readiness-only, sem sync real
 - RBAC avançado, SSO e scheduler configurável seguem fora do escopo desta fase
+- RBAC avançado e SSO seguem fora do escopo desta fase
 - parser Huawei ainda precisa de cobertura adicional em cenários reais
 - hardening final adicionou fixtures formais para BGP verbose, route-policy, communities, interfaces, L2VPN e route query
 - relatório de aceite atualizado em `reports/MVP_ACCEPTANCE_VALIDATION.md`

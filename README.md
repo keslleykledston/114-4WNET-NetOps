@@ -19,6 +19,7 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 - RBAC local e auth: [docs/RBAC_MODEL.md](docs/RBAC_MODEL.md)
 - Setup local de auth: [docs/AUTH_LOCAL_SETUP.md](docs/AUTH_LOCAL_SETUP.md)
 - Permissões por role: [docs/USER_ROLES_PERMISSIONS.md](docs/USER_ROLES_PERMISSIONS.md)
+- Scheduler local: [docs/SCHEDULER_MODEL.md](docs/SCHEDULER_MODEL.md)
 
 ## Subir com Docker
 
@@ -39,6 +40,7 @@ Login local:
 - `ADMIN_PASSWORD` precisa existir para criar o admin inicial
 - `CONFIG_APPLY_ENABLED=false` continua bloqueando apply real
 - `DRY_RUN_DEFAULT=true` continua no modo seguro
+- scheduler aparece em `/scheduler`
 
 ## Parar
 

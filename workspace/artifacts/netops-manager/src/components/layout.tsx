@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   FileBarChart,
   PlugZap,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
@@ -33,6 +34,7 @@ const navItems = [
   { href: "/audit", icon: ShieldAlert, label: "Audit" },
   { href: "/reports", icon: FileBarChart, label: "Reports" },
   { href: "/integrations", icon: PlugZap, label: "Integrations" },
+  { href: "/scheduler", icon: CalendarClock, label: "Scheduler" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

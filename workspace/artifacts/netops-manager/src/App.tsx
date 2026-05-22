@@ -16,6 +16,7 @@ import Templates from "@/pages/templates";
 import Audit from "@/pages/audit";
 import Reports from "@/pages/reports";
 import Integrations from "@/pages/integrations";
+import Scheduler from "@/pages/scheduler";
 import Policies from "@/pages/policies";
 import ConfigCollection from "@/pages/config-collection";
 import SnmpHistory from "@/pages/snmp-history";
@@ -68,6 +69,7 @@ function Router() {
         <Route path="/audit" component={Audit} />
         <Route path="/reports" component={Reports} />
         <Route path="/integrations" component={Integrations} />
+        <Route path="/scheduler" component={Scheduler} />
         <Route path="/policies" component={Policies} />
         <Route path="/config-collection" component={ConfigCollection} />
         <Route path="/snmp-history" component={SnmpHistory} />

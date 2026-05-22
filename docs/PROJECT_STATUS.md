@@ -289,6 +289,35 @@
 
 ## Próximos Passos Recomendados
 
+### v0.3.0 — Gestão de usuários (PRÓXIMA FASE)
+
+1. Implementar tela `/users` com CRUD.
+2. Schema de permissões granulares por módulo.
+3. Reset de senha com token temporário.
+4. Session timeout e revoke manual.
+5. Audit log de ações de usuário.
+
+### v0.3.1 — Import/Export dispositivos
+
+1. Parser de CSV/XLSX com preview pré-aplicação.
+2. Validação de IP/hostname, deduplicação.
+3. Endpoint de export (sem secrets).
+4. Histórico de imports com auditoria.
+
+### v0.3.2 — Download/export compliance
+
+1. Botão download na UI compliance.
+2. Gerador de relatório (Markdown/JSON/CSV).
+3. Evidence sanitizada, summary de categorias.
+
+### v0.3.3 — Pilot operacional NOC
+
+1. Validação com operadores reais.
+2. Feedback de UX, performance, operabilidade.
+3. Dashboard de uptime e alerts críticos.
+
+### Fases Futuras (v0.2.9+ contínuo)
+
 1. FASE 4.1: migrar favicon/icone K3G do `60-bgp_manager`.
 2. FASE 5: habilitar coleta SNMP/SSH real controlada read-only atras de flag/config.
 3. Validar histórico SNMP com snapshots reais do ambiente.

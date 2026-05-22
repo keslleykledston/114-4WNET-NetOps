@@ -1,5 +1,36 @@
 # Changelog
 
+## v0.3.0 Planned — Gestão de usuários e autorizações
+
+- Tela `/users` com CRUD de usuários.
+- Permissões granulares por módulo.
+- Reset de senha com token temporário.
+- Session timeout configurável.
+- Session revoke manual.
+- Audit log de ações de usuário.
+
+## v0.3.1 Planned — Import/Export de dispositivos
+
+- Import CSV/XLSX/TXT com preview pré-aplicação.
+- Validação e deduplicação de IP/hostname.
+- Proteção de credenciais no import.
+- Export CSV/XLSX/JSON sem secrets.
+- Histórico de imports com audit trail.
+
+## v0.3.2 Planned — Download/export de relatórios
+
+- Download compliance por job (Markdown/JSON/CSV).
+- Filtros aplicados ao export.
+- Evidence sanitizada.
+- Summary de severidade e categoria.
+
+## v0.3.3 Planned — Pilot operacional NOC
+
+- Validação com operadores reais.
+- Feedback de UX e performance.
+- Dashboard de uptime.
+- Alerts em tempo real para críticos.
+
 ## v0.2.4 Compliance Profundo
 
 - Added structured compliance engine based on persisted `discovery_snapshot`.

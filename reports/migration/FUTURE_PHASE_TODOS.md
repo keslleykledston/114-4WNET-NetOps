@@ -173,6 +173,229 @@ POST /policy-editor/preview (no execute)
 
 ---
 
+# v0.3.0 — Gestão de usuários e autorizações
+
+## Objetivo
+Implementar tela de gestão de usuários com CRUD, reset de senha, permissões granulares e sessão aprimorada.
+
+## Scope
+
+### Tela `/users` (Admin-only)
+- Listagem com nome, email, role, criação, último acesso, status
+- Botões: Editar, Desabilitar, Reset senha
+- Criação via form modal
+
+### CRUD de Usuários
+- Criar: nome, email, role, salvar senha (hash bcrypt)
+- Editar: nome, role (email imutável por segurança)
+- Desabilitar: soft delete, preserve audit trail
+- Reabilitar: admin only
+
+### Reset de Senha
+- Token temporário (validade 1 hora)
+- Email de reset com link
+- Nova senha sem enviar plaintext
+- Audit log: quem resetou, quando
+
+### Permissões Granulares
+- Schema: module (devices, compliance, scheduler, reports, users) × action (view, create, edit, delete, execute)
+- Associadas a role ou usuário específico
+- Override: usuário pode ter permissão > role
+- Audit: mudanças de permissão registradas
+
+### Session Hardening
+- Timeout: 24h (padrão), configurável
+- Session revoke manual por admin
+- Session list: show active sessions, kill button
+- Audit trail: login, logout, timeout, revoke
+
+## Tabelas Novas
+```sql
+-- ja existentes:
+users, user_sessions
+
+-- novos:
+user_permissions (user_id, module, action, granted_at, granted_by)
+user_sessions_revoked (session_id, revoked_at, revoked_by, reason)
+```
+
+## Endpoints Novos
+```
+GET /api/users (admin-only)
+POST /api/users (admin-only)
+PUT /api/users/:id (admin-only)
+DELETE /api/users/:id (soft delete, admin-only)
+POST /api/users/:id/reset-password (admin-only)
+GET /api/auth/me/sessions
+DELETE /api/auth/sessions/:id (revoke)
+GET /api/auth/me/permissions
+```
+
+## UI
+- Tela clean com tabela, filtros por role/status
+- Form modal para CRUD
+- Confirmação para desabilitar/reset
+- Dark mode preservado
+
+## Validação
+- `pnpm run typecheck`
+- `BASE_PATH=/ PORT=5000 pnpm run build`
+- `docker compose up -d --build`
+- Testar login após reset password
+- Testar session revoke
+
+---
+
+# v0.3.1 — Import/Export de dispositivos
+
+## Objetivo
+Importar lotes de dispositivos (CSV/XLSX/TXT) com preview, deduplicação e validação.
+
+## Scope
+
+### Import
+- Formatos: CSV, XLSX, TXT (um IP/hostname por linha)
+- Campos: hostname, ip, vendor, platform, site, role, ssh_port, ssh_user
+- Validação: IP válido, hostname único, vendor suportado
+- Deduplicação: por hostname e/ou IP
+- Preview: mostrar antes de aplicar, allow/skip conflicts
+- Não sobrescrever credenciais existentes
+- Preservar tags, metadata
+
+### Export
+- Formato: CSV, XLSX, JSON
+- Seleção: todos ou filtered (por site, vendor, status)
+- Campos: hostname, ip, vendor, platform, site, role, ssh_port, status, last_seen, created_at
+- Sem secrets: ssh_password, snmp_community não exportados
+- JSON: estrutura completa com metadata
+
+### Histórico
+- Rastrear imports: arquivo, usuário, timestamp, contagem
+- Auditoria: antes/depois de cambios
+- Rollback simples: desfazer import anterior
+
+## Tabelas Novas
+```sql
+device_imports (id, imported_by, file_name, format, total_count, success_count, error_count, imported_at, rollback_at)
+device_import_items (import_id, device_id, action, error_message)
+```
+
+## Endpoints Novos
+```
+POST /api/devices/import/preview (file, return: list + conflicts)
+POST /api/devices/import/apply (import_id, confirm: bool)
+GET /api/devices/export (format: csv|xlsx|json, filter?: {site, vendor, status})
+GET /api/device-imports (list)
+POST /api/device-imports/:id/rollback
+```
+
+## UI
+- Botão Upload na tela de dispositivos
+- Form modal: choose file, select format, preview conflicts
+- Export: menu button na listagem, checkboxes para multi-select
+
+---
+
+# v0.3.2 — Download/export de relatórios de compliance
+
+## Objetivo
+Permitir download de relatórios de compliance com filtros aplicados e evidence sanitizada.
+
+## Scope
+
+### Download Compliance
+- Filtro: por job, device, severidade, categoria, status
+- Formatos: Markdown, JSON, CSV
+- Campos: finding_id, object, severity, category, status, recommendation, evidence (sanitized)
+- Include: timestamp, job info, device info, contagem
+
+### Evidence Sanitização
+- Remover payloads brutos > 1KB
+- Sanitizar IPs/ASNs públicos apenas
+- Mask: secrets, passwords, internal IPs
+- Keep: summarized evidence (e.g., "3 security issues found")
+
+### Relatório Markdown
+```markdown
+# Compliance Report — Device X, Job Y
+
+**Generated:** 2026-05-22  
+**Job:** job_id  
+**Device:** hostname  
+**Filter:** Actionable, Severity > warning  
+**Total findings:** 42  
+
+## Summary
+- Critical: 3 (BLOCKER_REAL)
+- High: 8 (RISCO_OPERACIONAL)
+- Medium: 15 (PADRONIZACAO)
+- Low: 16 (CUSTOMIZACAO)
+
+## Findings
+
+### [BLOCKER_REAL] BGP Security Issue — AS-PATH Filtering
+**Object:** peer 1.2.3.4  
+**Status:** Open  
+**Recommendation:** Enable AS-PATH filtering  
+**Evidence:** No prefix-list configured
+
+---
+```
+
+## Endpoints Novos
+```
+GET /api/compliance/export?job_id=X&format=markdown|json|csv&filter={...}
+GET /api/compliance/jobs/:id/export
+POST /api/compliance/findings/:id/export
+```
+
+## UI
+- Botão Download na tabela/painel compliance
+- Menu: export as markdown/json/csv
+- Preview antes de download
+
+---
+
+# v0.3.3 — Pilot operacional NOC
+
+## Objetivo
+Validar plataforma com operadores reais em NOC e coletar feedback de UX/performance.
+
+## Scope
+
+### Validação Operacional
+- Teste com 3-5 operadores reais por 1-2 semanas
+- Feedback: UX, densidade visual, performance, confiança
+- Métricas: tempo de resposta, uptime, alerts SLA
+
+### Melhorias Coletadas
+- Ajustes dark mode (contraste, legibilidade)
+- Tabelas mais compactas se necessário
+- Filtros frequentes persisted
+- Keyboard shortcuts para ações rápidas
+
+### Dashboard de Uptime
+- Widget mostrando status de devices (últimas 24h)
+- Alerts em tempo real para findings críticos
+- Notificações push para failures
+
+### Alerts Críticos
+- Findings BLOCKER_REAL disparam notificação
+- Email para on-call
+- Integração com webhook (Slack, PagerDuty)
+
+## Dados Coletados
+- Log de ações de operador
+- Query count/latency
+- Error rate
+- Feature usage (qual painel, quantas vezes)
+
+## Relatório
+- `reports/V0_3_3_PILOT_NOC_REPORT.md`
+- Findings, recommendations, next steps
+
+---
+
 # BGP Operational Abstractions — vindo do 60-bgp_manager
 
 Nas proximas fases, abstrair do projeto 60-bgp_manager as funcionalidades operacionais de BGP, mantendo o design atual do 114-4WNET-NetOps.

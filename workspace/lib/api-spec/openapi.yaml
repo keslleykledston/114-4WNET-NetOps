@@ -781,6 +781,15 @@ paths:
           in: query
           schema:
             type: string
+        - name: latestJobOnly
+          in: query
+          schema:
+            type: boolean
+        - name: freshness
+          in: query
+          schema:
+            type: string
+            enum: [current, stale, legacy, superseded, all]
         - name: deviceId
           in: query
           schema:
@@ -794,6 +803,19 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ComplianceFinding"
+
+  /compliance-findings-freshness-summary:
+    get:
+      operationId: getComplianceFindingsFreshnessSummary
+      tags: [compliance-jobs]
+      summary: Summarize current, stale, legacy and superseded compliance findings
+      responses:
+        "200":
+          description: Findings freshness summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComplianceFindingsFreshnessSummary"
 
   /compliance-findings-groups:
     get:
@@ -825,6 +847,15 @@ paths:
           in: query
           schema:
             type: string
+        - name: latestJobOnly
+          in: query
+          schema:
+            type: boolean
+        - name: freshness
+          in: query
+          schema:
+            type: string
+            enum: [current, stale, legacy, superseded, all]
         - name: deviceId
           in: query
           schema:
@@ -3005,6 +3036,13 @@ components:
           type: ["integer", "null"]
         cachedFromPersistedSnapshot:
           type: boolean
+        parserVersion:
+          type: string
+        parserVersions:
+          type: object
+          properties:
+            interface:
+              type: string
         sourcesUsed:
           type: array
           items:
@@ -3517,6 +3555,17 @@ components:
           type: ["string", "null"]
         jobCreatedAt:
           type: ["string", "null"]
+        freshness:
+          type: string
+          enum: [current, stale, legacy, superseded]
+        isLatestJobForDevice:
+          type: boolean
+        complianceEngineVersion:
+          type: ["string", "null"]
+        parserVersion:
+          type: ["string", "null"]
+        interfaceParserVersion:
+          type: ["string", "null"]
 
     ComplianceFindingGroup:
       type: object
@@ -3545,6 +3594,48 @@ components:
           items:
             type: string
         message:
+          type: string
+
+    ComplianceLatestJobSummary:
+      type: object
+      required: [id, deviceId, status, createdAt, completedAt]
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        deviceHostname:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+
+    ComplianceFindingsFreshnessSummary:
+      type: object
+      required: [current, stale, legacy, superseded, totalFindings, latestJobs, currentComplianceEngineVersion, currentParserVersion, currentInterfaceParserVersion]
+      properties:
+        current:
+          type: integer
+        stale:
+          type: integer
+        legacy:
+          type: integer
+        superseded:
+          type: integer
+        totalFindings:
+          type: integer
+        latestJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplianceLatestJobSummary"
+        currentComplianceEngineVersion:
+          type: string
+        currentParserVersion:
+          type: string
+        currentInterfaceParserVersion:
           type: string
 
     ComplianceSummary:

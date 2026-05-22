@@ -19,6 +19,7 @@ import { runInterfaceChecks } from "./checks/interface-checks.js";
 import { runL2vpnChecks } from "./checks/l2vpn-checks.js";
 import { runSecurityChecks } from "./checks/security-checks.js";
 import { runVrfChecks } from "./checks/vrf-checks.js";
+import { COMPLIANCE_ENGINE_VERSION, COMPLIANCE_PARSER_VERSION, INTERFACE_PARSER_VERSION } from "../netops/versioning.js";
 
 const DEFAULT_POLICIES: Array<Pick<CompliancePolicy, "name" | "description" | "context" | "severity" | "ruleType" | "rulePattern" | "vendor" | "enabled">> = [
   { name: "Discovery snapshot disponível", description: "Snapshot estruturado existe para compliance.", context: "security", severity: "warning", ruleType: "structured", rulePattern: "structured-snapshot-present", vendor: "huawei", enabled: true },
@@ -325,7 +326,14 @@ export async function executeComplianceJob(jobId: number) {
         ruleName: finding.policyName,
         rawReference: finding.rawReference === undefined ? compactReference(finding.evidence) : compactReference(finding.rawReference),
         operationalCategory,
-        metadataJson: finding.metadata ?? {},
+        metadataJson: {
+          ...(finding.metadata ?? {}),
+          complianceEngineVersion: COMPLIANCE_ENGINE_VERSION,
+          parserVersion: COMPLIANCE_PARSER_VERSION,
+          parserVersions: {
+            interface: INTERFACE_PARSER_VERSION,
+          },
+        },
       };
     });
     await db.insert(complianceFindingsTable).values(rows);

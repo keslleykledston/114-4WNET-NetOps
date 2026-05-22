@@ -21,8 +21,53 @@ import {
 } from "@workspace/api-zod";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 import { executeComplianceJob } from "../modules/compliance/compliance-engine.js";
+import { COMPLIANCE_ENGINE_VERSION, COMPLIANCE_PARSER_VERSION, INTERFACE_PARSER_VERSION } from "../modules/netops/versioning.js";
 
 const router = Router();
+type FindingFreshness = "current" | "stale" | "legacy" | "superseded";
+
+function isTruthyQuery(value: unknown): boolean {
+  return value === true || value === "true" || value === "1" || value === "yes";
+}
+
+function freshnessQuery(value: unknown): FindingFreshness | "all" {
+  return value === "current" || value === "stale" || value === "legacy" || value === "superseded" || value === "all"
+    ? value
+    : "all";
+}
+
+function metadataRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function latestJobMap(jobs: Array<{ id: number; deviceId: number; createdAt: Date }>) {
+  const latest = new Map<number, { id: number; createdAt: Date }>();
+  for (const job of jobs) {
+    const current = latest.get(job.deviceId);
+    if (!current || job.createdAt > current.createdAt || (job.createdAt.getTime() === current.createdAt.getTime() && job.id > current.id)) {
+      latest.set(job.deviceId, { id: job.id, createdAt: job.createdAt });
+    }
+  }
+  return latest;
+}
+
+function findingFreshness(row: { jobId: number; deviceId: number | null; metadataJson: unknown }, latestByDevice: Map<number, { id: number }>): FindingFreshness {
+  const metadata = metadataRecord(row.metadataJson);
+  if (!metadata.complianceEngineVersion || !metadata.parserVersion) return "legacy";
+  if (metadata.complianceEngineVersion !== COMPLIANCE_ENGINE_VERSION || metadata.parserVersion !== COMPLIANCE_PARSER_VERSION) return "stale";
+  if (row.deviceId && latestByDevice.get(row.deviceId)?.id !== row.jobId) return "superseded";
+  return "current";
+}
+
+function versionFields(metadataJson: unknown) {
+  const metadata = metadataRecord(metadataJson);
+  const parserVersions = metadataRecord(metadata.parserVersions);
+  return {
+    complianceEngineVersion: typeof metadata.complianceEngineVersion === "string" ? metadata.complianceEngineVersion : null,
+    parserVersion: typeof metadata.parserVersion === "string" ? metadata.parserVersion : null,
+    interfaceParserVersion: typeof parserVersions.interface === "string" ? parserVersions.interface : null,
+  };
+}
 
 // ── POLICY PROFILES HANDLERS ────────────────────────────────────────────────
 
@@ -355,6 +400,15 @@ router.post("/compliance/jobs/:id/execute", executeJobHandler);
 // ── FINDINGS ────────────────────────────────────────────────────────────────
 
 router.get("/compliance-findings", async (req, res) => {
+  const jobs = await db.select({
+    id: complianceJobsTable.id,
+    deviceId: complianceJobsTable.deviceId,
+    createdAt: complianceJobsTable.createdAt,
+  }).from(complianceJobsTable);
+  const latestByDevice = latestJobMap(jobs);
+  const selectedFreshness = freshnessQuery(req.query.freshness);
+  const latestOnly = isTruthyQuery(req.query.latestJobOnly);
+
   const rows = await db.select({
     id: complianceFindingsTable.id,
     jobId: complianceFindingsTable.jobId,
@@ -390,6 +444,9 @@ router.get("/compliance-findings", async (req, res) => {
     .limit(500);
 
   const filtered = rows.filter((row) => {
+    const freshness = findingFreshness(row, latestByDevice);
+    if (latestOnly && (!row.deviceId || latestByDevice.get(row.deviceId)?.id !== row.jobId)) return false;
+    if (selectedFreshness !== "all" && freshness !== selectedFreshness) return false;
     if (req.query.status && (row.status ?? row.result) !== String(req.query.status)) return false;
     if (req.query.severity && row.severity !== String(req.query.severity)) return false;
     if (req.query.context && row.context !== String(req.query.context)) return false;
@@ -402,6 +459,9 @@ router.get("/compliance-findings", async (req, res) => {
 
   res.json(filtered.map((row) => ({
     ...row,
+    ...versionFields(row.metadataJson),
+    freshness: findingFreshness(row, latestByDevice),
+    isLatestJobForDevice: row.deviceId ? latestByDevice.get(row.deviceId)?.id === row.jobId : false,
     status: row.status ?? row.result,
     message: row.message ?? row.detail,
     jobCreatedAt: row.jobCreatedAt?.toISOString() ?? null,
@@ -445,9 +505,68 @@ async function buildJobDetail(id: number) {
   };
 }
 
+router.get("/compliance-findings-freshness-summary", async (_req, res) => {
+  const jobs = await db.select({
+    id: complianceJobsTable.id,
+    deviceId: complianceJobsTable.deviceId,
+    deviceHostname: devicesTable.hostname,
+    status: complianceJobsTable.status,
+    createdAt: complianceJobsTable.createdAt,
+    completedAt: complianceJobsTable.completedAt,
+  })
+    .from(complianceJobsTable)
+    .leftJoin(devicesTable, eq(complianceJobsTable.deviceId, devicesTable.id));
+  const latestByDevice = latestJobMap(jobs.map((job) => ({ id: job.id, deviceId: job.deviceId, createdAt: job.createdAt })));
+  const latestJobs = jobs
+    .filter((job) => latestByDevice.get(job.deviceId)?.id === job.id)
+    .sort((a, b) => a.deviceHostname?.localeCompare(b.deviceHostname ?? "") ?? 0)
+    .map((job) => ({
+      id: job.id,
+      deviceId: job.deviceId,
+      deviceHostname: job.deviceHostname,
+      status: job.status,
+      createdAt: job.createdAt.toISOString(),
+      completedAt: job.completedAt?.toISOString() ?? null,
+    }));
+
+  const findings = await db.select({
+    jobId: complianceFindingsTable.jobId,
+    metadataJson: complianceFindingsTable.metadataJson,
+    deviceId: complianceJobsTable.deviceId,
+  })
+    .from(complianceFindingsTable)
+    .leftJoin(complianceJobsTable, eq(complianceFindingsTable.jobId, complianceJobsTable.id))
+    .limit(5000);
+
+  const counts = { current: 0, stale: 0, legacy: 0, superseded: 0 };
+  for (const finding of findings) {
+    const freshness = findingFreshness(finding, latestByDevice);
+    counts[freshness] += 1;
+  }
+
+  res.json({
+    ...counts,
+    totalFindings: findings.length,
+    latestJobs,
+    currentComplianceEngineVersion: COMPLIANCE_ENGINE_VERSION,
+    currentParserVersion: COMPLIANCE_PARSER_VERSION,
+    currentInterfaceParserVersion: INTERFACE_PARSER_VERSION,
+  });
+});
+
 router.get("/compliance-findings-groups", async (req, res) => {
+  const jobs = await db.select({
+    id: complianceJobsTable.id,
+    deviceId: complianceJobsTable.deviceId,
+    createdAt: complianceJobsTable.createdAt,
+  }).from(complianceJobsTable);
+  const latestByDevice = latestJobMap(jobs);
+  const selectedFreshness = freshnessQuery(req.query.freshness);
+  const latestOnly = isTruthyQuery(req.query.latestJobOnly);
+
   const rows = await db.select({
     id: complianceFindingsTable.id,
+    jobId: complianceFindingsTable.jobId,
     policyName: complianceFindingsTable.policyName,
     severity: complianceFindingsTable.severity,
     context: complianceFindingsTable.context,
@@ -460,6 +579,7 @@ router.get("/compliance-findings-groups", async (req, res) => {
     ruleId: complianceFindingsTable.ruleId,
     ruleName: complianceFindingsTable.ruleName,
     operationalCategory: complianceFindingsTable.operationalCategory,
+    metadataJson: complianceFindingsTable.metadataJson,
     deviceId: complianceJobsTable.deviceId,
   })
     .from(complianceFindingsTable)
@@ -468,6 +588,9 @@ router.get("/compliance-findings-groups", async (req, res) => {
     .limit(500);
 
   const filtered = rows.filter((row) => {
+    const freshness = findingFreshness(row, latestByDevice);
+    if (latestOnly && (!row.deviceId || latestByDevice.get(row.deviceId)?.id !== row.jobId)) return false;
+    if (selectedFreshness !== "all" && freshness !== selectedFreshness) return false;
     if (req.query.status && (row.status ?? row.result) !== String(req.query.status)) return false;
     if (req.query.severity && row.severity !== String(req.query.severity)) return false;
     if (req.query.context && row.context !== String(req.query.context)) return false;

@@ -634,6 +634,10 @@ export interface BgpPeerDetails {
   evidence: DiscoveryEvidenceSummary[];
 }
 
+export type DeviceDiscoverySnapshotParserVersions = {
+  interface?: string;
+};
+
 export interface DeviceDiscoverySnapshot {
   deviceId: number;
   discoveryRunId: string;
@@ -646,6 +650,8 @@ export interface DeviceDiscoverySnapshot {
   /** @nullable */
   persistedSnapshotId?: number | null;
   cachedFromPersistedSnapshot?: boolean;
+  parserVersion?: string;
+  parserVersions?: DeviceDiscoverySnapshotParserVersions;
   sourcesUsed: DiscoverySource[];
   interfaces: InterfaceSummary[];
   bgpPeers: BgpPeerSummary[];
@@ -921,6 +927,16 @@ export interface ComplianceJobInput {
   policyProfileName?: string;
 }
 
+export type ComplianceFindingFreshness = typeof ComplianceFindingFreshness[keyof typeof ComplianceFindingFreshness];
+
+
+export const ComplianceFindingFreshness = {
+  current: 'current',
+  stale: 'stale',
+  legacy: 'legacy',
+  superseded: 'superseded',
+} as const;
+
 export type ComplianceFindingMetadataJson = { [key: string]: unknown };
 
 export interface ComplianceFinding {
@@ -971,6 +987,14 @@ export interface ComplianceFinding {
   deviceHostname?: string | null;
   /** @nullable */
   jobCreatedAt?: string | null;
+  freshness?: ComplianceFindingFreshness;
+  isLatestJobForDevice?: boolean;
+  /** @nullable */
+  complianceEngineVersion?: string | null;
+  /** @nullable */
+  parserVersion?: string | null;
+  /** @nullable */
+  interfaceParserVersion?: string | null;
 }
 
 export interface ComplianceJobDetail {
@@ -1005,6 +1029,29 @@ export interface ComplianceFindingGroup {
   sampleFindingIds: string[];
   exampleFindingIds?: string[];
   message: string;
+}
+
+export interface ComplianceLatestJobSummary {
+  id: number;
+  deviceId: number;
+  /** @nullable */
+  deviceHostname?: string | null;
+  status: string;
+  createdAt: string;
+  /** @nullable */
+  completedAt: string | null;
+}
+
+export interface ComplianceFindingsFreshnessSummary {
+  current: number;
+  stale: number;
+  legacy: number;
+  superseded: number;
+  totalFindings: number;
+  latestJobs: ComplianceLatestJobSummary[];
+  currentComplianceEngineVersion: string;
+  currentParserVersion: string;
+  currentInterfaceParserVersion: string;
 }
 
 export interface ComplianceSummary {
@@ -2095,8 +2142,21 @@ context?: string;
 confidence?: string;
 source?: string;
 operationalCategory?: string;
+latestJobOnly?: boolean;
+freshness?: ListComplianceFindingsFreshness;
 deviceId?: number;
 };
+
+export type ListComplianceFindingsFreshness = typeof ListComplianceFindingsFreshness[keyof typeof ListComplianceFindingsFreshness];
+
+
+export const ListComplianceFindingsFreshness = {
+  current: 'current',
+  stale: 'stale',
+  legacy: 'legacy',
+  superseded: 'superseded',
+  all: 'all',
+} as const;
 
 export type ListComplianceFindingsGroupsParams = {
 status?: string;
@@ -2105,8 +2165,21 @@ context?: string;
 confidence?: string;
 source?: string;
 operationalCategory?: string;
+latestJobOnly?: boolean;
+freshness?: ListComplianceFindingsGroupsFreshness;
 deviceId?: number;
 };
+
+export type ListComplianceFindingsGroupsFreshness = typeof ListComplianceFindingsGroupsFreshness[keyof typeof ListComplianceFindingsGroupsFreshness];
+
+
+export const ListComplianceFindingsGroupsFreshness = {
+  current: 'current',
+  stale: 'stale',
+  legacy: 'legacy',
+  superseded: 'superseded',
+  all: 'all',
+} as const;
 
 export type ListConfigTemplatesParams = {
 type?: string;

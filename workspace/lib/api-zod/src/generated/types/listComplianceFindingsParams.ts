@@ -5,6 +5,7 @@
  * NetOps Manager API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListComplianceFindingsFreshness } from './listComplianceFindingsFreshness';
 
 export type ListComplianceFindingsParams = {
 status?: string;
@@ -13,5 +14,7 @@ context?: string;
 confidence?: string;
 source?: string;
 operationalCategory?: string;
+latestJobOnly?: boolean;
+freshness?: ListComplianceFindingsFreshness;
 deviceId?: number;
 };

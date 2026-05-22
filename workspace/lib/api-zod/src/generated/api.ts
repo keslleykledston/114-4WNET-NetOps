@@ -845,6 +845,8 @@ export const ListComplianceFindingsQueryParams = zod.object({
   "confidence": zod.coerce.string().optional(),
   "source": zod.coerce.string().optional(),
   "operationalCategory": zod.coerce.string().optional(),
+  "latestJobOnly": zod.coerce.boolean().optional(),
+  "freshness": zod.enum(['current', 'stale', 'legacy', 'superseded', 'all']).optional(),
   "deviceId": zod.coerce.number().optional()
 })
 
@@ -876,9 +878,37 @@ export const ListComplianceFindingsResponseItem = zod.object({
 }).passthrough().optional(),
   "deviceId": zod.number().nullish(),
   "deviceHostname": zod.string().nullish(),
-  "jobCreatedAt": zod.string().nullish()
+  "jobCreatedAt": zod.string().nullish(),
+  "freshness": zod.enum(['current', 'stale', 'legacy', 'superseded']).optional(),
+  "isLatestJobForDevice": zod.boolean().optional(),
+  "complianceEngineVersion": zod.string().nullish(),
+  "parserVersion": zod.string().nullish(),
+  "interfaceParserVersion": zod.string().nullish()
 })
 export const ListComplianceFindingsResponse = zod.array(ListComplianceFindingsResponseItem)
+
+
+/**
+ * @summary Summarize current, stale, legacy and superseded compliance findings
+ */
+export const GetComplianceFindingsFreshnessSummaryResponse = zod.object({
+  "current": zod.number(),
+  "stale": zod.number(),
+  "legacy": zod.number(),
+  "superseded": zod.number(),
+  "totalFindings": zod.number(),
+  "latestJobs": zod.array(zod.object({
+  "id": zod.number(),
+  "deviceId": zod.number(),
+  "deviceHostname": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})),
+  "currentComplianceEngineVersion": zod.string(),
+  "currentParserVersion": zod.string(),
+  "currentInterfaceParserVersion": zod.string()
+})
 
 
 /**
@@ -891,6 +921,8 @@ export const ListComplianceFindingsGroupsQueryParams = zod.object({
   "confidence": zod.coerce.string().optional(),
   "source": zod.coerce.string().optional(),
   "operationalCategory": zod.coerce.string().optional(),
+  "latestJobOnly": zod.coerce.boolean().optional(),
+  "freshness": zod.enum(['current', 'stale', 'legacy', 'superseded', 'all']).optional(),
   "deviceId": zod.coerce.number().optional()
 })
 
@@ -956,7 +988,12 @@ export const GetComplianceJobResponse = zod.object({
 }).passthrough().optional(),
   "deviceId": zod.number().nullish(),
   "deviceHostname": zod.string().nullish(),
-  "jobCreatedAt": zod.string().nullish()
+  "jobCreatedAt": zod.string().nullish(),
+  "freshness": zod.enum(['current', 'stale', 'legacy', 'superseded']).optional(),
+  "isLatestJobForDevice": zod.boolean().optional(),
+  "complianceEngineVersion": zod.string().nullish(),
+  "parserVersion": zod.string().nullish(),
+  "interfaceParserVersion": zod.string().nullish()
 }))
 })
 
@@ -1008,7 +1045,12 @@ export const ExecuteComplianceJobResponse = zod.object({
 }).passthrough().optional(),
   "deviceId": zod.number().nullish(),
   "deviceHostname": zod.string().nullish(),
-  "jobCreatedAt": zod.string().nullish()
+  "jobCreatedAt": zod.string().nullish(),
+  "freshness": zod.enum(['current', 'stale', 'legacy', 'superseded']).optional(),
+  "isLatestJobForDevice": zod.boolean().optional(),
+  "complianceEngineVersion": zod.string().nullish(),
+  "parserVersion": zod.string().nullish(),
+  "interfaceParserVersion": zod.string().nullish()
 }))
 })
 
@@ -1792,6 +1834,10 @@ export const GetDeviceDiscoverySnapshotResponse = zod.union([zod.object({
   "persistedRunId": zod.number().optional(),
   "persistedSnapshotId": zod.number().nullish(),
   "cachedFromPersistedSnapshot": zod.boolean().optional(),
+  "parserVersion": zod.string().optional(),
+  "parserVersions": zod.object({
+  "interface": zod.string().optional()
+}).optional(),
   "sourcesUsed": zod.array(zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox'])),
   "interfaces": zod.array(zod.object({
   "name": zod.string(),

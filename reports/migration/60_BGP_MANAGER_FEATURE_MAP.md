@@ -89,3 +89,10 @@
 - UI alterna entre lista de findings e grupos de findings.
 - Cards de agrupamento destacam top criticos, top por quantidade, bloqueadores reais e riscos operacionais.
 - Drawer de grupo mostra findings associados, objetos afetados e evidencias sanitizadas.
+
+## Compliance freshness v0.2.9
+
+- Findings novos carregam `complianceEngineVersion`, `parserVersion` e `parserVersions.interface` em metadata.
+- `/api/compliance-findings` e `/api/compliance-findings-groups` aceitam `latestJobOnly` e `freshness`.
+- `/api/compliance-findings-freshness-summary` separa current, stale, legacy e superseded.
+- `/compliance` oculta historico por padrao e mostra toggle explicito para incluir findings antigos.

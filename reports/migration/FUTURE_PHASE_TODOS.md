@@ -605,6 +605,14 @@ Objetivo: migrar favicon/icone K3G do `60-bgp_manager` sem trocar layout, tema o
 - [x] Abrir drawer read-only com findings do grupo, objetos afetados e evidencias sanitizadas.
 - [x] Manter filtros por actionable, severity, context, operationalCategory, source e confidence.
 
+## v0.2.9 Stale findings handling
+
+- [x] Classificar findings como current, stale, legacy ou superseded.
+- [x] Adicionar filtros `latestJobOnly` e `freshness` na API.
+- [x] Expor summary de freshness e ultimo job por device.
+- [x] Fazer `/compliance` mostrar somente ultimo job por device por padrao.
+- [x] Manter historico acessivel por toggle sem apagar evidencias antigas.
+
 ## FASE 7 - Pre-check de servico
 
 - [ ] Validar conectividade e permissao read-only.

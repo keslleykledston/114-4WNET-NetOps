@@ -5,6 +5,7 @@
  * NetOps Manager API
  * OpenAPI spec version: 0.1.0
  */
+import type { ComplianceFindingFreshness } from './complianceFindingFreshness';
 import type { ComplianceFindingMetadataJson } from './complianceFindingMetadataJson';
 
 export interface ComplianceFinding {
@@ -55,4 +56,12 @@ export interface ComplianceFinding {
   deviceHostname?: string | null;
   /** @nullable */
   jobCreatedAt?: string | null;
+  freshness?: ComplianceFindingFreshness;
+  isLatestJobForDevice?: boolean;
+  /** @nullable */
+  complianceEngineVersion?: string | null;
+  /** @nullable */
+  parserVersion?: string | null;
+  /** @nullable */
+  interfaceParserVersion?: string | null;
 }

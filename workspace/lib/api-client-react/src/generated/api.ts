@@ -35,6 +35,7 @@ import type {
   CommunitySet,
   ComplianceFinding,
   ComplianceFindingGroup,
+  ComplianceFindingsFreshnessSummary,
   ComplianceJob,
   ComplianceJobDetail,
   ComplianceJobInput,
@@ -3169,6 +3170,83 @@ export function useListComplianceFindings<TData = Awaited<ReturnType<typeof list
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListComplianceFindingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetComplianceFindingsFreshnessSummaryUrl = () => {
+
+
+
+
+  return `/api/compliance-findings-freshness-summary`
+}
+
+/**
+ * @summary Summarize current, stale, legacy and superseded compliance findings
+ */
+export const getComplianceFindingsFreshnessSummary = async ( options?: RequestInit): Promise<ComplianceFindingsFreshnessSummary> => {
+
+  return customFetch<ComplianceFindingsFreshnessSummary>(getGetComplianceFindingsFreshnessSummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetComplianceFindingsFreshnessSummaryQueryKey = () => {
+    return [
+    `/api/compliance-findings-freshness-summary`
+    ] as const;
+    }
+
+
+export const getGetComplianceFindingsFreshnessSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getComplianceFindingsFreshnessSummary>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getComplianceFindingsFreshnessSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetComplianceFindingsFreshnessSummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getComplianceFindingsFreshnessSummary>>> = ({ signal }) => getComplianceFindingsFreshnessSummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getComplianceFindingsFreshnessSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetComplianceFindingsFreshnessSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getComplianceFindingsFreshnessSummary>>>
+export type GetComplianceFindingsFreshnessSummaryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Summarize current, stale, legacy and superseded compliance findings
+ */
+
+export function useGetComplianceFindingsFreshnessSummary<TData = Awaited<ReturnType<typeof getComplianceFindingsFreshnessSummary>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getComplianceFindingsFreshnessSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetComplianceFindingsFreshnessSummaryQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

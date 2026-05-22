@@ -69,3 +69,10 @@
 - Findings podem alternar entre lista detalhada e grupos agregados por regra/contexto/severidade/categoria.
 - Grupos usam cards compactos, tabela densa e drawer lateral; evidencias exibidas continuam sanitizadas e individuais.
 - Labels de categoria operacional devem aparecer em portugues, preservando os codigos no contrato de API.
+
+## Baseline v0.2.9 freshness
+
+- `/compliance` mostra por padrao somente o ultimo job por device.
+- Historico continua acessivel por toggle explicito `Incluir histórico`.
+- Findings exibem badge de freshness: Atual, Stale, Legado ou Substituído.
+- Alertas de stale/legacy devem informar que dados antigos nao foram apagados.

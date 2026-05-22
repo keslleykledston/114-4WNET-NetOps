@@ -61,6 +61,12 @@ export interface RoutePolicyNode {
   sequence: number | null;
   action: string | null;
   matches: string[];
+  matchDetails?: Array<{
+    type: "community-filter" | "community-list" | "ip-prefix" | "as-path-filter" | "extcommunity-filter" | "unknown";
+    name: string;
+    raw: string;
+    qualifier?: "basic" | "advanced" | "whole-match" | null;
+  }>;
   applies: string[];
   evidence: DiscoveryEvidence;
 }
@@ -151,6 +157,10 @@ export interface DeviceDiscoverySnapshot {
   persistedRunId?: number;
   persistedSnapshotId?: number | null;
   cachedFromPersistedSnapshot?: boolean;
+  parserVersion?: string;
+  parserVersions?: {
+    interface?: string;
+  };
   sourcesUsed: DiscoverySource[];
   interfaces: InterfaceSummary[];
   bgpPeers: BgpPeerSummary[];

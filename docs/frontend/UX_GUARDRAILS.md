@@ -88,3 +88,5 @@ Alteracao permitida:
 - Drawer de grupo deve listar objetos afetados e evidencias individuais sanitizadas, sem `rawReference` ou payload bruto.
 - Actionable only deve incluir apenas `BLOCKER_REAL`, `RISCO_OPERACIONAL`, `PADRONIZACAO` e `CUSTOMIZACAO`.
 - Categorias operacionais devem usar labels em portugues na UI e codigos canonicos na API.
+- Findings antigos devem ser tratados por freshness e ocultos por padrao via `latestJobOnly=true`, nunca apagados automaticamente.
+- A UI deve exigir toggle explicito para incluir historico e deve sinalizar `Legado`/`Stale` quando exibidos.

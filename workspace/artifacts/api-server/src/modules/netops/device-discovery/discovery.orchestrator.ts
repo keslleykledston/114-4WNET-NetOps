@@ -11,6 +11,7 @@ import { buildBgpPeerDetails, normalizeDiscoveryBgpPeers, primaryDirectionForRol
 import { normalizeDiscoveryInterfaces } from "./normalizers/interface.normalizer.js";
 import { emptyL2vpnSummary } from "./normalizers/l2vpn.normalizer.js";
 import { normalizeDiscoveryCommunities, normalizeDiscoveryPolicies } from "./normalizers/policy.normalizer.js";
+import { COMPLIANCE_PARSER_VERSION, INTERFACE_PARSER_VERSION } from "../versioning.js";
 
 function parseJsonArray(value: string | null): unknown[] {
   if (!value) return [];
@@ -358,6 +359,10 @@ export class CollectionOrchestrator {
       persistedRunId: persistedRun.id,
       persistedSnapshotId: null,
       cachedFromPersistedSnapshot,
+      parserVersion: COMPLIANCE_PARSER_VERSION,
+      parserVersions: {
+        interface: INTERFACE_PARSER_VERSION,
+      },
       sourcesUsed: [
         ...(snmp.success ? ["snmp_snapshot" as const] : []),
         ...(ssh.success ? ["ssh_live" as const] : []),

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BgpPeerSummary } from './bgpPeerSummary';
+import type { DeviceDiscoverySnapshotParserVersions } from './deviceDiscoverySnapshotParserVersions';
 import type { DiscoveryNamedEntries } from './discoveryNamedEntries';
 import type { DiscoverySource } from './discoverySource';
 import type { DiscoveryStatus } from './discoveryStatus';
@@ -27,6 +28,8 @@ export interface DeviceDiscoverySnapshot {
   /** @nullable */
   persistedSnapshotId?: number | null;
   cachedFromPersistedSnapshot?: boolean;
+  parserVersion?: string;
+  parserVersions?: DeviceDiscoverySnapshotParserVersions;
   sourcesUsed: DiscoverySource[];
   interfaces: InterfaceSummary[];
   bgpPeers: BgpPeerSummary[];

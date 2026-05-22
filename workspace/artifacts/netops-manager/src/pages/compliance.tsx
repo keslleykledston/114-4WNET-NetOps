@@ -3,6 +3,7 @@ import {
   getListComplianceFindingsQueryKey,
   getListComplianceJobsQueryKey,
   useCreateComplianceJob,
+  useGetComplianceFindingsFreshnessSummary,
   useGetComplianceSummary,
   useListComplianceFindings,
   useListComplianceFindingsGroups,
@@ -44,6 +45,22 @@ function badgeClass(value: string | null | undefined) {
 
 function param(value: string) {
   return value === FILTER_ALL ? undefined : value;
+}
+
+function freshnessLabel(value: string | null | undefined) {
+  if (value === "current") return "Atual";
+  if (value === "stale") return "Stale";
+  if (value === "legacy") return "Legado";
+  if (value === "superseded") return "Substituído";
+  return "Sem versão";
+}
+
+function freshnessClass(value: string | null | undefined) {
+  if (value === "current") return "bg-green-500/10 text-green-400 border-green-500/20";
+  if (value === "stale") return "bg-amber-500/10 text-amber-300 border-amber-500/20";
+  if (value === "legacy") return "bg-red-500/10 text-red-300 border-red-500/20";
+  if (value === "superseded") return "bg-slate-500/10 text-slate-300 border-slate-500/20";
+  return "bg-slate-500/10 text-slate-300 border-slate-500/20";
 }
 
 interface GroupSummaryCardProps {
@@ -90,6 +107,7 @@ export default function Compliance() {
   const { user } = useAuth();
   const isOperator = user?.role === "operator" || user?.role === "admin";
   const { data: summary } = useGetComplianceSummary();
+  const { data: freshnessSummary } = useGetComplianceFindingsFreshnessSummary();
   const { data: jobs, isLoading } = useListComplianceJobs();
   const { data: devices } = useListDevices();
   const createJob = useCreateComplianceJob();
@@ -108,6 +126,7 @@ export default function Compliance() {
   const [deviceFilter, setDeviceFilter] = useState(FILTER_ALL);
   const [operationalCategoryFilter, setOperationalCategoryFilter] = useState(FILTER_ALL);
   const [onlyActionable, setOnlyActionable] = useState(false);
+  const [includeHistory, setIncludeHistory] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("findings");
   const [selectedFinding, setSelectedFinding] = useState<ComplianceFinding | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<ComplianceFindingGroup | null>(null);
@@ -119,6 +138,8 @@ export default function Compliance() {
     confidence: param(confidenceFilter),
     source: param(sourceFilter),
     operationalCategory: param(operationalCategoryFilter),
+    latestJobOnly: !includeHistory,
+    freshness: "all" as const,
     deviceId: deviceFilter === FILTER_ALL ? undefined : Number(deviceFilter),
   };
   const { data: allFindings, isLoading: findingsLoading } = useListComplianceFindings(findingParams);
@@ -259,6 +280,23 @@ export default function Compliance() {
 
       <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-200">
         Compliance read-only. Confidence baixo/unknown vira warning/unknown quando evidência forte não existe. Execute discovery para melhorar confiança.
+        {!includeHistory && (
+          <span className="ml-2 text-amber-100">Mostrando somente o último job por device.</span>
+        )}
+      </div>
+
+      {(freshnessSummary?.legacy || freshnessSummary?.stale) ? (
+        <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-200">
+          Existem {freshnessSummary.legacy} findings legados e {freshnessSummary.stale} stale gerados antes da versão atual do parser/engine.
+          Eles ficam ocultos por padrão e continuam acessíveis ao incluir histórico.
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Current</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-green-400">{freshnessSummary?.current ?? 0}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Stale</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-amber-300">{freshnessSummary?.stale ?? 0}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Legacy</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-red-300">{freshnessSummary?.legacy ?? 0}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Superseded</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-slate-300">{freshnessSummary?.superseded ?? 0}</div></CardContent></Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -307,15 +345,24 @@ export default function Compliance() {
               <CardTitle>Finding Filters</CardTitle>
               <CardDescription>Filtra por status, severidade, contexto, confidence, source, device e categoria operacional</CardDescription>
             </div>
-            <Button
-              variant={onlyActionable ? "default" : "outline"}
-              size="sm"
-              onClick={() => setOnlyActionable(!onlyActionable)}
-              className="gap-2"
-            >
-              <Filter className="h-4 w-4" />
-              Actionable Only
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={includeHistory ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIncludeHistory(!includeHistory)}
+              >
+                Incluir histórico
+              </Button>
+              <Button
+                variant={onlyActionable ? "default" : "outline"}
+                size="sm"
+                onClick={() => setOnlyActionable(!onlyActionable)}
+                className="gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Actionable Only
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-7 gap-3">
@@ -358,14 +405,15 @@ export default function Compliance() {
                     <TableHead>Mensagem</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Confidence</TableHead>
+                    <TableHead>Freshness</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {findingsLoading ? (
-                    <TableRow><TableCell colSpan={9} className="text-center py-8">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-8">Loading...</TableCell></TableRow>
                   ) : findings?.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No findings.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No findings.</TableCell></TableRow>
                   ) : findings?.map((finding: ComplianceFinding) => (
                     <TableRow key={finding.id}>
                       <TableCell><Badge variant="outline" className={badgeClass(finding.severity)}>{finding.severity}</Badge></TableCell>
@@ -379,6 +427,7 @@ export default function Compliance() {
                       <TableCell className="max-w-[420px] truncate">{finding.message ?? finding.detail ?? "-"}</TableCell>
                       <TableCell className="font-mono text-xs">{finding.source ?? "-"}</TableCell>
                       <TableCell><Badge variant="outline" className={badgeClass(finding.confidence)}>{finding.confidence ?? "-"}</Badge></TableCell>
+                      <TableCell><Badge variant="outline" className={freshnessClass(finding.freshness)}>{freshnessLabel(finding.freshness)}</Badge></TableCell>
                       <TableCell>
                         <Button variant="ghost" size="sm" onClick={() => setSelectedFinding(finding)}>
                           <Eye className="h-4 w-4" />
@@ -454,12 +503,13 @@ export default function Compliance() {
           </DialogHeader>
           {selectedFinding && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
                 <div><div className="text-muted-foreground">Status</div><Badge variant="outline" className={badgeClass(selectedFinding.status ?? selectedFinding.result)}>{selectedFinding.status ?? selectedFinding.result}</Badge></div>
                 <div><div className="text-muted-foreground">Severity</div><Badge variant="outline" className={badgeClass(selectedFinding.severity)}>{selectedFinding.severity}</Badge></div>
                 <div><div className="text-muted-foreground">Category</div><OperationalCategoryBadge value={selectedFinding.operationalCategory} /></div>
                 <div><div className="text-muted-foreground">Source</div><div className="font-mono text-xs">{selectedFinding.source ?? "-"}</div></div>
                 <div><div className="text-muted-foreground">Confidence</div><div className="font-mono text-xs">{selectedFinding.confidence ?? "-"}</div></div>
+                <div><div className="text-muted-foreground">Freshness</div><Badge variant="outline" className={freshnessClass(selectedFinding.freshness)}>{freshnessLabel(selectedFinding.freshness)}</Badge></div>
               </div>
               <div>
                 <div className="text-sm text-muted-foreground">Mensagem</div>
@@ -476,6 +526,7 @@ export default function Compliance() {
               <div className="text-xs text-muted-foreground space-y-1">
                 <div>Rule: {selectedFinding.ruleName ?? selectedFinding.policyName} {selectedFinding.ruleId ? `(${selectedFinding.ruleId})` : ""}</div>
                 <div>Object: {selectedFinding.objectType ?? "-"} / {selectedFinding.objectId ?? "-"} ({selectedFinding.objectName ?? "-"})</div>
+                <div>Engine/parser: {selectedFinding.complianceEngineVersion ?? "legacy"} / {selectedFinding.parserVersion ?? "legacy"}</div>
               </div>
             </div>
           )}

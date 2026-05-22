@@ -17,6 +17,102 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Local login
+ */
+export const LoginBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string()
+})
+
+export const LoginResponse = zod.object({
+  "user": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin'])
+}),
+  "token": zod.string()
+})
+
+
+/**
+ * @summary Current authenticated user
+ */
+export const GetAuthSessionResponse = zod.object({
+  "user": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin'])
+})
+})
+
+
+/**
+ * @summary List users
+ */
+export const ListUsersResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin']),
+  "enabled": zod.boolean(),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create user
+ */
+export const CreateUserBody = zod.object({
+  "name": zod.string(),
+  "email": zod.string(),
+  "password": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin']).optional(),
+  "enabled": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Update user
+ */
+export const UpdateUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateUserBody = zod.object({
+  "name": zod.string().optional(),
+  "email": zod.string().optional(),
+  "password": zod.string().optional(),
+  "role": zod.enum(['viewer', 'operator', 'admin']).optional(),
+  "enabled": zod.boolean().optional()
+})
+
+export const UpdateUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin']),
+  "enabled": zod.boolean(),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete user
+ */
+export const DeleteUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List all devices
  */
 export const ListDevicesQueryParams = zod.object({

@@ -9,6 +9,68 @@ export interface HealthStatus {
   status: string;
 }
 
+export type UserRole = typeof UserRole[keyof typeof UserRole];
+
+
+export const UserRole = {
+  viewer: 'viewer',
+  operator: 'operator',
+  admin: 'admin',
+} as const;
+
+export interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  enabled: boolean;
+  /** @nullable */
+  lastLoginAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthLoginResponse {
+  user: AuthUser;
+  token: string;
+}
+
+export interface SessionResponse {
+  user: AuthUser;
+}
+
+export interface UserListResponse {
+  items: User[];
+}
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  role?: UserRole;
+  enabled?: boolean;
+}
+
+export interface UpdateUserRequest {
+  name?: string;
+  email?: string;
+  password?: string;
+  role?: UserRole;
+  enabled?: boolean;
+}
+
 /**
  * @nullable
  */

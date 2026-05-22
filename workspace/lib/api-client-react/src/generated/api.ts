@@ -52,9 +52,13 @@ import type {
   Device,
   DeviceDiscoveryRequest,
   DeviceDiscoverySnapshot,
+  DeviceExportRequest,
   DeviceGroup,
   DeviceGroupInput,
   DeviceGroupUpdate,
+  DeviceImportApplyRequest,
+  DeviceImportApplyResponse,
+  DeviceImportPreviewResponse,
   DeviceInput,
   DeviceStats,
   DeviceUpdate,
@@ -97,6 +101,7 @@ import type {
   NetopsLatestSnmpSnapshot,
   NetopsLogEntry,
   NetopsReadonlyCollectionResult,
+  PreviewDeviceImportBody,
   ProvisioningJob,
   ProvisioningJobDetail,
   ProvisioningJobInput,
@@ -2649,6 +2654,221 @@ export function useGetDeviceCollectedConfig<TData = Awaited<ReturnType<typeof ge
 
 
 
+
+export const getExportDevicesUrl = () => {
+
+
+
+
+  return `/api/devices/export`
+}
+
+/**
+ * @summary Export devices to CSV, XLSX, or JSON
+ */
+export const exportDevices = async (deviceExportRequest: DeviceExportRequest, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getExportDevicesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deviceExportRequest,)
+  }
+);}
+
+
+
+
+export const getExportDevicesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportDevices>>, TError,{data: BodyType<DeviceExportRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof exportDevices>>, TError,{data: BodyType<DeviceExportRequest>}, TContext> => {
+
+const mutationKey = ['exportDevices'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportDevices>>, {data: BodyType<DeviceExportRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  exportDevices(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExportDevicesMutationResult = NonNullable<Awaited<ReturnType<typeof exportDevices>>>
+    export type ExportDevicesMutationBody = BodyType<DeviceExportRequest>
+    export type ExportDevicesMutationError = ErrorType<void>
+
+    /**
+ * @summary Export devices to CSV, XLSX, or JSON
+ */
+export const useExportDevices = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportDevices>>, TError,{data: BodyType<DeviceExportRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof exportDevices>>,
+        TError,
+        {data: BodyType<DeviceExportRequest>},
+        TContext
+      > => {
+      return useMutation(getExportDevicesMutationOptions(options));
+    }
+
+export const getPreviewDeviceImportUrl = () => {
+
+
+
+
+  return `/api/devices/import/preview`
+}
+
+/**
+ * @summary Preview device import from file
+ */
+export const previewDeviceImport = async (previewDeviceImportBody: PreviewDeviceImportBody, options?: RequestInit): Promise<DeviceImportPreviewResponse> => {
+    const formData = new FormData();
+formData.append(`file`, previewDeviceImportBody.file);
+
+  return customFetch<DeviceImportPreviewResponse>(getPreviewDeviceImportUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body:
+      formData,
+  }
+);}
+
+
+
+
+export const getPreviewDeviceImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewDeviceImport>>, TError,{data: BodyType<PreviewDeviceImportBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewDeviceImport>>, TError,{data: BodyType<PreviewDeviceImportBody>}, TContext> => {
+
+const mutationKey = ['previewDeviceImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewDeviceImport>>, {data: BodyType<PreviewDeviceImportBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewDeviceImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewDeviceImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewDeviceImport>>>
+    export type PreviewDeviceImportMutationBody = BodyType<PreviewDeviceImportBody>
+    export type PreviewDeviceImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Preview device import from file
+ */
+export const usePreviewDeviceImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewDeviceImport>>, TError,{data: BodyType<PreviewDeviceImportBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewDeviceImport>>,
+        TError,
+        {data: BodyType<PreviewDeviceImportBody>},
+        TContext
+      > => {
+      return useMutation(getPreviewDeviceImportMutationOptions(options));
+    }
+
+export const getApplyDeviceImportUrl = () => {
+
+
+
+
+  return `/api/devices/import/apply`
+}
+
+/**
+ * @summary Apply device import
+ */
+export const applyDeviceImport = async (deviceImportApplyRequest: DeviceImportApplyRequest, options?: RequestInit): Promise<DeviceImportApplyResponse> => {
+
+  return customFetch<DeviceImportApplyResponse>(getApplyDeviceImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      deviceImportApplyRequest,)
+  }
+);}
+
+
+
+
+export const getApplyDeviceImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyDeviceImport>>, TError,{data: BodyType<DeviceImportApplyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyDeviceImport>>, TError,{data: BodyType<DeviceImportApplyRequest>}, TContext> => {
+
+const mutationKey = ['applyDeviceImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyDeviceImport>>, {data: BodyType<DeviceImportApplyRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  applyDeviceImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyDeviceImportMutationResult = NonNullable<Awaited<ReturnType<typeof applyDeviceImport>>>
+    export type ApplyDeviceImportMutationBody = BodyType<DeviceImportApplyRequest>
+    export type ApplyDeviceImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Apply device import
+ */
+export const useApplyDeviceImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyDeviceImport>>, TError,{data: BodyType<DeviceImportApplyRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyDeviceImport>>,
+        TError,
+        {data: BodyType<DeviceImportApplyRequest>},
+        TContext
+      > => {
+      return useMutation(getApplyDeviceImportMutationOptions(options));
+    }
 
 export const getListDeviceGroupsUrl = () => {
 

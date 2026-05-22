@@ -1,11 +1,13 @@
 import { Router } from "express";
+import multer from "multer";
 import { db } from "@workspace/db";
 import { devicesTable, deviceGroupsTable } from "@workspace/db";
-import { eq, sql, count } from "drizzle-orm";
+import { eq, sql, count, inArray } from "drizzle-orm";
 import { encrypt, decrypt } from "../lib/crypto.js";
 import { testSSHConnection } from "../lib/ssh.js";
 import { collectSnmpSnapshot } from "../lib/snmp.js";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
+import { requirePermission } from "../lib/auth.js";
 import {
   CreateDeviceBody,
   UpdateDeviceBody,
@@ -17,8 +19,26 @@ import {
   ListDevicesQueryParams,
 } from "@workspace/api-zod";
 import { collectedConfigsTable } from "@workspace/db";
+import { exportToCSV, exportToJSON, getExportFilename, getContentType } from "../modules/devices/devices-export.service.js";
+import { generateImportPreview, applyImport } from "../modules/devices/device-import.service.js";
+import { FIELD_ALIASES } from "../modules/devices/device-import.types.js";
 
 const router = Router();
+
+// Multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  fileFilter: (req, file, cb) => {
+    const allowed = [".csv", ".txt", ".xlsx"];
+    const ext = file.originalname.toLowerCase().slice(file.originalname.lastIndexOf("."));
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only CSV, TXT, and XLSX files are allowed"));
+    }
+  },
+});
 
 function publicDevice<T extends { lastSeen?: Date | null; createdAt: Date; updatedAt: Date }>(device: T) {
   return {
@@ -304,6 +324,106 @@ router.get("/devices/:id/collected-config", async (req, res) => {
 
   if (!cfg) { res.status(404).json({ error: "No collected config found" }); return; }
   res.json({ ...cfg, collectedAt: cfg.collectedAt.toISOString() });
+});
+
+// Export endpoints
+router.post("/devices/export", requirePermission("devices.export"), async (req, res) => {
+  const { ids, format = "csv" } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ error: "No devices selected" });
+    return;
+  }
+
+  if (!["csv", "xlsx", "json"].includes(format)) {
+    res.status(400).json({ error: "Invalid format. Use csv, xlsx, or json" });
+    return;
+  }
+
+  try {
+    const devices = await db.select().from(devicesTable).where(inArray(devicesTable.id, ids));
+
+    if (devices.length === 0) {
+      res.status(404).json({ error: "No devices found" });
+      return;
+    }
+
+    let buffer: Buffer;
+    if (format === "json") {
+      const user = req.headers["x-user-email"] || "unknown";
+      buffer = exportToJSON(devices, String(user));
+    } else {
+      buffer = exportToCSV(devices);
+    }
+
+    const filename = getExportFilename(format as "csv" | "xlsx" | "json");
+    const contentType = getContentType(format as "csv" | "xlsx" | "json");
+
+    await logAuditEvent({
+      action: "device_export",
+      objectType: "device",
+      objectId: ids.join(","),
+      metadata: { format, count: devices.length },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Export failed" });
+  }
+});
+
+// Import endpoints
+router.post("/devices/import/preview", requirePermission("devices.import"), upload.single("file"), async (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ error: "No file uploaded" });
+    return;
+  }
+
+  try {
+    const preview = await generateImportPreview(req.file.buffer, req.file.originalname || "import.csv", FIELD_ALIASES);
+
+    await logAuditEvent({
+      action: "device_import_preview",
+      objectType: "device",
+      objectId: preview.fileHash,
+      metadata: {
+        totalRows: preview.summary.totalRows,
+        validRows: preview.summary.validRows,
+        invalidRows: preview.summary.invalidRows,
+      },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    res.json(preview);
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "Preview failed" });
+  }
+});
+
+router.post("/devices/import/apply", requirePermission("devices.import"), async (req, res) => {
+  const { previewToken, mode = "upsert" } = req.body;
+
+  if (!previewToken) {
+    res.status(400).json({ error: "Missing previewToken" });
+    return;
+  }
+
+  if (!["create_only", "update_existing", "upsert"].includes(mode)) {
+    res.status(400).json({ error: "Invalid mode. Use: create_only, update_existing, or upsert" });
+    return;
+  }
+
+  try {
+    // userId can be 0 (will be logged in audit with sourceIp instead)
+    const result = await applyImport(previewToken, mode as any, 0, getRequestSourceIp(req));
+
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Apply failed" });
+  }
 });
 
 export default router;

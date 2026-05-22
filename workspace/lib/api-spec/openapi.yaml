@@ -647,6 +647,75 @@ paths:
         "404":
           description: Not found
 
+  /devices/export:
+    post:
+      operationId: exportDevices
+      tags: [devices]
+      summary: Export devices to CSV, XLSX, or JSON
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceExportRequest"
+      responses:
+        "200":
+          description: Export file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid request
+
+  /devices/import/preview:
+    post:
+      operationId: previewDeviceImport
+      tags: [devices]
+      summary: Preview device import from file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Import preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceImportPreviewResponse"
+        "400":
+          description: Invalid file
+
+  /devices/import/apply:
+    post:
+      operationId: applyDeviceImport
+      tags: [devices]
+      summary: Apply device import
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceImportApplyRequest"
+      responses:
+        "200":
+          description: Import applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeviceImportApplyResponse"
+        "400":
+          description: Invalid request
+
   # ── DEVICE GROUPS ─────────────────────────────────────────────────────────────
   /device-groups:
     get:
@@ -4900,6 +4969,147 @@ components:
       type: array
       items:
         $ref: "#/components/schemas/ScheduledJobRun"
+
+    DeviceExportRequest:
+      type: object
+      required: [ids, format]
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+        format:
+          type: string
+          enum: [csv, xlsx, json]
+
+    DeviceImportItem:
+      type: object
+      required: [rowNumber, action, errors, warnings]
+      properties:
+        rowNumber:
+          type: integer
+        action:
+          type: string
+          enum: [create, update, skip, invalid]
+        parsed:
+          $ref: "#/components/schemas/ParsedDevice"
+        matchedDeviceId:
+          type: ["integer", "null"]
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+
+    ParsedDevice:
+      type: object
+      required: [hostname]
+      properties:
+        hostname:
+          type: string
+        ipAddress:
+          type: ["string", "null"]
+        vendor:
+          type: ["string", "null"]
+        platform:
+          type: ["string", "null"]
+        role:
+          type: ["string", "null"]
+        site:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        sshPort:
+          type: ["integer", "null"]
+        snmpVersion:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    DeviceImportSummary:
+      type: object
+      required: [totalRows, validRows, invalidRows, toCreate, toUpdate, toSkip, duplicates, warnings]
+      properties:
+        totalRows:
+          type: integer
+        validRows:
+          type: integer
+        invalidRows:
+          type: integer
+        toCreate:
+          type: integer
+        toUpdate:
+          type: integer
+        toSkip:
+          type: integer
+        duplicates:
+          type: integer
+        warnings:
+          type: integer
+
+    DeviceImportPreviewResponse:
+      type: object
+      required: [summary, items, previewToken, fileHash, createdAt, expiresAt]
+      properties:
+        summary:
+          $ref: "#/components/schemas/DeviceImportSummary"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeviceImportItem"
+        previewToken:
+          type: string
+        fileHash:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    DeviceImportApplyRequest:
+      type: object
+      required: [previewToken, mode]
+      properties:
+        previewToken:
+          type: string
+        mode:
+          type: string
+          enum: [create_only, update_existing, upsert]
+
+    DeviceImportApplyResponse:
+      type: object
+      required: [success, summary, errors]
+      properties:
+        success:
+          type: boolean
+        summary:
+          type: object
+          required: [created, updated, skipped, failed]
+          properties:
+            created:
+              type: integer
+            updated:
+              type: integer
+            skipped:
+              type: integer
+            failed:
+              type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            required: [rowNumber, message]
+            properties:
+              rowNumber:
+                type: integer
+              message:
+                type: string
 
     UserPermissions:
       type: object

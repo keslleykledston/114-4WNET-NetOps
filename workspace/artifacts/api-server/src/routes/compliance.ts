@@ -397,6 +397,267 @@ router.get("/compliance/jobs/:id", getJob);
 router.post("/compliance-jobs/:id/execute", executeJobHandler);
 router.post("/compliance/jobs/:id/execute", executeJobHandler);
 
+// ── REPORT DOWNLOAD ─────────────────────────────────────────────────────────
+import { requirePermission } from "../lib/auth.js";
+import {
+  exportComplianceReport,
+  buildReportFilename,
+} from "../modules/compliance/report-export/compliance-report-export.service.js";
+
+router.get("/compliance/jobs/:id/report/download", requirePermission("compliance.export"), async (req, res) => {
+  try {
+    const jobId = Number(req.params.id);
+    if (!jobId) {
+      res.status(400).json({ error: "Invalid job ID" });
+      return;
+    }
+
+    const format = req.query.format as "markdown" | "json" | "csv" || "markdown";
+    if (!["markdown", "json", "csv"].includes(format)) {
+      res.status(400).json({ error: "Invalid format" });
+      return;
+    }
+
+    // Verify job exists
+    const [job] = await db.select().from(complianceJobsTable).where(eq(complianceJobsTable.id, jobId));
+    if (!job) {
+      res.status(404).json({ error: "Job not found" });
+      return;
+    }
+
+    // Build filters from query params
+    const filters = {
+      status: req.query.status as string | undefined,
+      severity: req.query.severity as string | undefined,
+      context: req.query.context as string | undefined,
+      source: req.query.source as string | undefined,
+      confidence: req.query.confidence as string | undefined,
+      operationalCategory: req.query.operationalCategory as string | undefined,
+      freshness: req.query.freshness as string | undefined,
+      actionableOnly: isTruthyQuery(req.query.actionableOnly),
+    };
+
+    const { content, contentType } = await exportComplianceReport(jobId, format, filters);
+    const filename = buildReportFilename(jobId, format);
+
+    // Audit logging
+    const findings = await db.select().from(complianceFindingsTable).where(eq(complianceFindingsTable.jobId, jobId));
+    await logAuditEvent({
+      action: "compliance_report_download",
+      objectType: "compliance_job",
+      objectId: String(jobId),
+      metadata: {
+        format,
+        findingsCount: findings.length,
+        filters,
+        sanitized: true,
+      },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(content);
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Report generation failed",
+    });
+  }
+});
+
+// ── FINDINGS EXPORT ─────────────────────────────────────────────────────────
+import { exportFindingsCsv, exportGroupsCsv } from "../modules/compliance/report-export/compliance-report-csv.js";
+
+router.get("/compliance/findings/export", requirePermission("compliance.export"), async (req, res) => {
+  try {
+    const format = req.query.format as "csv" | "json" || "csv";
+    if (!["csv", "json"].includes(format)) {
+      res.status(400).json({ error: "Invalid format" });
+      return;
+    }
+
+    const rows = await db.select({
+      id: complianceFindingsTable.id,
+      jobId: complianceFindingsTable.jobId,
+      policyId: complianceFindingsTable.policyId,
+      policyName: complianceFindingsTable.policyName,
+      severity: complianceFindingsTable.severity,
+      context: complianceFindingsTable.context,
+      status: complianceFindingsTable.status,
+      message: complianceFindingsTable.message,
+      recommendation: complianceFindingsTable.recommendation,
+      source: complianceFindingsTable.source,
+      confidence: complianceFindingsTable.confidence,
+      objectType: complianceFindingsTable.objectType,
+      objectName: complianceFindingsTable.objectName,
+      ruleId: complianceFindingsTable.ruleId,
+      ruleName: complianceFindingsTable.ruleName,
+      operationalCategory: complianceFindingsTable.operationalCategory,
+      metadataJson: complianceFindingsTable.metadataJson,
+      deviceId: complianceJobsTable.deviceId,
+      deviceHostname: devicesTable.hostname,
+    }).from(complianceFindingsTable)
+      .innerJoin(complianceJobsTable, eq(complianceFindingsTable.jobId, complianceJobsTable.id))
+      .innerJoin(devicesTable, eq(complianceJobsTable.deviceId, devicesTable.id));
+
+    const findings = rows.map((r) => {
+      const metadata = (r.metadataJson as Record<string, unknown>) || {};
+      return {
+        id: r.id,
+        jobId: r.jobId,
+        deviceId: r.deviceId!,
+        deviceHostname: r.deviceHostname,
+        status: r.status || "unknown",
+        severity: r.severity,
+        context: r.context,
+        operationalCategory: r.operationalCategory || "unknown",
+        freshness: (metadata.freshness as string) || "fresh",
+        source: r.source || "unknown",
+        confidence: r.confidence || "medium",
+        ruleId: r.ruleId || "unknown",
+        ruleName: r.ruleName || "unknown",
+        objectType: r.objectType || "unknown",
+        objectName: r.objectName || "unknown",
+        message: r.message || "",
+        recommendation: r.recommendation || "",
+        createdAt: r.id.toString(),
+      };
+    });
+
+    let content: string;
+    let contentType: string;
+
+    if (format === "csv") {
+      content = exportFindingsCsv(findings);
+      contentType = "text/csv; charset=utf-8";
+    } else {
+      content = JSON.stringify(findings, null, 2);
+      contentType = "application/json";
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const ext = format;
+    const filename = `compliance-findings-${timestamp}.${ext}`;
+
+    await logAuditEvent({
+      action: "compliance_findings_export",
+      objectType: "compliance_findings",
+      objectId: "bulk",
+      metadata: {
+        format,
+        findingsCount: findings.length,
+        sanitized: true,
+      },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(content);
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Export failed",
+    });
+  }
+});
+
+router.get("/compliance/findings/groups/export", requirePermission("compliance.export"), async (req, res) => {
+  try {
+    const format = req.query.format as "csv" | "json" || "csv";
+    if (!["csv", "json"].includes(format)) {
+      res.status(400).json({ error: "Invalid format" });
+      return;
+    }
+
+    const rows = await db.select({
+      id: complianceFindingsTable.id,
+      jobId: complianceFindingsTable.jobId,
+      policyName: complianceFindingsTable.policyName,
+      severity: complianceFindingsTable.severity,
+      context: complianceFindingsTable.context,
+      message: complianceFindingsTable.message,
+      ruleId: complianceFindingsTable.ruleId,
+      ruleName: complianceFindingsTable.ruleName,
+      operationalCategory: complianceFindingsTable.operationalCategory,
+      metadataJson: complianceFindingsTable.metadataJson,
+    }).from(complianceFindingsTable);
+
+    const groupMap = new Map<string, { count: number; sampleIds: number[]; policyName: string | null; ruleName: string | null; message: string }>();
+
+    for (const row of rows) {
+      const metadata = (row.metadataJson as Record<string, unknown>) || {};
+      const freshness = (metadata.freshness as string) || "fresh";
+      const key = `${row.ruleId || "unknown"}|${row.policyName}|${row.context}|${row.severity}|${row.operationalCategory || "unknown"}|${freshness}`;
+
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          count: 0,
+          sampleIds: [],
+          policyName: row.policyName,
+          ruleName: row.ruleName,
+          message: row.message || "",
+        });
+      }
+
+      const group = groupMap.get(key)!;
+      group.count++;
+      if (group.sampleIds.length < 5) {
+        group.sampleIds.push(row.id);
+      }
+    }
+
+    const groups = Array.from(groupMap.entries()).map(([key, data]) => {
+      const [ruleId, policyName, context, severity, category, freshness] = key.split("|");
+      return {
+        ruleId: ruleId || "unknown",
+        ruleName: data.ruleName || "unknown",
+        policyName: data.policyName || "unknown",
+        context,
+        severity,
+        operationalCategory: category,
+        freshness,
+        message: data.message,
+        count: data.count,
+        sampleFindingIds: data.sampleIds,
+      };
+    });
+
+    let content: string;
+    let contentType: string;
+
+    if (format === "csv") {
+      content = exportGroupsCsv(groups);
+      contentType = "text/csv; charset=utf-8";
+    } else {
+      content = JSON.stringify(groups, null, 2);
+      contentType = "application/json";
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const ext = format;
+    const filename = `compliance-groups-${timestamp}.${ext}`;
+
+    await logAuditEvent({
+      action: "compliance_groups_export",
+      objectType: "compliance_findings",
+      objectId: "groups",
+      metadata: {
+        format,
+        groupsCount: groups.length,
+      },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(content);
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Export failed",
+    });
+  }
+});
+
 // ── FINDINGS ────────────────────────────────────────────────────────────────
 
 router.get("/compliance-findings", async (req, res) => {

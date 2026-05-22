@@ -1262,6 +1262,43 @@ export const ExecuteComplianceJobResponse = zod.object({
 
 
 /**
+ * @summary Download compliance job report
+ */
+export const DownloadComplianceReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const downloadComplianceReportQueryFormatDefault = `markdown`;
+
+export const DownloadComplianceReportQueryParams = zod.object({
+  "format": zod.enum(['markdown', 'json', 'csv']).default(downloadComplianceReportQueryFormatDefault),
+  "status": zod.coerce.string().optional(),
+  "severity": zod.coerce.string().optional(),
+  "context": zod.coerce.string().optional()
+})
+
+
+/**
+ * @summary Export compliance findings
+ */
+export const exportComplianceFindingsQueryFormatDefault = `csv`;
+
+export const ExportComplianceFindingsQueryParams = zod.object({
+  "format": zod.enum(['csv', 'json']).default(exportComplianceFindingsQueryFormatDefault)
+})
+
+
+/**
+ * @summary Export compliance finding groups
+ */
+export const exportComplianceFindingsGroupsQueryFormatDefault = `csv`;
+
+export const ExportComplianceFindingsGroupsQueryParams = zod.object({
+  "format": zod.enum(['csv', 'json']).default(exportComplianceFindingsGroupsQueryFormatDefault)
+})
+
+
+/**
  * @summary List config templates
  */
 export const ListConfigTemplatesQueryParams = zod.object({

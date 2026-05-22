@@ -21,7 +21,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle2, Clock, Eye, Plus, ShieldAlert, ShieldCheck, Filter } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Eye, Plus, ShieldAlert, ShieldCheck, Filter, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
 import { ComplianceFindingGroupDrawer } from "@/features/compliance/compliance-finding-group-drawer";
@@ -473,13 +473,14 @@ export default function Compliance() {
                 <TableHead>Status</TableHead>
                 <TableHead>Findings</TableHead>
                 <TableHead>Completed</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8">Loading...</TableCell></TableRow>
               ) : jobs?.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No compliance jobs found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No compliance jobs found.</TableCell></TableRow>
               ) : jobs?.map((job: any) => (
                 <TableRow key={job.id}>
                   <TableCell className="font-mono text-sm">#{job.id}</TableCell>
@@ -489,6 +490,19 @@ export default function Compliance() {
                   <TableCell><Badge variant="outline" className={badgeClass(job.status)}>{job.status}</Badge></TableCell>
                   <TableCell><div className="text-xs"><span className="text-green-500 mr-2">{job.passCount} pass</span><span className="text-red-500">{job.failCount} fail</span></div></TableCell>
                   <TableCell className="text-xs text-muted-foreground">{job.completedAt ? new Date(job.completedAt).toLocaleString() : "-"}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const url = `/api/compliance/jobs/${job.id}/report/download?format=markdown`;
+                        window.location.href = url;
+                      }}
+                      title="Download report"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

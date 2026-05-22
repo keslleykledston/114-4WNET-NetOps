@@ -2365,6 +2365,46 @@ export const ListComplianceFindingsGroupsFreshness = {
   all: 'all',
 } as const;
 
+export type DownloadComplianceReportParams = {
+format?: DownloadComplianceReportFormat;
+status?: string;
+severity?: string;
+context?: string;
+};
+
+export type DownloadComplianceReportFormat = typeof DownloadComplianceReportFormat[keyof typeof DownloadComplianceReportFormat];
+
+
+export const DownloadComplianceReportFormat = {
+  markdown: 'markdown',
+  json: 'json',
+  csv: 'csv',
+} as const;
+
+export type ExportComplianceFindingsParams = {
+format?: ExportComplianceFindingsFormat;
+};
+
+export type ExportComplianceFindingsFormat = typeof ExportComplianceFindingsFormat[keyof typeof ExportComplianceFindingsFormat];
+
+
+export const ExportComplianceFindingsFormat = {
+  csv: 'csv',
+  json: 'json',
+} as const;
+
+export type ExportComplianceFindingsGroupsParams = {
+format?: ExportComplianceFindingsGroupsFormat;
+};
+
+export type ExportComplianceFindingsGroupsFormat = typeof ExportComplianceFindingsGroupsFormat[keyof typeof ExportComplianceFindingsGroupsFormat];
+
+
+export const ExportComplianceFindingsGroupsFormat = {
+  csv: 'csv',
+  json: 'json',
+} as const;
+
 export type ListConfigTemplatesParams = {
 type?: string;
 };

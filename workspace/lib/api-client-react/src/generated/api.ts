@@ -63,7 +63,10 @@ import type {
   DeviceStats,
   DeviceUpdate,
   DisableUser200,
+  DownloadComplianceReportParams,
   EffectivePermissionsResponse,
+  ExportComplianceFindingsGroupsParams,
+  ExportComplianceFindingsParams,
   HealthStatus,
   IntegrationListResponse,
   IntegrationSetting,
@@ -4227,6 +4230,263 @@ export const useExecuteComplianceJob = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getExecuteComplianceJobMutationOptions(options));
     }
+
+export const getDownloadComplianceReportUrl = (id: number,
+    params?: DownloadComplianceReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compliance/jobs/${id}/report/download?${stringifiedParams}` : `/api/compliance/jobs/${id}/report/download`
+}
+
+/**
+ * @summary Download compliance job report
+ */
+export const downloadComplianceReport = async (id: number,
+    params?: DownloadComplianceReportParams, options?: RequestInit): Promise<unknown> => {
+
+  return customFetch<unknown>(getDownloadComplianceReportUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadComplianceReportQueryKey = (id: number,
+    params?: DownloadComplianceReportParams,) => {
+    return [
+    `/api/compliance/jobs/${id}/report/download`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getDownloadComplianceReportQueryOptions = <TData = Awaited<ReturnType<typeof downloadComplianceReport>>, TError = ErrorType<void>>(id: number,
+    params?: DownloadComplianceReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadComplianceReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadComplianceReportQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadComplianceReport>>> = ({ signal }) => downloadComplianceReport(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadComplianceReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadComplianceReportQueryResult = NonNullable<Awaited<ReturnType<typeof downloadComplianceReport>>>
+export type DownloadComplianceReportQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download compliance job report
+ */
+
+export function useDownloadComplianceReport<TData = Awaited<ReturnType<typeof downloadComplianceReport>>, TError = ErrorType<void>>(
+ id: number,
+    params?: DownloadComplianceReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadComplianceReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadComplianceReportQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getExportComplianceFindingsUrl = (params?: ExportComplianceFindingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compliance/findings/export?${stringifiedParams}` : `/api/compliance/findings/export`
+}
+
+/**
+ * @summary Export compliance findings
+ */
+export const exportComplianceFindings = async (params?: ExportComplianceFindingsParams, options?: RequestInit): Promise<unknown> => {
+
+  return customFetch<unknown>(getExportComplianceFindingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportComplianceFindingsQueryKey = (params?: ExportComplianceFindingsParams,) => {
+    return [
+    `/api/compliance/findings/export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportComplianceFindingsQueryOptions = <TData = Awaited<ReturnType<typeof exportComplianceFindings>>, TError = ErrorType<void>>(params?: ExportComplianceFindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportComplianceFindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportComplianceFindingsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportComplianceFindings>>> = ({ signal }) => exportComplianceFindings(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportComplianceFindings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportComplianceFindingsQueryResult = NonNullable<Awaited<ReturnType<typeof exportComplianceFindings>>>
+export type ExportComplianceFindingsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Export compliance findings
+ */
+
+export function useExportComplianceFindings<TData = Awaited<ReturnType<typeof exportComplianceFindings>>, TError = ErrorType<void>>(
+ params?: ExportComplianceFindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportComplianceFindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportComplianceFindingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getExportComplianceFindingsGroupsUrl = (params?: ExportComplianceFindingsGroupsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/compliance/findings/groups/export?${stringifiedParams}` : `/api/compliance/findings/groups/export`
+}
+
+/**
+ * @summary Export compliance finding groups
+ */
+export const exportComplianceFindingsGroups = async (params?: ExportComplianceFindingsGroupsParams, options?: RequestInit): Promise<unknown> => {
+
+  return customFetch<unknown>(getExportComplianceFindingsGroupsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportComplianceFindingsGroupsQueryKey = (params?: ExportComplianceFindingsGroupsParams,) => {
+    return [
+    `/api/compliance/findings/groups/export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportComplianceFindingsGroupsQueryOptions = <TData = Awaited<ReturnType<typeof exportComplianceFindingsGroups>>, TError = ErrorType<void>>(params?: ExportComplianceFindingsGroupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportComplianceFindingsGroups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportComplianceFindingsGroupsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportComplianceFindingsGroups>>> = ({ signal }) => exportComplianceFindingsGroups(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportComplianceFindingsGroups>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportComplianceFindingsGroupsQueryResult = NonNullable<Awaited<ReturnType<typeof exportComplianceFindingsGroups>>>
+export type ExportComplianceFindingsGroupsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Export compliance finding groups
+ */
+
+export function useExportComplianceFindingsGroups<TData = Awaited<ReturnType<typeof exportComplianceFindingsGroups>>, TError = ErrorType<void>>(
+ params?: ExportComplianceFindingsGroupsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportComplianceFindingsGroups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportComplianceFindingsGroupsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListConfigTemplatesUrl = (params?: ListConfigTemplatesParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -289,32 +289,42 @@
 
 ## Próximos Passos Recomendados
 
-### v0.3.0 — Gestão de usuários (PRÓXIMA FASE)
+### ✅ v0.3.0 — Gestão de usuários (Completed)
 
-1. Implementar tela `/users` com CRUD.
-2. Schema de permissões granulares por módulo.
-3. Reset de senha com token temporário.
-4. Session timeout e revoke manual.
-5. Audit log de ações de usuário.
+1. ✅ Implementar tela `/users` com CRUD.
+2. ✅ Schema de permissões granulares por módulo.
+3. ✅ Reset de senha com token temporário.
+4. ✅ Session timeout e revoke manual.
+5. ✅ Audit log de ações de usuário.
+**Status:** ✅ Completed (v0.3.0)
 
-### v0.3.1 — Import/Export dispositivos
+### ✅ v0.3.1 — Import/Export dispositivos (Completed)
 
-1. Parser de CSV/XLSX com preview pré-aplicação.
-2. Validação de IP/hostname, deduplicação.
-3. Endpoint de export (sem secrets).
-4. Histórico de imports com auditoria.
+1. ✅ Parser de CSV/XLSX com preview pré-aplicação.
+2. ✅ Validação de IP/hostname, deduplicação.
+3. ✅ Endpoint de export (sem secrets).
+4. ✅ Histórico de imports com auditoria.
+**Status:** ✅ Completed (v0.3.1-v0.3.2)
 
-### v0.3.2 — Download/export compliance
+### ✅ v0.3.3 — Compliance Report Export (Completed)
 
-1. Botão download na UI compliance.
-2. Gerador de relatório (Markdown/JSON/CSV).
-3. Evidence sanitizada, summary de categorias.
+1. ✅ Botão download na UI compliance.
+2. ✅ Gerador de relatório (Markdown/JSON/CSV).
+3. ✅ Evidence sanitizada, summary de categorias.
+4. ✅ Export endpoints (findings, groups).
+5. ✅ Permissões via compliance.export.
+6. ✅ Audit logging de todos exports.
+7. ✅ OpenAPI + Orval codegen.
+8. ✅ Selftest suite (16/16 tests).
+**Status:** ✅ Completed (v0.3.3) — Production Ready
 
-### v0.3.3 — Pilot operacional NOC
+### v0.3.4 — Pilot operacional NOC (Planned)
 
 1. Validação com operadores reais.
 2. Feedback de UX, performance, operabilidade.
 3. Dashboard de uptime e alerts críticos.
+4. Streaming de relatórios para datasets grandes.
+5. Email delivery de relatórios.
 
 ### Fases Futuras (v0.2.9+ contínuo)
 

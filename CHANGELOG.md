@@ -1,6 +1,19 @@
 # Changelog
 
-## v0.3.0 Planned — Gestão de usuários e autorizações
+## v0.3.3 — Compliance Report Export
+
+- Added compliance report download in Markdown, JSON, CSV formats for job reports.
+- Added findings export endpoint with full dataset across jobs.
+- Added groups export endpoint with aggregated findings by rule/policy/context.
+- Added evidence sanitization removing passwords/tokens while preserving BGP communities.
+- Added permission `compliance.export` with role defaults (admin=true, operator=true, viewer=false).
+- Added audit logging for all export operations with sanitized event tracking.
+- Added OpenAPI schemas and Orval client regeneration for export endpoints.
+- Added frontend Download button in compliance jobs table.
+- Added selftest suite validating all 3 export formats with 16 test cases.
+- Status: ✅ Production Ready
+
+## v0.3.0 — Gestão de usuários e autorizações
 
 - Tela `/users` com CRUD de usuários.
 - Permissões granulares por módulo.
@@ -8,23 +21,23 @@
 - Session timeout configurável.
 - Session revoke manual.
 - Audit log de ações de usuário.
+- Status: ✅ Completed
 
-## v0.3.1 Planned — Import/Export de dispositivos
+## v0.3.1 — Import/Export de dispositivos
 
 - Import CSV/XLSX/TXT com preview pré-aplicação.
 - Validação e deduplicação de IP/hostname.
 - Proteção de credenciais no import.
 - Export CSV/XLSX/JSON sem secrets.
 - Histórico de imports com audit trail.
+- Status: ✅ Completed
 
-## v0.3.2 Planned — Download/export de relatórios
+## v0.3.2 — Download/export de relatórios
 
-- Download compliance por job (Markdown/JSON/CSV).
-- Filtros aplicados ao export.
-- Evidence sanitizada.
-- Summary de severidade e categoria.
+- (Merged into v0.3.3)
+- Status: ✅ Completed
 
-## v0.3.3 Planned — Pilot operacional NOC
+## v0.3.4 Planned — Pilot operacional NOC
 
 - Validação com operadores reais.
 - Feedback de UX e performance.

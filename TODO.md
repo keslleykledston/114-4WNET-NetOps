@@ -1,29 +1,32 @@
 # TODO
 
-## v0.3.0 — Gestão de usuários
+## ✅ v0.3.3 — Compliance Report Export (Completed)
 
-- Criar tela `/users` com CRUD de usuários.
-- Adicionar schema de permissões granulares por módulo.
-- Implementar reset de senha com token temporário.
-- Adicionar session timeout configurável.
-- Implementar session revoke manual.
-- Audit log para todas ações de usuário.
+- ✅ Botão download na UI compliance.
+- ✅ Gerador de relatório Markdown/JSON/CSV.
+- ✅ Filtro por job com findings e evidence sanitizada.
+- ✅ Incluir summary severidade/contexto/categoria.
+- ✅ Endpoints para findings export e groups export.
+- ✅ Sanitização com redação de senhas/tokens/secrets.
+- ✅ Permissões via compliance.export.
+- ✅ Audit logging de todas ações de export.
+- ✅ Selftest suite (16/16 tests).
 
-## v0.3.1 — Import/Export dispositivos
+## ✅ v0.3.0-v0.3.2 — Completed Features
 
-- Implementar parser de CSV/XLSX com preview pré-aplicação.
-- Validação de IP/hostname e deduplicação.
-- Proteger credenciais no import (não sobrescrever se existente).
-- Endpoint de export (CSV/XLSX/JSON).
-- Sanitizar secrets na exportação.
-- Histórico de imports com audit trail.
+- ✅ v0.3.0: Gestão de usuários com tela `/users`, CRUD, reset de senha, permissões granulares.
+- ✅ v0.3.1: Import/Export de dispositivos com preview, validação, deduplicação, audit trail.
+- ✅ v0.3.2: Download/export de relatórios (merged into v0.3.3).
 
-## v0.3.2 — Download/export compliance
+## v0.3.4 — Pilot operacional NOC (Planned)
 
-- Botão download na UI compliance.
-- Gerador de relatório Markdown/JSON/CSV.
-- Filtro por job com findings e evidence sanitizada.
-- Incluir summary severidade/contexto/categoria.
+- Validação com operadores reais em NOC.
+- Feedback de UX, performance e operabilidade.
+- Ajustes de densidade visual (dark mode, tabelas compactas).
+- Monitoramento de uptime dashboard.
+- Alerts em tempo real para findings críticos.
+- Streaming de relatórios para datasets grandes (>10k findings).
+- Email delivery de relatórios.
 
 ## v0.2.9+ Roadmap (Em Andamento)
 

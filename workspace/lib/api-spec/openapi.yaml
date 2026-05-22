@@ -1104,6 +1104,90 @@ paths:
               schema:
                 $ref: "#/components/schemas/ComplianceJobDetail"
 
+  /compliance/jobs/{id}/report/download:
+    get:
+      operationId: downloadComplianceReport
+      tags: [compliance-jobs]
+      summary: Download compliance job report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [markdown, json, csv]
+            default: markdown
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: context
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report file
+          content:
+            text/markdown: {}
+            application/json: {}
+            text/csv: {}
+        "404":
+          description: Job not found
+        "403":
+          description: Permission denied
+
+  /compliance/findings/export:
+    get:
+      operationId: exportComplianceFindings
+      tags: [compliance-findings]
+      summary: Export compliance findings
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+      responses:
+        "200":
+          description: Findings export
+          content:
+            text/csv: {}
+            application/json: {}
+        "403":
+          description: Permission denied
+
+  /compliance/findings/groups/export:
+    get:
+      operationId: exportComplianceFindingsGroups
+      tags: [compliance-findings]
+      summary: Export compliance finding groups
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+      responses:
+        "200":
+          description: Groups export
+          content:
+            text/csv: {}
+            application/json: {}
+        "403":
+          description: Permission denied
+
   # ── CONFIG TEMPLATES ─────────────────────────────────────────────────────────
   /config-templates:
     get:

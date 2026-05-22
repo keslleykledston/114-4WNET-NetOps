@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Server, Plus, Search, Trash2, Activity, TerminalSquare, SearchX, Pencil } from "lucide-react";
+import { Server, Plus, Search, Trash2, Activity, TerminalSquare, SearchX, Pencil, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
+import { DeviceImportModal } from "@/features/devices/device-import-modal";
 
 export default function Devices() {
   const [search, setSearch] = useState("");
@@ -24,6 +25,7 @@ export default function Devices() {
   const testConnection = useTestDeviceConnection();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
   const editingDevice = devices?.find((device) => device.id === editingDeviceId) ?? null;
 
@@ -152,20 +154,39 @@ export default function Devices() {
           <p className="text-muted-foreground mt-1">Manage network infrastructure inventory</p>
         </div>
 
-        <DeviceFormDialog
-          mode="create"
-          open={isCreateOpen}
-          onOpenChange={setIsCreateOpen}
-          onSubmit={handleCreate}
-          isPending={createDevice.isPending}
-          trigger={
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Device
-            </Button>
-          }
-        />
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsImportOpen(true)}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+          <DeviceFormDialog
+            mode="create"
+            open={isCreateOpen}
+            onOpenChange={setIsCreateOpen}
+            onSubmit={handleCreate}
+            isPending={createDevice.isPending}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Device
+              </Button>
+            }
+          />
+        </div>
       </div>
+
+      <DeviceImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onSuccess={() => {
+          toast({ title: "Importação concluída com sucesso" });
+          queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
+          setIsImportOpen(false);
+        }}
+      />
 
       <DeviceFormDialog
         mode="edit"

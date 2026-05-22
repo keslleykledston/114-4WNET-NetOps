@@ -1,36 +1,38 @@
 # Roadmap
 
-## v0.3.0 — Gestão de usuários e autorizações
+## ✅ v0.3.3 — Compliance Report Export (Completed)
 
-- Tela `/users` com listagem CRUD.
-- Criar/editar/desabilitar usuários locais.
-- Reset de senha com token temporário.
-- Papéis: viewer, operator, admin (existentes).
-- Permissões granulares por módulo (devices, compliance, scheduler, reports).
-- Audit log de ações de usuário (criação, disable, senha, role change).
-- Sessão com timeout configurável.
-- Session revoke manual por admin.
+- ✅ Download compliance por job (Markdown/JSON/CSV).
+- ✅ Export findings com filtros e aggregação.
+- ✅ Evidence sanitizada (senhas/tokens/secrets removidas).
+- ✅ Summary de severidade, contexto e categoria operacional.
+- ✅ Permissões via compliance.export (admin/operator).
+- ✅ Audit log para todas ações de export.
+- ✅ OpenAPI + Orval regeneração.
+- ✅ Selftest suite (16/16 tests passing).
+- **Status:** ✅ Production Ready
 
-## v0.3.1 — Import/Export de dispositivos
+## ✅ v0.3.0 — Gestão de usuários e autorizações (Completed)
 
-- Import: CSV/XLSX/TXT com preview pré-aplicação.
-- Validação de IP/hostname.
-- Deduplicação por hostname/IP.
-- Não sobrescrever credenciais criptografadas.
-- Export: CSV/XLSX/JSON de selecionados (sem secrets).
-- Preservar metadata (site, role, vendor, platform).
-- Histórico de imports (audit trail).
+- ✅ Tela `/users` com listagem CRUD.
+- ✅ Criar/editar/desabilitar usuários locais.
+- ✅ Reset de senha com token temporário.
+- ✅ Papéis: viewer, operator, admin.
+- ✅ Permissões granulares por módulo.
+- ✅ Audit log de ações de usuário.
+- ✅ Sessão com timeout configurável.
+- ✅ Session revoke manual por admin.
 
-## v0.3.2 — Download/export de relatórios de compliance
+## ✅ v0.3.1-v0.3.2 — Import/Export de dispositivos e relatórios (Completed)
 
-- Botão download no painel compliance.
-- Export por job (findings filtrados).
-- Formatos: Markdown, JSON, CSV (PDF futuro).
-- Evidence sanitizada (sem payloads brutos).
-- Incluir summary de severidade, contexto e categoria operacional.
-- Timestamp e versão do job.
+- ✅ Import: CSV/XLSX/TXT com preview pré-aplicação.
+- ✅ Validação de IP/hostname e deduplicação.
+- ✅ Proteção de credenciais no import.
+- ✅ Export: CSV/XLSX/JSON de selecionados (sem secrets).
+- ✅ Histórico de imports com audit trail.
+- ✅ Markdown/JSON/CSV de relatórios.
 
-## v0.3.3 — Pilot operacional NOC
+## v0.3.4 — Pilot operacional NOC
 
 - Validação com operadores reais em NOC.
 - Feedback de UX, performance e operabilidade.

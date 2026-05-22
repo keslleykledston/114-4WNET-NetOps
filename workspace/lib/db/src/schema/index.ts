@@ -1,4 +1,5 @@
 export * from "./devices";
+export * from "./auth";
 export * from "./compliance";
 export * from "./templates";
 export * from "./provisioning";

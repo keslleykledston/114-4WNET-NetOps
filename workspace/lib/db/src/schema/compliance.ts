@@ -20,6 +20,7 @@ export const complianceJobsTable = pgTable("compliance_jobs", {
   id: serial("id").primaryKey(),
   deviceId: integer("device_id").notNull().references(() => devicesTable.id, { onDelete: "cascade" }),
   contexts: text("contexts").notNull(),
+  policyProfileName: text("policy_profile_name").default("huawei-vrp-edge-balanced"),
   status: text("status").notNull().default("pending"),
   passCount: integer("pass_count").notNull().default(0),
   failCount: integer("fail_count").notNull().default(0),
@@ -27,6 +28,20 @@ export const complianceJobsTable = pgTable("compliance_jobs", {
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const compliancePolicyProfilesTable = pgTable("compliance_policy_profiles", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  deviceRole: text("device_role"),
+  vendor: text("vendor"),
+  platform: text("platform"),
+  enabled: boolean("enabled").notNull().default(true),
+  rulesJson: jsonb("rules_json").notNull().default({}),
+  thresholdsJson: jsonb("thresholds_json").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const complianceFindingsTable = pgTable("compliance_findings", {
@@ -51,15 +66,19 @@ export const complianceFindingsTable = pgTable("compliance_findings", {
   ruleId: text("rule_id"),
   ruleName: text("rule_name"),
   rawReference: text("raw_reference"),
+  operationalCategory: text("operational_category"),
   metadataJson: jsonb("metadata_json").notNull().default({}),
 });
 
 export const insertCompliancePolicySchema = createInsertSchema(compliancePoliciesTable).omit({ id: true, createdAt: true });
 export const insertComplianceJobSchema = createInsertSchema(complianceJobsTable).omit({ id: true, createdAt: true, startedAt: true, completedAt: true });
 export const insertComplianceFindingSchema = createInsertSchema(complianceFindingsTable).omit({ id: true });
+export const insertCompliancePolicyProfileSchema = createInsertSchema(compliancePolicyProfilesTable).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertCompliancePolicy = z.infer<typeof insertCompliancePolicySchema>;
 export type CompliancePolicy = typeof compliancePoliciesTable.$inferSelect;
 export type InsertComplianceJob = z.infer<typeof insertComplianceJobSchema>;
 export type ComplianceJob = typeof complianceJobsTable.$inferSelect;
 export type ComplianceFinding = typeof complianceFindingsTable.$inferSelect;
+export type InsertCompliancePolicyProfile = z.infer<typeof insertCompliancePolicyProfileSchema>;
+export type CompliancePolicyProfile = typeof compliancePolicyProfilesTable.$inferSelect;

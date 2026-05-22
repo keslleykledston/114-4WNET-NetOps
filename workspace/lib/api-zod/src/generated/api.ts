@@ -795,7 +795,8 @@ export const ListComplianceJobsResponse = zod.array(ListComplianceJobsResponseIt
  */
 export const CreateComplianceJobBody = zod.object({
   "deviceId": zod.number(),
-  "contexts": zod.array(zod.string())
+  "contexts": zod.array(zod.string()),
+  "policyProfileName": zod.string().optional()
 })
 
 

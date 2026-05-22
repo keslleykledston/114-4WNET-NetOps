@@ -9,6 +9,7 @@ import {
   discoverySnapshotsTable,
   type CompliancePolicy,
 } from "@workspace/db";
+import { compliancePolicyProfilesTable, type CompliancePolicyProfile } from "@workspace/db/schema";
 import type { DeviceDiscoverySnapshot } from "../netops/device-discovery/discovery.types.js";
 import { confidenceFromSnapshot, sourceFromSnapshot } from "./confidence.js";
 import type { ComplianceContext, StructuredFinding } from "./compliance-context.js";
@@ -72,6 +73,84 @@ function normalizeSeverity(finding: StructuredFinding): string {
     if (finding.severity === "critical" || finding.severity === "high") return "warning";
   }
   return finding.severity;
+}
+
+function getOperationalCategory(ruleName: string, severity: string): string {
+  // Map rule names to operational categories
+  const blockersReal = [
+    "Peer BGP Established",
+    "Cliente com import policy",
+    "Operadora/IX/CDN com export policy",
+  ];
+  const riskOperational = [
+    "Prefix-list referenciada existe",
+    "Community-filter/list referenciada existe",
+    "Route-policy referenciada existe",
+    "VRF com RD",
+    "VRF com RT import",
+    "VRF com RT export",
+  ];
+  const riskOperacional = riskOperational; // Alias for PT spelling
+  const standardization = [
+    "Subinterface com dot1q",
+    "Interface ativa com descrição",
+    "Peer BGP com descrição",
+  ];
+  const informative = [
+    "SSH presente",
+    "NTP configurado",
+    "Discovery snapshot disponível",
+  ];
+  const falsoPositivo = [
+    "Telnet ausente",
+    "SNMP public ausente",
+  ];
+
+  if (blockersReal.includes(ruleName)) return "BLOCKER_REAL";
+  if (riskOperacional.includes(ruleName)) return "RISCO_OPERACIONAL";
+  if (standardization.includes(ruleName)) return "PADRONIZACAO";
+  if (informative.includes(ruleName)) return "INFORMATIVO";
+  if (falsoPositivo.includes(ruleName)) return "POSSIVEL_FALSO_POSITIVO";
+
+  // Default: infer from severity
+  if (severity === "high" || severity === "critical") return "RISCO_OPERACIONAL";
+  if (severity === "medium") return "PADRONIZACAO";
+  return "INFORMATIVO";
+}
+
+interface ProfileThresholds {
+  bgp?: Record<string, string>;
+  interface?: Record<string, string>;
+  security?: Record<string, string>;
+  l3vpn?: Record<string, string>;
+}
+
+function applySeverityMapping(finding: StructuredFinding, profile: CompliancePolicyProfile | null): string {
+  if (!profile) return finding.severity;
+
+  const thresholds = (profile.thresholdsJson ?? {}) as ProfileThresholds;
+  const ruleName = finding.policyName;
+  const context = finding.context;
+
+  // Map rule name to threshold key
+  const mappings: Record<string, { context: string; key: string }> = {
+    "Peer BGP Established": { context: "bgp", key: "peer_established_severity" },
+    "Cliente com import policy": { context: "bgp", key: "customer_import_policy_severity" },
+    "Operadora/IX/CDN com export policy": { context: "bgp", key: "provider_export_policy_severity" },
+    "Prefix-list referenciada existe": { context: "bgp", key: "prefix_list_severity" },
+    "Community-filter/list referenciada existe": { context: "bgp", key: "community_list_severity" },
+    "Subinterface com dot1q": { context: "interface", key: "dot1q_severity" },
+    "Interface ativa com descrição": { context: "interface", key: "description_severity" },
+  };
+
+  const mapping = mappings[ruleName];
+  if (!mapping) return finding.severity;
+
+  const contextThresholds = thresholds[mapping.context as keyof ProfileThresholds];
+  if (!contextThresholds) return finding.severity;
+
+  const severityOverride = contextThresholds[mapping.key];
+  return severityOverride || finding.severity;
 }
 
 function evaluateLegacyPolicy(policy: CompliancePolicy, ctx: ComplianceContext): StructuredFinding | null {
@@ -146,6 +225,11 @@ async function buildContext(jobId: number): Promise<ComplianceContext | null> {
   const [snapshotRow] = await db.select().from(discoverySnapshotsTable).where(eq(discoverySnapshotsTable.deviceId, device.id)).orderBy(desc(discoverySnapshotsTable.createdAt)).limit(1);
   const [collectedConfig] = await db.select().from(collectedConfigsTable).where(eq(collectedConfigsTable.deviceId, device.id)).orderBy(desc(collectedConfigsTable.collectedAt)).limit(1);
   const snapshot = (snapshotRow?.snapshotJson ?? null) as DeviceDiscoverySnapshot | null;
+
+  // Load policy profile (default to balanced if not specified)
+  const profileName = job.policyProfileName ?? "huawei-vrp-edge-balanced";
+  const [profile] = await db.select().from(compliancePolicyProfilesTable).where(eq(compliancePolicyProfilesTable.name, profileName));
+
   return {
     device,
     contexts: parseContexts(job.contexts),
@@ -155,6 +239,7 @@ async function buildContext(jobId: number): Promise<ComplianceContext | null> {
     rawConfig: collectedConfig?.rawConfig ?? "",
     source: sourceFromSnapshot(snapshot),
     confidence: confidenceFromSnapshot(snapshot),
+    profile: profile ?? null,
   };
 }
 
@@ -212,7 +297,10 @@ export async function executeComplianceJob(jobId: number) {
   if (findings.length > 0) {
     const rows = findings.map((finding) => {
       const policy = byRule.get(finding.policyKey) ?? byName.get(finding.policyName);
-      const severity = normalizeSeverity(finding);
+      let severity = normalizeSeverity(finding);
+      // Apply profile-based severity mapping
+      severity = applySeverityMapping(finding, ctx.profile) || severity;
+      const operationalCategory = getOperationalCategory(finding.policyName, severity);
       if (finding.status === "pass") passCount += 1;
       if (finding.status === "fail") failCount += 1;
       return {
@@ -236,6 +324,7 @@ export async function executeComplianceJob(jobId: number) {
         ruleId: finding.policyKey,
         ruleName: finding.policyName,
         rawReference: finding.rawReference === undefined ? compactReference(finding.evidence) : compactReference(finding.rawReference),
+        operationalCategory,
         metadataJson: finding.metadata ?? {},
       };
     });

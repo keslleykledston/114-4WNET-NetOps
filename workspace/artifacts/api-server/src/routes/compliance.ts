@@ -6,6 +6,7 @@ import {
   complianceFindingsTable,
   devicesTable,
 } from "@workspace/db";
+import { compliancePolicyProfilesTable } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
 import {
   CreateCompliancePolicyBody,
@@ -22,6 +23,94 @@ import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 import { executeComplianceJob } from "../modules/compliance/compliance-engine.js";
 
 const router = Router();
+
+// ── POLICY PROFILES HANDLERS ────────────────────────────────────────────────
+
+async function listPolicyProfiles(req: any, res: any) {
+  const profiles = await db.select().from(compliancePolicyProfilesTable).orderBy(compliancePolicyProfilesTable.name);
+  res.json(profiles.map(p => ({
+    ...p,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  })));
+}
+
+async function createPolicyProfile(req: any, res: any) {
+  const { name, description, deviceRole, vendor, platform, rulesJson, thresholdsJson } = req.body;
+  if (!name) { res.status(400).json({ error: "name required" }); return; }
+  const [profile] = await db.insert(compliancePolicyProfilesTable).values({
+    name,
+    description: description ?? null,
+    deviceRole: deviceRole ?? null,
+    vendor: vendor ?? null,
+    platform: platform ?? null,
+    rulesJson: rulesJson ?? {},
+    thresholdsJson: thresholdsJson ?? {},
+  }).returning();
+  await logAuditEvent({
+    action: "compliance_profile_created",
+    objectType: "compliance_policy_profile",
+    objectId: String(profile.id),
+    metadata: { name: profile.name },
+    sourceIp: getRequestSourceIp(req),
+  });
+  res.status(201).json({
+    ...profile,
+    createdAt: profile.createdAt.toISOString(),
+    updatedAt: profile.updatedAt.toISOString(),
+  });
+}
+
+async function getPolicyProfile(req: any, res: any) {
+  const [profile] = await db.select().from(compliancePolicyProfilesTable).where(eq(compliancePolicyProfilesTable.name, req.params.name));
+  if (!profile) { res.status(404).json({ error: "Not found" }); return; }
+  res.json({
+    ...profile,
+    createdAt: profile.createdAt.toISOString(),
+    updatedAt: profile.updatedAt.toISOString(),
+  });
+}
+
+async function updatePolicyProfile(req: any, res: any) {
+  const { description, rulesJson, thresholdsJson, enabled } = req.body;
+  const [updated] = await db.update(compliancePolicyProfilesTable)
+    .set({
+      description: description ?? undefined,
+      rulesJson: rulesJson ?? undefined,
+      thresholdsJson: thresholdsJson ?? undefined,
+      enabled: enabled ?? undefined,
+      updatedAt: new Date(),
+    })
+    .where(eq(compliancePolicyProfilesTable.name, req.params.name))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  await logAuditEvent({
+    action: "compliance_profile_updated",
+    objectType: "compliance_policy_profile",
+    objectId: String(updated.id),
+    metadata: { name: updated.name },
+    sourceIp: getRequestSourceIp(req),
+  });
+  res.json({
+    ...updated,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+  });
+}
+
+// ── POLICY PROFILES ROUTES (both /compliance-policy-profiles and /compliance/policy-profiles) ──
+
+router.get("/compliance-policy-profiles", listPolicyProfiles);
+router.get("/compliance/policy-profiles", listPolicyProfiles);
+
+router.post("/compliance-policy-profiles", createPolicyProfile);
+router.post("/compliance/policy-profiles", createPolicyProfile);
+
+router.get("/compliance-policy-profiles/:name", getPolicyProfile);
+router.get("/compliance/policy-profiles/:name", getPolicyProfile);
+
+router.patch("/compliance-policy-profiles/:name", updatePolicyProfile);
+router.patch("/compliance/policy-profiles/:name", updatePolicyProfile);
 
 // ── POLICIES ────────────────────────────────────────────────────────────────
 
@@ -86,9 +175,9 @@ router.delete("/compliance-policies/:id", async (req, res) => {
   res.status(204).end();
 });
 
-// ── JOBS ─────────────────────────────────────────────────────────────────────
+// ── JOBS HANDLERS ──────────────────────────────────────────────────────────────
 
-router.get("/compliance-jobs", async (req, res) => {
+async function listJobs(req: any, res: any) {
   const query = ListComplianceJobsQueryParams.safeParse(req.query);
   const jobs = await db.select({
     id: complianceJobsTable.id,
@@ -123,9 +212,9 @@ router.get("/compliance-jobs", async (req, res) => {
     completedAt: j.completedAt?.toISOString() ?? null,
     createdAt: j.createdAt.toISOString(),
   })));
-});
+}
 
-router.get("/compliance-jobs/summary", async (req, res) => {
+async function getJobSummary(req: any, res: any) {
   const allJobs = await db.select({
     id: complianceJobsTable.id,
     deviceId: complianceJobsTable.deviceId,
@@ -181,7 +270,89 @@ router.get("/compliance-jobs/summary", async (req, res) => {
     failuresByContext: byContext,
     failuresBySeverity: bySeverity,
   });
-});
+}
+
+async function createJob(req: any, res: any) {
+  const parsed = CreateComplianceJobBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
+
+  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, parsed.data.deviceId));
+  if (!device) { res.status(400).json({ error: "Device not found" }); return; }
+
+  const parsedData = parsed.data as { deviceId: number; contexts: string[]; policyProfileName?: string };
+  const profileName = parsedData.policyProfileName ?? "huawei-vrp-edge-balanced";
+
+  const [job] = await db.insert(complianceJobsTable).values({
+    deviceId: parsed.data.deviceId,
+    contexts: JSON.stringify(parsed.data.contexts),
+    policyProfileName: profileName,
+    status: "pending",
+    passCount: 0,
+    failCount: 0,
+  }).returning();
+
+  const result = { ...job, deviceHostname: device.hostname, contexts: parsed.data.contexts, startedAt: null, completedAt: null, policyProfileName: job.policyProfileName, createdAt: job.createdAt.toISOString() };
+  res.status(201).json(result);
+
+  await logAuditEvent({
+    action: "compliance_create",
+    objectType: "compliance_job",
+    objectId: String(job.id),
+    metadata: { deviceId: job.deviceId, contexts: parsed.data.contexts, policyProfileName: profileName },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  executeJob(job.id).catch(() => {});
+}
+
+async function getJob(req: any, res: any) {
+  const params = GetComplianceJobParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
+  const detail = await buildJobDetail(params.data.id);
+  if (!detail) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(detail);
+}
+
+async function executeJobHandler(req: any, res: any) {
+  const params = ExecuteComplianceJobParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  await db.update(complianceJobsTable).set({ status: "pending", passCount: 0, failCount: 0, errorMessage: null }).where(eq(complianceJobsTable.id, params.data.id));
+  await db.delete(complianceFindingsTable).where(eq(complianceFindingsTable.jobId, params.data.id));
+
+  await logAuditEvent({
+    action: "compliance_execute",
+    objectType: "compliance_job",
+    objectId: String(params.data.id),
+    metadata: { reset: true },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  const detail = await buildJobDetail(params.data.id);
+  if (!detail) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(detail);
+
+  executeJob(params.data.id).catch(() => {});
+}
+
+// ── JOBS ROUTES (both /compliance-jobs and /compliance/jobs) ───────────────────
+
+router.get("/compliance-jobs", listJobs);
+router.get("/compliance/jobs", listJobs);
+
+router.get("/compliance-jobs/summary", getJobSummary);
+router.get("/compliance/jobs/summary", getJobSummary);
+
+router.post("/compliance-jobs", createJob);
+router.post("/compliance/jobs", createJob);
+
+router.get("/compliance-jobs/:id", getJob);
+router.get("/compliance/jobs/:id", getJob);
+
+router.post("/compliance-jobs/:id/execute", executeJobHandler);
+router.post("/compliance/jobs/:id/execute", executeJobHandler);
+
+// ── FINDINGS ────────────────────────────────────────────────────────────────
 
 router.get("/compliance-findings", async (req, res) => {
   const rows = await db.select({
@@ -207,6 +378,7 @@ router.get("/compliance-findings", async (req, res) => {
     objectName: complianceFindingsTable.objectName,
     ruleId: complianceFindingsTable.ruleId,
     ruleName: complianceFindingsTable.ruleName,
+    operationalCategory: complianceFindingsTable.operationalCategory,
     rawReference: complianceFindingsTable.rawReference,
     metadataJson: complianceFindingsTable.metadataJson,
     jobCreatedAt: complianceJobsTable.createdAt,
@@ -233,63 +405,6 @@ router.get("/compliance-findings", async (req, res) => {
     message: row.message ?? row.detail,
     jobCreatedAt: row.jobCreatedAt?.toISOString() ?? null,
   })));
-});
-
-router.post("/compliance-jobs", async (req, res) => {
-  const parsed = CreateComplianceJobBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
-
-  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, parsed.data.deviceId));
-  if (!device) { res.status(400).json({ error: "Device not found" }); return; }
-
-  const [job] = await db.insert(complianceJobsTable).values({
-    deviceId: parsed.data.deviceId,
-    contexts: JSON.stringify(parsed.data.contexts),
-    status: "pending",
-    passCount: 0,
-    failCount: 0,
-  }).returning();
-
-  const result = { ...job, deviceHostname: device.hostname, contexts: parsed.data.contexts, startedAt: null, completedAt: null, createdAt: job.createdAt.toISOString() };
-  res.status(201).json(result);
-
-  await logAuditEvent({
-    action: "compliance_create",
-    objectType: "compliance_job",
-    objectId: String(job.id),
-    metadata: { deviceId: job.deviceId, contexts: parsed.data.contexts },
-    sourceIp: getRequestSourceIp(req),
-  });
-
-  executeJob(job.id).catch(() => {});
-});
-
-router.get("/compliance-jobs/:id", async (req, res) => {
-  const params = GetComplianceJobParams.safeParse({ id: Number(req.params.id) });
-  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
-  res.json(await getJobDetail(params.data.id, res));
-});
-
-router.post("/compliance-jobs/:id/execute", async (req, res) => {
-  const params = ExecuteComplianceJobParams.safeParse({ id: Number(req.params.id) });
-  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
-
-  await db.update(complianceJobsTable).set({ status: "pending", passCount: 0, failCount: 0, errorMessage: null }).where(eq(complianceJobsTable.id, params.data.id));
-  await db.delete(complianceFindingsTable).where(eq(complianceFindingsTable.jobId, params.data.id));
-
-  await logAuditEvent({
-    action: "compliance_execute",
-    objectType: "compliance_job",
-    objectId: String(params.data.id),
-    metadata: { reset: true },
-    sourceIp: getRequestSourceIp(req),
-  });
-
-  const detail = await buildJobDetail(params.data.id);
-  if (!detail) { res.status(404).json({ error: "Not found" }); return; }
-  res.json(detail);
-
-  executeJob(params.data.id).catch(() => {});
 });
 
 async function getJobDetail(id: number, res: any) {

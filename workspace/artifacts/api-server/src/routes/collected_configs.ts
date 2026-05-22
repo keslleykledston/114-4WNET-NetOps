@@ -9,6 +9,7 @@ import {
 } from "@workspace/api-zod";
 import { decrypt } from "../lib/crypto.js";
 import { runSSHCommands, getCollectionCommands, parseConfig } from "../lib/ssh.js";
+import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 
 const router = Router();
 
@@ -95,6 +96,19 @@ router.post("/collected-configs", async (req, res) => {
     parsedL2vpn,
     parsedL3vpn,
   }).returning();
+
+  await logAuditEvent({
+    action: "collect_config",
+    objectType: "device",
+    objectId: String(device.id),
+    metadata: {
+      deviceHostname: device.hostname,
+      source: "ssh",
+      status: rawConfig.startsWith("Error collecting config:") ? "failed" : "success",
+      parserVersion: "huawei-vrp",
+    },
+    sourceIp: getRequestSourceIp(req),
+  });
 
   res.status(201).json({
     ...cfg,

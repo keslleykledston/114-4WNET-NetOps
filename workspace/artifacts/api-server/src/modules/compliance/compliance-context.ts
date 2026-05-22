@@ -1,4 +1,5 @@
 import type { CollectedConfig, Device, DiscoverySnapshot } from "@workspace/db";
+import type { CompliancePolicyProfile } from "@workspace/db/schema";
 import type { DeviceDiscoverySnapshot } from "../netops/device-discovery/discovery.types.js";
 import type { ComplianceConfidence, ComplianceSource } from "./confidence.js";
 
@@ -33,6 +34,7 @@ export type ComplianceContext = {
   rawConfig: string;
   source: ComplianceSource;
   confidence: ComplianceConfidence;
+  profile: CompliancePolicyProfile | null;
 };
 
 export function contextRequested(ctx: ComplianceContext, names: string[]): boolean {

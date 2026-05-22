@@ -243,7 +243,7 @@ async function buildJobDetail(id: number) {
   };
 }
 
-async function executeJob(jobId: number) {
+export async function executeJob(jobId: number) {
   await db.update(complianceJobsTable).set({ status: "running", startedAt: new Date() }).where(eq(complianceJobsTable.id, jobId));
 
   const [job] = await db.select().from(complianceJobsTable).where(eq(complianceJobsTable.id, jobId));

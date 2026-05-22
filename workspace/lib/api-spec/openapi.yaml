@@ -31,6 +31,8 @@ tags:
     description: Generated reports
   - name: integrations
     description: Integration readiness settings
+  - name: scheduler
+    description: Scheduled discovery and compliance jobs
   - name: collected-configs
     description: Collected device configurations
   - name: snmp-snapshots
@@ -160,6 +162,207 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /scheduled-jobs:
+    get:
+      operationId: listScheduledJobs
+      tags: [scheduler]
+      summary: List scheduled jobs
+      responses:
+        "200":
+          description: Jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJobListResponse"
+    post:
+      operationId: createScheduledJob
+      tags: [scheduler]
+      summary: Create scheduled job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduledJobCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+
+  /scheduled-jobs/{id}:
+    get:
+      operationId: getScheduledJob
+      tags: [scheduler]
+      summary: Get scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+    patch:
+      operationId: updateScheduledJob
+      tags: [scheduler]
+      summary: Update scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduledJobUpdateRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+    delete:
+      operationId: deleteScheduledJob
+      tags: [scheduler]
+      summary: Delete scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /scheduled-jobs/{id}/run-now:
+    post:
+      operationId: runScheduledJobNow
+      tags: [scheduler]
+      summary: Run scheduled job now
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJobRunDetail"
+
+  /scheduled-jobs/{id}/enable:
+    post:
+      operationId: enableScheduledJob
+      tags: [scheduler]
+      summary: Enable scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+
+  /scheduled-jobs/{id}/disable:
+    post:
+      operationId: disableScheduledJob
+      tags: [scheduler]
+      summary: Disable scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+
+  /scheduled-job-runs:
+    get:
+      operationId: listScheduledJobRuns
+      tags: [scheduler]
+      summary: List scheduled job runs
+      parameters:
+        - name: scheduledJobId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJobRunListResponse"
+
+  /scheduled-job-runs/{id}:
+    get:
+      operationId: getScheduledJobRun
+      tags: [scheduler]
+      summary: Get scheduled job run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJobRunDetail"
+
+  /scheduled-job-runs/{id}/items:
+    get:
+      operationId: listScheduledJobRunItems
+      tags: [scheduler]
+      summary: List run items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduledJobRunItem"
 
   # ── DEVICES ──────────────────────────────────────────────────────────────────
   /devices:
@@ -3761,3 +3964,217 @@ components:
           enum: [success, error, pending]
         createdAt:
           type: string
+
+    ScheduledJobType:
+      type: string
+      enum: [discovery, compliance, health_check]
+
+    ScheduledJobTargetType:
+      type: string
+      enum: [device, device_group, all_devices]
+
+    ScheduledJobRunStatus:
+      type: string
+      enum: [pending, running, completed, failed, partial, cancelled]
+
+    ScheduledJobRunItemStatus:
+      type: string
+      enum: [pending, running, completed, failed, skipped]
+
+    ScheduledJob:
+      type: object
+      required:
+        - id
+        - name
+        - jobType
+        - targetType
+        - contextsJson
+        - intervalMinutes
+        - enabled
+        - runOnStartup
+        - maxRuntimeSeconds
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        jobType:
+          $ref: "#/components/schemas/ScheduledJobType"
+        targetType:
+          $ref: "#/components/schemas/ScheduledJobTargetType"
+        targetId:
+          type: ["integer", "null"]
+        targetLabel:
+          type: ["string", "null"]
+        contextsJson:
+          type: array
+          items:
+            type: string
+        cronExpression:
+          type: ["string", "null"]
+        intervalMinutes:
+          type: integer
+        enabled:
+          type: boolean
+        runOnStartup:
+          type: boolean
+        maxRuntimeSeconds:
+          type: integer
+        createdBy:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        lastRunAt:
+          type: ["string", "null"]
+        nextRunAt:
+          type: ["string", "null"]
+
+    ScheduledJobCreateRequest:
+      type: object
+      required: [name, jobType, targetType]
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        jobType:
+          $ref: "#/components/schemas/ScheduledJobType"
+        targetType:
+          $ref: "#/components/schemas/ScheduledJobTargetType"
+        targetId:
+          type: ["integer", "null"]
+        contextsJson:
+          type: array
+          items:
+            type: string
+        cronExpression:
+          type: ["string", "null"]
+        intervalMinutes:
+          type: integer
+        enabled:
+          type: boolean
+        runOnStartup:
+          type: boolean
+        maxRuntimeSeconds:
+          type: integer
+
+    ScheduledJobUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        jobType:
+          $ref: "#/components/schemas/ScheduledJobType"
+        targetType:
+          $ref: "#/components/schemas/ScheduledJobTargetType"
+        targetId:
+          type: ["integer", "null"]
+        contextsJson:
+          type: array
+          items:
+            type: string
+        cronExpression:
+          type: ["string", "null"]
+        intervalMinutes:
+          type: ["integer", "null"]
+        enabled:
+          type: boolean
+        runOnStartup:
+          type: boolean
+        maxRuntimeSeconds:
+          type: ["integer", "null"]
+
+    ScheduledJobRun:
+      type: object
+      required:
+        - id
+        - scheduledJobId
+        - status
+        - triggeredBy
+        - createdAt
+      properties:
+        id:
+          type: integer
+        scheduledJobId:
+          type: integer
+        status:
+          $ref: "#/components/schemas/ScheduledJobRunStatus"
+        startedAt:
+          type: ["string", "null"]
+        finishedAt:
+          type: ["string", "null"]
+        triggeredBy:
+          type: string
+          enum: [scheduler, manual]
+        actorId:
+          type: ["integer", "null"]
+        summaryJson:
+          type: ["object", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ScheduledJobRunItem:
+      type: object
+      required:
+        - id
+        - scheduledJobRunId
+        - deviceId
+        - status
+        - actionType
+        - createdAt
+      properties:
+        id:
+          type: integer
+        scheduledJobRunId:
+          type: integer
+        deviceId:
+          type: integer
+        status:
+          $ref: "#/components/schemas/ScheduledJobRunItemStatus"
+        actionType:
+          type: string
+          enum: [discovery, compliance, health_check]
+        resultRefType:
+          type: ["string", "null"]
+        resultRefId:
+          type: ["string", "null"]
+        summaryJson:
+          type: ["object", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        startedAt:
+          type: ["string", "null"]
+        finishedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ScheduledJobRunDetail:
+      allOf:
+        - $ref: "#/components/schemas/ScheduledJobRun"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ScheduledJobRunItem"
+
+    ScheduledJobListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/ScheduledJob"
+
+    ScheduledJobRunListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/ScheduledJobRun"

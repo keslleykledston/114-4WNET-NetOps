@@ -113,6 +113,318 @@ export const DeleteUserParams = zod.object({
 
 
 /**
+ * @summary List scheduled jobs
+ */
+export const ListScheduledJobsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+export const ListScheduledJobsResponse = zod.array(ListScheduledJobsResponseItem)
+
+
+/**
+ * @summary Create scheduled job
+ */
+export const CreateScheduledJobBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "contextsJson": zod.array(zod.string()).optional(),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number().optional(),
+  "enabled": zod.boolean().optional(),
+  "runOnStartup": zod.boolean().optional(),
+  "maxRuntimeSeconds": zod.number().optional()
+})
+
+
+/**
+ * @summary Get scheduled job
+ */
+export const GetScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetScheduledJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update scheduled job
+ */
+export const UpdateScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateScheduledJobBody = zod.object({
+  "name": zod.string().optional(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']).optional(),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']).optional(),
+  "targetId": zod.number().nullish(),
+  "contextsJson": zod.array(zod.string()).optional(),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number().nullish(),
+  "enabled": zod.boolean().optional(),
+  "runOnStartup": zod.boolean().optional(),
+  "maxRuntimeSeconds": zod.number().nullish()
+})
+
+export const UpdateScheduledJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Delete scheduled job
+ */
+export const DeleteScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Run scheduled job now
+ */
+export const RunScheduledJobNowParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RunScheduledJobNowResponse = zod.object({
+  "id": zod.number(),
+  "scheduledJobId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'partial', 'cancelled']),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "triggeredBy": zod.enum(['scheduler', 'manual']),
+  "actorId": zod.number().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string()
+}).and(zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "scheduledJobRunId": zod.number(),
+  "deviceId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'skipped']),
+  "actionType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "resultRefType": zod.string().nullish(),
+  "resultRefId": zod.string().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary Enable scheduled job
+ */
+export const EnableScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const EnableScheduledJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Disable scheduled job
+ */
+export const DisableScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DisableScheduledJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary List scheduled job runs
+ */
+export const ListScheduledJobRunsQueryParams = zod.object({
+  "scheduledJobId": zod.coerce.number().optional()
+})
+
+export const ListScheduledJobRunsResponseItem = zod.object({
+  "id": zod.number(),
+  "scheduledJobId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'partial', 'cancelled']),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "triggeredBy": zod.enum(['scheduler', 'manual']),
+  "actorId": zod.number().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListScheduledJobRunsResponse = zod.array(ListScheduledJobRunsResponseItem)
+
+
+/**
+ * @summary Get scheduled job run
+ */
+export const GetScheduledJobRunParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetScheduledJobRunResponse = zod.object({
+  "id": zod.number(),
+  "scheduledJobId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'partial', 'cancelled']),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "triggeredBy": zod.enum(['scheduler', 'manual']),
+  "actorId": zod.number().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string()
+}).and(zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "scheduledJobRunId": zod.number(),
+  "deviceId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'skipped']),
+  "actionType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "resultRefType": zod.string().nullish(),
+  "resultRefId": zod.string().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary List run items
+ */
+export const ListScheduledJobRunItemsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListScheduledJobRunItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "scheduledJobRunId": zod.number(),
+  "deviceId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'skipped']),
+  "actionType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "resultRefType": zod.string().nullish(),
+  "resultRefId": zod.string().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListScheduledJobRunItemsResponse = zod.array(ListScheduledJobRunItemsResponseItem)
+
+
+/**
  * @summary List all devices
  */
 export const ListDevicesQueryParams = zod.object({

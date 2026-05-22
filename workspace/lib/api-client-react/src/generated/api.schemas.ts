@@ -1701,6 +1701,189 @@ export interface CommunityChangeAudit {
   createdAt: string;
 }
 
+export type ScheduledJobType = typeof ScheduledJobType[keyof typeof ScheduledJobType];
+
+
+export const ScheduledJobType = {
+  discovery: 'discovery',
+  compliance: 'compliance',
+  health_check: 'health_check',
+} as const;
+
+export type ScheduledJobTargetType = typeof ScheduledJobTargetType[keyof typeof ScheduledJobTargetType];
+
+
+export const ScheduledJobTargetType = {
+  device: 'device',
+  device_group: 'device_group',
+  all_devices: 'all_devices',
+} as const;
+
+export type ScheduledJobRunStatus = typeof ScheduledJobRunStatus[keyof typeof ScheduledJobRunStatus];
+
+
+export const ScheduledJobRunStatus = {
+  pending: 'pending',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed',
+  partial: 'partial',
+  cancelled: 'cancelled',
+} as const;
+
+export type ScheduledJobRunItemStatus = typeof ScheduledJobRunItemStatus[keyof typeof ScheduledJobRunItemStatus];
+
+
+export const ScheduledJobRunItemStatus = {
+  pending: 'pending',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+export interface ScheduledJob {
+  id: number;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  jobType: ScheduledJobType;
+  targetType: ScheduledJobTargetType;
+  /** @nullable */
+  targetId?: number | null;
+  /** @nullable */
+  targetLabel?: string | null;
+  contextsJson: string[];
+  /** @nullable */
+  cronExpression?: string | null;
+  intervalMinutes: number;
+  enabled: boolean;
+  runOnStartup: boolean;
+  maxRuntimeSeconds: number;
+  /** @nullable */
+  createdBy?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  lastRunAt?: string | null;
+  /** @nullable */
+  nextRunAt?: string | null;
+}
+
+export interface ScheduledJobCreateRequest {
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  jobType: ScheduledJobType;
+  targetType: ScheduledJobTargetType;
+  /** @nullable */
+  targetId?: number | null;
+  contextsJson?: string[];
+  /** @nullable */
+  cronExpression?: string | null;
+  intervalMinutes?: number;
+  enabled?: boolean;
+  runOnStartup?: boolean;
+  maxRuntimeSeconds?: number;
+}
+
+export interface ScheduledJobUpdateRequest {
+  name?: string;
+  /** @nullable */
+  description?: string | null;
+  jobType?: ScheduledJobType;
+  targetType?: ScheduledJobTargetType;
+  /** @nullable */
+  targetId?: number | null;
+  contextsJson?: string[];
+  /** @nullable */
+  cronExpression?: string | null;
+  /** @nullable */
+  intervalMinutes?: number | null;
+  enabled?: boolean;
+  runOnStartup?: boolean;
+  /** @nullable */
+  maxRuntimeSeconds?: number | null;
+}
+
+export type ScheduledJobRunTriggeredBy = typeof ScheduledJobRunTriggeredBy[keyof typeof ScheduledJobRunTriggeredBy];
+
+
+export const ScheduledJobRunTriggeredBy = {
+  scheduler: 'scheduler',
+  manual: 'manual',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ScheduledJobRunSummaryJson = { [key: string]: unknown } | null;
+
+export interface ScheduledJobRun {
+  id: number;
+  scheduledJobId: number;
+  status: ScheduledJobRunStatus;
+  /** @nullable */
+  startedAt?: string | null;
+  /** @nullable */
+  finishedAt?: string | null;
+  triggeredBy: ScheduledJobRunTriggeredBy;
+  /** @nullable */
+  actorId?: number | null;
+  /** @nullable */
+  summaryJson?: ScheduledJobRunSummaryJson;
+  /** @nullable */
+  errorMessage?: string | null;
+  createdAt: string;
+}
+
+export type ScheduledJobRunItemActionType = typeof ScheduledJobRunItemActionType[keyof typeof ScheduledJobRunItemActionType];
+
+
+export const ScheduledJobRunItemActionType = {
+  discovery: 'discovery',
+  compliance: 'compliance',
+  health_check: 'health_check',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ScheduledJobRunItemSummaryJson = { [key: string]: unknown } | null;
+
+export interface ScheduledJobRunItem {
+  id: number;
+  scheduledJobRunId: number;
+  deviceId: number;
+  status: ScheduledJobRunItemStatus;
+  actionType: ScheduledJobRunItemActionType;
+  /** @nullable */
+  resultRefType?: string | null;
+  /** @nullable */
+  resultRefId?: string | null;
+  /** @nullable */
+  summaryJson?: ScheduledJobRunItemSummaryJson;
+  /** @nullable */
+  errorMessage?: string | null;
+  /** @nullable */
+  startedAt?: string | null;
+  /** @nullable */
+  finishedAt?: string | null;
+  createdAt: string;
+}
+
+export type ScheduledJobRunDetail = ScheduledJobRun & {
+  items?: ScheduledJobRunItem[];
+};
+
+export type ScheduledJobListResponse = ScheduledJob[];
+
+export type ScheduledJobRunListResponse = ScheduledJobRun[];
+
+export type ListScheduledJobRunsParams = {
+scheduledJobId?: number;
+};
+
 export type ListDevicesParams = {
 status?: string;
 vendor?: string;

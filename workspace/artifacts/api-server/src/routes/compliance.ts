@@ -6,7 +6,7 @@ import {
   complianceFindingsTable,
   devicesTable,
 } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import {
   CreateCompliancePolicyBody,
   UpdateCompliancePolicyBody,
@@ -18,9 +18,8 @@ import {
   ExecuteComplianceJobParams,
   ListComplianceJobsQueryParams,
 } from "@workspace/api-zod";
-import { decrypt } from "../lib/crypto.js";
-import { runSSHCommands, getCollectionCommands } from "../lib/ssh.js";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
+import { executeComplianceJob } from "../modules/compliance/compliance-engine.js";
 
 const router = Router();
 
@@ -38,6 +37,13 @@ router.post("/compliance-policies", async (req, res) => {
     ...parsed.data,
     enabled: parsed.data.enabled ?? true,
   }).returning();
+  await logAuditEvent({
+    action: "compliance_policy_created",
+    objectType: "compliance_policy",
+    objectId: String(policy.id),
+    metadata: { name: policy.name, context: policy.context, severity: policy.severity },
+    sourceIp: getRequestSourceIp(req),
+  });
   res.status(201).json({ ...policy, createdAt: policy.createdAt.toISOString() });
 });
 
@@ -56,6 +62,13 @@ router.patch("/compliance-policies/:id", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
   const [updated] = await db.update(compliancePoliciesTable).set(parsed.data).where(eq(compliancePoliciesTable.id, params.data.id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  await logAuditEvent({
+    action: "compliance_policy_updated",
+    objectType: "compliance_policy",
+    objectId: String(updated.id),
+    metadata: { name: updated.name, context: updated.context, severity: updated.severity },
+    sourceIp: getRequestSourceIp(req),
+  });
   res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
 });
 
@@ -63,6 +76,13 @@ router.delete("/compliance-policies/:id", async (req, res) => {
   const params = DeleteCompliancePolicyParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
   await db.delete(compliancePoliciesTable).where(eq(compliancePoliciesTable.id, params.data.id));
+  await logAuditEvent({
+    action: "compliance_policy_deleted",
+    objectType: "compliance_policy",
+    objectId: String(params.data.id),
+    metadata: {},
+    sourceIp: getRequestSourceIp(req),
+  });
   res.status(204).end();
 });
 
@@ -137,7 +157,10 @@ router.get("/compliance-jobs/summary", async (req, res) => {
     createdAt: j.createdAt.toISOString(),
   }));
 
-  const failedFindings = findings.filter(f => f.result === "fail");
+  const failedFindings = findings.filter(f => (f.status ?? f.result) === "fail");
+  const warningFindings = findings.filter(f => (f.status ?? f.result) === "warning");
+  const unknownFindings = findings.filter(f => (f.status ?? f.result) === "unknown");
+  const criticalFindings = findings.filter(f => f.severity === "critical");
   const byContext = Object.entries(
     failedFindings.reduce((acc, f) => { acc[f.context] = (acc[f.context] ?? 0) + 1; return acc; }, {} as Record<string, number>)
   ).map(([key, count]) => ({ key, count }));
@@ -146,7 +169,70 @@ router.get("/compliance-jobs/summary", async (req, res) => {
     failedFindings.reduce((acc, f) => { acc[f.severity] = (acc[f.severity] ?? 0) + 1; return acc; }, {} as Record<string, number>)
   ).map(([key, count]) => ({ key, count }));
 
-  res.json({ totalJobs, passed, failed, running, recentJobs, failuresByContext: byContext, failuresBySeverity: bySeverity });
+  res.json({
+    totalJobs,
+    passed,
+    failed,
+    running,
+    warningFindings: warningFindings.length,
+    unknownFindings: unknownFindings.length,
+    criticalFindings: criticalFindings.length,
+    recentJobs,
+    failuresByContext: byContext,
+    failuresBySeverity: bySeverity,
+  });
+});
+
+router.get("/compliance-findings", async (req, res) => {
+  const rows = await db.select({
+    id: complianceFindingsTable.id,
+    jobId: complianceFindingsTable.jobId,
+    deviceId: complianceJobsTable.deviceId,
+    deviceHostname: devicesTable.hostname,
+    policyId: complianceFindingsTable.policyId,
+    policyName: complianceFindingsTable.policyName,
+    severity: complianceFindingsTable.severity,
+    context: complianceFindingsTable.context,
+    result: complianceFindingsTable.result,
+    detail: complianceFindingsTable.detail,
+    evidence: complianceFindingsTable.evidence,
+    status: complianceFindingsTable.status,
+    message: complianceFindingsTable.message,
+    recommendation: complianceFindingsTable.recommendation,
+    blocking: complianceFindingsTable.blocking,
+    source: complianceFindingsTable.source,
+    confidence: complianceFindingsTable.confidence,
+    objectType: complianceFindingsTable.objectType,
+    objectId: complianceFindingsTable.objectId,
+    objectName: complianceFindingsTable.objectName,
+    ruleId: complianceFindingsTable.ruleId,
+    ruleName: complianceFindingsTable.ruleName,
+    rawReference: complianceFindingsTable.rawReference,
+    metadataJson: complianceFindingsTable.metadataJson,
+    jobCreatedAt: complianceJobsTable.createdAt,
+  })
+    .from(complianceFindingsTable)
+    .leftJoin(complianceJobsTable, eq(complianceFindingsTable.jobId, complianceJobsTable.id))
+    .leftJoin(devicesTable, eq(complianceJobsTable.deviceId, devicesTable.id))
+    .orderBy(desc(complianceFindingsTable.id))
+    .limit(500);
+
+  const filtered = rows.filter((row) => {
+    if (req.query.status && (row.status ?? row.result) !== String(req.query.status)) return false;
+    if (req.query.severity && row.severity !== String(req.query.severity)) return false;
+    if (req.query.context && row.context !== String(req.query.context)) return false;
+    if (req.query.confidence && row.confidence !== String(req.query.confidence)) return false;
+    if (req.query.source && row.source !== String(req.query.source)) return false;
+    if (req.query.deviceId && row.deviceId !== Number(req.query.deviceId)) return false;
+    return true;
+  });
+
+  res.json(filtered.map((row) => ({
+    ...row,
+    status: row.status ?? row.result,
+    message: row.message ?? row.detail,
+    jobCreatedAt: row.jobCreatedAt?.toISOString() ?? null,
+  })));
 });
 
 router.post("/compliance-jobs", async (req, res) => {
@@ -244,98 +330,7 @@ async function buildJobDetail(id: number) {
 }
 
 export async function executeJob(jobId: number) {
-  await db.update(complianceJobsTable).set({ status: "running", startedAt: new Date() }).where(eq(complianceJobsTable.id, jobId));
-
-  const [job] = await db.select().from(complianceJobsTable).where(eq(complianceJobsTable.id, jobId));
-  if (!job) return;
-
-  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, job.deviceId));
-  if (!device) {
-    await db.update(complianceJobsTable).set({ status: "error", errorMessage: "Device not found", completedAt: new Date() }).where(eq(complianceJobsTable.id, jobId));
-    return;
-  }
-
-  const contexts: string[] = JSON.parse(job.contexts ?? "[]");
-  const policies = await db.select().from(compliancePoliciesTable).where(eq(compliancePoliciesTable.enabled, true));
-  const relevantPolicies = policies.filter(p => contexts.includes(p.context) && (!p.vendor || p.vendor === device.vendor));
-
-  let rawConfig = "";
-  try {
-    const password = decrypt(device.passwordEncrypted);
-    const commands = getCollectionCommands(device.vendor, device.platform);
-    const results = await runSSHCommands({ host: device.ipAddress, port: device.sshPort, username: device.username, password }, commands);
-    rawConfig = results.map(r => r.output).join("\n\n");
-
-    await db.update(devicesTable).set({ status: "active", lastSeen: new Date(), updatedAt: new Date() }).where(eq(devicesTable.id, device.id));
-  } catch {
-    await db.update(devicesTable).set({ status: "unreachable", updatedAt: new Date() }).where(eq(devicesTable.id, device.id));
-  }
-
-  let passCount = 0;
-  let failCount = 0;
-  const findings = [];
-
-  for (const policy of relevantPolicies) {
-    let result: "pass" | "fail" | "error" = "pass";
-    let detail = "";
-    let evidence = "";
-
-    try {
-      if (!rawConfig) {
-        result = "error";
-        detail = "Could not collect device configuration via SSH";
-      } else if (policy.ruleType === "regex" && policy.rulePattern) {
-        const regex = new RegExp(policy.rulePattern, "im");
-        if (regex.test(rawConfig)) {
-          result = "pass";
-          const match = rawConfig.match(regex);
-          evidence = match?.[0]?.substring(0, 200) ?? "";
-        } else {
-          result = "fail";
-          detail = `Pattern not found: ${policy.rulePattern}`;
-        }
-      } else if (policy.ruleType === "presence" && policy.rulePattern) {
-        const found = rawConfig.toLowerCase().includes(policy.rulePattern.toLowerCase());
-        result = found ? "pass" : "fail";
-        if (!found) detail = `Required element not present: ${policy.rulePattern}`;
-      } else if (policy.ruleType === "absence" && policy.rulePattern) {
-        const found = rawConfig.toLowerCase().includes(policy.rulePattern.toLowerCase());
-        result = found ? "fail" : "pass";
-        if (found) detail = `Forbidden element found: ${policy.rulePattern}`;
-      } else {
-        result = "pass";
-      }
-    } catch (e) {
-      result = "error";
-      detail = String(e);
-    }
-
-    if (result === "pass") passCount++;
-    else if (result === "fail") failCount++;
-
-    findings.push({
-      jobId,
-      policyId: policy.id,
-      policyName: policy.name,
-      severity: policy.severity,
-      context: policy.context,
-      result,
-      detail: detail || null,
-      evidence: evidence || null,
-    });
-  }
-
-  if (findings.length > 0) {
-    await db.insert(complianceFindingsTable).values(findings);
-  }
-
-  const finalStatus = failCount > 0 ? "failed" : "passed";
-  await db.update(complianceJobsTable).set({
-    status: finalStatus,
-    passCount,
-    failCount,
-    completedAt: new Date(),
-  }).where(eq(complianceJobsTable.id, jobId));
+  await executeComplianceJob(jobId);
 }
 
 export default router;

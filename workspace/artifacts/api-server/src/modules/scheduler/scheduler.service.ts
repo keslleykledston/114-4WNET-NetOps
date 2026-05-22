@@ -7,7 +7,6 @@ import {
   scheduledJobRunItemsTable,
   scheduledJobRunsTable,
   scheduledJobsTable,
-  discoverySnapshotsTable,
 } from "@workspace/db";
 import type {
   ScheduledJob as DbScheduledJob,
@@ -402,11 +401,6 @@ async function executeComplianceRun(job: DbScheduledJob, runId: number, devices:
     const item = await createRunItem(runId, device.id, "compliance");
     await db.update(scheduledJobRunItemsTable).set({ status: "running", startedAt: new Date() }).where(eq(scheduledJobRunItemsTable.id, item.id));
     try {
-      const [snapshot] = await db.select().from(discoverySnapshotsTable).where(eq(discoverySnapshotsTable.deviceId, device.id)).orderBy(desc(discoverySnapshotsTable.createdAt)).limit(1);
-      if (!snapshot) {
-        throw new Error("Nenhum discovery snapshot encontrado.");
-      }
-
       const [complianceJob] = await db.insert(complianceJobsTable).values({
         deviceId: device.id,
         contexts: JSON.stringify(contexts.length > 0 ? contexts : ["compliance"]),
@@ -425,6 +419,7 @@ async function executeComplianceRun(job: DbScheduledJob, runId: number, devices:
         status,
         passCount: finishedJob?.passCount ?? 0,
         failCount: finishedJob?.failCount ?? 0,
+        sourceConfidenceEngine: true,
         contexts,
       };
       await db.update(scheduledJobRunItemsTable).set({

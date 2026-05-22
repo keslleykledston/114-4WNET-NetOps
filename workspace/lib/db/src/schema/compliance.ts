@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { devicesTable } from "./devices";
@@ -39,6 +39,19 @@ export const complianceFindingsTable = pgTable("compliance_findings", {
   result: text("result").notNull(),
   detail: text("detail"),
   evidence: text("evidence"),
+  status: text("status"),
+  message: text("message"),
+  recommendation: text("recommendation"),
+  blocking: boolean("blocking").notNull().default(false),
+  source: text("source"),
+  confidence: text("confidence"),
+  objectType: text("object_type"),
+  objectId: text("object_id"),
+  objectName: text("object_name"),
+  ruleId: text("rule_id"),
+  ruleName: text("rule_name"),
+  rawReference: text("raw_reference"),
+  metadataJson: jsonb("metadata_json").notNull().default({}),
 });
 
 export const insertCompliancePolicySchema = createInsertSchema(compliancePoliciesTable).omit({ id: true, createdAt: true });

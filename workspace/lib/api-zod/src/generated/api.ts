@@ -78,6 +78,25 @@ export const CreateUserBody = zod.object({
 
 
 /**
+ * @summary Get user
+ */
+export const GetUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin']),
+  "enabled": zod.boolean(),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Update user
  */
 export const UpdateUserParams = zod.object({
@@ -109,6 +128,114 @@ export const UpdateUserResponse = zod.object({
  */
 export const DeleteUserParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Disable user
+ */
+export const DisableUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DisableUserResponse = zod.object({
+  "message": zod.string().optional()
+})
+
+
+/**
+ * @summary Enable user
+ */
+export const EnableUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const EnableUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin']),
+  "enabled": zod.boolean(),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Reset user password
+ */
+export const ResetUserPasswordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const resetUserPasswordBodyPasswordMin = 8;
+
+
+
+export const ResetUserPasswordBody = zod.object({
+  "password": zod.string().min(resetUserPasswordBodyPasswordMin)
+})
+
+export const ResetUserPasswordResponse = zod.object({
+  "message": zod.string().optional()
+})
+
+
+/**
+ * @summary List my sessions
+ */
+export const ListAuthSessionsResponse = zod.object({
+  "sessions": zod.array(zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "expiresAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "revokedAt": zod.coerce.date().nullish()
+}))
+})
+
+
+/**
+ * @summary Revoke session
+ */
+export const RevokeAuthSessionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get my permissions
+ */
+export const GetMyPermissionsResponse = zod.object({
+  "effectivePermissions": zod.object({
+  "devices": zod.object({
+  "read": zod.boolean().optional(),
+  "write": zod.boolean().optional(),
+  "import": zod.boolean().optional(),
+  "export": zod.boolean().optional()
+}).optional(),
+  "compliance": zod.object({
+  "read": zod.boolean().optional(),
+  "run": zod.boolean().optional(),
+  "export": zod.boolean().optional()
+}).optional(),
+  "scheduler": zod.object({
+  "read": zod.boolean().optional(),
+  "write": zod.boolean().optional()
+}).optional(),
+  "integrations": zod.object({
+  "read": zod.boolean().optional(),
+  "write": zod.boolean().optional()
+}).optional(),
+  "users": zod.object({
+  "read": zod.boolean().optional(),
+  "write": zod.boolean().optional()
+}).optional(),
+  "audit": zod.object({
+  "read": zod.boolean().optional()
+}).optional()
+})
 })
 
 

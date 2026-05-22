@@ -5,7 +5,6 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
-  CircleHelp,
   Cloud,
   Filter,
   GitBranch,
@@ -50,10 +49,7 @@ const bgpCategories: Array<BgpCategoryItem> = [
   { key: "bgp-ix", label: "IX", icon: Share2, roleFilter: "ix" },
   { key: "bgp-cdn-ix", label: "CDN/IX", icon: Network, roleFilter: "cdn_ix" },
   { key: "bgp-ibgp", label: "iBGP", icon: Link2, roleFilter: "ibgp" },
-  { key: "bgp-unknown", label: "Unknown", icon: CircleHelp, roleFilter: "unknown" },
 ];
-
-const bgpViews = bgpCategories;
 
 function groupLabel(device: Device): string {
   return device.site?.trim() || "Sem cliente";
@@ -81,16 +77,17 @@ function groupDevices(devices: Device[]): Array<[string, Device[]]> {
 
 function BgpCategoryTree({
   device,
+  peers,
   category,
   selected,
   onSelect,
 }: {
   device: Device;
+  peers: NetopsBgpPeer[] | undefined;
   category: BgpCategoryItem;
   selected: NetopsTreeSelection | null;
   onSelect: (selection: NetopsTreeSelection) => void;
 }) {
-  const { data: peers } = useListNetopsDeviceBgpPeers(device.id);
   const filteredPeers = useMemo(
     () => (peers ?? []).filter((p) => p.role === category.roleFilter),
     [peers, category.roleFilter],
@@ -119,6 +116,100 @@ function BgpCategoryTree({
   );
 }
 
+function DeviceTreeNode({
+  device,
+  selected,
+  onSelect,
+  treeItemClass,
+  expanded,
+  onToggleDevice,
+  bgpOpen,
+  onToggleBgp,
+}: {
+  device: Device;
+  selected: NetopsTreeSelection | null;
+  onSelect: (selection: NetopsTreeSelection) => void;
+  treeItemClass: (active: boolean, depth: "device" | "view" | "child") => string;
+  expanded: boolean;
+  onToggleDevice: () => void;
+  bgpOpen: boolean;
+  onToggleBgp: () => void;
+}) {
+  const { data: peers } = useListNetopsDeviceBgpPeers(device.id);
+  const activeDevice = selected?.device.id === device.id;
+
+  return (
+    <div key={device.id}>
+      <div className={treeItemClass(activeDevice && selected?.view === "device", "device")}>
+        <button
+          type="button"
+          className="-ml-1 rounded p-0.5 hover:bg-muted"
+          onClick={onToggleDevice}
+          aria-label={expanded ? "Collapse device" : "Expand device"}
+        >
+          {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        </button>
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          onClick={() => onSelect({ device, view: "device" })}
+        >
+          <Server className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{device.hostname}</span>
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="space-y-0.5">
+          {deviceViews.map(({ key, label: itemLabel, icon: Icon }) => {
+            if (key === "bgp") {
+              return (
+                <div key={key}>
+                  <div className={treeItemClass(activeDevice && selected?.view === key, "view")}>
+                    <button
+                      type="button"
+                      className="-ml-1 rounded p-0.5 hover:bg-muted"
+                      onClick={onToggleBgp}
+                      aria-label={bgpOpen ? "Collapse BGP" : "Expand BGP"}
+                    >
+                      {bgpOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                    </button>
+                    <button
+                      type="button"
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                      onClick={() => onSelect({ device, view: key })}
+                    >
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span>{itemLabel}</span>
+                    </button>
+                  </div>
+
+                  {bgpOpen &&
+                    bgpCategories.map((category) => (
+                      <BgpCategoryTree key={category.key} device={device} peers={peers} category={category} selected={selected} onSelect={onSelect} />
+                    ))}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={key}
+                type="button"
+                className={treeItemClass(activeDevice && selected?.view === key, "view")}
+                onClick={() => onSelect({ device, view: key })}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span>{itemLabel}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedDevices, setExpandedDevices] = useState<Record<number, boolean>>({});
@@ -136,11 +227,6 @@ export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
 
   function isBgpOpen(id: number): boolean {
     return expandedBgp[id] ?? true;
-  }
-
-  function selectDevice(device: Device, view: NetopsTreeView = "device") {
-    setExpandedDevices((current) => ({ ...current, [device.id]: true }));
-    onSelect({ device, view });
   }
 
   function treeItemClass(active: boolean, depth: "device" | "view" | "child") {
@@ -188,85 +274,20 @@ export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
               <div className="ml-3 space-y-0.5 border-l border-border/70 pl-2">
                 {groupDevices.map((device) => {
                   const deviceOpen = isDeviceOpen(device.id);
-                  const activeDevice = selected?.device.id === device.id;
+                  const bgpOpen = isBgpOpen(device.id);
 
                   return (
-                    <div key={device.id}>
-                      <div className={treeItemClass(activeDevice && selected?.view === "device", "device")}>
-                        <button
-                          type="button"
-                          className="-ml-1 rounded p-0.5 hover:bg-muted"
-                          onClick={() => setExpandedDevices((current) => ({ ...current, [device.id]: !deviceOpen }))}
-                          aria-label={deviceOpen ? "Collapse device" : "Expand device"}
-                        >
-                          {deviceOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                        </button>
-                        <button
-                          type="button"
-                          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                          onClick={() => selectDevice(device)}
-                        >
-                          <Server className="h-3.5 w-3.5 shrink-0" />
-                          <span className="truncate">{device.hostname}</span>
-                        </button>
-                      </div>
-
-                      {deviceOpen && (
-                        <div className="space-y-0.5">
-                          {deviceViews.map(({ key, label: itemLabel, icon: Icon }) => {
-                            if (key === "bgp") {
-                              const bgpOpen = isBgpOpen(device.id);
-
-                              return (
-                                <div key={key}>
-                                  <div className={treeItemClass(activeDevice && selected?.view === key, "view")}>
-                                    <button
-                                      type="button"
-                                      className="-ml-1 rounded p-0.5 hover:bg-muted"
-                                      onClick={() => setExpandedBgp((current) => ({ ...current, [device.id]: !bgpOpen }))}
-                                      aria-label={bgpOpen ? "Collapse BGP" : "Expand BGP"}
-                                    >
-                                      {bgpOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                                      onClick={() => selectDevice(device, key)}
-                                    >
-                                      <Icon className="h-3.5 w-3.5 shrink-0" />
-                                      <span>{itemLabel}</span>
-                                    </button>
-                                  </div>
-
-                                  {bgpOpen &&
-                                    bgpCategories.map((category) => (
-                                      <BgpCategoryTree
-                                        key={category.key}
-                                        device={device}
-                                        category={category}
-                                        selected={selected}
-                                        onSelect={onSelect}
-                                      />
-                                    ))}
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <button
-                                key={key}
-                                type="button"
-                                className={treeItemClass(activeDevice && selected?.view === key, "view")}
-                                onClick={() => selectDevice(device, key)}
-                              >
-                                <Icon className="h-3.5 w-3.5 shrink-0" />
-                                <span>{itemLabel}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                    <DeviceTreeNode
+                      key={device.id}
+                      device={device}
+                      selected={selected}
+                      onSelect={onSelect}
+                      treeItemClass={treeItemClass}
+                      expanded={deviceOpen}
+                      onToggleDevice={() => setExpandedDevices((current) => ({ ...current, [device.id]: !deviceOpen }))}
+                      bgpOpen={bgpOpen}
+                      onToggleBgp={() => setExpandedBgp((current) => ({ ...current, [device.id]: !bgpOpen }))}
+                    />
                   );
                 })}
               </div>

@@ -30,6 +30,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatBgpUptime } from "./format-bgp-uptime";
 
 export type BgpPeerActionKind =
   | "details"
@@ -174,7 +175,7 @@ function ActionBody({
           <DetailRow label="VRF" value={data.vrf ?? "-"} />
           <DetailRow label="Import policy" value={data.importPolicy ?? "-"} />
           <DetailRow label="Export policy" value={data.exportPolicy ?? "-"} />
-          <DetailRow label="Uptime" value={data.uptime ?? "-"} />
+          <DetailRow label="Uptime" value={formatBgpUptime(data.uptime)} />
           <DetailRow label="Fonte" value={data.source} />
         </dl>
       );

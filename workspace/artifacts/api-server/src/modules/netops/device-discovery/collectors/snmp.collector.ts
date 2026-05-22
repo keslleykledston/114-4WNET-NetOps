@@ -40,8 +40,10 @@ export async function collectDiscoverySnmp(device: Device): Promise<CollectorOut
       peerIp: item.peerIp,
       remoteAs: item.remoteAs,
       state: item.state,
-      receivedPrefixes: item.inUpdates,
-      advertisedPrefixes: item.outUpdates,
+      // `inUpdates`/`outUpdates` são contadores de mensagens BGP, não de prefixos.
+      // Os contadores de rotas devem vir do verbose via SSH.
+      receivedPrefixes: null,
+      advertisedPrefixes: null,
       uptime: item.uptimeSecs != null ? String(item.uptimeSecs) : null,
       source: "snmp",
     })),

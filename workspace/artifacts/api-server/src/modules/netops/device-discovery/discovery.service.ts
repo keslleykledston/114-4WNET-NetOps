@@ -1,9 +1,10 @@
 import type { DeviceDiscoveryRequest, DeviceDiscoverySnapshot, DiscoveryStatus, DiscoveryWarning } from "./discovery.types.js";
 import { collectionOrchestrator } from "./discovery.orchestrator.js";
 import { rawEvidenceStore } from "./evidence/evidence-store.js";
-import { bgpPeerRoleOverridesTable, db } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { bgpPeerRoleOverridesTable, db, snmpSnapshotsTable } from "@workspace/db";
+import { desc, eq as ormEq } from "drizzle-orm";
 import { normalizeDiscoveryBgpPeers, primaryDirectionForRole } from "./normalizers/bgp.normalizer.js";
+import { snapshotToNetopsData } from "../adapters/snapshot-adapter.js";
 
 const DEFAULT_CONTEXTS = ["interfaces", "bgp", "l2vpn", "policies", "vrfs"] as const;
 
@@ -11,7 +12,7 @@ async function applyRoleOverrides(deviceId: number, peers: ReturnType<typeof nor
   const overrides = await db
     .select()
     .from(bgpPeerRoleOverridesTable)
-    .where(eq(bgpPeerRoleOverridesTable.deviceId, deviceId));
+    .where(ormEq(bgpPeerRoleOverridesTable.deviceId, deviceId));
   const byPeer = new Map(overrides.map((override) => [`${override.peerIp}|${override.addressFamily}`, override]));
 
   return peers.map((peer) => {
@@ -48,9 +49,50 @@ export async function runDeviceDiscovery(deviceId: number, request: DeviceDiscov
   return collectionOrchestrator.run(deviceId, request);
 }
 
+async function getLatestSnmpBgpPeers(deviceId: number) {
+  const [snapshot] = await db
+    .select()
+    .from(snmpSnapshotsTable)
+    .where(ormEq(snmpSnapshotsTable.deviceId, deviceId))
+    .orderBy(desc(snmpSnapshotsTable.collectedAt))
+    .limit(1);
+
+  if (!snapshot) return null;
+
+  const data = snapshotToNetopsData(snapshot);
+  return normalizeDiscoveryBgpPeers([], data.bgpPeers, [], []);
+}
+
+async function applyRoleOverridesToPeers(deviceId: number, peers: ReturnType<typeof normalizeDiscoveryBgpPeers>) {
+  const overrides = await db
+    .select()
+    .from(bgpPeerRoleOverridesTable)
+    .where(ormEq(bgpPeerRoleOverridesTable.deviceId, deviceId));
+  const byPeer = new Map(overrides.map((override) => [`${override.peerIp}|${override.addressFamily}`, override]));
+
+  return peers.map((peer) => {
+    const override = byPeer.get(`${peer.peerIp}|${peer.addressFamily}`);
+    if (!override) return peer;
+    return {
+      ...peer,
+      role: override.role as typeof peer.role,
+      category: override.role as typeof peer.category,
+      primaryDirection: primaryDirectionForRole(override.role as typeof peer.role),
+      roleSource: "manual_override" as const,
+      remoteAs: override.remoteAs ?? peer.remoteAs,
+      name: override.label ?? peer.name,
+    };
+  });
+}
+
 export async function getLatestDiscoverySnapshot(deviceId: number) {
   const memorySnapshot = rawEvidenceStore.getLatestSnapshot(deviceId);
-  if (memorySnapshot) return memorySnapshot;
+  if (memorySnapshot) {
+    return {
+      ...memorySnapshot,
+      bgpPeers: await applyRoleOverridesToPeers(deviceId, memorySnapshot.bgpPeers),
+    };
+  }
 
   const persisted = await rawEvidenceStore.getLatestPersistentSnapshot(deviceId);
   if (!persisted) return null;
@@ -76,15 +118,58 @@ export async function getLatestDiscoverySnapshot(deviceId: number) {
 }
 
 export async function listDiscoveryBgpPeers(deviceId: number, category?: string) {
+  const device = await db.query.devicesTable.findFirst({
+    where: (devices, { eq }) => eq(devices.id, deviceId),
+  });
+  if (!device) return null;
+
   const snapshot = await getLatestDiscoverySnapshot(deviceId);
-  if (!snapshot) return null;
-  return snapshot.bgpPeers.filter((peer) => !category || peer.category === category);
+  const peers = snapshot?.bgpPeers
+    ?? await applyRoleOverridesToPeers(deviceId, await getLatestSnmpBgpPeers(deviceId) ?? [])
+    ?? [];
+  return peers.filter((peer) => !category || peer.category === category);
 }
 
 export async function getDiscoveryBgpPeerDetails(deviceId: number, peerIp: string) {
   const snapshot = await getLatestDiscoverySnapshot(deviceId);
-  if (!snapshot) return null;
-  return collectionOrchestrator.buildPeerDetails(snapshot, peerIp);
+  if (snapshot) {
+    return collectionOrchestrator.buildPeerDetails(snapshot, peerIp);
+  }
+
+  const peers = await getLatestSnmpBgpPeers(deviceId);
+  if (!peers) return null;
+  const peer = (await applyRoleOverridesToPeers(deviceId, peers)).find((item) => item.peerIp === peerIp);
+  if (!peer) return null;
+
+  return collectionOrchestrator.buildPeerDetails({
+    deviceId,
+    discoveryRunId: `snmp-fallback-${deviceId}`,
+    status: "cached",
+    contexts: ["bgp"],
+    startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+    sourceStatus: {
+      ssh: "skipped",
+      snmp: "success",
+      cachedConfig: "skipped",
+    },
+    sourcesUsed: ["snmp_snapshot"],
+    interfaces: [],
+    bgpPeers: peers,
+    policies: [],
+    communities: [],
+    communityLists: [],
+    prefixLists: [],
+    vrfs: [],
+    l2vpn: {
+      source: "snmp_snapshot",
+      confidence: "low",
+      l2vcs: [],
+      vsis: [],
+    },
+    warnings: [],
+    audit: [],
+  }, peerIp);
 }
 
 export async function queryDiscoveryRoutes(deviceId: number, peerIp: string, body: unknown) {

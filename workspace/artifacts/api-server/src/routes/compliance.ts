@@ -6,7 +6,8 @@ import {
   complianceFindingsTable,
   devicesTable,
 } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { compliancePolicyProfilesTable } from "@workspace/db/schema";
+import { eq, desc } from "drizzle-orm";
 import {
   CreateCompliancePolicyBody,
   UpdateCompliancePolicyBody,
@@ -18,10 +19,98 @@ import {
   ExecuteComplianceJobParams,
   ListComplianceJobsQueryParams,
 } from "@workspace/api-zod";
-import { decrypt } from "../lib/crypto.js";
-import { runSSHCommands, getCollectionCommands } from "../lib/ssh.js";
+import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
+import { executeComplianceJob } from "../modules/compliance/compliance-engine.js";
 
 const router = Router();
+
+// ── POLICY PROFILES HANDLERS ────────────────────────────────────────────────
+
+async function listPolicyProfiles(req: any, res: any) {
+  const profiles = await db.select().from(compliancePolicyProfilesTable).orderBy(compliancePolicyProfilesTable.name);
+  res.json(profiles.map(p => ({
+    ...p,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  })));
+}
+
+async function createPolicyProfile(req: any, res: any) {
+  const { name, description, deviceRole, vendor, platform, rulesJson, thresholdsJson } = req.body;
+  if (!name) { res.status(400).json({ error: "name required" }); return; }
+  const [profile] = await db.insert(compliancePolicyProfilesTable).values({
+    name,
+    description: description ?? null,
+    deviceRole: deviceRole ?? null,
+    vendor: vendor ?? null,
+    platform: platform ?? null,
+    rulesJson: rulesJson ?? {},
+    thresholdsJson: thresholdsJson ?? {},
+  }).returning();
+  await logAuditEvent({
+    action: "compliance_profile_created",
+    objectType: "compliance_policy_profile",
+    objectId: String(profile.id),
+    metadata: { name: profile.name },
+    sourceIp: getRequestSourceIp(req),
+  });
+  res.status(201).json({
+    ...profile,
+    createdAt: profile.createdAt.toISOString(),
+    updatedAt: profile.updatedAt.toISOString(),
+  });
+}
+
+async function getPolicyProfile(req: any, res: any) {
+  const [profile] = await db.select().from(compliancePolicyProfilesTable).where(eq(compliancePolicyProfilesTable.name, req.params.name));
+  if (!profile) { res.status(404).json({ error: "Not found" }); return; }
+  res.json({
+    ...profile,
+    createdAt: profile.createdAt.toISOString(),
+    updatedAt: profile.updatedAt.toISOString(),
+  });
+}
+
+async function updatePolicyProfile(req: any, res: any) {
+  const { description, rulesJson, thresholdsJson, enabled } = req.body;
+  const [updated] = await db.update(compliancePolicyProfilesTable)
+    .set({
+      description: description ?? undefined,
+      rulesJson: rulesJson ?? undefined,
+      thresholdsJson: thresholdsJson ?? undefined,
+      enabled: enabled ?? undefined,
+      updatedAt: new Date(),
+    })
+    .where(eq(compliancePolicyProfilesTable.name, req.params.name))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  await logAuditEvent({
+    action: "compliance_profile_updated",
+    objectType: "compliance_policy_profile",
+    objectId: String(updated.id),
+    metadata: { name: updated.name },
+    sourceIp: getRequestSourceIp(req),
+  });
+  res.json({
+    ...updated,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+  });
+}
+
+// ── POLICY PROFILES ROUTES (both /compliance-policy-profiles and /compliance/policy-profiles) ──
+
+router.get("/compliance-policy-profiles", listPolicyProfiles);
+router.get("/compliance/policy-profiles", listPolicyProfiles);
+
+router.post("/compliance-policy-profiles", createPolicyProfile);
+router.post("/compliance/policy-profiles", createPolicyProfile);
+
+router.get("/compliance-policy-profiles/:name", getPolicyProfile);
+router.get("/compliance/policy-profiles/:name", getPolicyProfile);
+
+router.patch("/compliance-policy-profiles/:name", updatePolicyProfile);
+router.patch("/compliance/policy-profiles/:name", updatePolicyProfile);
 
 // ── POLICIES ────────────────────────────────────────────────────────────────
 
@@ -37,6 +126,13 @@ router.post("/compliance-policies", async (req, res) => {
     ...parsed.data,
     enabled: parsed.data.enabled ?? true,
   }).returning();
+  await logAuditEvent({
+    action: "compliance_policy_created",
+    objectType: "compliance_policy",
+    objectId: String(policy.id),
+    metadata: { name: policy.name, context: policy.context, severity: policy.severity },
+    sourceIp: getRequestSourceIp(req),
+  });
   res.status(201).json({ ...policy, createdAt: policy.createdAt.toISOString() });
 });
 
@@ -55,6 +151,13 @@ router.patch("/compliance-policies/:id", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
   const [updated] = await db.update(compliancePoliciesTable).set(parsed.data).where(eq(compliancePoliciesTable.id, params.data.id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  await logAuditEvent({
+    action: "compliance_policy_updated",
+    objectType: "compliance_policy",
+    objectId: String(updated.id),
+    metadata: { name: updated.name, context: updated.context, severity: updated.severity },
+    sourceIp: getRequestSourceIp(req),
+  });
   res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
 });
 
@@ -62,12 +165,19 @@ router.delete("/compliance-policies/:id", async (req, res) => {
   const params = DeleteCompliancePolicyParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
   await db.delete(compliancePoliciesTable).where(eq(compliancePoliciesTable.id, params.data.id));
+  await logAuditEvent({
+    action: "compliance_policy_deleted",
+    objectType: "compliance_policy",
+    objectId: String(params.data.id),
+    metadata: {},
+    sourceIp: getRequestSourceIp(req),
+  });
   res.status(204).end();
 });
 
-// ── JOBS ─────────────────────────────────────────────────────────────────────
+// ── JOBS HANDLERS ──────────────────────────────────────────────────────────────
 
-router.get("/compliance-jobs", async (req, res) => {
+async function listJobs(req: any, res: any) {
   const query = ListComplianceJobsQueryParams.safeParse(req.query);
   const jobs = await db.select({
     id: complianceJobsTable.id,
@@ -102,9 +212,9 @@ router.get("/compliance-jobs", async (req, res) => {
     completedAt: j.completedAt?.toISOString() ?? null,
     createdAt: j.createdAt.toISOString(),
   })));
-});
+}
 
-router.get("/compliance-jobs/summary", async (req, res) => {
+async function getJobSummary(req: any, res: any) {
   const allJobs = await db.select({
     id: complianceJobsTable.id,
     deviceId: complianceJobsTable.deviceId,
@@ -136,7 +246,10 @@ router.get("/compliance-jobs/summary", async (req, res) => {
     createdAt: j.createdAt.toISOString(),
   }));
 
-  const failedFindings = findings.filter(f => f.result === "fail");
+  const failedFindings = findings.filter(f => (f.status ?? f.result) === "fail");
+  const warningFindings = findings.filter(f => (f.status ?? f.result) === "warning");
+  const unknownFindings = findings.filter(f => (f.status ?? f.result) === "unknown");
+  const criticalFindings = findings.filter(f => f.severity === "critical");
   const byContext = Object.entries(
     failedFindings.reduce((acc, f) => { acc[f.context] = (acc[f.context] ?? 0) + 1; return acc; }, {} as Record<string, number>)
   ).map(([key, count]) => ({ key, count }));
@@ -145,48 +258,154 @@ router.get("/compliance-jobs/summary", async (req, res) => {
     failedFindings.reduce((acc, f) => { acc[f.severity] = (acc[f.severity] ?? 0) + 1; return acc; }, {} as Record<string, number>)
   ).map(([key, count]) => ({ key, count }));
 
-  res.json({ totalJobs, passed, failed, running, recentJobs, failuresByContext: byContext, failuresBySeverity: bySeverity });
-});
+  res.json({
+    totalJobs,
+    passed,
+    failed,
+    running,
+    warningFindings: warningFindings.length,
+    unknownFindings: unknownFindings.length,
+    criticalFindings: criticalFindings.length,
+    recentJobs,
+    failuresByContext: byContext,
+    failuresBySeverity: bySeverity,
+  });
+}
 
-router.post("/compliance-jobs", async (req, res) => {
+async function createJob(req: any, res: any) {
   const parsed = CreateComplianceJobBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
 
   const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, parsed.data.deviceId));
   if (!device) { res.status(400).json({ error: "Device not found" }); return; }
 
+  const parsedData = parsed.data as { deviceId: number; contexts: string[]; policyProfileName?: string };
+  const profileName = parsedData.policyProfileName ?? "huawei-vrp-edge-balanced";
+
   const [job] = await db.insert(complianceJobsTable).values({
     deviceId: parsed.data.deviceId,
     contexts: JSON.stringify(parsed.data.contexts),
+    policyProfileName: profileName,
     status: "pending",
     passCount: 0,
     failCount: 0,
   }).returning();
 
-  const result = { ...job, deviceHostname: device.hostname, contexts: parsed.data.contexts, startedAt: null, completedAt: null, createdAt: job.createdAt.toISOString() };
+  const result = { ...job, deviceHostname: device.hostname, contexts: parsed.data.contexts, startedAt: null, completedAt: null, policyProfileName: job.policyProfileName, createdAt: job.createdAt.toISOString() };
   res.status(201).json(result);
 
-  executeJob(job.id).catch(() => {});
-});
+  await logAuditEvent({
+    action: "compliance_create",
+    objectType: "compliance_job",
+    objectId: String(job.id),
+    metadata: { deviceId: job.deviceId, contexts: parsed.data.contexts, policyProfileName: profileName },
+    sourceIp: getRequestSourceIp(req),
+  });
 
-router.get("/compliance-jobs/:id", async (req, res) => {
+  executeJob(job.id).catch(() => {});
+}
+
+async function getJob(req: any, res: any) {
   const params = GetComplianceJobParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
-  res.json(await getJobDetail(params.data.id, res));
-});
+  const detail = await buildJobDetail(params.data.id);
+  if (!detail) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(detail);
+}
 
-router.post("/compliance-jobs/:id/execute", async (req, res) => {
+async function executeJobHandler(req: any, res: any) {
   const params = ExecuteComplianceJobParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
 
   await db.update(complianceJobsTable).set({ status: "pending", passCount: 0, failCount: 0, errorMessage: null }).where(eq(complianceJobsTable.id, params.data.id));
   await db.delete(complianceFindingsTable).where(eq(complianceFindingsTable.jobId, params.data.id));
 
+  await logAuditEvent({
+    action: "compliance_execute",
+    objectType: "compliance_job",
+    objectId: String(params.data.id),
+    metadata: { reset: true },
+    sourceIp: getRequestSourceIp(req),
+  });
+
   const detail = await buildJobDetail(params.data.id);
   if (!detail) { res.status(404).json({ error: "Not found" }); return; }
   res.json(detail);
 
   executeJob(params.data.id).catch(() => {});
+}
+
+// ── JOBS ROUTES (both /compliance-jobs and /compliance/jobs) ───────────────────
+
+router.get("/compliance-jobs", listJobs);
+router.get("/compliance/jobs", listJobs);
+
+router.get("/compliance-jobs/summary", getJobSummary);
+router.get("/compliance/jobs/summary", getJobSummary);
+
+router.post("/compliance-jobs", createJob);
+router.post("/compliance/jobs", createJob);
+
+router.get("/compliance-jobs/:id", getJob);
+router.get("/compliance/jobs/:id", getJob);
+
+router.post("/compliance-jobs/:id/execute", executeJobHandler);
+router.post("/compliance/jobs/:id/execute", executeJobHandler);
+
+// ── FINDINGS ────────────────────────────────────────────────────────────────
+
+router.get("/compliance-findings", async (req, res) => {
+  const rows = await db.select({
+    id: complianceFindingsTable.id,
+    jobId: complianceFindingsTable.jobId,
+    deviceId: complianceJobsTable.deviceId,
+    deviceHostname: devicesTable.hostname,
+    policyId: complianceFindingsTable.policyId,
+    policyName: complianceFindingsTable.policyName,
+    severity: complianceFindingsTable.severity,
+    context: complianceFindingsTable.context,
+    result: complianceFindingsTable.result,
+    detail: complianceFindingsTable.detail,
+    evidence: complianceFindingsTable.evidence,
+    status: complianceFindingsTable.status,
+    message: complianceFindingsTable.message,
+    recommendation: complianceFindingsTable.recommendation,
+    blocking: complianceFindingsTable.blocking,
+    source: complianceFindingsTable.source,
+    confidence: complianceFindingsTable.confidence,
+    objectType: complianceFindingsTable.objectType,
+    objectId: complianceFindingsTable.objectId,
+    objectName: complianceFindingsTable.objectName,
+    ruleId: complianceFindingsTable.ruleId,
+    ruleName: complianceFindingsTable.ruleName,
+    operationalCategory: complianceFindingsTable.operationalCategory,
+    rawReference: complianceFindingsTable.rawReference,
+    metadataJson: complianceFindingsTable.metadataJson,
+    jobCreatedAt: complianceJobsTable.createdAt,
+  })
+    .from(complianceFindingsTable)
+    .leftJoin(complianceJobsTable, eq(complianceFindingsTable.jobId, complianceJobsTable.id))
+    .leftJoin(devicesTable, eq(complianceJobsTable.deviceId, devicesTable.id))
+    .orderBy(desc(complianceFindingsTable.id))
+    .limit(500);
+
+  const filtered = rows.filter((row) => {
+    if (req.query.status && (row.status ?? row.result) !== String(req.query.status)) return false;
+    if (req.query.severity && row.severity !== String(req.query.severity)) return false;
+    if (req.query.context && row.context !== String(req.query.context)) return false;
+    if (req.query.confidence && row.confidence !== String(req.query.confidence)) return false;
+    if (req.query.source && row.source !== String(req.query.source)) return false;
+    if (req.query.operationalCategory && row.operationalCategory !== String(req.query.operationalCategory)) return false;
+    if (req.query.deviceId && row.deviceId !== Number(req.query.deviceId)) return false;
+    return true;
+  });
+
+  res.json(filtered.map((row) => ({
+    ...row,
+    status: row.status ?? row.result,
+    message: row.message ?? row.detail,
+    jobCreatedAt: row.jobCreatedAt?.toISOString() ?? null,
+  })));
 });
 
 async function getJobDetail(id: number, res: any) {
@@ -226,99 +445,85 @@ async function buildJobDetail(id: number) {
   };
 }
 
-async function executeJob(jobId: number) {
-  await db.update(complianceJobsTable).set({ status: "running", startedAt: new Date() }).where(eq(complianceJobsTable.id, jobId));
+router.get("/compliance-findings-groups", async (req, res) => {
+  const rows = await db.select({
+    id: complianceFindingsTable.id,
+    policyName: complianceFindingsTable.policyName,
+    severity: complianceFindingsTable.severity,
+    context: complianceFindingsTable.context,
+    message: complianceFindingsTable.message,
+    detail: complianceFindingsTable.detail,
+    status: complianceFindingsTable.status,
+    result: complianceFindingsTable.result,
+    source: complianceFindingsTable.source,
+    confidence: complianceFindingsTable.confidence,
+    ruleId: complianceFindingsTable.ruleId,
+    ruleName: complianceFindingsTable.ruleName,
+    operationalCategory: complianceFindingsTable.operationalCategory,
+    deviceId: complianceJobsTable.deviceId,
+  })
+    .from(complianceFindingsTable)
+    .leftJoin(complianceJobsTable, eq(complianceFindingsTable.jobId, complianceJobsTable.id))
+    .orderBy(desc(complianceFindingsTable.id))
+    .limit(500);
 
-  const [job] = await db.select().from(complianceJobsTable).where(eq(complianceJobsTable.id, jobId));
-  if (!job) return;
+  const filtered = rows.filter((row) => {
+    if (req.query.status && (row.status ?? row.result) !== String(req.query.status)) return false;
+    if (req.query.severity && row.severity !== String(req.query.severity)) return false;
+    if (req.query.context && row.context !== String(req.query.context)) return false;
+    if (req.query.confidence && row.confidence !== String(req.query.confidence)) return false;
+    if (req.query.source && row.source !== String(req.query.source)) return false;
+    if (req.query.deviceId && row.deviceId !== Number(req.query.deviceId)) return false;
+    if (req.query.operationalCategory && row.operationalCategory !== String(req.query.operationalCategory)) return false;
+    return true;
+  });
 
-  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, job.deviceId));
-  if (!device) {
-    await db.update(complianceJobsTable).set({ status: "error", errorMessage: "Device not found", completedAt: new Date() }).where(eq(complianceJobsTable.id, jobId));
-    return;
-  }
-
-  const contexts: string[] = JSON.parse(job.contexts ?? "[]");
-  const policies = await db.select().from(compliancePoliciesTable).where(eq(compliancePoliciesTable.enabled, true));
-  const relevantPolicies = policies.filter(p => contexts.includes(p.context) && (!p.vendor || p.vendor === device.vendor));
-
-  let rawConfig = "";
-  try {
-    const password = decrypt(device.passwordEncrypted);
-    const commands = getCollectionCommands(device.vendor, device.platform);
-    const results = await runSSHCommands({ host: device.ipAddress, port: device.sshPort, username: device.username, password }, commands);
-    rawConfig = results.map(r => r.output).join("\n\n");
-
-    await db.update(devicesTable).set({ status: "active", lastSeen: new Date(), updatedAt: new Date() }).where(eq(devicesTable.id, device.id));
-  } catch {
-    await db.update(devicesTable).set({ status: "unreachable", updatedAt: new Date() }).where(eq(devicesTable.id, device.id));
-  }
-
-  let passCount = 0;
-  let failCount = 0;
-  const findings = [];
-
-  for (const policy of relevantPolicies) {
-    let result: "pass" | "fail" | "error" = "pass";
-    let detail = "";
-    let evidence = "";
-
-    try {
-      if (!rawConfig) {
-        result = "error";
-        detail = "Could not collect device configuration via SSH";
-      } else if (policy.ruleType === "regex" && policy.rulePattern) {
-        const regex = new RegExp(policy.rulePattern, "im");
-        if (regex.test(rawConfig)) {
-          result = "pass";
-          const match = rawConfig.match(regex);
-          evidence = match?.[0]?.substring(0, 200) ?? "";
-        } else {
-          result = "fail";
-          detail = `Pattern not found: ${policy.rulePattern}`;
-        }
-      } else if (policy.ruleType === "presence" && policy.rulePattern) {
-        const found = rawConfig.toLowerCase().includes(policy.rulePattern.toLowerCase());
-        result = found ? "pass" : "fail";
-        if (!found) detail = `Required element not present: ${policy.rulePattern}`;
-      } else if (policy.ruleType === "absence" && policy.rulePattern) {
-        const found = rawConfig.toLowerCase().includes(policy.rulePattern.toLowerCase());
-        result = found ? "fail" : "pass";
-        if (found) detail = `Forbidden element found: ${policy.rulePattern}`;
-      } else {
-        result = "pass";
-      }
-    } catch (e) {
-      result = "error";
-      detail = String(e);
+  const groups = new Map<string, {
+    count: number;
+    examples: string[];
+    ruleName: string | null;
+    policyName: string | null;
+    message: string;
+  }>();
+  for (const row of filtered) {
+    const ruleId = row.ruleId ?? row.policyName ?? "unknown";
+    const message = row.message ?? row.detail ?? "Sem mensagem normalizada";
+    const key = `${ruleId}|${row.severity}|${row.context}|${row.operationalCategory ?? "unknown"}|${message}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        count: 0,
+        examples: [],
+        ruleName: row.ruleName,
+        policyName: row.policyName,
+        message,
+      });
     }
-
-    if (result === "pass") passCount++;
-    else if (result === "fail") failCount++;
-
-    findings.push({
-      jobId,
-      policyId: policy.id,
-      policyName: policy.name,
-      severity: policy.severity,
-      context: policy.context,
-      result,
-      detail: detail || null,
-      evidence: evidence || null,
-    });
+    const group = groups.get(key)!;
+    group.count++;
+    if (group.examples.length < 3) group.examples.push(String(row.id));
   }
 
-  if (findings.length > 0) {
-    await db.insert(complianceFindingsTable).values(findings);
-  }
+  const result = Array.from(groups.entries()).map(([key, data]) => {
+    const [ruleId, severity, context, category] = key.split("|");
+    return {
+      ruleId,
+      ruleName: data.ruleName,
+      severity,
+      context,
+      operationalCategory: category,
+      policyName: data.policyName,
+      count: data.count,
+      sampleFindingIds: data.examples,
+      exampleFindingIds: data.examples,
+      message: data.message,
+    };
+  }).sort((a, b) => b.count - a.count);
 
-  const finalStatus = failCount > 0 ? "failed" : "passed";
-  await db.update(complianceJobsTable).set({
-    status: finalStatus,
-    passCount,
-    failCount,
-    completedAt: new Date(),
-  }).where(eq(complianceJobsTable.id, jobId));
+  res.json(result);
+});
+
+export async function executeJob(jobId: number) {
+  await executeComplianceJob(jobId);
 }
 
 export default router;

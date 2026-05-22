@@ -1,6 +1,7 @@
 import type { InterfaceSummary } from "../discovery.types.js";
 import { sourceConfidence } from "../source-priority.js";
 import type { NetopsInterface } from "../../types.js";
+import { isHuaweiInterfaceName } from "../../../compliance/interface-identifiers.js";
 
 export function normalizeDiscoveryInterfaces(
   sshInterfaces: NetopsInterface[],
@@ -11,6 +12,7 @@ export function normalizeDiscoveryInterfaces(
   const byName = new Map<string, InterfaceSummary>();
 
   for (const item of localDbInterfaces) {
+    if (!isHuaweiInterfaceName(item.name)) continue;
     byName.set(item.name, {
       ...item,
       exists: true,
@@ -21,6 +23,7 @@ export function normalizeDiscoveryInterfaces(
   }
 
   for (const item of cachedInterfaces) {
+    if (!isHuaweiInterfaceName(item.name)) continue;
     byName.set(item.name, {
       ...item,
       exists: true,
@@ -31,6 +34,7 @@ export function normalizeDiscoveryInterfaces(
   }
 
   for (const item of snmpInterfaces) {
+    if (!isHuaweiInterfaceName(item.name)) continue;
     const current = byName.get(item.name);
     byName.set(item.name, {
       ...(current ?? item),
@@ -48,6 +52,7 @@ export function normalizeDiscoveryInterfaces(
   }
 
   for (const item of sshInterfaces) {
+    if (!isHuaweiInterfaceName(item.name)) continue;
     byName.set(item.name, {
       ...item,
       exists: true,

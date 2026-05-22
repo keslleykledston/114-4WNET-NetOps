@@ -12,6 +12,7 @@ import {
   RenderConfigTemplateBody,
   ListConfigTemplatesQueryParams,
 } from "@workspace/api-zod";
+import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 
 const router = Router();
 
@@ -29,6 +30,13 @@ router.post("/config-templates", async (req, res) => {
   const parsed = CreateConfigTemplateBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
   const [tmpl] = await db.insert(configTemplatesTable).values(parsed.data).returning();
+  await logAuditEvent({
+    action: "template_create",
+    objectType: "config_template",
+    objectId: String(tmpl.id),
+    metadata: { name: tmpl.name, type: tmpl.type, vendor: tmpl.vendor, platform: tmpl.platform, templateLength: tmpl.template.length },
+    sourceIp: getRequestSourceIp(req),
+  });
   res.status(201).json({ ...tmpl, createdAt: tmpl.createdAt.toISOString(), updatedAt: tmpl.updatedAt.toISOString() });
 });
 
@@ -47,12 +55,26 @@ router.patch("/config-templates/:id", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
   const [updated] = await db.update(configTemplatesTable).set({ ...parsed.data, updatedAt: new Date() }).where(eq(configTemplatesTable.id, params.data.id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  await logAuditEvent({
+    action: "template_update",
+    objectType: "config_template",
+    objectId: String(updated.id),
+    metadata: { name: updated.name, type: updated.type, vendor: updated.vendor, platform: updated.platform, templateLength: updated.template.length },
+    sourceIp: getRequestSourceIp(req),
+  });
   res.json({ ...updated, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString() });
 });
 
 router.delete("/config-templates/:id", async (req, res) => {
   const params = DeleteConfigTemplateParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
+  await logAuditEvent({
+    action: "template_delete",
+    objectType: "config_template",
+    objectId: String(params.data.id),
+    metadata: { deleted: true },
+    sourceIp: getRequestSourceIp(req),
+  });
   await db.delete(configTemplatesTable).where(eq(configTemplatesTable.id, params.data.id));
   res.status(204).end();
 });
@@ -82,6 +104,19 @@ router.post("/config-templates/:id/render", async (req, res) => {
       rendered = rendered.replaceAll(`{{ ${varName} }}`, String(value));
     }
   }
+
+  await logAuditEvent({
+    action: "template_render",
+    objectType: "config_template",
+    objectId: String(params.data.id),
+    metadata: {
+      templateName: tmpl.name,
+      warningsCount: warnings.length,
+      paramsKeys: Object.keys(userParams),
+      renderedLength: rendered.length,
+    },
+    sourceIp: getRequestSourceIp(req),
+  });
 
   res.json({ rendered, warnings });
 });

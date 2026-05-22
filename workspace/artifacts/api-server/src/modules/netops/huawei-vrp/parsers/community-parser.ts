@@ -23,6 +23,12 @@ export interface RoutePolicyCommunityFilterRef {
   filterName: string;
 }
 
+export interface RoutePolicyCommunityListRef {
+  routePolicy: string;
+  node: string;
+  listName: string;
+}
+
 export interface RoutePolicyApplyCommunity {
   routePolicy: string;
   node: string;
@@ -33,6 +39,7 @@ export interface ParsedRunningConfigCommunities {
   communityFilters: CommunityFilterEntry[];
   communityLists: CommunityListEntry[];
   routePolicyIfMatch: RoutePolicyCommunityFilterRef[];
+  routePolicyIfMatchCommunityLists: RoutePolicyCommunityListRef[];
   routePolicyApplyCommunity: RoutePolicyApplyCommunity[];
 }
 
@@ -109,6 +116,7 @@ export function parseRunningConfigCommunities(configText: string): ParsedRunning
     communityFilters: [],
     communityLists: [],
     routePolicyIfMatch: [],
+    routePolicyIfMatchCommunityLists: [],
     routePolicyApplyCommunity: [],
   };
 
@@ -182,7 +190,7 @@ export function parseRunningConfigCommunities(configText: string): ParsedRunning
     const mRp = RE_RP_HEADER.exec(line);
     if (mRp) {
       rpName = mRp[1];
-      rpNode = mRp[3];
+      rpNode = mRp[2] || mRp[3] || null;
       currentList = null;
       continue;
     }
@@ -197,6 +205,19 @@ export function parseRunningConfigCommunities(configText: string): ParsedRunning
             routePolicy: rpName,
             node: rpNode,
             filterName: fn,
+          });
+        }
+        continue;
+      }
+
+      const mIfList = /^\s*if-match\s+community-list\s+(\S+)\s*$/i.exec(line);
+      if (mIfList) {
+        const listName = (mIfList[1] || "").trim();
+        if (listName) {
+          out.routePolicyIfMatchCommunityLists.push({
+            routePolicy: rpName,
+            node: rpNode,
+            listName,
           });
         }
         continue;
@@ -267,6 +288,10 @@ export function usageCountsForLibraryNames(
   const counts: Record<string, number> = {};
   for (const ref of parsed.routePolicyIfMatch) {
     const k = ref.filterName;
+    counts[k] = (counts[k] || 0) + 1;
+  }
+  for (const ref of parsed.routePolicyIfMatchCommunityLists) {
+    const k = ref.listName;
     counts[k] = (counts[k] || 0) + 1;
   }
   return counts;

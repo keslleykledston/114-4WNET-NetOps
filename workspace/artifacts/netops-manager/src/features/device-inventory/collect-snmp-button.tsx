@@ -1,5 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  getGetDeviceDiscoverySnapshotQueryKey,
+  getListDeviceBgpPeersQueryKey,
   getGetNetopsDeviceSummaryQueryKey,
   getListNetopsDeviceBgpPeersQueryKey,
   getListNetopsDeviceInterfacesQueryKey,
@@ -31,6 +33,8 @@ export function CollectSnmpButton({ device, variant = "outline", size = "sm" }: 
           void queryClient.invalidateQueries({ queryKey: getListNetopsDeviceInterfacesQueryKey(device.id) });
           void queryClient.invalidateQueries({ queryKey: getListNetopsDeviceBgpPeersQueryKey(device.id) });
           void queryClient.invalidateQueries({ queryKey: getListNetopsDeviceLogsQueryKey(device.id) });
+          void queryClient.invalidateQueries({ queryKey: getGetDeviceDiscoverySnapshotQueryKey(device.id) });
+          void queryClient.invalidateQueries({ queryKey: getListDeviceBgpPeersQueryKey(device.id) });
 
           if (result.executed) {
             toast({

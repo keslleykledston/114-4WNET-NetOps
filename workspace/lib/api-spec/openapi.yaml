@@ -9,6 +9,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Local authentication
+  - name: users
+    description: Local user management
   - name: devices
     description: Network device registry
   - name: device-groups
@@ -21,6 +25,14 @@ tags:
     description: VPN configuration templates
   - name: provisioning-jobs
     description: VPN provisioning jobs
+  - name: audit
+    description: Audit trail
+  - name: reports
+    description: Generated reports
+  - name: integrations
+    description: Integration readiness settings
+  - name: scheduler
+    description: Scheduled discovery and compliance jobs
   - name: collected-configs
     description: Collected device configurations
   - name: snmp-snapshots
@@ -41,6 +53,316 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Local login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthLoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthLoginResponse"
+
+  /auth/me:
+    get:
+      operationId: getAuthSession
+      tags: [auth]
+      summary: Current authenticated user
+      responses:
+        "200":
+          description: Session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: End session
+      responses:
+        "204":
+          description: Logged out
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /scheduled-jobs:
+    get:
+      operationId: listScheduledJobs
+      tags: [scheduler]
+      summary: List scheduled jobs
+      responses:
+        "200":
+          description: Jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJobListResponse"
+    post:
+      operationId: createScheduledJob
+      tags: [scheduler]
+      summary: Create scheduled job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduledJobCreateRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+
+  /scheduled-jobs/{id}:
+    get:
+      operationId: getScheduledJob
+      tags: [scheduler]
+      summary: Get scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+    patch:
+      operationId: updateScheduledJob
+      tags: [scheduler]
+      summary: Update scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduledJobUpdateRequest"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+    delete:
+      operationId: deleteScheduledJob
+      tags: [scheduler]
+      summary: Delete scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /scheduled-jobs/{id}/run-now:
+    post:
+      operationId: runScheduledJobNow
+      tags: [scheduler]
+      summary: Run scheduled job now
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJobRunDetail"
+
+  /scheduled-jobs/{id}/enable:
+    post:
+      operationId: enableScheduledJob
+      tags: [scheduler]
+      summary: Enable scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+
+  /scheduled-jobs/{id}/disable:
+    post:
+      operationId: disableScheduledJob
+      tags: [scheduler]
+      summary: Disable scheduled job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJob"
+
+  /scheduled-job-runs:
+    get:
+      operationId: listScheduledJobRuns
+      tags: [scheduler]
+      summary: List scheduled job runs
+      parameters:
+        - name: scheduledJobId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJobRunListResponse"
+
+  /scheduled-job-runs/{id}:
+    get:
+      operationId: getScheduledJobRun
+      tags: [scheduler]
+      summary: Get scheduled job run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledJobRunDetail"
+
+  /scheduled-job-runs/{id}/items:
+    get:
+      operationId: listScheduledJobRunItems
+      tags: [scheduler]
+      summary: List run items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScheduledJobRunItem"
 
   # ── DEVICES ──────────────────────────────────────────────────────────────────
   /devices:
@@ -428,6 +750,94 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ComplianceSummary"
+
+  /compliance-findings:
+    get:
+      operationId: listComplianceFindings
+      tags: [compliance-jobs]
+      summary: List enriched compliance findings
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: context
+          in: query
+          schema:
+            type: string
+        - name: confidence
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: operationalCategory
+          in: query
+          schema:
+            type: string
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Findings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ComplianceFinding"
+
+  /compliance-findings-groups:
+    get:
+      operationId: listComplianceFindingsGroups
+      tags: [compliance-jobs]
+      summary: List enriched compliance findings grouped by rule, context, severity and operational category
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: context
+          in: query
+          schema:
+            type: string
+        - name: confidence
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: operationalCategory
+          in: query
+          schema:
+            type: string
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Finding groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ComplianceFindingGroup"
 
   /compliance-jobs/{id}:
     get:
@@ -1594,6 +2004,292 @@ paths:
                 items:
                   $ref: "#/components/schemas/CommunityChangeAudit"
 
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [audit]
+      summary: List audit logs
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: objectType
+          in: query
+          schema:
+            type: string
+        - name: objectId
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogListResponse"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List generated provisioning reports
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportListResponse"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a generated provisioning report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /provisioning-jobs/{id}/report:
+    post:
+      operationId: createProvisioningReport
+      tags: [provisioning-jobs]
+      summary: Generate a provisioning report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Generated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /integrations:
+    get:
+      operationId: listIntegrations
+      tags: [integrations]
+      summary: List integration readiness settings
+      responses:
+        "200":
+          description: Integrations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationListResponse"
+
+  /integrations/{name}:
+    get:
+      operationId: getIntegration
+      tags: [integrations]
+      summary: Get integration readiness setting
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationSetting"
+    patch:
+      operationId: updateIntegration
+      tags: [integrations]
+      summary: Update integration readiness setting
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                configJson:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Updated integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationSetting"
+
+  /netbox/status:
+    get:
+      operationId: getNetBoxStatus
+      tags: [netbox]
+      summary: Get NetBox readiness status
+      responses:
+        "200":
+          description: NetBox status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxStatus"
+
+  /netbox/test-connection:
+    post:
+      operationId: testNetBoxConnection
+      tags: [netbox]
+      summary: Test NetBox connection
+      responses:
+        "200":
+          description: Connection result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxConnectionTestResponse"
+
+  /netbox/devices:
+    get:
+      operationId: listNetBoxDevices
+      tags: [netbox]
+      summary: List NetBox devices
+      responses:
+        "200":
+          description: NetBox devices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxDeviceListResponse"
+
+  /netbox/sites:
+    get:
+      operationId: listNetBoxSites
+      tags: [netbox]
+      summary: List NetBox sites
+      responses:
+        "200":
+          description: NetBox sites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxSimpleListResponse"
+
+  /netbox/tenants:
+    get:
+      operationId: listNetBoxTenants
+      tags: [netbox]
+      summary: List NetBox tenants
+      responses:
+        "200":
+          description: NetBox tenants
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxSimpleListResponse"
+
+  /netbox/device-roles:
+    get:
+      operationId: listNetBoxDeviceRoles
+      tags: [netbox]
+      summary: List NetBox device roles
+      responses:
+        "200":
+          description: NetBox device roles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxSimpleListResponse"
+
+  /netbox/manufacturers:
+    get:
+      operationId: listNetBoxManufacturers
+      tags: [netbox]
+      summary: List NetBox manufacturers
+      responses:
+        "200":
+          description: NetBox manufacturers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxSimpleListResponse"
+
+  /netbox/platforms:
+    get:
+      operationId: listNetBoxPlatforms
+      tags: [netbox]
+      summary: List NetBox platforms
+      responses:
+        "200":
+          description: NetBox platforms
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxSimpleListResponse"
+
+  /netbox/devices/preview-sync:
+    post:
+      operationId: previewNetBoxDeviceSync
+      tags: [netbox]
+      summary: Preview read-only sync from NetBox
+      responses:
+        "200":
+          description: Sync preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxSyncPreviewResponse"
+
+  /netbox/devices/sync-local:
+    post:
+      operationId: syncNetBoxDevicesLocal
+      tags: [netbox]
+      summary: Sync NetBox devices to local inventory
+      responses:
+        "200":
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetBoxSyncResult"
+
 components:
   schemas:
     HealthStatus:
@@ -1602,6 +2298,406 @@ components:
       properties:
         status:
           type: string
+
+    UserRole:
+      type: string
+      enum: [viewer, operator, admin]
+
+    AuthUser:
+      type: object
+      required: [id, name, email, role]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+
+    User:
+      type: object
+      required: [id, name, email, role, enabled, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        enabled:
+          type: boolean
+        lastLoginAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AuthLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthLoginResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthUser"
+        token:
+          type: string
+
+    SessionResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthUser"
+
+    UserListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+
+    CreateUserRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        enabled:
+          type: boolean
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          $ref: "#/components/schemas/UserRole"
+        enabled:
+          type: boolean
+
+    AuditLog:
+      type: object
+      required: [id, action, objectType, objectId, createdAt]
+      properties:
+        id:
+          type: integer
+        actorId:
+          type: ["integer", "null"]
+        actor:
+          type: string
+        action:
+          type: string
+        objectType:
+          type: string
+        objectId:
+          type: string
+        metadataJson:
+          type: ["object", "null"]
+          additionalProperties: true
+        sourceIp:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLogListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/AuditLog"
+
+    Report:
+      type: object
+      required: [id, provisioningJobId, reportType, contentMarkdown, generatedAt]
+      properties:
+        id:
+          type: integer
+        provisioningJobId:
+          type: integer
+        reportType:
+          type: string
+        contentMarkdown:
+          type: string
+        generatedBy:
+          type: ["string", "null"]
+        generatedAt:
+          type: string
+          format: date-time
+        jobName:
+          type: ["string", "null"]
+        jobType:
+          type: ["string", "null"]
+
+    ReportListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/Report"
+
+    IntegrationSetting:
+      type: object
+      required: [id, name, enabled, readiness, configJson, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        enabled:
+          type: boolean
+        readiness:
+          type: string
+          description: future, partial, ready
+        lastConnectionStatus:
+          type: ["string", "null"]
+        lastConnectionAt:
+          type: ["string", "null"]
+          format: date-time
+        configJson:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    IntegrationListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/IntegrationSetting"
+
+    NetBoxStatus:
+      type: object
+      required: [enabled, baseUrlConfigured, tokenConfigured, skipTlsVerify, timeoutMs, pageSize, readiness, lastConnectionStatus, lastConnectionAt]
+      properties:
+        enabled:
+          type: boolean
+        baseUrl:
+          type: ["string", "null"]
+        tokenConfigured:
+          type: boolean
+        skipTlsVerify:
+          type: boolean
+        timeoutMs:
+          type: integer
+        pageSize:
+          type: integer
+        readiness:
+          type: string
+          description: disabled, partial, ready
+        lastConnectionStatus:
+          type: ["string", "null"]
+        lastConnectionAt:
+          type: ["string", "null"]
+          format: date-time
+        baseUrlConfigured:
+          type: boolean
+
+    NetBoxConnectionTestResponse:
+      type: object
+      required: [status, message, readiness, baseUrlConfigured, tokenConfigured, skipTlsVerify, testedAt]
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        readiness:
+          type: string
+        baseUrlConfigured:
+          type: boolean
+        tokenConfigured:
+          type: boolean
+        skipTlsVerify:
+          type: boolean
+        testedAt:
+          type: string
+          format: date-time
+        version:
+          type: ["string", "null"]
+
+    NetBoxSimpleItem:
+      type: object
+      required: [id, name, displayName]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: ["string", "null"]
+        displayName:
+          type: string
+
+    NetBoxSimpleListResponse:
+      type: object
+      required: [count, items, next, previous]
+      properties:
+        count:
+          type: integer
+        next:
+          type: ["string", "null"]
+        previous:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetBoxSimpleItem"
+
+    NetBoxDevice:
+      type: object
+      required: [id, name, displayName]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        displayName:
+          type: string
+        ipAddress:
+          type: ["string", "null"]
+        siteId:
+          type: ["integer", "null"]
+        siteName:
+          type: ["string", "null"]
+        tenantId:
+          type: ["integer", "null"]
+        tenantName:
+          type: ["string", "null"]
+        roleId:
+          type: ["integer", "null"]
+        roleName:
+          type: ["string", "null"]
+        vendor:
+          type: ["string", "null"]
+        platform:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        comments:
+          type: ["string", "null"]
+
+    NetBoxDeviceListResponse:
+      type: object
+      required: [count, items, next, previous]
+      properties:
+        count:
+          type: integer
+        next:
+          type: ["string", "null"]
+        previous:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetBoxDevice"
+
+    NetBoxSyncPreviewRequest:
+      type: object
+      properties:
+        pageSize:
+          type: integer
+
+    NetBoxSyncPreviewItem:
+      type: object
+      required: [netboxDeviceId, hostname, action, matchedLocalDeviceId, warnings]
+      properties:
+        netboxDeviceId:
+          type: integer
+        hostname:
+          type: string
+        ipAddress:
+          type: ["string", "null"]
+        site:
+          type: ["string", "null"]
+        role:
+          type: ["string", "null"]
+        vendor:
+          type: ["string", "null"]
+        platform:
+          type: ["string", "null"]
+        action:
+          type: string
+        matchedLocalDeviceId:
+          type: ["integer", "null"]
+        warnings:
+          type: array
+          items:
+            type: string
+
+    NetBoxSyncPreviewResponse:
+      type: object
+      required: [summary, items]
+      properties:
+        summary:
+          type: object
+          required: [totalFromNetBox, matchedByNetboxId, matchedByHostname, toCreate, toUpdate, toSkip, warnings]
+          properties:
+            totalFromNetBox:
+              type: integer
+            matchedByNetboxId:
+              type: integer
+            matchedByHostname:
+              type: integer
+            toCreate:
+              type: integer
+            toUpdate:
+              type: integer
+            toSkip:
+              type: integer
+            warnings:
+              type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetBoxSyncPreviewItem"
+
+    NetBoxSyncResult:
+      allOf:
+        - $ref: "#/components/schemas/NetBoxSyncPreviewResponse"
+        - type: object
+          required: [durationMs, created, updated, skipped, warningsList]
+          properties:
+            durationMs:
+              type: integer
+            created:
+              type: integer
+            updated:
+              type: integer
+            skipped:
+              type: integer
+            warningsList:
+              type: array
+              items:
+                type: string
 
     DiscoveryStatus:
       type: string
@@ -2327,6 +3423,8 @@ components:
           type: array
           items:
             type: string
+        policyProfileName:
+          type: string
 
     ComplianceJobDetail:
       type: object
@@ -2384,6 +3482,70 @@ components:
           type: ["string", "null"]
         evidence:
           type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+          description: "pass, fail, warning, unknown"
+        message:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        blocking:
+          type: boolean
+        source:
+          type: ["string", "null"]
+        confidence:
+          type: ["string", "null"]
+        objectType:
+          type: ["string", "null"]
+        objectId:
+          type: ["string", "null"]
+        objectName:
+          type: ["string", "null"]
+        ruleId:
+          type: ["string", "null"]
+        ruleName:
+          type: ["string", "null"]
+        operationalCategory:
+          type: ["string", "null"]
+        rawReference:
+          type: ["string", "null"]
+        metadataJson:
+          type: object
+        deviceId:
+          type: ["integer", "null"]
+        deviceHostname:
+          type: ["string", "null"]
+        jobCreatedAt:
+          type: ["string", "null"]
+
+    ComplianceFindingGroup:
+      type: object
+      required: [ruleId, severity, context, operationalCategory, count, sampleFindingIds, message]
+      properties:
+        ruleId:
+          type: string
+        ruleName:
+          type: ["string", "null"]
+        policyName:
+          type: ["string", "null"]
+        severity:
+          type: string
+        context:
+          type: string
+        operationalCategory:
+          type: string
+        count:
+          type: integer
+        sampleFindingIds:
+          type: array
+          items:
+            type: string
+        exampleFindingIds:
+          type: array
+          items:
+            type: string
+        message:
+          type: string
 
     ComplianceSummary:
       type: object
@@ -2396,6 +3558,12 @@ components:
         failed:
           type: integer
         running:
+          type: integer
+        warningFindings:
+          type: integer
+        unknownFindings:
+          type: integer
+        criticalFindings:
           type: integer
         recentJobs:
           type: array
@@ -3300,3 +4468,217 @@ components:
           enum: [success, error, pending]
         createdAt:
           type: string
+
+    ScheduledJobType:
+      type: string
+      enum: [discovery, compliance, health_check]
+
+    ScheduledJobTargetType:
+      type: string
+      enum: [device, device_group, all_devices]
+
+    ScheduledJobRunStatus:
+      type: string
+      enum: [pending, running, completed, failed, partial, cancelled]
+
+    ScheduledJobRunItemStatus:
+      type: string
+      enum: [pending, running, completed, failed, skipped]
+
+    ScheduledJob:
+      type: object
+      required:
+        - id
+        - name
+        - jobType
+        - targetType
+        - contextsJson
+        - intervalMinutes
+        - enabled
+        - runOnStartup
+        - maxRuntimeSeconds
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        jobType:
+          $ref: "#/components/schemas/ScheduledJobType"
+        targetType:
+          $ref: "#/components/schemas/ScheduledJobTargetType"
+        targetId:
+          type: ["integer", "null"]
+        targetLabel:
+          type: ["string", "null"]
+        contextsJson:
+          type: array
+          items:
+            type: string
+        cronExpression:
+          type: ["string", "null"]
+        intervalMinutes:
+          type: integer
+        enabled:
+          type: boolean
+        runOnStartup:
+          type: boolean
+        maxRuntimeSeconds:
+          type: integer
+        createdBy:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        lastRunAt:
+          type: ["string", "null"]
+        nextRunAt:
+          type: ["string", "null"]
+
+    ScheduledJobCreateRequest:
+      type: object
+      required: [name, jobType, targetType]
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        jobType:
+          $ref: "#/components/schemas/ScheduledJobType"
+        targetType:
+          $ref: "#/components/schemas/ScheduledJobTargetType"
+        targetId:
+          type: ["integer", "null"]
+        contextsJson:
+          type: array
+          items:
+            type: string
+        cronExpression:
+          type: ["string", "null"]
+        intervalMinutes:
+          type: integer
+        enabled:
+          type: boolean
+        runOnStartup:
+          type: boolean
+        maxRuntimeSeconds:
+          type: integer
+
+    ScheduledJobUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        jobType:
+          $ref: "#/components/schemas/ScheduledJobType"
+        targetType:
+          $ref: "#/components/schemas/ScheduledJobTargetType"
+        targetId:
+          type: ["integer", "null"]
+        contextsJson:
+          type: array
+          items:
+            type: string
+        cronExpression:
+          type: ["string", "null"]
+        intervalMinutes:
+          type: ["integer", "null"]
+        enabled:
+          type: boolean
+        runOnStartup:
+          type: boolean
+        maxRuntimeSeconds:
+          type: ["integer", "null"]
+
+    ScheduledJobRun:
+      type: object
+      required:
+        - id
+        - scheduledJobId
+        - status
+        - triggeredBy
+        - createdAt
+      properties:
+        id:
+          type: integer
+        scheduledJobId:
+          type: integer
+        status:
+          $ref: "#/components/schemas/ScheduledJobRunStatus"
+        startedAt:
+          type: ["string", "null"]
+        finishedAt:
+          type: ["string", "null"]
+        triggeredBy:
+          type: string
+          enum: [scheduler, manual]
+        actorId:
+          type: ["integer", "null"]
+        summaryJson:
+          type: ["object", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ScheduledJobRunItem:
+      type: object
+      required:
+        - id
+        - scheduledJobRunId
+        - deviceId
+        - status
+        - actionType
+        - createdAt
+      properties:
+        id:
+          type: integer
+        scheduledJobRunId:
+          type: integer
+        deviceId:
+          type: integer
+        status:
+          $ref: "#/components/schemas/ScheduledJobRunItemStatus"
+        actionType:
+          type: string
+          enum: [discovery, compliance, health_check]
+        resultRefType:
+          type: ["string", "null"]
+        resultRefId:
+          type: ["string", "null"]
+        summaryJson:
+          type: ["object", "null"]
+        errorMessage:
+          type: ["string", "null"]
+        startedAt:
+          type: ["string", "null"]
+        finishedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ScheduledJobRunDetail:
+      allOf:
+        - $ref: "#/components/schemas/ScheduledJobRun"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/ScheduledJobRunItem"
+
+    ScheduledJobListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/ScheduledJob"
+
+    ScheduledJobRunListResponse:
+      type: array
+      items:
+        $ref: "#/components/schemas/ScheduledJobRun"

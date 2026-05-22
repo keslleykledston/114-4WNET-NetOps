@@ -10,7 +10,6 @@ export type NetopsTreeView =
   | "bgp-ix"
   | "bgp-cdn-ix"
   | "bgp-ibgp"
-  | "bgp-unknown"
   | "filters"
   | "communities";
 
@@ -39,8 +38,6 @@ export function viewLabel(view: NetopsTreeView): string {
       return "CDN/IX";
     case "bgp-ibgp":
       return "iBGP";
-    case "bgp-unknown":
-      return "Unknown";
     case "filters":
       return "Filters";
     case "communities":

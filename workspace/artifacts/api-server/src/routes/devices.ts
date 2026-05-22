@@ -5,6 +5,7 @@ import { eq, sql, count } from "drizzle-orm";
 import { encrypt, decrypt } from "../lib/crypto.js";
 import { testSSHConnection } from "../lib/ssh.js";
 import { collectSnmpSnapshot } from "../lib/snmp.js";
+import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 import {
   CreateDeviceBody,
   UpdateDeviceBody,
@@ -19,10 +20,9 @@ import { collectedConfigsTable } from "@workspace/db";
 
 const router = Router();
 
-function publicDevice<T extends { snmpCommunity?: string | null; lastSeen?: Date | null; createdAt: Date; updatedAt: Date }>(device: T) {
+function publicDevice<T extends { lastSeen?: Date | null; createdAt: Date; updatedAt: Date }>(device: T) {
   return {
     ...device,
-    snmpCommunity: null,
     lastSeen: device.lastSeen?.toISOString() ?? null,
     createdAt: device.createdAt.toISOString(),
     updatedAt: device.updatedAt.toISOString(),
@@ -42,7 +42,6 @@ router.get("/devices", async (req, res) => {
     site: devicesTable.site,
     role: devicesTable.role,
     groupId: devicesTable.groupId,
-    snmpCommunity: devicesTable.snmpCommunity,
     netboxDeviceId: devicesTable.netboxDeviceId,
     lastSeen: devicesTable.lastSeen,
     status: devicesTable.status,
@@ -76,6 +75,13 @@ router.post("/devices", async (req, res) => {
     passwordEncrypted: encrypt(password),
     status: "unknown",
   }).returning();
+  await logAuditEvent({
+    action: "device_create",
+    objectType: "device",
+    objectId: String(device.id),
+    metadata: { hostname: device.hostname, ipAddress: device.ipAddress, vendor: device.vendor, platform: device.platform, site: device.site, status: device.status },
+    sourceIp: getRequestSourceIp(req),
+  });
   res.status(201).json(publicDevice(device));
 });
 
@@ -112,7 +118,6 @@ router.get("/devices/:id", async (req, res) => {
     site: devicesTable.site,
     role: devicesTable.role,
     groupId: devicesTable.groupId,
-    snmpCommunity: devicesTable.snmpCommunity,
     netboxDeviceId: devicesTable.netboxDeviceId,
     lastSeen: devicesTable.lastSeen,
     status: devicesTable.status,
@@ -146,11 +151,25 @@ router.patch("/devices/:id", async (req, res) => {
     .returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(publicDevice(updated));
+  await logAuditEvent({
+    action: "device_update",
+    objectType: "device",
+    objectId: String(updated.id),
+    metadata: { hostname: updated.hostname, ipAddress: updated.ipAddress, vendor: updated.vendor, platform: updated.platform, site: updated.site, status: updated.status },
+    sourceIp: getRequestSourceIp(req),
+  });
 });
 
 router.delete("/devices/:id", async (req, res) => {
   const params = DeleteDeviceParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
+  await logAuditEvent({
+    action: "device_delete",
+    objectType: "device",
+    objectId: String(params.data.id),
+    metadata: { deleted: true },
+    sourceIp: getRequestSourceIp(req),
+  });
   await db.delete(devicesTable).where(eq(devicesTable.id, params.data.id));
   res.status(204).end();
 });
@@ -182,6 +201,13 @@ router.post("/devices/:id/test-connection", async (req, res) => {
     lastSeen: result.success ? new Date() : undefined,
     updatedAt: new Date(),
   }).where(eq(devicesTable.id, device.id));
+  await logAuditEvent({
+    action: "device_test_connection",
+    objectType: "device",
+    objectId: String(device.id),
+    metadata: { success: result.success, latencyMs: result.latencyMs, message: result.message, hostname: result.hostname },
+    sourceIp: getRequestSourceIp(req),
+  });
 
   res.json(result);
 });
@@ -217,6 +243,17 @@ router.post("/devices/:id/test-connectivity", async (req, res) => {
       snmpCommunity: device.snmpCommunity,
     }) : Promise.resolve({ success: false, errorMessage: "No SNMP community configured" })
   ]);
+
+  await logAuditEvent({
+    action: "device_test_connectivity",
+    objectType: "device",
+    objectId: String(device.id),
+    metadata: {
+      ssh: { success: sshResult.success, latencyMs: sshResult.latencyMs, message: sshResult.message },
+      snmp: { success: snmpResult.success, message: snmpResult.errorMessage ?? "ok" },
+    },
+    sourceIp: getRequestSourceIp(req),
+  });
 
   const sshOk = sshResult.success;
   const snmpOk = snmpResult.success;

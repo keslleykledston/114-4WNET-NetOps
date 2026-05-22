@@ -8,19 +8,28 @@ function numberValue(value: string | undefined): number | null {
 }
 
 // Regex for extracting peer info from compact peer list
-const peerListLineRegex = /^([0-9a-fA-F:.]+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+([0-9A-Za-z:]+)\s+([A-Za-z]+|-)/;
+const peerListLineRegex = /^([0-9a-fA-F:.]+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+([0-9A-Za-z:]+)\s+([A-Za-z()]+|-)/;
 
 // Regex for extracting verbose peer info - in sections like "BGP Peer is 189.23.156.121"
 const peerHeaderRegex = /^BGP Peer is ([0-9a-fA-F:.]+),\s*remote AS (\d+)/i;
+const peerTypeRegex = /^Type:\s+(EBGP|IBGP)\s+link/i;
 const peerDescriptionRegex = /^Peer's description:\s*"([^"]+)"/i;
 const receivedTotalRoutesRegex = /^Received total routes:\s*(\d+)\s*$/i;
 const receivedActiveRoutesRegex = /^Received active routes total:\s*(\d+)\s*$/i;
 const advertisedTotalRoutesRegex = /^Advertised total routes:\s*(\d+)\s*$/i;
-const stateRegex = /^BGP current state:\s*([A-Za-z]+)/i;
+const stateRegex = /^BGP current state:\s*([A-Za-z()]+)/i;
 const uptimeRegex = /^BGP current state:[^,]*,\s*Up for\s+([0-9A-Za-z:d]+)/i;
+
+function normalizeStateKey(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z]/g, "");
+}
 
 interface ParsedVerbosePeer extends Partial<NetopsBgpPeer> {
   peerIp: string;
+}
+
+export interface ParseHuaweiBgpPeersOptions {
+  vrfName?: string;
 }
 
 function parseVerbosePeerBlock(lines: string[]): ParsedVerbosePeer | null {
@@ -46,6 +55,12 @@ function parseVerbosePeerBlock(lines: string[]): ParsedVerbosePeer | null {
     if (descMatch) {
       result.description = descMatch[1];
       result.name = descMatch[1];
+      continue;
+    }
+
+    let typeMatch = peerTypeRegex.exec(trimmed);
+    if (typeMatch) {
+      result.sessionType = typeMatch[1].toUpperCase() === "IBGP" ? "iBGP" : "eBGP";
       continue;
     }
 
@@ -75,7 +90,7 @@ function parseVerbosePeerBlock(lines: string[]): ParsedVerbosePeer | null {
       // Also extract state from this line
       let stateMatch = stateRegex.exec(trimmed);
       if (stateMatch) {
-        const stateStr = stateMatch[1].toLowerCase();
+        const stateStr = normalizeStateKey(stateMatch[1]);
         const stateMap: Record<string, "Established" | "Idle" | "Active" | "Connect"> = {
           "established": "Established",
           "idle": "Idle",
@@ -90,7 +105,7 @@ function parseVerbosePeerBlock(lines: string[]): ParsedVerbosePeer | null {
     // Extract state (when uptime is not available)
     let stateMatch = stateRegex.exec(trimmed);
     if (stateMatch) {
-      const stateStr = stateMatch[1].toLowerCase();
+      const stateStr = normalizeStateKey(stateMatch[1]);
       const stateMap: Record<string, "Established" | "Idle" | "Active" | "Connect"> = {
         "established": "Established",
         "idle": "Idle",
@@ -107,9 +122,11 @@ function parseVerbosePeerBlock(lines: string[]): ParsedVerbosePeer | null {
   return result;
 }
 
-export function parseHuaweiBgpPeers(output: string, addressFamilyHint?: "ipv4" | "ipv6"): NetopsBgpPeer[] {
+export function parseHuaweiBgpPeers(output: string, options?: ParseHuaweiBgpPeersOptions): NetopsBgpPeer[] {
   const peers: NetopsBgpPeer[] = [];
   const peersByIp = new Map<string, ParsedVerbosePeer>();
+  const seenPeerIps = new Set<string>();
+  const vrfName = options?.vrfName?.trim() || null;
 
   const lines = output.split(/\r?\n/);
 
@@ -149,6 +166,7 @@ export function parseHuaweiBgpPeers(output: string, addressFamilyHint?: "ipv4" |
     const validStates: Record<string, "Established" | "Idle" | "Active" | "Connect" | undefined> = {
       "Established": "Established",
       "Idle": "Idle",
+      "Idle(Admin)": "Idle",
       "Active": "Active",
       "Connect": "Connect",
       "-": undefined,
@@ -161,8 +179,10 @@ export function parseHuaweiBgpPeers(output: string, addressFamilyHint?: "ipv4" |
       remoteAs: numberValue(remoteAs),
       state: validStates[stateStr],
       uptime,
+      vrf: vrfName,
       source: "ssh",
     };
+    seenPeerIps.add(peerIp);
 
     if (verboseData) {
       Object.assign(peer, {
@@ -177,8 +197,22 @@ export function parseHuaweiBgpPeers(output: string, addressFamilyHint?: "ipv4" |
     peers.push(normalizeBgpPeer(peer as any));
   }
 
-  if (addressFamilyHint) {
-    return peers.map((peer) => ({ ...peer, addressFamily: addressFamilyHint }));
+  for (const [peerIp, verboseData] of peersByIp.entries()) {
+    if (seenPeerIps.has(peerIp)) continue;
+    peers.push(normalizeBgpPeer({
+      peerIp,
+      remoteAs: verboseData.remoteAs ?? null,
+      state: verboseData.state ?? "Unknown",
+      uptime: verboseData.uptime ?? null,
+      vrf: vrfName,
+      source: "ssh",
+      description: verboseData.description ?? null,
+      name: verboseData.name ?? null,
+      receivedPrefixes: verboseData.receivedPrefixes ?? null,
+      advertisedPrefixes: verboseData.advertisedPrefixes ?? null,
+      activePrefixes: verboseData.activePrefixes ?? null,
+      sessionType: verboseData.sessionType ?? "unknown",
+    } as any));
   }
 
   return peers;

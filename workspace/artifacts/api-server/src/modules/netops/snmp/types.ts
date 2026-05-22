@@ -20,7 +20,9 @@ export interface SnmpCollectedBgpPeer {
   remoteAs: number | null;
   state: string;
   uptimeSecs: number | null;
+  // SNMP BGP counters used as prefix counts in the inventory layer.
   inUpdates: number | null;
+  // SNMP BGP counters used as prefix counts in the inventory layer.
   outUpdates: number | null;
   addressFamily: "ipv4" | "ipv6" | "unknown";
   source: "snmp";

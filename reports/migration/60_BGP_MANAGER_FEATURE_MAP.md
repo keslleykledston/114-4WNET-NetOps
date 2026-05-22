@@ -22,6 +22,8 @@
 - Tabela `snmp_snapshots`.
 - Poller SNMP persistindo interfaces, BGP peers e VRFs em JSON.
 - API e tela de historico SNMP: `/api/snmp-snapshots` e `SNMP History`.
+- Discovery BGP agora e VRF-aware: coleta SSH cobre `display bgp peer verbose`, `display bgp ipv6 peer verbose`, `vpnv4` e `vpnv6` por `vpn-instance`.
+- Override local de papel BGP ja persistido em `bgp_peer_role_overrides`, com `manual_override > classifier > snapshot > customer(default)`.
 - OpenAPI, Orval e Zod.
 - CI com typecheck, build e smoke Docker.
 
@@ -59,6 +61,7 @@
 - Huawei VRP tem saidas variantes por plataforma e versao.
 - APIs read-only devem nascer sem quebrar contratos existentes.
 - UI operacional pode crescer demais; precisa manter densidade e padrao visual atual.
+- Override de papel BGP nao usa `unknown` como categoria visivel; `unknown` fica como fallback interno apenas.
 
 ## Proxima etapa implementada agora
 
@@ -73,8 +76,16 @@
 - `GET /api/devices/:id/bgp/peers?category=customer`
 - `GET /api/devices/:id/bgp/peers/:peerIp/details`
 - `POST /api/devices/:id/bgp/peers/:peerIp/routes/query`
+  - Consulta SSH viva de prefixos recebidos/anunciados com limite maximo de 200 itens por pagina, suporte a `page` e `offset`, aviso de alto volume e persistencia de historico.
 - Frontend BGP passa a consumir objetos estruturados de discovery.
 - Persistencia local adicionada em `discovery_runs`, `discovery_snapshots` e `discovery_evidence`.
 - OpenAPI/Orval atualizado para os endpoints de discovery.
 - Parser Huawei VRP cobre primeira melhoria de route-policy nodes, community-filter/list e L2VC/VSI basico.
-- Ainda pendente: parser Huawei VRP completo e busca viva protegida de rotas.
+- Ainda pendente: parser Huawei VRP completo para variantes adicionais de plataforma/versao.
+
+## Compliance grouping UI v0.2.8
+
+- `/compliance` consome `GET /api/compliance-findings-groups` via cliente OpenAPI/Orval.
+- UI alterna entre lista de findings e grupos de findings.
+- Cards de agrupamento destacam top criticos, top por quantidade, bloqueadores reais e riscos operacionais.
+- Drawer de grupo mostra findings associados, objetos afetados e evidencias sanitizadas.

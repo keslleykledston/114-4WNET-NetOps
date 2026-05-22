@@ -60,6 +60,127 @@ function normalizeSSHErrorMessage(message: string): string {
   return message;
 }
 
+const PASSWORD_CHANGE_PROMPT = /Change now\?\s*\[Y\/N\]:/i;
+const SHELL_PROMPT_LINE = /^<[^>\n]+>\s*$/;
+const ANSI_ESCAPE = /\u001b\[[0-9;]*[A-Za-z]/g;
+
+function stripAnsi(value: string): string {
+  return value.replace(ANSI_ESCAPE, "");
+}
+
+function normalizeShellText(value: string): string {
+  return stripAnsi(value).replace(/\r/g, "");
+}
+
+function hasPromptLine(buffer: string): boolean {
+  const lines = normalizeShellText(buffer)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return false;
+  return SHELL_PROMPT_LINE.test(lines[lines.length - 1]);
+}
+
+function parseShellCommandOutput(buffer: string, command: string): string {
+  const lines = normalizeShellText(buffer).split("\n");
+  const output: string[] = [];
+  let seenCommand = false;
+
+  for (const line of lines) {
+    const trimmed = line.trimEnd();
+    const compact = trimmed.trim();
+
+    if (!compact) continue;
+    if (PASSWORD_CHANGE_PROMPT.test(compact)) continue;
+    if (SHELL_PROMPT_LINE.test(compact)) continue;
+
+    const inlinePromptMatch = compact.match(/^<[^>\n]+>(.*)$/);
+    const commandText = inlinePromptMatch ? inlinePromptMatch[1].trim() : compact;
+
+    if (!seenCommand) {
+      if (commandText === command) {
+        seenCommand = true;
+      }
+      continue;
+    }
+
+    output.push(trimmed);
+  }
+
+  return output.join("\n").trim();
+}
+
+function openInteractiveShell(conn: Client): Promise<NodeJS.ReadWriteStream> {
+  return new Promise((resolve, reject) => {
+    conn.shell({ term: "vt100", rows: 120, cols: 240 }, (err, stream) => {
+      if (err || !stream) {
+        reject(err ?? new Error("Failed to open SSH shell"));
+        return;
+      }
+      resolve(stream);
+    });
+  });
+}
+
+function waitForShellPrompt(
+  stream: NodeJS.ReadWriteStream,
+  options?: {
+    timeoutMs?: number;
+    declinePasswordChange?: boolean;
+  },
+): Promise<string> {
+  const timeoutMs = options?.timeoutMs ?? 30000;
+
+  return new Promise((resolve, reject) => {
+    let buffer = "";
+    let declinedPasswordChange = false;
+    let finished = false;
+
+    const cleanup = () => {
+      stream.off("data", onData);
+      stream.off("error", onError);
+      stream.off("close", onClose);
+      clearTimeout(timer);
+    };
+
+    const settle = (fn: () => void) => {
+      if (finished) return;
+      finished = true;
+      cleanup();
+      fn();
+    };
+
+    const timer = setTimeout(() => {
+      settle(() => reject(new Error(`SSH shell timed out after ${timeoutMs}ms`)));
+    }, timeoutMs);
+
+    const onData = (chunk: Buffer | string) => {
+      buffer += chunk.toString();
+
+      if (options?.declinePasswordChange && !declinedPasswordChange && PASSWORD_CHANGE_PROMPT.test(buffer)) {
+        declinedPasswordChange = true;
+        stream.write("N\n");
+      }
+
+      if (hasPromptLine(buffer)) {
+        settle(() => resolve(buffer));
+      }
+    };
+
+    const onError = (error: Error) => {
+      settle(() => reject(error));
+    };
+
+    const onClose = () => {
+      settle(() => reject(new Error("SSH shell closed before prompt was received")));
+    };
+
+    stream.on("data", onData);
+    stream.on("error", onError);
+    stream.on("close", onClose);
+  });
+}
+
 export async function testSSHConnection(config: SSHConfig): Promise<{ success: boolean; latencyMs: number | null; hostname: string | null; message: string }> {
   return new Promise((resolve) => {
     const start = Date.now();
@@ -117,10 +238,23 @@ export async function runSSHCommands(config: SSHConfig, commands: string[]): Pro
 
     conn.on("ready", async () => {
       try {
+        const shell = await openInteractiveShell(conn);
+
+        await waitForShellPrompt(shell, {
+          timeoutMs: 15000,
+          declinePasswordChange: true,
+        });
+
+        shell.write("screen-length 0 temporary\n");
+        await waitForShellPrompt(shell, { timeoutMs: 15000 });
+
         for (const command of commands) {
-          const result = await runSingleCommand(conn, command);
-          results.push(result);
+          shell.write(`${command}\n`);
+          const rawOutput = await waitForShellPrompt(shell, { timeoutMs: 120000 });
+          results.push({ command, output: parseShellCommandOutput(rawOutput, command) });
         }
+
+        shell.end();
         clearTimeout(timeout);
         resolved = true;
         conn.end();

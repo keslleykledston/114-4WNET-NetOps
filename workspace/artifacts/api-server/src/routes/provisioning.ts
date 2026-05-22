@@ -1,83 +1,95 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import {
-  provisioningJobsTable,
-  provisioningStepsTable,
-  devicesTable,
-  configTemplatesTable,
-} from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+import { db, devicesTable, provisioningJobsTable, provisioningStepsTable, configTemplatesTable } from "@workspace/db";
 import {
   CreateProvisioningJobBody,
-  GetProvisioningJobParams,
-  ValidateProvisioningJobParams,
   ExecuteProvisioningJobParams,
-  RollbackProvisioningJobParams,
+  GetProvisioningJobParams,
   ListProvisioningJobsQueryParams,
+  RollbackProvisioningJobParams,
+  ValidateProvisioningJobParams,
 } from "@workspace/api-zod";
 import { decrypt } from "../lib/crypto.js";
 import { runSSHCommands } from "../lib/ssh.js";
+import { env } from "../lib/env.js";
+import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
+import { buildProvisioningJobReportMarkdown, createProvisioningReport, getProvisioningJobDetail } from "../modules/netops/provisioning.service.js";
 
 const router = Router();
 
+function parseDeviceIds(value: string | null | undefined): number[] {
+  try {
+    const parsed = JSON.parse(value ?? "[]");
+    return Array.isArray(parsed) ? parsed.map((item) => Number(item)).filter((item) => Number.isInteger(item)) : [];
+  } catch {
+    return [];
+  }
+}
+
 async function buildJobDetail(id: number) {
-  const [job] = await db.select().from(provisioningJobsTable).where(eq(provisioningJobsTable.id, id));
-  if (!job) return null;
+  return await getProvisioningJobDetail(id);
+}
 
-  const steps = await db.select({
-    id: provisioningStepsTable.id,
-    jobId: provisioningStepsTable.jobId,
-    deviceId: provisioningStepsTable.deviceId,
-    deviceHostname: devicesTable.hostname,
-    stepName: provisioningStepsTable.stepName,
-    status: provisioningStepsTable.status,
-    configApplied: provisioningStepsTable.configApplied,
-    output: provisioningStepsTable.output,
-    errorMessage: provisioningStepsTable.errorMessage,
-    executedAt: provisioningStepsTable.executedAt,
-  })
-    .from(provisioningStepsTable)
-    .leftJoin(devicesTable, eq(provisioningStepsTable.deviceId, devicesTable.id))
-    .where(eq(provisioningStepsTable.jobId, id));
+async function buildJobStats() {
+  const jobs = await db.select().from(provisioningJobsTable);
+  const total = jobs.length;
+  const completed = jobs.filter((job) => job.status === "completed").length;
+  const failed = jobs.filter((job) => job.status === "failed").length;
+  const blocked = jobs.filter((job) => job.status === "blocked").length;
+  const executing = jobs.filter((job) => job.status === "executing").length;
+  const draft = jobs.filter((job) => job.status === "draft" || job.status === "validated" || job.status === "approved").length;
+  const byType = Object.entries(
+    jobs.reduce((acc, job) => {
+      acc[job.type] = (acc[job.type] ?? 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+  ).map(([key, count]) => ({ key, count }));
 
-  return {
-    ...job,
-    deviceIds: JSON.parse(job.deviceIds ?? "[]"),
-    validatedAt: job.validatedAt?.toISOString() ?? null,
-    executedAt: job.executedAt?.toISOString() ?? null,
-    completedAt: job.completedAt?.toISOString() ?? null,
-    createdAt: job.createdAt.toISOString(),
-    steps: steps.map(s => ({ ...s, executedAt: s.executedAt?.toISOString() ?? null })),
-  };
+  return { total, completed, failed, blocked, executing, draft, byType };
+}
+
+async function upsertStepRows(jobId: number, deviceIds: number[], status: "pending" | "skipped" | "running" | "completed" | "failed", output: string | null, errorMessage: string | null) {
+  await db.delete(provisioningStepsTable).where(eq(provisioningStepsTable.jobId, jobId));
+  const stepRows = deviceIds.flatMap((deviceId) => [
+    { jobId, deviceId, stepName: "Pre-flight check", status, configApplied: null, output, errorMessage, executedAt: status === "pending" || status === "skipped" ? null : new Date() },
+    { jobId, deviceId, stepName: "Apply configuration", status, configApplied: null, output, errorMessage, executedAt: status === "pending" || status === "skipped" ? null : new Date() },
+    { jobId, deviceId, stepName: "Validate configuration", status, configApplied: null, output, errorMessage, executedAt: status === "pending" || status === "skipped" ? null : new Date() },
+  ]);
+  if (stepRows.length > 0) {
+    await db.insert(provisioningStepsTable).values(stepRows);
+  }
 }
 
 router.get("/provisioning-jobs", async (req, res) => {
   const query = ListProvisioningJobsQueryParams.safeParse(req.query);
   const jobs = await db.select().from(provisioningJobsTable).orderBy(desc(provisioningJobsTable.createdAt)).limit(100);
-  const filtered = jobs.filter(j => {
+  const filtered = jobs.filter((job) => {
     if (query.success) {
-      if (query.data.status && j.status !== query.data.status) return false;
-      if (query.data.type && j.type !== query.data.type) return false;
+      if (query.data.status && job.status !== query.data.status) return false;
+      if (query.data.type && job.type !== query.data.type) return false;
       if (query.data.deviceId) {
-        const ids: number[] = JSON.parse(j.deviceIds ?? "[]");
-        if (!ids.includes(query.data.deviceId)) return false;
+        if (!parseDeviceIds(job.deviceIds).includes(query.data.deviceId)) return false;
       }
     }
     return true;
   });
-  res.json(filtered.map(j => ({
-    ...j,
-    deviceIds: JSON.parse(j.deviceIds ?? "[]"),
-    validatedAt: j.validatedAt?.toISOString() ?? null,
-    executedAt: j.executedAt?.toISOString() ?? null,
-    completedAt: j.completedAt?.toISOString() ?? null,
-    createdAt: j.createdAt.toISOString(),
+  res.json(filtered.map((job) => ({
+    ...job,
+    deviceIds: parseDeviceIds(job.deviceIds),
+    validatedAt: job.validatedAt?.toISOString() ?? null,
+    executedAt: job.executedAt?.toISOString() ?? null,
+    completedAt: job.completedAt?.toISOString() ?? null,
+    createdAt: job.createdAt.toISOString(),
   })));
 });
 
 router.post("/provisioning-jobs", async (req, res) => {
   const parsed = CreateProvisioningJobBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+
   const [job] = await db.insert(provisioningJobsTable).values({
     name: parsed.data.name,
     type: parsed.data.type,
@@ -86,6 +98,7 @@ router.post("/provisioning-jobs", async (req, res) => {
     templateId: parsed.data.templateId ?? null,
     parameters: parsed.data.parameters ?? null,
   }).returning();
+
   res.status(201).json({
     ...job,
     deviceIds: parsed.data.deviceIds,
@@ -96,97 +109,254 @@ router.post("/provisioning-jobs", async (req, res) => {
   });
 });
 
-router.get("/provisioning-jobs/stats", async (req, res) => {
-  const jobs = await db.select().from(provisioningJobsTable);
-  const total = jobs.length;
-  const completed = jobs.filter(j => j.status === "completed").length;
-  const failed = jobs.filter(j => j.status === "failed").length;
-  const executing = jobs.filter(j => j.status === "executing").length;
-  const draft = jobs.filter(j => j.status === "draft" || j.status === "validated").length;
-  const byType = Object.entries(
-    jobs.reduce((acc, j) => { acc[j.type] = (acc[j.type] ?? 0) + 1; return acc; }, {} as Record<string, number>)
-  ).map(([key, count]) => ({ key, count }));
-  res.json({ total, completed, failed, executing, draft, byType });
+router.get("/provisioning-jobs/stats", async (_req, res) => {
+  res.json(await buildJobStats());
 });
 
 router.get("/provisioning-jobs/:id", async (req, res) => {
   const params = GetProvisioningJobParams.safeParse({ id: Number(req.params.id) });
-  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
   const detail = await buildJobDetail(params.data.id);
-  if (!detail) { res.status(404).json({ error: "Not found" }); return; }
+  if (!detail) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
   res.json(detail);
 });
 
 router.post("/provisioning-jobs/:id/validate", async (req, res) => {
   const params = ValidateProvisioningJobParams.safeParse({ id: Number(req.params.id) });
-  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
 
-  const [job] = await db.select().from(provisioningJobsTable).where(eq(provisioningJobsTable.id, params.data.id));
-  if (!job) { res.status(404).json({ error: "Not found" }); return; }
+  const detail = await buildJobDetail(params.data.id);
+  if (!detail) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
 
-  const deviceIds: number[] = JSON.parse(job.deviceIds ?? "[]");
   const checks = [];
-
-  if (deviceIds.length === 0) {
-    checks.push({ name: "Device selection", passed: false, message: "No devices selected" });
-  } else {
-    checks.push({ name: "Device selection", passed: true, message: `${deviceIds.length} device(s) selected` });
-  }
-
-  const devicesFound = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceIds[0] ?? 0));
-  const allFound = deviceIds.length > 0;
-  checks.push({ name: "Device reachability", passed: allFound, message: allFound ? "All target devices found in inventory" : "Some devices not found in inventory" });
-
-  if (job.templateId) {
-    const [tmpl] = await db.select().from(configTemplatesTable).where(eq(configTemplatesTable.id, job.templateId));
-    checks.push({ name: "Template validation", passed: !!tmpl, message: tmpl ? `Template '${tmpl.name}' found` : "Template not found" });
-  } else {
-    checks.push({ name: "Template validation", passed: true, message: "No template required" });
-  }
-
-  checks.push({ name: "Parameters check", passed: true, message: "Parameters look valid" });
+  const deviceIds = detail.deviceIds;
+  checks.push({ name: "Device selection", passed: deviceIds.length > 0, message: deviceIds.length > 0 ? `${deviceIds.length} device(s) selected` : "No devices selected" });
+  checks.push({ name: "Template validation", passed: !detail.templateId || Boolean(await db.select().from(configTemplatesTable).where(eq(configTemplatesTable.id, detail.templateId)).then((rows) => rows[0])), message: detail.templateId ? "Template found" : "No template required" });
   checks.push({ name: "Conflict check", passed: true, message: "No conflicting provisioning jobs detected" });
 
-  const valid = checks.every(c => c.passed);
+  const valid = checks.every((check) => check.passed);
   if (valid) {
     await db.update(provisioningJobsTable).set({ status: "validated", validatedAt: new Date() }).where(eq(provisioningJobsTable.id, params.data.id));
   }
 
+  await logAuditEvent({
+    action: "provisioning_validate",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: { valid, checks, jobName: detail.name, jobType: detail.type },
+    sourceIp: getRequestSourceIp(req),
+  });
+
   res.json({ valid, checks });
+});
+
+router.post("/provisioning-jobs/:id/preview", async (req, res) => {
+  const params = ValidateProvisioningJobParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const detail = await buildJobDetail(params.data.id);
+  if (!detail) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const previewMarkdown = await buildProvisioningJobReportMarkdown(params.data.id);
+  await logAuditEvent({
+    action: "provisioning_preview",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: { jobName: detail.name, jobType: detail.type, previewLength: previewMarkdown?.length ?? 0 },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  res.json({ ...detail, previewMarkdown });
+});
+
+router.post("/provisioning-jobs/:id/approve", async (req, res) => {
+  const params = ValidateProvisioningJobParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const detail = await buildJobDetail(params.data.id);
+  if (!detail) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  await db.update(provisioningJobsTable).set({ status: "approved" }).where(eq(provisioningJobsTable.id, params.data.id));
+
+  await logAuditEvent({
+    action: "provisioning_approve",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: { jobName: detail.name, jobType: detail.type },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  res.json({ ...detail, status: "approved" });
+});
+
+router.post("/provisioning-jobs/:id/report", async (req, res) => {
+  const params = GetProvisioningJobParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const report = await createProvisioningReport(params.data.id, "system");
+  if (!report) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  await logAuditEvent({
+    action: "provisioning_report",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: { reportId: report.id, reportType: report.reportType, contentLength: report.contentMarkdown.length },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  res.status(201).json({
+    ...report,
+    generatedAt: report.generatedAt.toISOString(),
+  });
 });
 
 router.post("/provisioning-jobs/:id/execute", async (req, res) => {
   const params = ExecuteProvisioningJobParams.safeParse({ id: Number(req.params.id) });
-  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
 
   const [job] = await db.select().from(provisioningJobsTable).where(eq(provisioningJobsTable.id, params.data.id));
-  if (!job) { res.status(404).json({ error: "Not found" }); return; }
+  if (!job) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
 
-  await db.update(provisioningJobsTable).set({ status: "executing", executedAt: new Date() }).where(eq(provisioningJobsTable.id, params.data.id));
-  const deviceIds: number[] = JSON.parse(job.deviceIds ?? "[]");
+  const deviceIds = parseDeviceIds(job.deviceIds);
+  const blocked = env.configApplyEnabled !== true;
+  const dryRun = env.dryRunDefault || blocked;
+  const blockedMessage = "Execução real bloqueada. CONFIG_APPLY_ENABLED=false.";
 
+  if (blocked || dryRun) {
+    await db.update(provisioningJobsTable).set({
+      status: blocked ? "blocked" : "validated",
+      executedAt: new Date(),
+      errorMessage: blocked ? blockedMessage : null,
+    }).where(eq(provisioningJobsTable.id, params.data.id));
+
+    await upsertStepRows(
+      params.data.id,
+      deviceIds,
+      "skipped",
+      blocked ? blockedMessage : "Dry-run mode. No SSH commands sent.",
+      blocked ? blockedMessage : null,
+    );
+
+    await logAuditEvent({
+      action: blocked ? "provisioning_execute_blocked" : "provisioning_execute_dry_run",
+      objectType: "provisioning_job",
+      objectId: String(params.data.id),
+      metadata: { jobName: job.name, jobType: job.type, dryRun, blocked, deviceCount: deviceIds.length },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    const detail = await buildJobDetail(params.data.id);
+    if (!detail) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(detail);
+    return;
+  }
+
+  await db.update(provisioningJobsTable).set({ status: "executing", executedAt: new Date(), errorMessage: null }).where(eq(provisioningJobsTable.id, params.data.id));
   await db.delete(provisioningStepsTable).where(eq(provisioningStepsTable.jobId, params.data.id));
-  const stepRows = deviceIds.flatMap(deviceId => [
+
+  const stepRows = deviceIds.flatMap((deviceId) => [
     { jobId: params.data.id, deviceId, stepName: "Pre-flight check", status: "pending" as const },
     { jobId: params.data.id, deviceId, stepName: "Apply configuration", status: "pending" as const },
     { jobId: params.data.id, deviceId, stepName: "Validate configuration", status: "pending" as const },
   ]);
   const insertedSteps = stepRows.length > 0 ? await db.insert(provisioningStepsTable).values(stepRows).returning() : [];
 
+  await logAuditEvent({
+    action: "provisioning_execute",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: { jobName: job.name, jobType: job.type, deviceCount: deviceIds.length, stepCount: insertedSteps.length },
+    sourceIp: getRequestSourceIp(req),
+  });
+
   const detail = await buildJobDetail(params.data.id);
-  if (!detail) { res.status(404).json({ error: "Not found" }); return; }
+  if (!detail) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
   res.json(detail);
 
-  executeProvisioningJob(params.data.id, deviceIds, insertedSteps.map(s => s.id)).catch(() => {});
+  executeProvisioningJob(params.data.id, deviceIds, insertedSteps.map((step) => step.id)).catch(() => {});
 });
 
 router.post("/provisioning-jobs/:id/rollback", async (req, res) => {
   const params = RollbackProvisioningJobParams.safeParse({ id: Number(req.params.id) });
-  if (!params.success) { res.status(400).json({ error: "Invalid ID" }); return; }
-  await db.update(provisioningJobsTable).set({ status: "rolled_back" }).where(eq(provisioningJobsTable.id, params.data.id));
-  await db.update(provisioningStepsTable).set({ status: "skipped" }).where(eq(provisioningStepsTable.jobId, params.data.id));
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const [job] = await db.select().from(provisioningJobsTable).where(eq(provisioningJobsTable.id, params.data.id));
+  if (!job) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const blocked = env.configApplyEnabled !== true;
+  const message = blocked ? "Execução real bloqueada. CONFIG_APPLY_ENABLED=false." : "Rollback executado em modo seguro.";
+
+  await db.update(provisioningJobsTable).set({
+    status: blocked ? "blocked" : "rolled_back",
+    errorMessage: blocked ? message : null,
+    completedAt: new Date(),
+  }).where(eq(provisioningJobsTable.id, params.data.id));
+
+  await db.update(provisioningStepsTable).set({ status: "skipped", errorMessage: message }).where(eq(provisioningStepsTable.jobId, params.data.id));
+
+  await logAuditEvent({
+    action: blocked ? "provisioning_rollback_blocked" : "provisioning_rollback",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: { jobName: job.name, jobType: job.type, blocked },
+    sourceIp: getRequestSourceIp(req),
+  });
+
   const detail = await buildJobDetail(params.data.id);
-  if (!detail) { res.status(404).json({ error: "Not found" }); return; }
+  if (!detail) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
   res.json(detail);
 });
 
@@ -199,28 +369,31 @@ async function executeProvisioningJob(jobId: number, deviceIds: number[], stepId
 
     const deviceStepIds = stepIds.splice(0, 3);
 
-    for (let i = 0; i < deviceStepIds.length; i++) {
-      const stepId = deviceStepIds[i];
+    for (let index = 0; index < deviceStepIds.length; index += 1) {
+      const stepId = deviceStepIds[index];
       if (!stepId) continue;
 
       await db.update(provisioningStepsTable).set({ status: "running", executedAt: new Date() }).where(eq(provisioningStepsTable.id, stepId));
 
-      await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
-
       try {
         const password = decrypt(device.passwordEncrypted);
+        const commands = index === 0
+          ? ["show version"]
+          : index === 1
+            ? ["show running-config | section mpls"]
+            : ["show mpls l2transport vc"];
         const result = await runSSHCommands(
           { host: device.ipAddress, port: device.sshPort, username: device.username, password },
-          i === 0 ? ["show version"] : i === 1 ? ["show running-config | section mpls"] : ["show mpls l2transport vc"]
+          commands,
         );
         await db.update(provisioningStepsTable).set({
           status: "completed",
           output: result[0]?.output ?? "",
         }).where(eq(provisioningStepsTable.id, stepId));
-      } catch (e) {
+      } catch (error) {
         await db.update(provisioningStepsTable).set({
           status: "failed",
-          errorMessage: String(e),
+          errorMessage: error instanceof Error ? error.message : String(error),
         }).where(eq(provisioningStepsTable.id, stepId));
         anyFailed = true;
         break;

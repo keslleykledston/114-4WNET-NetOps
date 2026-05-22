@@ -143,6 +143,12 @@ function normalizeBgpPeers(snapshot: SnmpSnapshot): NetopsBgpPeer[] {
     const rowSource = text(row["source"]);
     const source = rowSource === "snmp" ? "snmp" : "snapshot";
     const uptimeSecs = numberValue(row["uptimeSecs"] ?? row["uptime_secs"]);
+    const receivedPrefixes = source === "snmp"
+      ? null
+      : numberValue(row["receivedPrefixes"] ?? row["received_prefixes"]);
+    const advertisedPrefixes = source === "snmp"
+      ? null
+      : numberValue(row["advertisedPrefixes"] ?? row["advertised_prefixes"]);
 
     return normalizeBgpPeer({
       peerIp,
@@ -154,8 +160,8 @@ function normalizeBgpPeers(snapshot: SnmpSnapshot): NetopsBgpPeer[] {
       vrf: text(row["vrf"]) ?? text(row["vrfName"]) ?? text(row["vrf_name"]),
       importPolicy,
       exportPolicy,
-      receivedPrefixes: numberValue(row["receivedPrefixes"] ?? row["received_prefixes"] ?? row["inUpdates"]),
-      advertisedPrefixes: numberValue(row["advertisedPrefixes"] ?? row["advertised_prefixes"] ?? row["outUpdates"]),
+      receivedPrefixes,
+      advertisedPrefixes,
       activePrefixes: numberValue(row["activePrefixes"] ?? row["active_prefixes"]),
       uptime: text(row["uptime"]) ?? (uptimeSecs != null ? String(uptimeSecs) : null),
       source,

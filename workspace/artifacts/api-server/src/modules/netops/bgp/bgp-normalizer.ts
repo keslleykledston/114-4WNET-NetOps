@@ -17,11 +17,17 @@ export interface RawBgpPeerLike {
   advertisedPrefixes?: number | null;
   activePrefixes?: number | null;
   uptime?: string | null;
+  sessionType?: NetopsBgpPeer["sessionType"] | null;
   source: NetopsSource;
 }
 
+function normalizeLegacyRole(role: NetopsBgpPeer["role"] | null | undefined): NetopsBgpPeer["role"] | null {
+  if (!role || role === "unknown") return null;
+  return role;
+}
+
 export function normalizeBgpState(value: string | null | undefined): NetopsBgpPeer["state"] {
-  const normalized = value?.trim().toLowerCase();
+  const normalized = value?.trim().toLowerCase().replace(/[^a-z]/g, "");
   if (normalized === "established") return "Established";
   if (normalized === "idle") return "Idle";
   if (normalized === "active") return "Active";
@@ -30,11 +36,12 @@ export function normalizeBgpState(value: string | null | undefined): NetopsBgpPe
 }
 
 export function normalizeBgpPeer(input: RawBgpPeerLike): NetopsBgpPeer {
-  const sessionType = input.localAs != null && input.remoteAs != null && input.localAs === input.remoteAs
+  const sessionType = input.sessionType
+    ?? (input.localAs != null && input.remoteAs != null && input.localAs === input.remoteAs
     ? "iBGP"
     : input.remoteAs != null
       ? "eBGP"
-      : "unknown";
+      : "unknown");
   const classifiedRole = sessionType === "iBGP" ? "ibgp" : classifyBgpPeer({
     remoteAs: input.remoteAs ?? null,
     localAs: input.localAs ?? null,
@@ -43,7 +50,7 @@ export function normalizeBgpPeer(input: RawBgpPeerLike): NetopsBgpPeer {
     importPolicy: input.importPolicy ?? null,
     exportPolicy: input.exportPolicy ?? null,
   });
-  const role = input.role ?? classifiedRole;
+  const role = normalizeLegacyRole(input.role) ?? (classifiedRole === "unknown" ? "customer" : classifiedRole);
 
   return {
     peerIp: input.peerIp,
@@ -52,7 +59,7 @@ export function normalizeBgpPeer(input: RawBgpPeerLike): NetopsBgpPeer {
     name: input.name ?? null,
     state: normalizeBgpState(input.state),
     role,
-    roleSource: input.role ? "snapshot" : role === "unknown" ? "unknown" : "classifier",
+    roleSource: normalizeLegacyRole(input.role) ? "snapshot" : "classifier",
     addressFamily: classifyBgpAddressFamily(input.peerIp),
     sessionType,
     vrf: input.vrf ?? null,

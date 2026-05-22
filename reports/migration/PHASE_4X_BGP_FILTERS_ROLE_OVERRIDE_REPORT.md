@@ -56,10 +56,10 @@ Schema via Drizzle push (`pnpm --filter @workspace/db run push`).
 ## Precedencia de papel
 
 ```text
-manual_override > classifier > snapshot/mock > unknown
+manual_override > classifier > snapshot/mock > customer(default)
 ```
 
-`roleSource` exposto no peer: `manual_override | classifier | snapshot | unknown`.
+`roleSource` exposto no peer: `manual_override | classifier | snapshot | unknown` (compatibilidade interna; UI nao expõe `unknown` como categoria).
 
 ## Frontend (painel BGP)
 

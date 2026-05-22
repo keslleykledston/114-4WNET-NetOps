@@ -14,7 +14,14 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 
 ## Documentação
 
-- Status funcional e pendências: [docs/PROJECT_STATUS.md](/Users/keslleykssantos/projects/ativos/114-4WNET_NetOps/docs/PROJECT_STATUS.md)
+- Status funcional e pendências: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+- Plano de fechamento do MVP: [docs/MVP_CLOSURE_PLAN.md](docs/MVP_CLOSURE_PLAN.md)
+- RBAC local e auth: [docs/RBAC_MODEL.md](docs/RBAC_MODEL.md)
+- Setup local de auth: [docs/AUTH_LOCAL_SETUP.md](docs/AUTH_LOCAL_SETUP.md)
+- Permissões por role: [docs/USER_ROLES_PERMISSIONS.md](docs/USER_ROLES_PERMISSIONS.md)
+- Scheduler local: [docs/SCHEDULER_MODEL.md](docs/SCHEDULER_MODEL.md)
+- NetBox read-only sync: [docs/NETBOX_READONLY_SYNC.md](docs/NETBOX_READONLY_SYNC.md)
+- Compliance v2 source/confidence: [docs/COMPLIANCE_ENGINE_V2.md](docs/COMPLIANCE_ENGINE_V2.md)
 
 ## Subir com Docker
 
@@ -27,6 +34,16 @@ URLs:
 
 - Frontend: `http://localhost:3000`
 - API: `http://localhost:8080/api/healthz`
+
+Login local:
+
+- abrir `http://localhost:3000/login`
+- definir `ADMIN_EMAIL`, `ADMIN_PASSWORD` e `ADMIN_NAME` no `.env`
+- `ADMIN_PASSWORD` precisa existir para criar o admin inicial
+- `CONFIG_APPLY_ENABLED=false` continua bloqueando apply real
+- `DRY_RUN_DEFAULT=true` continua no modo seguro
+- scheduler aparece em `/scheduler`
+- NetBox read-only usa `NETBOX_ENABLED`, `NETBOX_URL`, `NETBOX_TOKEN` e aparece em `/integrations`
 
 ## Parar
 

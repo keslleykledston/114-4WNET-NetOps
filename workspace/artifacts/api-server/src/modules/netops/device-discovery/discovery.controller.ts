@@ -7,6 +7,7 @@ import {
   queryDiscoveryRoutes,
   runDeviceDiscovery,
 } from "./discovery.service.js";
+import { getRequestSourceIp, logAuditEvent } from "../../../lib/audit.js";
 
 function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -26,6 +27,18 @@ export async function discoverDevice(req: Request, res: Response) {
   if (!deviceId) { res.status(400).json({ error: "Invalid device ID" }); return; }
   const snapshot = await runDeviceDiscovery(deviceId, normalizeDiscoveryRequest(req.body));
   if (!snapshot) { res.status(404).json({ error: "Device not found" }); return; }
+  await logAuditEvent({
+    action: "discover",
+    objectType: "device",
+    objectId: String(deviceId),
+    metadata: {
+      contexts: snapshot.contexts,
+      status: snapshot.status,
+      sourcesUsed: snapshot.sourcesUsed,
+      warnings: snapshot.warnings.length,
+    },
+    sourceIp: getRequestSourceIp(req),
+  });
   res.status(202).json(snapshot);
 }
 
@@ -61,5 +74,16 @@ export async function postDiscoveryRouteQuery(req: Request, res: Response) {
   if (!deviceId) { res.status(400).json({ error: "Invalid device ID" }); return; }
   const result = await queryDiscoveryRoutes(deviceId, peerIp(req.params.peerIp), req.body);
   if (!result) { res.status(404).json({ error: "BGP peer details not found" }); return; }
+  await logAuditEvent({
+    action: "route_query",
+    objectType: "bgp_peer",
+    objectId: `${deviceId}:${peerIp(req.params.peerIp)}`,
+    metadata: {
+      direction: req.body && typeof req.body === "object" ? (req.body as Record<string, unknown>).direction : undefined,
+      routesReturned: result.items.length,
+      totalRoutes: result.total,
+    },
+    sourceIp: getRequestSourceIp(req),
+  });
   res.json(result);
 }

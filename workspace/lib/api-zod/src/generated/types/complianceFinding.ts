@@ -5,6 +5,7 @@
  * NetOps Manager API
  * OpenAPI spec version: 0.1.0
  */
+import type { ComplianceFindingMetadataJson } from './complianceFindingMetadataJson';
 
 export interface ComplianceFinding {
   id: number;
@@ -19,4 +20,39 @@ export interface ComplianceFinding {
   detail?: string | null;
   /** @nullable */
   evidence?: string | null;
+  /**
+     * pass, fail, warning, unknown
+     * @nullable
+     */
+  status?: string | null;
+  /** @nullable */
+  message?: string | null;
+  /** @nullable */
+  recommendation?: string | null;
+  blocking?: boolean;
+  /** @nullable */
+  source?: string | null;
+  /** @nullable */
+  confidence?: string | null;
+  /** @nullable */
+  objectType?: string | null;
+  /** @nullable */
+  objectId?: string | null;
+  /** @nullable */
+  objectName?: string | null;
+  /** @nullable */
+  ruleId?: string | null;
+  /** @nullable */
+  ruleName?: string | null;
+  /** @nullable */
+  operationalCategory?: string | null;
+  /** @nullable */
+  rawReference?: string | null;
+  metadataJson?: ComplianceFindingMetadataJson;
+  /** @nullable */
+  deviceId?: number | null;
+  /** @nullable */
+  deviceHostname?: string | null;
+  /** @nullable */
+  jobCreatedAt?: string | null;
 }

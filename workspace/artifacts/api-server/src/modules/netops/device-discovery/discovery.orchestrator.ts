@@ -172,8 +172,13 @@ function keyInterface(item: Pick<NetopsInterface, "name">): string {
   return item.name;
 }
 
-function keyPeer(item: Pick<NetopsBgpPeer, "peerIp" | "addressFamily">): string {
-  return `${item.peerIp}|${item.addressFamily}`;
+function keyPeer(item: Pick<NetopsBgpPeer, "peerIp" | "addressFamily" | "vrf">): string {
+  return `${item.peerIp}|${item.addressFamily}|${item.vrf ?? ""}`;
+}
+
+function normalizeLegacyRole(role: NetopsBgpPeer["role"] | null | undefined): NetopsBgpPeer["role"] {
+  if (!role || role === "unknown") return "customer";
+  return role;
 }
 
 function removalCandidateWarnings(
@@ -183,7 +188,7 @@ function removalCandidateWarnings(
   freshPeers: NetopsBgpPeer[],
 ): DiscoveryWarning[] {
   const freshInterfaceKeys = new Set(freshInterfaces.map(keyInterface));
-  const freshPeerKeys = new Set(freshPeers.map(keyPeer));
+  const freshPeerKeys = new Set(freshPeers.map((peer) => keyPeer(peer)));
   return [
     ...localInterfaces
       .filter((item) => !freshInterfaceKeys.has(keyInterface(item)))
@@ -212,11 +217,12 @@ async function applyRoleOverrides(deviceId: number, peers: ReturnType<typeof nor
   return peers.map((peer) => {
     const override = byPeer.get(`${peer.peerIp}|${peer.addressFamily}`);
     if (!override) return peer;
+    const role = normalizeLegacyRole(override.role as typeof peer.role);
     return {
       ...peer,
-      role: override.role as typeof peer.role,
-      category: override.role as typeof peer.category,
-      primaryDirection: primaryDirectionForRole(override.role as typeof peer.role),
+      role,
+      category: role,
+      primaryDirection: primaryDirectionForRole(role),
       roleSource: "manual_override" as const,
       remoteAs: override.remoteAs ?? peer.remoteAs,
       name: override.label ?? peer.name,

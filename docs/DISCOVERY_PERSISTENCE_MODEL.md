@@ -20,6 +20,7 @@ Read rules:
 
 - `GET /api/devices/:id/discovery-snapshot` returns the latest persisted snapshot.
 - BGP peers and peer details are served from the latest snapshot.
+- If only SNMP fallback data exists, the API reapplies manual BGP role overrides before exposing peers.
 - If no snapshot exists, the API returns an explicit discovery-required error.
 
 The Drizzle schema is in `workspace/lib/db/src/schema/discovery.ts`. A manual idempotent SQL migration is available at `workspace/lib/db/migrations/0001_device_discovery_persistence.sql`.

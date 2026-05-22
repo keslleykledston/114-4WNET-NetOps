@@ -42,14 +42,14 @@ export interface RouteQueryResponse {
   errorMessage?: string;
 }
 
-const MAX_DISPLAY_ROUTES = 200;
-const DEFAULT_LIMIT = 200;
+export const MAX_DISPLAY_ROUTES = 200;
+export const DEFAULT_LIMIT = 200;
 
 function isIpv6(ip: string): boolean {
   return ip.includes(":");
 }
 
-function buildRouteCommands(
+export function buildRouteCommands(
   peerIp: string,
   direction: "received" | "advertised",
   vrf: string | null
@@ -124,16 +124,22 @@ export async function queryBgpRoutes(
   direction: "received" | "advertised",
   vrf: string | null | undefined,
   routeCounters: { receivedRoutes?: number | null; advertisedRoutes?: number | null } | null,
-  body: RouteQueryRequest
+  body: RouteQueryRequest,
+  executor: (device: Device, commands: string[]) => Promise<string> = executeSSHCommands,
 ): Promise<RouteQueryResponse> {
   const limit = Math.min(Math.max(1, body.limit ?? DEFAULT_LIMIT), DEFAULT_LIMIT);
-  const page = Math.max(1, body.page ?? 1);
-  const offset = (page - 1) * limit;
+  const requestedOffset = typeof body.offset === "number" && Number.isFinite(body.offset)
+    ? Math.max(0, Math.floor(body.offset))
+    : null;
+  const page = requestedOffset === null
+    ? Math.max(1, Math.floor(body.page ?? 1))
+    : Math.floor(requestedOffset / limit) + 1;
+  const offset = requestedOffset ?? (page - 1) * limit;
   const queryTime = new Date();
 
   try {
     const commands = buildRouteCommands(peerIp, direction, (vrf ?? null) as string | null);
-    const output = await executeSSHCommands(device, commands);
+    const output = await executor(device, commands);
 
     if (!output || output.trim().length === 0) {
       return {
@@ -157,12 +163,20 @@ export async function queryBgpRoutes(
     const allRows = parsed.rows;
     const reportedTotal = parsed.reportedTotal;
 
-    const fullTotal = allRows.length;
-    const capped = fullTotal > MAX_DISPLAY_ROUTES;
+    const filter = typeof body.filter === "string" ? body.filter.trim().toLowerCase() : "";
+    const displayRows = filter
+      ? allRows.filter(row =>
+          row.prefix.toLowerCase().includes(filter) ||
+          row.asPath.toLowerCase().includes(filter) ||
+          (row.origin ?? "").toLowerCase().includes(filter)
+        )
+      : allRows;
+    const fullTotal = displayRows.length;
+    const reportedHighVolume = (reportedTotal ?? allRows.length) > MAX_DISPLAY_ROUTES;
     let warningMessage: string | undefined;
 
-    if (capped) {
-      warningMessage = `Foram detectadas ${fullTotal} rotas; por segurança a consulta foi limitada a ${MAX_DISPLAY_ROUTES} nesta interface.`;
+    if (reportedHighVolume) {
+      warningMessage = `Foram detectadas ${reportedTotal ?? allRows.length} rotas; a interface exibe no maximo ${limit} prefixos por pagina.`;
     }
 
     if (direction === "received" && routeCounters?.receivedRoutes && routeCounters.receivedRoutes > 5000) {
@@ -171,7 +185,6 @@ export async function queryBgpRoutes(
       warningMessage = `Este peer possui alto volume de prefixos anunciados (${routeCounters.advertisedRoutes}). A consulta foi limitada a ${limit} por página.`;
     }
 
-    const displayRows = capped ? allRows.slice(0, MAX_DISPLAY_ROUTES) : allRows;
     const paginatedRows = displayRows.slice(offset, offset + limit);
 
     const items: RouteQueryItem[] = paginatedRows.map((row: typeof allRows[0]) => ({
@@ -192,7 +205,7 @@ export async function queryBgpRoutes(
         direction,
         queryTime,
         totalRoutes: fullTotal,
-        routesReturned: displayRows.length,
+        routesReturned: paginatedRows.length,
         routesJson: allRows as any,
         source: "ssh",
         status: "ok",
@@ -212,8 +225,8 @@ export async function queryBgpRoutes(
       page,
       limit,
       hasNextPage: offset + paginatedRows.length < displayRows.length,
-      hasPreviousPage: page > 1,
-      excessWarning: capped || (warningMessage ? true : false),
+      hasPreviousPage: offset > 0,
+      excessWarning: reportedHighVolume || (warningMessage ? true : false),
       warningMessage,
       items,
     };

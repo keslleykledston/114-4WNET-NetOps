@@ -17,6 +17,414 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Local login
+ */
+export const LoginBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string()
+})
+
+export const LoginResponse = zod.object({
+  "user": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin'])
+}),
+  "token": zod.string()
+})
+
+
+/**
+ * @summary Current authenticated user
+ */
+export const GetAuthSessionResponse = zod.object({
+  "user": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin'])
+})
+})
+
+
+/**
+ * @summary List users
+ */
+export const ListUsersResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin']),
+  "enabled": zod.boolean(),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create user
+ */
+export const CreateUserBody = zod.object({
+  "name": zod.string(),
+  "email": zod.string(),
+  "password": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin']).optional(),
+  "enabled": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Update user
+ */
+export const UpdateUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateUserBody = zod.object({
+  "name": zod.string().optional(),
+  "email": zod.string().optional(),
+  "password": zod.string().optional(),
+  "role": zod.enum(['viewer', 'operator', 'admin']).optional(),
+  "enabled": zod.boolean().optional()
+})
+
+export const UpdateUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.enum(['viewer', 'operator', 'admin']),
+  "enabled": zod.boolean(),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete user
+ */
+export const DeleteUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List scheduled jobs
+ */
+export const ListScheduledJobsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+export const ListScheduledJobsResponse = zod.array(ListScheduledJobsResponseItem)
+
+
+/**
+ * @summary Create scheduled job
+ */
+export const CreateScheduledJobBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "contextsJson": zod.array(zod.string()).optional(),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number().optional(),
+  "enabled": zod.boolean().optional(),
+  "runOnStartup": zod.boolean().optional(),
+  "maxRuntimeSeconds": zod.number().optional()
+})
+
+
+/**
+ * @summary Get scheduled job
+ */
+export const GetScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetScheduledJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update scheduled job
+ */
+export const UpdateScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateScheduledJobBody = zod.object({
+  "name": zod.string().optional(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']).optional(),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']).optional(),
+  "targetId": zod.number().nullish(),
+  "contextsJson": zod.array(zod.string()).optional(),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number().nullish(),
+  "enabled": zod.boolean().optional(),
+  "runOnStartup": zod.boolean().optional(),
+  "maxRuntimeSeconds": zod.number().nullish()
+})
+
+export const UpdateScheduledJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Delete scheduled job
+ */
+export const DeleteScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Run scheduled job now
+ */
+export const RunScheduledJobNowParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RunScheduledJobNowResponse = zod.object({
+  "id": zod.number(),
+  "scheduledJobId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'partial', 'cancelled']),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "triggeredBy": zod.enum(['scheduler', 'manual']),
+  "actorId": zod.number().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string()
+}).and(zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "scheduledJobRunId": zod.number(),
+  "deviceId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'skipped']),
+  "actionType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "resultRefType": zod.string().nullish(),
+  "resultRefId": zod.string().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary Enable scheduled job
+ */
+export const EnableScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const EnableScheduledJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Disable scheduled job
+ */
+export const DisableScheduledJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DisableScheduledJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "jobType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "targetType": zod.enum(['device', 'device_group', 'all_devices']),
+  "targetId": zod.number().nullish(),
+  "targetLabel": zod.string().nullish(),
+  "contextsJson": zod.array(zod.string()),
+  "cronExpression": zod.string().nullish(),
+  "intervalMinutes": zod.number(),
+  "enabled": zod.boolean(),
+  "runOnStartup": zod.boolean(),
+  "maxRuntimeSeconds": zod.number(),
+  "createdBy": zod.number().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "lastRunAt": zod.string().nullish(),
+  "nextRunAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary List scheduled job runs
+ */
+export const ListScheduledJobRunsQueryParams = zod.object({
+  "scheduledJobId": zod.coerce.number().optional()
+})
+
+export const ListScheduledJobRunsResponseItem = zod.object({
+  "id": zod.number(),
+  "scheduledJobId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'partial', 'cancelled']),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "triggeredBy": zod.enum(['scheduler', 'manual']),
+  "actorId": zod.number().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListScheduledJobRunsResponse = zod.array(ListScheduledJobRunsResponseItem)
+
+
+/**
+ * @summary Get scheduled job run
+ */
+export const GetScheduledJobRunParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetScheduledJobRunResponse = zod.object({
+  "id": zod.number(),
+  "scheduledJobId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'partial', 'cancelled']),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "triggeredBy": zod.enum(['scheduler', 'manual']),
+  "actorId": zod.number().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string()
+}).and(zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "scheduledJobRunId": zod.number(),
+  "deviceId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'skipped']),
+  "actionType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "resultRefType": zod.string().nullish(),
+  "resultRefId": zod.string().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary List run items
+ */
+export const ListScheduledJobRunItemsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListScheduledJobRunItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "scheduledJobRunId": zod.number(),
+  "deviceId": zod.number(),
+  "status": zod.enum(['pending', 'running', 'completed', 'failed', 'skipped']),
+  "actionType": zod.enum(['discovery', 'compliance', 'health_check']),
+  "resultRefType": zod.string().nullish(),
+  "resultRefId": zod.string().nullish(),
+  "summaryJson": zod.object({
+
+}).passthrough().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "finishedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListScheduledJobRunItemsResponse = zod.array(ListScheduledJobRunItemsResponseItem)
+
+
+/**
  * @summary List all devices
  */
 export const ListDevicesQueryParams = zod.object({
@@ -387,7 +795,8 @@ export const ListComplianceJobsResponse = zod.array(ListComplianceJobsResponseIt
  */
 export const CreateComplianceJobBody = zod.object({
   "deviceId": zod.number(),
-  "contexts": zod.array(zod.string())
+  "contexts": zod.array(zod.string()),
+  "policyProfileName": zod.string().optional()
 })
 
 
@@ -399,6 +808,9 @@ export const GetComplianceSummaryResponse = zod.object({
   "passed": zod.number(),
   "failed": zod.number(),
   "running": zod.number(),
+  "warningFindings": zod.number().optional(),
+  "unknownFindings": zod.number().optional(),
+  "criticalFindings": zod.number().optional(),
   "recentJobs": zod.array(zod.object({
   "id": zod.number(),
   "deviceId": zod.number(),
@@ -421,6 +833,80 @@ export const GetComplianceSummaryResponse = zod.object({
   "count": zod.number()
 }))
 })
+
+
+/**
+ * @summary List enriched compliance findings
+ */
+export const ListComplianceFindingsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "severity": zod.coerce.string().optional(),
+  "context": zod.coerce.string().optional(),
+  "confidence": zod.coerce.string().optional(),
+  "source": zod.coerce.string().optional(),
+  "operationalCategory": zod.coerce.string().optional(),
+  "deviceId": zod.coerce.number().optional()
+})
+
+export const ListComplianceFindingsResponseItem = zod.object({
+  "id": zod.number(),
+  "jobId": zod.number(),
+  "policyId": zod.number(),
+  "policyName": zod.string(),
+  "severity": zod.string(),
+  "context": zod.string(),
+  "result": zod.string().describe('pass, fail, error'),
+  "detail": zod.string().nullish(),
+  "evidence": zod.string().nullish(),
+  "status": zod.string().nullish().describe('pass, fail, warning, unknown'),
+  "message": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "blocking": zod.boolean().optional(),
+  "source": zod.string().nullish(),
+  "confidence": zod.string().nullish(),
+  "objectType": zod.string().nullish(),
+  "objectId": zod.string().nullish(),
+  "objectName": zod.string().nullish(),
+  "ruleId": zod.string().nullish(),
+  "ruleName": zod.string().nullish(),
+  "operationalCategory": zod.string().nullish(),
+  "rawReference": zod.string().nullish(),
+  "metadataJson": zod.object({
+
+}).passthrough().optional(),
+  "deviceId": zod.number().nullish(),
+  "deviceHostname": zod.string().nullish(),
+  "jobCreatedAt": zod.string().nullish()
+})
+export const ListComplianceFindingsResponse = zod.array(ListComplianceFindingsResponseItem)
+
+
+/**
+ * @summary List enriched compliance findings grouped by rule, context, severity and operational category
+ */
+export const ListComplianceFindingsGroupsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "severity": zod.coerce.string().optional(),
+  "context": zod.coerce.string().optional(),
+  "confidence": zod.coerce.string().optional(),
+  "source": zod.coerce.string().optional(),
+  "operationalCategory": zod.coerce.string().optional(),
+  "deviceId": zod.coerce.number().optional()
+})
+
+export const ListComplianceFindingsGroupsResponseItem = zod.object({
+  "ruleId": zod.string(),
+  "ruleName": zod.string().nullish(),
+  "policyName": zod.string().nullish(),
+  "severity": zod.string(),
+  "context": zod.string(),
+  "operationalCategory": zod.string(),
+  "count": zod.number(),
+  "sampleFindingIds": zod.array(zod.string()),
+  "exampleFindingIds": zod.array(zod.string()).optional(),
+  "message": zod.string()
+})
+export const ListComplianceFindingsGroupsResponse = zod.array(ListComplianceFindingsGroupsResponseItem)
 
 
 /**
@@ -451,7 +937,26 @@ export const GetComplianceJobResponse = zod.object({
   "context": zod.string(),
   "result": zod.string().describe('pass, fail, error'),
   "detail": zod.string().nullish(),
-  "evidence": zod.string().nullish()
+  "evidence": zod.string().nullish(),
+  "status": zod.string().nullish().describe('pass, fail, warning, unknown'),
+  "message": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "blocking": zod.boolean().optional(),
+  "source": zod.string().nullish(),
+  "confidence": zod.string().nullish(),
+  "objectType": zod.string().nullish(),
+  "objectId": zod.string().nullish(),
+  "objectName": zod.string().nullish(),
+  "ruleId": zod.string().nullish(),
+  "ruleName": zod.string().nullish(),
+  "operationalCategory": zod.string().nullish(),
+  "rawReference": zod.string().nullish(),
+  "metadataJson": zod.object({
+
+}).passthrough().optional(),
+  "deviceId": zod.number().nullish(),
+  "deviceHostname": zod.string().nullish(),
+  "jobCreatedAt": zod.string().nullish()
 }))
 })
 
@@ -484,7 +989,26 @@ export const ExecuteComplianceJobResponse = zod.object({
   "context": zod.string(),
   "result": zod.string().describe('pass, fail, error'),
   "detail": zod.string().nullish(),
-  "evidence": zod.string().nullish()
+  "evidence": zod.string().nullish(),
+  "status": zod.string().nullish().describe('pass, fail, warning, unknown'),
+  "message": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "blocking": zod.boolean().optional(),
+  "source": zod.string().nullish(),
+  "confidence": zod.string().nullish(),
+  "objectType": zod.string().nullish(),
+  "objectId": zod.string().nullish(),
+  "objectName": zod.string().nullish(),
+  "ruleId": zod.string().nullish(),
+  "ruleName": zod.string().nullish(),
+  "operationalCategory": zod.string().nullish(),
+  "rawReference": zod.string().nullish(),
+  "metadataJson": zod.object({
+
+}).passthrough().optional(),
+  "deviceId": zod.number().nullish(),
+  "deviceHostname": zod.string().nullish(),
+  "jobCreatedAt": zod.string().nullish()
 }))
 })
 
@@ -1811,5 +2335,338 @@ export const GetCommunityChangeAuditResponseItem = zod.object({
   "createdAt": zod.string()
 })
 export const GetCommunityChangeAuditResponse = zod.array(GetCommunityChangeAuditResponseItem)
+
+
+/**
+ * @summary List audit logs
+ */
+export const ListAuditLogsQueryParams = zod.object({
+  "action": zod.coerce.string().optional(),
+  "objectType": zod.coerce.string().optional(),
+  "objectId": zod.coerce.string().optional(),
+  "dateFrom": zod.date().optional(),
+  "dateTo": zod.date().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
+})
+
+export const ListAuditLogsResponseItem = zod.object({
+  "id": zod.number(),
+  "actorId": zod.number().nullish(),
+  "actor": zod.string().optional(),
+  "action": zod.string(),
+  "objectType": zod.string(),
+  "objectId": zod.string(),
+  "metadataJson": zod.record(zod.string(), zod.unknown()).nullish(),
+  "sourceIp": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAuditLogsResponse = zod.array(ListAuditLogsResponseItem)
+
+
+/**
+ * @summary List generated provisioning reports
+ */
+export const ListReportsResponseItem = zod.object({
+  "id": zod.number(),
+  "provisioningJobId": zod.number(),
+  "reportType": zod.string(),
+  "contentMarkdown": zod.string(),
+  "generatedBy": zod.string().nullish(),
+  "generatedAt": zod.coerce.date(),
+  "jobName": zod.string().nullish(),
+  "jobType": zod.string().nullish()
+})
+export const ListReportsResponse = zod.array(ListReportsResponseItem)
+
+
+/**
+ * @summary Get a generated provisioning report
+ */
+export const GetReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetReportResponse = zod.object({
+  "id": zod.number(),
+  "provisioningJobId": zod.number(),
+  "reportType": zod.string(),
+  "contentMarkdown": zod.string(),
+  "generatedBy": zod.string().nullish(),
+  "generatedAt": zod.coerce.date(),
+  "jobName": zod.string().nullish(),
+  "jobType": zod.string().nullish()
+})
+
+
+/**
+ * @summary Generate a provisioning report
+ */
+export const CreateProvisioningReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List integration readiness settings
+ */
+export const ListIntegrationsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "readiness": zod.string().describe('future, partial, ready'),
+  "lastConnectionStatus": zod.string().nullish(),
+  "lastConnectionAt": zod.coerce.date().nullish(),
+  "configJson": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListIntegrationsResponse = zod.array(ListIntegrationsResponseItem)
+
+
+/**
+ * @summary Get integration readiness setting
+ */
+export const GetIntegrationParams = zod.object({
+  "name": zod.coerce.string()
+})
+
+export const GetIntegrationResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "readiness": zod.string().describe('future, partial, ready'),
+  "lastConnectionStatus": zod.string().nullish(),
+  "lastConnectionAt": zod.coerce.date().nullish(),
+  "configJson": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update integration readiness setting
+ */
+export const UpdateIntegrationParams = zod.object({
+  "name": zod.coerce.string()
+})
+
+export const UpdateIntegrationBody = zod.object({
+  "enabled": zod.boolean().optional(),
+  "configJson": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const UpdateIntegrationResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "enabled": zod.boolean(),
+  "readiness": zod.string().describe('future, partial, ready'),
+  "lastConnectionStatus": zod.string().nullish(),
+  "lastConnectionAt": zod.coerce.date().nullish(),
+  "configJson": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get NetBox readiness status
+ */
+export const GetNetBoxStatusResponse = zod.object({
+  "enabled": zod.boolean(),
+  "baseUrl": zod.string().nullish(),
+  "tokenConfigured": zod.boolean(),
+  "skipTlsVerify": zod.boolean(),
+  "timeoutMs": zod.number(),
+  "pageSize": zod.number(),
+  "readiness": zod.string().describe('disabled, partial, ready'),
+  "lastConnectionStatus": zod.string().nullable(),
+  "lastConnectionAt": zod.coerce.date().nullable(),
+  "baseUrlConfigured": zod.boolean()
+})
+
+
+/**
+ * @summary Test NetBox connection
+ */
+export const TestNetBoxConnectionResponse = zod.object({
+  "status": zod.string(),
+  "message": zod.string(),
+  "readiness": zod.string(),
+  "baseUrlConfigured": zod.boolean(),
+  "tokenConfigured": zod.boolean(),
+  "skipTlsVerify": zod.boolean(),
+  "testedAt": zod.coerce.date(),
+  "version": zod.string().nullish()
+})
+
+
+/**
+ * @summary List NetBox devices
+ */
+export const ListNetBoxDevicesResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "displayName": zod.string(),
+  "ipAddress": zod.string().nullish(),
+  "siteId": zod.number().nullish(),
+  "siteName": zod.string().nullish(),
+  "tenantId": zod.number().nullish(),
+  "tenantName": zod.string().nullish(),
+  "roleId": zod.number().nullish(),
+  "roleName": zod.string().nullish(),
+  "vendor": zod.string().nullish(),
+  "platform": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "comments": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary List NetBox sites
+ */
+export const ListNetBoxSitesResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary List NetBox tenants
+ */
+export const ListNetBoxTenantsResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary List NetBox device roles
+ */
+export const ListNetBoxDeviceRolesResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary List NetBox manufacturers
+ */
+export const ListNetBoxManufacturersResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary List NetBox platforms
+ */
+export const ListNetBoxPlatformsResponse = zod.object({
+  "count": zod.number(),
+  "next": zod.string().nullable(),
+  "previous": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "slug": zod.string().nullish(),
+  "displayName": zod.string()
+}))
+})
+
+
+/**
+ * @summary Preview read-only sync from NetBox
+ */
+export const PreviewNetBoxDeviceSyncResponse = zod.object({
+  "summary": zod.object({
+  "totalFromNetBox": zod.number(),
+  "matchedByNetboxId": zod.number(),
+  "matchedByHostname": zod.number(),
+  "toCreate": zod.number(),
+  "toUpdate": zod.number(),
+  "toSkip": zod.number(),
+  "warnings": zod.number()
+}),
+  "items": zod.array(zod.object({
+  "netboxDeviceId": zod.number(),
+  "hostname": zod.string(),
+  "ipAddress": zod.string().nullish(),
+  "site": zod.string().nullish(),
+  "role": zod.string().nullish(),
+  "vendor": zod.string().nullish(),
+  "platform": zod.string().nullish(),
+  "action": zod.string(),
+  "matchedLocalDeviceId": zod.number().nullable(),
+  "warnings": zod.array(zod.string())
+}))
+})
+
+
+/**
+ * @summary Sync NetBox devices to local inventory
+ */
+export const SyncNetBoxDevicesLocalResponse = zod.object({
+  "summary": zod.object({
+  "totalFromNetBox": zod.number(),
+  "matchedByNetboxId": zod.number(),
+  "matchedByHostname": zod.number(),
+  "toCreate": zod.number(),
+  "toUpdate": zod.number(),
+  "toSkip": zod.number(),
+  "warnings": zod.number()
+}),
+  "items": zod.array(zod.object({
+  "netboxDeviceId": zod.number(),
+  "hostname": zod.string(),
+  "ipAddress": zod.string().nullish(),
+  "site": zod.string().nullish(),
+  "role": zod.string().nullish(),
+  "vendor": zod.string().nullish(),
+  "platform": zod.string().nullish(),
+  "action": zod.string(),
+  "matchedLocalDeviceId": zod.number().nullable(),
+  "warnings": zod.array(zod.string())
+}))
+}).and(zod.object({
+  "durationMs": zod.number(),
+  "created": zod.number(),
+  "updated": zod.number(),
+  "skipped": zod.number(),
+  "warningsList": zod.array(zod.string())
+}))
 
 

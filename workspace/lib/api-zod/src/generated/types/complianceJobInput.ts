@@ -9,4 +9,5 @@
 export interface ComplianceJobInput {
   deviceId: number;
   contexts: string[];
+  policyProfileName?: string;
 }

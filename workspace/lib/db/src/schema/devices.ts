@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { index, pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -27,7 +27,12 @@ export const devicesTable = pgTable("devices", {
   status: text("status").notNull().default("unknown"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  hostnameIdx: index("devices_hostname_idx").on(table.hostname),
+  statusIdx: index("devices_status_idx").on(table.status),
+  vendorIdx: index("devices_vendor_idx").on(table.vendor),
+  siteIdx: index("devices_site_idx").on(table.site),
+}));
 
 export const insertDeviceGroupSchema = createInsertSchema(deviceGroupsTable).omit({ id: true, createdAt: true });
 export const insertDeviceSchema = createInsertSchema(devicesTable).omit({ id: true, createdAt: true, updatedAt: true, lastSeen: true });

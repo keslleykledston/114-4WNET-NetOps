@@ -9,6 +9,256 @@ export interface HealthStatus {
   status: string;
 }
 
+export type UserRole = typeof UserRole[keyof typeof UserRole];
+
+
+export const UserRole = {
+  viewer: 'viewer',
+  operator: 'operator',
+  admin: 'admin',
+} as const;
+
+export interface AuthUser {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  enabled: boolean;
+  /** @nullable */
+  lastLoginAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthLoginResponse {
+  user: AuthUser;
+  token: string;
+}
+
+export interface SessionResponse {
+  user: AuthUser;
+}
+
+export interface UserListResponse {
+  items: User[];
+}
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  role?: UserRole;
+  enabled?: boolean;
+}
+
+export interface UpdateUserRequest {
+  name?: string;
+  email?: string;
+  password?: string;
+  role?: UserRole;
+  enabled?: boolean;
+}
+
+/**
+ * @nullable
+ */
+export type AuditLogMetadataJson = { [key: string]: unknown } | null;
+
+export interface AuditLog {
+  id: number;
+  /** @nullable */
+  actorId?: number | null;
+  actor?: string;
+  action: string;
+  objectType: string;
+  objectId: string;
+  /** @nullable */
+  metadataJson?: AuditLogMetadataJson;
+  /** @nullable */
+  sourceIp?: string | null;
+  createdAt: string;
+}
+
+export type AuditLogListResponse = AuditLog[];
+
+export interface Report {
+  id: number;
+  provisioningJobId: number;
+  reportType: string;
+  contentMarkdown: string;
+  /** @nullable */
+  generatedBy?: string | null;
+  generatedAt: string;
+  /** @nullable */
+  jobName?: string | null;
+  /** @nullable */
+  jobType?: string | null;
+}
+
+export type ReportListResponse = Report[];
+
+export type IntegrationSettingConfigJson = { [key: string]: unknown };
+
+export interface IntegrationSetting {
+  id: number;
+  name: string;
+  enabled: boolean;
+  /** future, partial, ready */
+  readiness: string;
+  /** @nullable */
+  lastConnectionStatus?: string | null;
+  /** @nullable */
+  lastConnectionAt?: string | null;
+  configJson: IntegrationSettingConfigJson;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type IntegrationListResponse = IntegrationSetting[];
+
+export interface NetBoxStatus {
+  enabled: boolean;
+  /** @nullable */
+  baseUrl?: string | null;
+  tokenConfigured: boolean;
+  skipTlsVerify: boolean;
+  timeoutMs: number;
+  pageSize: number;
+  /** disabled, partial, ready */
+  readiness: string;
+  /** @nullable */
+  lastConnectionStatus: string | null;
+  /** @nullable */
+  lastConnectionAt: string | null;
+  baseUrlConfigured: boolean;
+}
+
+export interface NetBoxConnectionTestResponse {
+  status: string;
+  message: string;
+  readiness: string;
+  baseUrlConfigured: boolean;
+  tokenConfigured: boolean;
+  skipTlsVerify: boolean;
+  testedAt: string;
+  /** @nullable */
+  version?: string | null;
+}
+
+export interface NetBoxSimpleItem {
+  id: number;
+  name: string;
+  /** @nullable */
+  slug?: string | null;
+  displayName: string;
+}
+
+export interface NetBoxSimpleListResponse {
+  count: number;
+  /** @nullable */
+  next: string | null;
+  /** @nullable */
+  previous: string | null;
+  items: NetBoxSimpleItem[];
+}
+
+export interface NetBoxDevice {
+  id: number;
+  name: string;
+  displayName: string;
+  /** @nullable */
+  ipAddress?: string | null;
+  /** @nullable */
+  siteId?: number | null;
+  /** @nullable */
+  siteName?: string | null;
+  /** @nullable */
+  tenantId?: number | null;
+  /** @nullable */
+  tenantName?: string | null;
+  /** @nullable */
+  roleId?: number | null;
+  /** @nullable */
+  roleName?: string | null;
+  /** @nullable */
+  vendor?: string | null;
+  /** @nullable */
+  platform?: string | null;
+  /** @nullable */
+  status?: string | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  comments?: string | null;
+}
+
+export interface NetBoxDeviceListResponse {
+  count: number;
+  /** @nullable */
+  next: string | null;
+  /** @nullable */
+  previous: string | null;
+  items: NetBoxDevice[];
+}
+
+export interface NetBoxSyncPreviewRequest {
+  pageSize?: number;
+}
+
+export interface NetBoxSyncPreviewItem {
+  netboxDeviceId: number;
+  hostname: string;
+  /** @nullable */
+  ipAddress?: string | null;
+  /** @nullable */
+  site?: string | null;
+  /** @nullable */
+  role?: string | null;
+  /** @nullable */
+  vendor?: string | null;
+  /** @nullable */
+  platform?: string | null;
+  action: string;
+  /** @nullable */
+  matchedLocalDeviceId: number | null;
+  warnings: string[];
+}
+
+export type NetBoxSyncPreviewResponseSummary = {
+  totalFromNetBox: number;
+  matchedByNetboxId: number;
+  matchedByHostname: number;
+  toCreate: number;
+  toUpdate: number;
+  toSkip: number;
+  warnings: number;
+};
+
+export interface NetBoxSyncPreviewResponse {
+  summary: NetBoxSyncPreviewResponseSummary;
+  items: NetBoxSyncPreviewItem[];
+}
+
+export type NetBoxSyncResult = NetBoxSyncPreviewResponse & {
+  durationMs: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  warningsList: string[];
+};
+
 export type DiscoveryStatus = typeof DiscoveryStatus[keyof typeof DiscoveryStatus];
 
 
@@ -668,7 +918,10 @@ export interface ComplianceJob {
 export interface ComplianceJobInput {
   deviceId: number;
   contexts: string[];
+  policyProfileName?: string;
 }
+
+export type ComplianceFindingMetadataJson = { [key: string]: unknown };
 
 export interface ComplianceFinding {
   id: number;
@@ -683,6 +936,41 @@ export interface ComplianceFinding {
   detail?: string | null;
   /** @nullable */
   evidence?: string | null;
+  /**
+     * pass, fail, warning, unknown
+     * @nullable
+     */
+  status?: string | null;
+  /** @nullable */
+  message?: string | null;
+  /** @nullable */
+  recommendation?: string | null;
+  blocking?: boolean;
+  /** @nullable */
+  source?: string | null;
+  /** @nullable */
+  confidence?: string | null;
+  /** @nullable */
+  objectType?: string | null;
+  /** @nullable */
+  objectId?: string | null;
+  /** @nullable */
+  objectName?: string | null;
+  /** @nullable */
+  ruleId?: string | null;
+  /** @nullable */
+  ruleName?: string | null;
+  /** @nullable */
+  operationalCategory?: string | null;
+  /** @nullable */
+  rawReference?: string | null;
+  metadataJson?: ComplianceFindingMetadataJson;
+  /** @nullable */
+  deviceId?: number | null;
+  /** @nullable */
+  deviceHostname?: string | null;
+  /** @nullable */
+  jobCreatedAt?: string | null;
 }
 
 export interface ComplianceJobDetail {
@@ -704,11 +992,29 @@ export interface ComplianceJobDetail {
   findings: ComplianceFinding[];
 }
 
+export interface ComplianceFindingGroup {
+  ruleId: string;
+  /** @nullable */
+  ruleName?: string | null;
+  /** @nullable */
+  policyName?: string | null;
+  severity: string;
+  context: string;
+  operationalCategory: string;
+  count: number;
+  sampleFindingIds: string[];
+  exampleFindingIds?: string[];
+  message: string;
+}
+
 export interface ComplianceSummary {
   totalJobs: number;
   passed: number;
   failed: number;
   running: number;
+  warningFindings?: number;
+  unknownFindings?: number;
+  criticalFindings?: number;
   recentJobs: ComplianceJob[];
   failuresByContext: CountByKey[];
   failuresBySeverity: CountByKey[];
@@ -1588,6 +1894,189 @@ export interface CommunityChangeAudit {
   createdAt: string;
 }
 
+export type ScheduledJobType = typeof ScheduledJobType[keyof typeof ScheduledJobType];
+
+
+export const ScheduledJobType = {
+  discovery: 'discovery',
+  compliance: 'compliance',
+  health_check: 'health_check',
+} as const;
+
+export type ScheduledJobTargetType = typeof ScheduledJobTargetType[keyof typeof ScheduledJobTargetType];
+
+
+export const ScheduledJobTargetType = {
+  device: 'device',
+  device_group: 'device_group',
+  all_devices: 'all_devices',
+} as const;
+
+export type ScheduledJobRunStatus = typeof ScheduledJobRunStatus[keyof typeof ScheduledJobRunStatus];
+
+
+export const ScheduledJobRunStatus = {
+  pending: 'pending',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed',
+  partial: 'partial',
+  cancelled: 'cancelled',
+} as const;
+
+export type ScheduledJobRunItemStatus = typeof ScheduledJobRunItemStatus[keyof typeof ScheduledJobRunItemStatus];
+
+
+export const ScheduledJobRunItemStatus = {
+  pending: 'pending',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+export interface ScheduledJob {
+  id: number;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  jobType: ScheduledJobType;
+  targetType: ScheduledJobTargetType;
+  /** @nullable */
+  targetId?: number | null;
+  /** @nullable */
+  targetLabel?: string | null;
+  contextsJson: string[];
+  /** @nullable */
+  cronExpression?: string | null;
+  intervalMinutes: number;
+  enabled: boolean;
+  runOnStartup: boolean;
+  maxRuntimeSeconds: number;
+  /** @nullable */
+  createdBy?: number | null;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  lastRunAt?: string | null;
+  /** @nullable */
+  nextRunAt?: string | null;
+}
+
+export interface ScheduledJobCreateRequest {
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  jobType: ScheduledJobType;
+  targetType: ScheduledJobTargetType;
+  /** @nullable */
+  targetId?: number | null;
+  contextsJson?: string[];
+  /** @nullable */
+  cronExpression?: string | null;
+  intervalMinutes?: number;
+  enabled?: boolean;
+  runOnStartup?: boolean;
+  maxRuntimeSeconds?: number;
+}
+
+export interface ScheduledJobUpdateRequest {
+  name?: string;
+  /** @nullable */
+  description?: string | null;
+  jobType?: ScheduledJobType;
+  targetType?: ScheduledJobTargetType;
+  /** @nullable */
+  targetId?: number | null;
+  contextsJson?: string[];
+  /** @nullable */
+  cronExpression?: string | null;
+  /** @nullable */
+  intervalMinutes?: number | null;
+  enabled?: boolean;
+  runOnStartup?: boolean;
+  /** @nullable */
+  maxRuntimeSeconds?: number | null;
+}
+
+export type ScheduledJobRunTriggeredBy = typeof ScheduledJobRunTriggeredBy[keyof typeof ScheduledJobRunTriggeredBy];
+
+
+export const ScheduledJobRunTriggeredBy = {
+  scheduler: 'scheduler',
+  manual: 'manual',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ScheduledJobRunSummaryJson = { [key: string]: unknown } | null;
+
+export interface ScheduledJobRun {
+  id: number;
+  scheduledJobId: number;
+  status: ScheduledJobRunStatus;
+  /** @nullable */
+  startedAt?: string | null;
+  /** @nullable */
+  finishedAt?: string | null;
+  triggeredBy: ScheduledJobRunTriggeredBy;
+  /** @nullable */
+  actorId?: number | null;
+  /** @nullable */
+  summaryJson?: ScheduledJobRunSummaryJson;
+  /** @nullable */
+  errorMessage?: string | null;
+  createdAt: string;
+}
+
+export type ScheduledJobRunItemActionType = typeof ScheduledJobRunItemActionType[keyof typeof ScheduledJobRunItemActionType];
+
+
+export const ScheduledJobRunItemActionType = {
+  discovery: 'discovery',
+  compliance: 'compliance',
+  health_check: 'health_check',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ScheduledJobRunItemSummaryJson = { [key: string]: unknown } | null;
+
+export interface ScheduledJobRunItem {
+  id: number;
+  scheduledJobRunId: number;
+  deviceId: number;
+  status: ScheduledJobRunItemStatus;
+  actionType: ScheduledJobRunItemActionType;
+  /** @nullable */
+  resultRefType?: string | null;
+  /** @nullable */
+  resultRefId?: string | null;
+  /** @nullable */
+  summaryJson?: ScheduledJobRunItemSummaryJson;
+  /** @nullable */
+  errorMessage?: string | null;
+  /** @nullable */
+  startedAt?: string | null;
+  /** @nullable */
+  finishedAt?: string | null;
+  createdAt: string;
+}
+
+export type ScheduledJobRunDetail = ScheduledJobRun & {
+  items?: ScheduledJobRunItem[];
+};
+
+export type ScheduledJobListResponse = ScheduledJob[];
+
+export type ScheduledJobRunListResponse = ScheduledJobRun[];
+
+export type ListScheduledJobRunsParams = {
+scheduledJobId?: number;
+};
+
 export type ListDevicesParams = {
 status?: string;
 vendor?: string;
@@ -1597,6 +2086,26 @@ site?: string;
 export type ListComplianceJobsParams = {
 deviceId?: number;
 status?: string;
+};
+
+export type ListComplianceFindingsParams = {
+status?: string;
+severity?: string;
+context?: string;
+confidence?: string;
+source?: string;
+operationalCategory?: string;
+deviceId?: number;
+};
+
+export type ListComplianceFindingsGroupsParams = {
+status?: string;
+severity?: string;
+context?: string;
+confidence?: string;
+source?: string;
+operationalCategory?: string;
+deviceId?: number;
 };
 
 export type ListConfigTemplatesParams = {
@@ -1691,5 +2200,22 @@ export type UpdateCommunitySetBody = {
   slug?: string;
   vrpObjectName?: string;
   description?: string;
+};
+
+export type ListAuditLogsParams = {
+action?: string;
+objectType?: string;
+objectId?: string;
+dateFrom?: string;
+dateTo?: string;
+limit?: number;
+offset?: number;
+};
+
+export type UpdateIntegrationBodyConfigJson = { [key: string]: unknown };
+
+export type UpdateIntegrationBody = {
+  enabled?: boolean;
+  configJson?: UpdateIntegrationBodyConfigJson;
 };
 

@@ -18,8 +18,7 @@ const DISCOVERY_COMMANDS = [
   // BGP commands
   "display bgp peer",
   "display bgp peer verbose",
-  "display bgp vpnv4 all peer",
-  "display bgp vpnv6 all peer",
+  "display bgp ipv6 peer verbose",
   // Interface commands
   "display interface brief",
   "display interface description",
@@ -39,8 +38,7 @@ const CONTEXT_COMMANDS: Record<DiscoveryContext, string[]> = {
   bgp: [
     "display bgp peer",
     "display bgp peer verbose",
-    "display bgp vpnv4 all peer",
-    "display bgp vpnv6 all peer",
+    "display bgp ipv6 peer verbose",
   ],
   l2vpn: [
     "display mpls l2vc",
@@ -62,6 +60,45 @@ export function getDiscoverySshCommands(contexts: DiscoveryContext[]): string[] 
   // Consolidar com DISCOVERY_COMMANDS, mantendo running-config PRIMEIRO
   const allCommands = ["display current-configuration", ...specificCommands];
   return [...new Set(allCommands)];
+}
+
+function normalizeCommand(command: string): string {
+  return command.trim().replace(/\s+/g, " ");
+}
+
+function parseVrfNameFromCommand(command: string): string | null {
+  const normalized = normalizeCommand(command);
+  const match = /^display bgp vpnv(?:4|6) vpn-instance (\S+) peer verbose$/i.exec(normalized);
+  return match ? match[1] : null;
+}
+
+function isBgpCommand(command: string): boolean {
+  const normalized = normalizeCommand(command);
+  return (
+    normalized === "display bgp peer" ||
+    normalized === "display bgp peer verbose" ||
+    normalized === "display bgp ipv6 peer verbose" ||
+    /^display bgp vpnv(?:4|6) vpn-instance \S+ peer verbose$/i.test(normalized)
+  );
+}
+
+function parseBgpPeersFromResults(results: Array<{ command: string; output: string }>) {
+  const peers = [];
+  for (const result of results) {
+    if (!isBgpCommand(result.command)) continue;
+    const vrfName = parseVrfNameFromCommand(result.command) ?? undefined;
+    peers.push(...parseHuaweiBgpPeers(result.output, { vrfName }));
+  }
+  return peers;
+}
+
+function buildVrfBgpCommands(vrfs: VrfSummary[]): string[] {
+  const commands: string[] = [];
+  for (const vrf of vrfs) {
+    commands.push(`display bgp vpnv4 vpn-instance ${vrf.name} peer verbose`);
+    commands.push(`display bgp vpnv6 vpn-instance ${vrf.name} peer verbose`);
+  }
+  return [...new Set(commands)];
 }
 
 export async function collectDiscoverySsh(
@@ -93,9 +130,8 @@ export async function collectDiscoverySsh(
     { host: device.ipAddress, port: device.sshPort, username: device.username, password },
     commands,
   );
-  const allOutput = results.map((result) => result.output).join("\n");
-  const l2vpn = parseHuaweiL2vpn(allOutput);
-  const vrfs: VrfSummary[] = parseHuaweiVrfs(allOutput).map((vrf) => ({
+  const runningConfigOutput = results.find((result) => normalizeCommand(result.command) === "display current-configuration")?.output ?? "";
+  const vrfs: VrfSummary[] = parseHuaweiVrfs(runningConfigOutput).map((vrf) => ({
     ...vrf,
     exists: true,
     source: "ssh_live",
@@ -103,13 +139,24 @@ export async function collectDiscoverySsh(
     evidence: `ip vpn-instance ${vrf.name}`,
   }));
 
+  const bgpVrfResults = contexts.includes("bgp") && vrfs.length > 0
+    ? await runSSHCommands(
+      { host: device.ipAddress, port: device.sshPort, username: device.username, password },
+      buildVrfBgpCommands(vrfs),
+    )
+    : [];
+
+  const allResults = [...results, ...bgpVrfResults];
+  const allOutput = allResults.map((result) => result.output).join("\n");
+  const l2vpn = parseHuaweiL2vpn(allOutput);
+
   return {
     source: "ssh",
     evidenceSource: "ssh",
-    success: results.some((result) => result.output.trim().length > 0 && !result.error),
-    rawOutputs: results.map((result) => ({ command: result.command, output: result.output, error: result.error })),
+    success: allResults.some((result) => result.output.trim().length > 0 && !result.error),
+    rawOutputs: allResults.map((result) => ({ command: result.command, output: result.output, error: result.error })),
     interfaces: parseHuaweiInterfaces(allOutput),
-    bgpPeers: parseHuaweiBgpPeers(allOutput),
+    bgpPeers: parseBgpPeersFromResults(allResults),
     filters: parseHuaweiPolicies(allOutput),
     communities: parseHuaweiCommunities(allOutput),
     vrfs,
@@ -119,7 +166,7 @@ export async function collectDiscoverySsh(
       source: l2vpn.l2vcs.length || l2vpn.vsis.length ? "ssh_live" : emptyL2vpnSummary.source,
       confidence: l2vpn.l2vcs.length || l2vpn.vsis.length ? "high" : emptyL2vpnSummary.confidence,
     },
-    warnings: results
+    warnings: allResults
       .filter((result) => result.error)
       .map((result) => ({ level: "warning", source: "ssh", message: `${result.command}: ${result.error}` })),
   };

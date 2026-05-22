@@ -1,0 +1,8 @@
+route-policy CUST-IN permit node 10
+ if-match ip-prefix CUST-IN-PFX
+ if-match community-filter CUST-CF
+ apply local-preference 200
+route-policy CUST-OUT deny node 20
+ if-match community-list CUST-LIST
+ apply community 65000:100 additive
+ip ip-prefix CUST-IN-PFX index 10 permit 10.0.0.0 8 greater-equal 8 less-equal 32

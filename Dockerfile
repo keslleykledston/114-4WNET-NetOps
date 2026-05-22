@@ -1,17 +1,38 @@
-FROM node:24-bookworm-slim AS workspace-base
+# syntax=docker/dockerfile:1.7
+
+FROM node:24-bookworm-slim AS workspace-deps
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="${PNPM_HOME}:${PATH}"
 
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.29.3 --activate
+RUN pnpm config set store-dir /pnpm/store \
+  && pnpm config set fetch-retries 5 \
+  && pnpm config set fetch-retry-mintimeout 10000 \
+  && pnpm config set fetch-retry-maxtimeout 120000 \
+  && pnpm config set network-timeout 300000
 
 WORKDIR /app/workspace
 
-COPY workspace/ ./
+# Copy only manifests first. Keeps dependency install cached when source changes.
+COPY --link workspace/package.json workspace/pnpm-lock.yaml workspace/pnpm-workspace.yaml ./
+COPY --link workspace/scripts/package.json ./scripts/package.json
+COPY --link workspace/artifacts/api-server/package.json ./artifacts/api-server/package.json
+COPY --link workspace/artifacts/netops-manager/package.json ./artifacts/netops-manager/package.json
+COPY --link workspace/artifacts/mockup-sandbox/package.json ./artifacts/mockup-sandbox/package.json
+COPY --link workspace/lib/api-client-react/package.json ./lib/api-client-react/package.json
+COPY --link workspace/lib/api-spec/package.json ./lib/api-spec/package.json
+COPY --link workspace/lib/api-zod/package.json ./lib/api-zod/package.json
+COPY --link workspace/lib/db/package.json ./lib/db/package.json
 
-RUN pnpm install --no-frozen-lockfile --ignore-scripts
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm fetch --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts --offline
 
-FROM workspace-base AS api-runtime
+FROM workspace-deps AS workspace-src
+
+COPY --link workspace/ ./
+
+FROM workspace-src AS api-runtime
 
 ENV NODE_ENV=production
 ENV PORT=8080
@@ -20,7 +41,7 @@ RUN pnpm --filter @workspace/api-server run build
 
 CMD ["pnpm", "--filter", "@workspace/api-server", "run", "start"]
 
-FROM workspace-base AS frontend-build
+FROM workspace-src AS frontend-build
 
 ARG FRONTEND_PORT=24780
 ARG BASE_PATH=/

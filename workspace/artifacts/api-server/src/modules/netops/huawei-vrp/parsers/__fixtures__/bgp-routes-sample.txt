@@ -1,0 +1,7 @@
+Total Number of Routes : 3
+Network : 10.10.0.0 PrefixLen : 24
+Path/Ogn : 65000 64512 i
+Network : 10.20.0.0 PrefixLen : 24
+Path/Ogn : 65000 64513 64514 i
+Network : 10.30.0.0 PrefixLen : 24
+Path/Ogn : 65000 64515 i

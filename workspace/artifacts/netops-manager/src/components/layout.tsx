@@ -10,11 +10,16 @@ import {
   Settings,
   Activity,
   RadioTower,
-  Workflow
+  Workflow,
+  ShieldAlert,
+  FileBarChart,
+  PlugZap,
+  CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "./auth-provider";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -26,11 +31,16 @@ const navItems = [
   { href: "/config-collection", icon: DownloadCloud, label: "Config Collection" },
   { href: "/snmp-history", icon: RadioTower, label: "SNMP History" },
   { href: "/netops-operations", icon: Workflow, label: "NetOps Operations" },
+  { href: "/audit", icon: ShieldAlert, label: "Audit" },
+  { href: "/reports", icon: FileBarChart, label: "Reports" },
+  { href: "/integrations", icon: PlugZap, label: "Integrations" },
+  { href: "/scheduler", icon: CalendarClock, label: "Scheduler" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { theme, setTheme } = useTheme();
+  const { user, logout } = useAuth();
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -66,6 +76,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
         
         <div className="p-4 border-t border-sidebar-border">
+          <div className="mb-3 rounded-md border border-sidebar-border bg-sidebar-accent/40 p-3 text-xs text-sidebar-foreground">
+            <div className="font-semibold">{user?.name ?? "Usuário"}</div>
+            <div className="truncate opacity-80">{user?.email ?? "sem sessão"}</div>
+            <div className="mt-1 uppercase tracking-[0.2em] opacity-70">{user?.role ?? "viewer"}</div>
+          </div>
           <Button 
             variant="outline" 
             className="w-full justify-start text-sidebar-foreground bg-transparent border-sidebar-border hover:bg-sidebar-accent"
@@ -74,6 +89,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
           >
             <Settings className="mr-2 h-4 w-4" />
             Toggle Theme
+          </Button>
+          <Button
+            variant="outline"
+            className="mt-2 w-full justify-start text-sidebar-foreground bg-transparent border-sidebar-border hover:bg-sidebar-accent"
+            onClick={() => void logout()}
+          >
+            Logout
           </Button>
         </div>
       </aside>

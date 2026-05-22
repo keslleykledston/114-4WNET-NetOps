@@ -208,6 +208,7 @@ async function collectBgp4Peers(
         remoteAs: toSnmpNumber(remoteAsResult.rows[index]),
         state,
         uptimeSecs: uptimeTicks != null ? Math.floor(uptimeTicks / 100) : null,
+        // These SNMP counters are later merged with SSH verbose prefix counts.
         inUpdates: toSnmpNumber(inUpdatesResult.rows[index]),
         outUpdates: toSnmpNumber(outUpdatesResult.rows[index]),
         addressFamily: classifyPeerAddressFamily(peerIp),

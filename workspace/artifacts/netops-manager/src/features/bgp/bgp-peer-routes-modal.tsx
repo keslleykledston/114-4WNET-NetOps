@@ -2,12 +2,10 @@ import { useState } from "react";
 import type { Device } from "@workspace/api-client-react";
 import type { DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
 import { useDiscoveryBgpPeerRoutes } from "@/features/device-discovery/discovery-api";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { AsPathTokens } from "@/components/AsPathTokens";
 
 interface BgpPeerRoutesModalProps {
@@ -27,7 +25,7 @@ export function BgpPeerRoutesModal({
 }: BgpPeerRoutesModalProps) {
   const [page, setPage] = useState(1);
   const peerIp = peer?.peerIp ?? "";
-  const peerName = peer?.name || peer?.description || "Unknown";
+  const peerName = peer?.name || peer?.description || "Cliente";
   const deviceId = device.id;
   const fetchEnabled = isOpen && !!peer;
 
@@ -43,7 +41,7 @@ export function BgpPeerRoutesModal({
   const isReceivedDirection = direction === "received";
   const title = isReceivedDirection
     ? `Prefixos recebidos (SSH) — ${peerName}`
-    : `Prefixos advertidos (SSH) — ${peerName}`;
+    : `Prefixos anunciados (SSH) — ${peerName}`;
   const counterLabel = isReceivedDirection
     ? `Total de prefixos recebidos: ${routesData?.total ?? 0}`
     : `Total de prefixos anunciados: ${routesData?.total ?? 0}`;
@@ -75,15 +73,6 @@ export function BgpPeerRoutesModal({
                 <span>Principal</span>
               </div>
             </div>
-            <DialogClose asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 hover:bg-slate-800 text-slate-400"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogClose>
           </div>
         </DialogHeader>
 

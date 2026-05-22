@@ -10,6 +10,9 @@ import DeviceDetail from "@/pages/device-detail";
 import Compliance from "@/pages/compliance";
 import Provisioning from "@/pages/provisioning";
 import Templates from "@/pages/templates";
+import Audit from "@/pages/audit";
+import Reports from "@/pages/reports";
+import Integrations from "@/pages/integrations";
 import Policies from "@/pages/policies";
 import ConfigCollection from "@/pages/config-collection";
 import SnmpHistory from "@/pages/snmp-history";
@@ -35,6 +38,9 @@ function Router() {
         <Route path="/compliance" component={Compliance} />
         <Route path="/provisioning" component={Provisioning} />
         <Route path="/templates" component={Templates} />
+        <Route path="/audit" component={Audit} />
+        <Route path="/reports" component={Reports} />
+        <Route path="/integrations" component={Integrations} />
         <Route path="/policies" component={Policies} />
         <Route path="/config-collection" component={ConfigCollection} />
         <Route path="/snmp-history" component={SnmpHistory} />

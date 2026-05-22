@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListNetopsDeviceBgpPeersQueryKey,
+  getListDeviceBgpPeersQueryKey,
   useUpdateNetopsDeviceBgpPeerRole,
 } from "@workspace/api-client-react";
 import type {
@@ -45,15 +46,18 @@ type AfFilter = "all" | NetopsBgpPeer["addressFamily"];
 
 const STORAGE_PREFIX = "netops:bgp-filters:";
 
-const roleLabel: Record<NetopsBgpPeerRole, string> = {
+const roleLabel: Partial<Record<NetopsBgpPeerRole, string>> = {
   provider: "Operadora",
   customer: "Cliente",
   cdn: "CDN",
   ix: "IX",
   cdn_ix: "CDN/IX",
   ibgp: "iBGP",
-  unknown: "Cliente",
 };
+
+function formatRoleLabel(role: NetopsBgpPeerRole) {
+  return roleLabel[role] ?? "Cliente";
+}
 
 const roleOptions: Array<{ value: RoleFilter; label: string }> = [
   { value: "all", label: "Todos" },
@@ -156,17 +160,6 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   const { data: peers, isLoading, isError } = useDiscoveryBgpPeers(device.id, role);
 
   useEffect(() => {
-    if (!peers) return;
-    const peersToMigrate = peers.filter((p) => p.role === "unknown" && !editedRoles[peerEditKey(p)]);
-    peersToMigrate.forEach((peer) => {
-      setEditedRoles((current) => ({
-        ...current,
-        [peerEditKey(peer)]: "customer",
-      }));
-    });
-  }, [peers?.length]);
-
-  useEffect(() => {
     if (role) {
       setRoleFilter(role);
       if (role === "ibgp") setIncludeIbgp(true);
@@ -196,12 +189,60 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
     mutation: {
       onSuccess: async (_data, variables) => {
         const key = `${variables.peerIp}|${variables.data.addressFamily}`;
+        const nextRole = variables.data.role;
+
+        const netopsQueries = queryClient.getQueriesData<DiscoveryBgpPeer[]>({
+          queryKey: getListNetopsDeviceBgpPeersQueryKey(device.id),
+        });
+
+        netopsQueries.forEach(([queryKey, current]) => {
+          if (!current) return;
+          const next = current.map((peer) => {
+            if (peer.peerIp !== variables.peerIp || peer.addressFamily !== variables.data.addressFamily) return peer;
+            return {
+              ...peer,
+              role: nextRole,
+              roleSource: "manual_override" as const,
+            };
+          });
+          queryClient.setQueryData(queryKey, next);
+        });
+
+        const cachedQueries = queryClient.getQueriesData<DiscoveryBgpPeer[]>({
+          queryKey: getListDeviceBgpPeersQueryKey(device.id),
+        });
+
+        cachedQueries.forEach(([queryKey, current]) => {
+          if (!current) return;
+          const params = (queryKey[1] as { category?: string } | undefined) ?? undefined;
+          const currentCategory = params?.category;
+          const next = current
+            .filter((peer) => {
+              if (peer.peerIp !== variables.peerIp || peer.addressFamily !== variables.data.addressFamily) return true;
+              if (!currentCategory || currentCategory === nextRole) return true;
+              return false;
+            })
+            .map((peer) => {
+              if (peer.peerIp !== variables.peerIp || peer.addressFamily !== variables.data.addressFamily) return peer;
+              return {
+                ...peer,
+                role: nextRole,
+                category: nextRole,
+                roleSource: "manual_override" as const,
+                primaryDirection: nextRole === "customer" ? "import" : nextRole === "ibgp" ? "internal" : "export",
+              };
+            });
+
+          queryClient.setQueryData(queryKey, next);
+        });
+
         setEditedRoles((current) => {
           const next = { ...current };
           delete next[key];
           return next;
         });
         await queryClient.invalidateQueries({ queryKey: getListNetopsDeviceBgpPeersQueryKey(device.id) });
+        await queryClient.invalidateQueries({ queryKey: getListDeviceBgpPeersQueryKey(device.id) });
         toast({ title: "Papel BGP salvo" });
       },
       onError: (err) => {
@@ -217,7 +258,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
 
   const filteredPeers = useMemo(() => {
     return (peers ?? []).filter((peer) => {
-      const selectedRole = editedRoles[peerEditKey(peer)] ?? (peer.role === "unknown" ? "customer" : peer.role);
+      const selectedRole = editedRoles[peerEditKey(peer)] ?? peer.role;
       if (!includeIbgp && selectedRole === "ibgp") return false;
       if (!role && roleFilter !== "all" && selectedRole !== roleFilter) return false;
       if (afFilter === "ipv4" && peer.addressFamily !== "ipv4") return false;
@@ -253,17 +294,23 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   }, [editedRoles, includeIbgp, peers]);
 
   function openPeerModal(peer: DiscoveryBgpPeer) {
+    setRoutesModalOpen(false);
+    setDetailModalOpen(false);
     setModalPeer(peer);
     setModalOpen(true);
   }
 
   function openRoutesModal(peer: DiscoveryBgpPeer, direction: "received" | "advertised") {
+    setModalOpen(false);
+    setDetailModalOpen(false);
     setRoutesModalPeer(peer);
     setRoutesDirection(direction);
     setRoutesModalOpen(true);
   }
 
   function openDetailModal(peer: DiscoveryBgpPeer) {
+    setModalOpen(false);
+    setRoutesModalOpen(false);
     setDetailModalPeer(peer);
     setDetailModalOpen(true);
   }
@@ -295,7 +342,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
           </CardTitle>
           <div className="flex items-center gap-2">
             <CollectSnmpButton device={device} />
-            <Badge variant="outline">{role ? roleLabel[role] : "Todos peers"}</Badge>
+            <Badge variant="outline">{role ? formatRoleLabel(role) : "Todos peers"}</Badge>
           </div>
         </div>
       </CardHeader>
@@ -448,7 +495,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                               const direction = peer.role === "customer" ? "received" : "advertised";
                               openRoutesModal(peer, direction);
                             }}
-                            title={peer.role === "customer" ? "Prefixos recebidos (SSH)" : "Prefixos advertidos (SSH)"}
+                            title={peer.role === "customer" ? "Prefixos recebidos (SSH)" : "Prefixos anunciados (SSH)"}
                           >
                             <Download className="h-3.5 w-3.5" />
                           </Button>
@@ -483,7 +530,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                             </SelectTrigger>
                             <SelectContent>
                               {editableRoleOptions.map((option) => (
-                                <SelectItem key={option} value={option}>{roleLabel[option]}</SelectItem>
+                                <SelectItem key={option} value={option}>{formatRoleLabel(option)}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>

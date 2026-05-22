@@ -20,6 +20,7 @@ import {
 } from "@workspace/api-zod";
 import { decrypt } from "../lib/crypto.js";
 import { runSSHCommands, getCollectionCommands } from "../lib/ssh.js";
+import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 
 const router = Router();
 
@@ -166,6 +167,14 @@ router.post("/compliance-jobs", async (req, res) => {
   const result = { ...job, deviceHostname: device.hostname, contexts: parsed.data.contexts, startedAt: null, completedAt: null, createdAt: job.createdAt.toISOString() };
   res.status(201).json(result);
 
+  await logAuditEvent({
+    action: "compliance_create",
+    objectType: "compliance_job",
+    objectId: String(job.id),
+    metadata: { deviceId: job.deviceId, contexts: parsed.data.contexts },
+    sourceIp: getRequestSourceIp(req),
+  });
+
   executeJob(job.id).catch(() => {});
 });
 
@@ -181,6 +190,14 @@ router.post("/compliance-jobs/:id/execute", async (req, res) => {
 
   await db.update(complianceJobsTable).set({ status: "pending", passCount: 0, failCount: 0, errorMessage: null }).where(eq(complianceJobsTable.id, params.data.id));
   await db.delete(complianceFindingsTable).where(eq(complianceFindingsTable.jobId, params.data.id));
+
+  await logAuditEvent({
+    action: "compliance_execute",
+    objectType: "compliance_job",
+    objectId: String(params.data.id),
+    metadata: { reset: true },
+    sourceIp: getRequestSourceIp(req),
+  });
 
   const detail = await buildJobDetail(params.data.id);
   if (!detail) { res.status(404).json({ error: "Not found" }); return; }

@@ -1,8 +1,6 @@
 import type { Device } from "@workspace/api-client-react";
 import type { DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface BgpPeerDetailModalProps {
   device: Device;
@@ -42,15 +40,6 @@ export function BgpPeerDetailModal({
             <DialogTitle className="text-lg font-semibold text-slate-100">
               {title}
             </DialogTitle>
-            <DialogClose asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 hover:bg-slate-800 text-slate-400"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogClose>
           </div>
         </DialogHeader>
 
@@ -64,20 +53,20 @@ export function BgpPeerDetailModal({
           </div>
 
 
-          {/* Received Routes / Inbound Updates */}
+          {/* Received prefix counter */}
           <div className="rounded-lg bg-slate-900/50 border border-slate-800 p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-              Received-Routes / In Updates
+              Received Routes
             </p>
             <p className="font-mono text-sm text-purple-400">
               {peer.receivedPrefixes ?? "—"}
             </p>
           </div>
 
-          {/* Advertised Routes / Outbound Updates */}
+          {/* Advertised prefix counter */}
           <div className="rounded-lg bg-slate-900/50 border border-slate-800 p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-              Advertised-Routes / Out Updates
+              Advertised Routes
             </p>
             <p className="font-mono text-sm text-blue-400">
               {peer.advertisedPrefixes ?? "—"}
@@ -111,7 +100,7 @@ export function BgpPeerDetailModal({
           {/* Notes */}
           <p className="text-xs text-slate-400 leading-relaxed pt-2">
             Route-policy names may not exist in BGP-4-MIB OIDs used in SNMP discovery.
-            These are persisted when Huawei SSH collection succeeds and{" "}
+            These prefix counters are persisted when Huawei SSH collection succeeds and{" "}
             <span className="font-mono text-slate-300">display bgp … peer verbose</span> is available.
           </p>
         </div>

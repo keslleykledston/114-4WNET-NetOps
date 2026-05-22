@@ -1,4 +1,4 @@
-import { boolean, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { devicesTable } from "./devices";
 
 export const discoveryRunsTable = pgTable("discovery_runs", {
@@ -21,7 +21,11 @@ export const discoveryRunsTable = pgTable("discovery_runs", {
   finishedAt: timestamp("finished_at"),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  deviceIdIdx: index("discovery_runs_device_id_idx").on(table.deviceId),
+  createdAtIdx: index("discovery_runs_created_at_idx").on(table.createdAt),
+  deviceCreatedAtIdx: index("discovery_runs_device_created_at_idx").on(table.deviceId, table.createdAt),
+}));
 
 export const discoverySnapshotsTable = pgTable("discovery_snapshots", {
   id: serial("id").primaryKey(),
@@ -33,7 +37,12 @@ export const discoverySnapshotsTable = pgTable("discovery_snapshots", {
   parserVersion: text("parser_version").notNull().default("huawei-vrp-v1"),
   snapshotHash: text("snapshot_hash").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  deviceIdIdx: index("discovery_snapshots_device_id_idx").on(table.deviceId),
+  discoveryRunIdIdx: index("discovery_snapshots_discovery_run_id_idx").on(table.discoveryRunId),
+  snapshotHashIdx: index("discovery_snapshots_snapshot_hash_idx").on(table.snapshotHash),
+  createdAtIdx: index("discovery_snapshots_created_at_idx").on(table.createdAt),
+}));
 
 export const discoveryEvidenceTable = pgTable("discovery_evidence", {
   id: serial("id").primaryKey(),
@@ -48,7 +57,12 @@ export const discoveryEvidenceTable = pgTable("discovery_evidence", {
   startedAt: timestamp("started_at").notNull(),
   finishedAt: timestamp("finished_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  deviceIdIdx: index("discovery_evidence_device_id_idx").on(table.deviceId),
+  discoveryRunIdIdx: index("discovery_evidence_discovery_run_id_idx").on(table.discoveryRunId),
+  sourceIdx: index("discovery_evidence_source_idx").on(table.source),
+  contextIdx: index("discovery_evidence_context_idx").on(table.context),
+}));
 
 export const bgpRouteHistoryTable = pgTable("bgp_route_history", {
   id: serial("id").primaryKey(),
@@ -63,7 +77,13 @@ export const bgpRouteHistoryTable = pgTable("bgp_route_history", {
   status: text("status").notNull(), // "ok" | "error"
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  deviceIdIdx: index("bgp_route_history_device_id_idx").on(table.deviceId),
+  peerIpIdx: index("bgp_route_history_peer_ip_idx").on(table.peerIp),
+  directionIdx: index("bgp_route_history_direction_idx").on(table.direction),
+  createdAtIdx: index("bgp_route_history_created_at_idx").on(table.createdAt),
+  devicePeerDirectionCreatedAtIdx: index("bgp_route_history_device_peer_direction_created_at_idx").on(table.deviceId, table.peerIp, table.direction, table.createdAt),
+}));
 
 export type DiscoveryRun = typeof discoveryRunsTable.$inferSelect;
 export type InsertDiscoveryRun = typeof discoveryRunsTable.$inferInsert;

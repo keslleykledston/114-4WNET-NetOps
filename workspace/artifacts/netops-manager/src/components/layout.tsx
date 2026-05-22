@@ -10,7 +10,10 @@ import {
   Settings,
   Activity,
   RadioTower,
-  Workflow
+  Workflow,
+  ShieldAlert,
+  FileBarChart,
+  PlugZap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
@@ -26,6 +29,9 @@ const navItems = [
   { href: "/config-collection", icon: DownloadCloud, label: "Config Collection" },
   { href: "/snmp-history", icon: RadioTower, label: "SNMP History" },
   { href: "/netops-operations", icon: Workflow, label: "NetOps Operations" },
+  { href: "/audit", icon: ShieldAlert, label: "Audit" },
+  { href: "/reports", icon: FileBarChart, label: "Reports" },
+  { href: "/integrations", icon: PlugZap, label: "Integrations" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

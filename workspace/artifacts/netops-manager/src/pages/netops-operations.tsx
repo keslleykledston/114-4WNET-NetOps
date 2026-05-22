@@ -101,10 +101,6 @@ export default function NetopsOperations() {
                 <BgpPanel device={activeSelection.device} title="BGP iBGP" role="ibgp" />
               )}
 
-              {activeSelection.view === "bgp-unknown" && (
-                <BgpPanel device={activeSelection.device} title="BGP Unknown" role="unknown" />
-              )}
-
               {activeSelection.view === "filters" && (
                 <FiltersPanel device={activeSelection.device} />
               )}

@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import type { Device } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, X, Download, Search } from "lucide-react";
+import { AlertCircle, Download, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDiscoveryBgpPeerDetails, type DiscoveryBgpPeer, type DiscoveryBgpPeerDetails } from "@/features/device-discovery/discovery-api";
 import { formatBgpUptime } from "./format-bgp-uptime";
@@ -25,7 +25,6 @@ const roleLabel: Record<string, string> = {
   ix: "IX",
   cdn_ix: "CDN/IX",
   ibgp: "iBGP",
-  unknown: "Cliente",
 };
 
 export function BgpPeerModal({ device, peer, open, onOpenChange }: BgpPeerModalProps) {
@@ -74,11 +73,6 @@ export function BgpPeerModal({ device, peer, open, onOpenChange }: BgpPeerModalP
                 </span>
               </DialogDescription>
             </div>
-            <DialogClose asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-slate-800 text-slate-400">
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogClose>
           </div>
         </DialogHeader>
 
@@ -158,7 +152,7 @@ function OperationalSummary({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <OpCard label="Device" value={deviceName} />
-        <OpCard label="Papel" value={roleLabel[peer.role] || peer.role} />
+        <OpCard label="Papel" value={roleLabel[peer.role] || "Cliente"} />
         <OpCard label="VRF" value={peer.vrf || "—"} mono size="sm" />
         <OpCard label="Session" value={peer.sessionType} />
       </div>

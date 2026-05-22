@@ -220,6 +220,7 @@ export function isAdminOnlyPath(pathname: string, method: string): boolean {
   if (pathname.startsWith("/auth")) return false;
   if (pathname.startsWith("/users")) return true;
   if (pathname.startsWith("/integrations") && method !== "GET") return true;
+  if (pathname.startsWith("/netbox/devices/sync-local")) return true;
   if (pathname.startsWith("/provisioning-jobs") && pathname.includes("/approve")) return true;
   return false;
 }

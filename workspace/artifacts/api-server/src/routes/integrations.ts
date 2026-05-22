@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { desc, eq } from "drizzle-orm";
 import { db, integrationSettingsTable } from "@workspace/db";
+import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 
 const router = Router();
 
@@ -8,9 +9,11 @@ const DEFAULT_INTEGRATIONS = [
   {
     name: "netbox",
     enabled: false,
+    readiness: "future",
     configJson: {
       readiness: "future",
       baseUrl: null,
+      skipTlsVerify: false,
       tokenConfigured: false,
       notes: "Integração preparada para fase futura",
     },
@@ -18,6 +21,7 @@ const DEFAULT_INTEGRATIONS = [
   {
     name: "future_webhook",
     enabled: false,
+    readiness: "future",
     configJson: {
       readiness: "future",
       notes: "Integração preparada para fase futura",
@@ -26,12 +30,30 @@ const DEFAULT_INTEGRATIONS = [
   {
     name: "future_zabbix",
     enabled: false,
+    readiness: "future",
     configJson: {
       readiness: "future",
       notes: "Integração preparada para fase futura",
     },
   },
 ];
+
+function serializeRow(row: typeof integrationSettingsTable.$inferSelect) {
+  const configJson = row.configJson && typeof row.configJson === "object" && !Array.isArray(row.configJson)
+    ? row.configJson as Record<string, unknown>
+    : {};
+  return {
+    id: row.id,
+    name: row.name,
+    enabled: row.enabled,
+    readiness: row.readiness,
+    lastConnectionStatus: row.lastConnectionStatus ?? null,
+    lastConnectionAt: row.lastConnectionAt?.toISOString() ?? null,
+    configJson,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
 
 async function ensureSeededIntegrations() {
   const existing = await db.select().from(integrationSettingsTable);
@@ -48,14 +70,7 @@ async function ensureSeededIntegrations() {
 router.get("/integrations", async (_req, res) => {
   await ensureSeededIntegrations();
   const rows = await db.select().from(integrationSettingsTable).orderBy(desc(integrationSettingsTable.createdAt));
-  res.json(rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    enabled: row.enabled,
-    configJson: row.configJson,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  })));
+  res.json(rows.map(serializeRow));
 });
 
 router.get("/integrations/:name", async (req, res) => {
@@ -66,14 +81,7 @@ router.get("/integrations/:name", async (req, res) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  res.json({
-    id: row.id,
-    name: row.name,
-    enabled: row.enabled,
-    configJson: row.configJson,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  });
+  res.json(serializeRow(row));
 });
 
 router.patch("/integrations/:name", async (req, res) => {
@@ -105,14 +113,20 @@ router.patch("/integrations/:name", async (req, res) => {
     return;
   }
 
-  res.json({
-    id: updated.id,
-    name: updated.name,
-    enabled: updated.enabled,
-    configJson: updated.configJson,
-    createdAt: updated.createdAt.toISOString(),
-    updatedAt: updated.updatedAt.toISOString(),
+  await logAuditEvent({
+    action: "integration_update",
+    objectType: "integration",
+    objectId: updated.name,
+    metadata: {
+      enabled: updated.enabled,
+      readiness: updated.readiness,
+      hasBaseUrl: Boolean((updated.configJson as Record<string, unknown>)?.baseUrl),
+      hasSkipTlsVerify: Boolean((updated.configJson as Record<string, unknown>)?.skipTlsVerify),
+    },
+    sourceIp: getRequestSourceIp(req),
   });
+
+  res.json(serializeRow(updated));
 });
 
 export default router;

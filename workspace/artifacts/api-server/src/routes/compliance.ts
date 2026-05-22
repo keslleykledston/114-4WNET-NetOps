@@ -444,6 +444,45 @@ async function buildJobDetail(id: number) {
   };
 }
 
+router.get("/compliance-findings-groups", async (req, res) => {
+  const rows = await db.select({
+    id: complianceFindingsTable.id,
+    policyName: complianceFindingsTable.policyName,
+    severity: complianceFindingsTable.severity,
+    context: complianceFindingsTable.context,
+    status: complianceFindingsTable.status,
+    operationalCategory: complianceFindingsTable.operationalCategory,
+  })
+    .from(complianceFindingsTable)
+    .orderBy(desc(complianceFindingsTable.id))
+    .limit(500);
+
+  const groups = new Map<string, { count: number; examples: string[] }>();
+  for (const row of rows) {
+    const key = `${row.severity}|${row.context}|${row.operationalCategory}|${row.policyName}`;
+    if (!groups.has(key)) {
+      groups.set(key, { count: 0, examples: [] });
+    }
+    const group = groups.get(key)!;
+    group.count++;
+    if (group.examples.length < 3) group.examples.push(String(row.id));
+  }
+
+  const result = Array.from(groups.entries()).map(([key, data]) => {
+    const [severity, context, category, policyName] = key.split("|");
+    return {
+      severity,
+      context,
+      operationalCategory: category,
+      policyName,
+      count: data.count,
+      exampleFindingIds: data.examples,
+    };
+  }).sort((a, b) => b.count - a.count);
+
+  res.json(result);
+});
+
 export async function executeJob(jobId: number) {
   await executeComplianceJob(jobId);
 }

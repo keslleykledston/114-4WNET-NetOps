@@ -49,6 +49,9 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:-netops-default-secret-key-32bytes}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       NETOPS_SNMP_REAL_ENABLED: ${NETOPS_SNMP_REAL_ENABLED:-false}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin}
     healthcheck:
       test:
         [

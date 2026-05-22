@@ -22,3 +22,11 @@
 - Added readiness-only integrations for NetBox, webhook, and Zabbix placeholders.
 - Applied missing production indexes for discovery and device lookup tables.
 - Stabilized Docker rebuilds with BuildKit cache mount, manifest-first pnpm install, and tighter `.dockerignore`.
+
+## v0.2.0 RBAC Local
+
+- Added local auth with `viewer`, `operator`, and `admin` roles.
+- Added `users` and `user_sessions` tables.
+- Added `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, and admin-only user management endpoints.
+- Added request authorization middleware and actor-aware audit logs.
+- Added frontend login/logout flow with protected routes.

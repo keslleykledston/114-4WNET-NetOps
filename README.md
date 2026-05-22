@@ -16,6 +16,9 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 
 - Status funcional e pendências: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
 - Plano de fechamento do MVP: [docs/MVP_CLOSURE_PLAN.md](docs/MVP_CLOSURE_PLAN.md)
+- RBAC local e auth: [docs/RBAC_MODEL.md](docs/RBAC_MODEL.md)
+- Setup local de auth: [docs/AUTH_LOCAL_SETUP.md](docs/AUTH_LOCAL_SETUP.md)
+- Permissões por role: [docs/USER_ROLES_PERMISSIONS.md](docs/USER_ROLES_PERMISSIONS.md)
 
 ## Subir com Docker
 
@@ -28,6 +31,14 @@ URLs:
 
 - Frontend: `http://localhost:3000`
 - API: `http://localhost:8080/api/healthz`
+
+Login local:
+
+- abrir `http://localhost:3000/login`
+- definir `ADMIN_EMAIL`, `ADMIN_PASSWORD` e `ADMIN_NAME` no `.env`
+- `ADMIN_PASSWORD` precisa existir para criar o admin inicial
+- `CONFIG_APPLY_ENABLED=false` continua bloqueando apply real
+- `DRY_RUN_DEFAULT=true` continua no modo seguro
 
 ## Parar
 

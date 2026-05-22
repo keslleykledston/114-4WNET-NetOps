@@ -3,6 +3,8 @@
 | Item | Status | Evidência | Pendência |
 |---|---|---|---|
 | Dashboard | PASS | UI build/typecheck ok | - |
+| Login / Logout | PASS | `/login` + cookie session + protected routes | - |
+| RBAC local | PASS | viewer/operator/admin enforced in API | - |
 | Device CRUD | PASS | API/client já existente | - |
 | SSH test | PASS | `device-discovery-selftest.mjs` | - |
 | SNMP fallback | PASS | discovery flow validado | - |
@@ -37,3 +39,4 @@
 - No secret exposure in audit/report/integration payloads.
 - Route query stays SSH live; history only persists result.
 - Docker build now uses manifest-first install, frozen lockfile, and pnpm store cache mount.
+- Local RBAC uses httpOnly session cookie and admin bootstrap env vars.

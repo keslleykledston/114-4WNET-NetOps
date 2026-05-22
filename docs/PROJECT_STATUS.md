@@ -66,6 +66,18 @@
 - steps por dispositivo
 - templates de configuração
 
+### Auth / RBAC local
+
+- autenticação local com login/logout em `/login`
+- roles:
+  - `viewer`
+  - `operator`
+  - `admin`
+- sessões em cookie httpOnly `netops_session`
+- usuário admin inicial via `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME`
+- middleware backend protege rotas sensíveis
+- auditoria registra actor real quando autenticado
+
 ### Coleta via SSH
 
 - coleta de configuração de dispositivo
@@ -183,6 +195,7 @@
 - páginas `/audit`, `/reports` e `/integrations` adicionadas ao frontend
 - índices faltantes aplicados no banco vivo
 - rebuild Docker estabilizado com `.dockerignore` enxuto e install PNPM por manifesto
+- RBAC local básico entregue com login, cookies seguros e proteção por role
 
 ## Pendências
 
@@ -225,7 +238,7 @@
 
 - apply real continua bloqueado por padrão
 - NetBox permanece readiness-only, sem sync real
-- RBAC formal e scheduler configurável seguem fora do escopo desta fase
+- RBAC avançado, SSO e scheduler configurável seguem fora do escopo desta fase
 - parser Huawei ainda precisa de cobertura adicional em cenários reais
 - hardening final adicionou fixtures formais para BGP verbose, route-policy, communities, interfaces, L2VPN e route query
 - relatório de aceite atualizado em `reports/MVP_ACCEPTANCE_VALIDATION.md`

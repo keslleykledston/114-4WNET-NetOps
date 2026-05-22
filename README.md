@@ -20,6 +20,7 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 - Setup local de auth: [docs/AUTH_LOCAL_SETUP.md](docs/AUTH_LOCAL_SETUP.md)
 - Permissões por role: [docs/USER_ROLES_PERMISSIONS.md](docs/USER_ROLES_PERMISSIONS.md)
 - Scheduler local: [docs/SCHEDULER_MODEL.md](docs/SCHEDULER_MODEL.md)
+- NetBox read-only sync: [docs/NETBOX_READONLY_SYNC.md](docs/NETBOX_READONLY_SYNC.md)
 
 ## Subir com Docker
 
@@ -41,6 +42,7 @@ Login local:
 - `CONFIG_APPLY_ENABLED=false` continua bloqueando apply real
 - `DRY_RUN_DEFAULT=true` continua no modo seguro
 - scheduler aparece em `/scheduler`
+- NetBox read-only usa `NETBOX_ENABLED`, `NETBOX_URL`, `NETBOX_TOKEN` e aparece em `/integrations`
 
 ## Parar
 

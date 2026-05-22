@@ -9,3 +9,5 @@
 - Keep provisioning apply locked behind an explicit safety flag until safe allowlisted apply steps are designed and tested.
 - Finish RBAC hardening: session expiry policy, password reset flow, and richer permission UI.
 - Expand scheduler support later with cron parser and richer run history filters.
+- Validate NetBox read-only sync against a real NetBox instance when `NETBOX_URL` and `NETBOX_TOKEN` are available.
+- Add dedicated local columns for NetBox tenant/site/role IDs if the next release needs richer inventory lineage.

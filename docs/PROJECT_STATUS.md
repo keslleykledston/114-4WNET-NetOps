@@ -212,6 +212,7 @@
 - rebuild Docker estabilizado com `.dockerignore` enxuto e install PNPM por manifesto
 - RBAC local básico entregue com login, cookies seguros e proteção por role
 - scheduler local básico entregue com run-now e histórico
+- NetBox read-only sync entregue com status, test connection, preview e sync local
 
 ## Pendências
 
@@ -250,10 +251,18 @@
 - falta definir estratégia de backup do PostgreSQL
 - se SSH ainda falhar com `SSH authentication failed`, validar credencial, AAA no equipamento e se o usuario VRP permite login SSH por `keyboard-interactive`
 
+### v0.2.3 NetBox Read-Only
+
+- NetBox usa somente chamadas `GET` contra NetBox.
+- `NETBOX_TOKEN` vem apenas de env e nao e retornado pela API.
+- `/integrations` mostra readiness, test/list/preview e sync local admin-only.
+- sync local cria/atualiza devices locais sem sobrescrever credenciais.
+- validacao real fica pendente ate existir `NETBOX_ENABLED=true`, `NETBOX_URL` e `NETBOX_TOKEN`.
+
 ### MVP Closure
 
 - apply real continua bloqueado por padrão
-- NetBox permanece readiness-only, sem sync real
+- NetBox permanece read-only contra NetBox; sync atual escreve apenas no banco local
 - RBAC avançado, SSO e scheduler configurável seguem fora do escopo desta fase
 - RBAC avançado e SSO seguem fora do escopo desta fase
 - parser Huawei ainda precisa de cobertura adicional em cenários reais

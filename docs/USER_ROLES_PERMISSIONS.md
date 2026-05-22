@@ -15,6 +15,9 @@
 | Provisioning validate / preview | no | yes | yes |
 | Provisioning approve | no | no | yes |
 | Integrations update | no | no | yes |
+| NetBox status | yes | yes | yes |
+| NetBox test/list/preview | no | yes | yes |
+| NetBox sync local | no | no | yes |
 | Users CRUD | no | no | yes |
 | Scheduler view | yes | yes | yes |
 | Scheduler run now | no | yes | yes |

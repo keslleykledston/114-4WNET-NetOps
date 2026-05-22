@@ -9,3 +9,5 @@
 - Wire compliance jobs to discovery confidence warnings.
 - Add password reset / disable user / session revoke UX for local RBAC.
 - Decide whether `cron_expression` becomes live in the next release or stays metadata only.
+- Test v0.2.3 NetBox read-only sync with a real NetBox lab.
+- Keep NetBox write-back out of scope until explicit design approval.

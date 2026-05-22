@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.3 NetBox Read-Only Sync
+
+- Added NetBox read-only status, connection test, list, preview, and local sync endpoints.
+- Added frontend NetBox controls in `/integrations`.
+- Added RBAC rules: viewer status, operator test/list/preview, admin sync-local.
+- Added token-safe env-based NetBox config and sanitized audit events.
+- Added NetBox field mapping and security documentation.
+
 ## Device Discovery Phase
 
 - Added read-only device discovery API with SSH primary and SNMP fallback/complement.

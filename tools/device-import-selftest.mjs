@@ -5,7 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const apiBaseUrl = process.env.API_BASE_URL || "http://127.0.0.1:5000";
+const apiBaseUrl = process.env.API_BASE_URL || "http://127.0.0.1:8085";
+const adminEmail = process.env.ADMIN_EMAIL || "admin@example.com";
+const adminPassword = process.env.ADMIN_PASSWORD || "admin123456";
 
 const colors = {
   reset: "\x1b[0m",
@@ -33,43 +35,76 @@ function test(name, result, error) {
   }
 }
 
+let adminToken = null;
+
+async function authenticate() {
+  const url = new URL("/api/auth/login", apiBaseUrl);
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: adminEmail, password: adminPassword }),
+  });
+  const data = await res.json();
+  return data.token;
+}
+
 async function request(method, path, body = null, file = null) {
   const url = new URL(path, apiBaseUrl);
   const options = {
     method,
     headers: {
-      "Authorization": "Bearer admin-token-test",
+      "Authorization": `Bearer ${adminToken}`,
     },
   };
 
   if (file) {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", file, file.name || "import.csv");
     options.body = formData;
+    // Don't set Content-Type for FormData, fetch will set it automatically with boundary
   } else if (body) {
     options.headers["Content-Type"] = "application/json";
     options.body = JSON.stringify(body);
   }
 
-  const res = await fetch(url, options);
-  let data = null;
   try {
-    data = await res.json();
-  } catch {
-    data = null;
+    const res = await fetch(url, options);
+    let data = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+    return { status: res.status, data, ok: res.ok };
+  } catch (err) {
+    log(colors.red, `  Fetch error: ${err.message}`);
+    return { status: 0, data: null, ok: false };
   }
-
-  return { status: res.status, data, ok: res.ok };
 }
 
 function createCsvFile(rows) {
   const headers = ["hostname", "ip_address", "vendor", "platform", "site", "status"];
   const lines = [headers.join(","), ...rows.map((r) => headers.map((h) => r[h] || "").join(","))];
-  return new Blob([lines.join("\n")], { type: "text/csv" });
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  blob.name = `import-${Date.now()}.csv`;
+  return blob;
 }
 
 async function runTests() {
   log(colors.blue, "\n=== Device Import Selftest ===\n");
+
+  // Authenticate
+  log(colors.yellow, "Setup: Authenticating...");
+  try {
+    adminToken = await authenticate();
+    if (!adminToken) {
+      log(colors.red, "Failed to authenticate");
+      process.exit(1);
+    }
+  } catch (err) {
+    log(colors.red, `Authentication error: ${err.message}`);
+    process.exit(1);
+  }
 
   // Test 1: Viewer permissions (should be rejected on preview)
   log(colors.yellow, "Test 1: Permission check (no explicit test, requires auth setup)");
@@ -84,7 +119,11 @@ async function runTests() {
 
   try {
     const res = await request("POST", "/api/devices/import/preview", null, csvFile);
-    test("Preview request accepted", res.ok, res.data?.error);
+    if (!res.ok) {
+      log(colors.red, `  Status: ${res.status}`);
+      log(colors.red, `  Data: ${JSON.stringify(res.data)}`);
+    }
+    test("Preview request accepted", res.ok, res.data?.error || `Status ${res.status}`);
 
     if (res.ok && res.data) {
       test("Preview has summary", res.data.summary !== undefined);

@@ -15,6 +15,7 @@
 - FASE 5.1.fix concluida: IF-MIB agora coleta 164 interfaces. Root cause: net-snmp doneCallback passa varbind array em error param. Fix: type-check error antes de rejeitar.
 - FASE 5.2 planejada: inventario persistido (interfaces/vrfs/config), SSH config collection read-only.
 - FASE 5.3 concluida: Device Discovery persistente com `discovery_runs`, `discovery_snapshots`, `discovery_evidence`, OpenAPI atualizado e client Orval regenerado.
+- v0.4.0 concluida: Provisioning preview & approval workflow — templates L2/L3/BGP, `POST /api/provisioning/preview`, estados draft→approved, UI `/provisioning`, apply bloqueado, docs `PROVISIONING_PREVIEW_WORKFLOW.md`.
 - FASE 6 planejada: BGP import policy editor preview (seguro, sem apply), route-policy parser, community library read-only.
 - FASE 7 planejada: apply real com RBAC, duplo check, auditoria completa, SSH write controlado.
 - FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.

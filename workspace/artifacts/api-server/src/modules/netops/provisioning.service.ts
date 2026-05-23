@@ -1,6 +1,8 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { configTemplatesTable, db, devicesTable, provisioningJobsTable, provisioningStepsTable, reportsTable } from "@workspace/db";
 import { auditLogsTable } from "@workspace/db";
+import { buildProvisioningPreview } from "./provisioning-preview.service.js";
+import { getServiceTemplate } from "./provisioning-templates.js";
 
 function parseJson(value: string | null): unknown {
   if (!value) return null;
@@ -84,16 +86,32 @@ export async function buildProvisioningJobReportMarkdown(id: number) {
     .orderBy(desc(auditLogsTable.createdAt))
     .limit(10);
 
-  const previewConfig = template && parameters
+  let previewConfig = template && parameters
     ? renderTemplate(template.template, parameters)
     : "Preview not available.";
-
-  const rollbackPreview = [
+  let rollbackPreview = [
     `Rollback preview for job #${detail.id}`,
     `- Status would return to draft/validated state`,
     `- Steps would be marked skipped`,
-    `- No SSH apply is executed in MVP`,
+    `- No SSH apply is executed in v0.4.0`,
   ].join("\n");
+
+  const serviceType = typeof parameters?.serviceType === "string" ? parameters.serviceType : detail.type;
+  const deviceId = Array.isArray(detail.deviceIds) && detail.deviceIds[0] ? Number(detail.deviceIds[0]) : null;
+  if (deviceId && getServiceTemplate(serviceType)) {
+    const structured = await buildProvisioningPreview({
+      deviceId,
+      serviceType,
+      parameters: (parameters?.serviceParams as Record<string, unknown>) ?? parameters ?? {},
+      maintenanceWindowStart: typeof parameters?.maintenanceWindowStart === "string" ? parameters.maintenanceWindowStart : null,
+      maintenanceWindowEnd: typeof parameters?.maintenanceWindowEnd === "string" ? parameters.maintenanceWindowEnd : null,
+      rollbackPlan: typeof parameters?.rollbackPlan === "string" ? parameters.rollbackPlan : null,
+    });
+    if (!("error" in structured)) {
+      previewConfig = structured.configPreview;
+      rollbackPreview = structured.rollbackPlan ?? structured.rollbackPreview;
+    }
+  }
 
   const validations = [
     `- Device count: ${detail.deviceIds.length}`,

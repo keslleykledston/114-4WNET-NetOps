@@ -36,45 +36,32 @@ export async function discoverL2Circuits(deviceId: number, sshConfig: SSHConfig)
     const allFindings = resolveL2Findings(normalized);
     const withFindings = attachFindingsToCircuits(normalized, allFindings);
 
-    // Upsert circuits in DB
+    // Insert circuits for this discovery run (MVP: no unique key for upsert yet)
     for (const circuit of withFindings) {
-      await db
-        .insert(l2CircuitsTable)
-        .values({
-          deviceId,
-          circuitType: circuit.circuitType,
-          name: circuit.name,
-          vcId: circuit.vcId,
-          vsiName: circuit.vsiName,
-          vsiId: circuit.vsiId,
-          localInterface: circuit.localInterface,
-          parentInterface: circuit.parentInterface,
-          peerIp: circuit.peerIp,
-          outerVlan: circuit.outerVlan,
-          innerVlan: circuit.innerVlan,
-          adminStatus: circuit.adminStatus,
-          operStatus: circuit.operStatus,
-          pwStatus: circuit.pwStatus,
-          macCount: circuit.macCount,
-          description: circuit.description,
-          findings: circuit.findings,
-          rawEvidence: circuit.rawEvidence,
-          discoveryRunId: runId,
-          firstSeen: now,
-          lastSeen: now,
-          source: "ssh_live",
-        })
-        .onConflictDoUpdate({
-          target: [],
-          set: {
-            adminStatus: circuit.adminStatus,
-            operStatus: circuit.operStatus,
-            pwStatus: circuit.pwStatus,
-            macCount: circuit.macCount,
-            findings: circuit.findings,
-            lastSeen: now,
-          },
-        });
+      await db.insert(l2CircuitsTable).values({
+        deviceId,
+        circuitType: circuit.circuitType,
+        name: circuit.name,
+        vcId: circuit.vcId,
+        vsiName: circuit.vsiName,
+        vsiId: circuit.vsiId,
+        localInterface: circuit.localInterface,
+        parentInterface: circuit.parentInterface,
+        peerIp: circuit.peerIp,
+        outerVlan: circuit.outerVlan,
+        innerVlan: circuit.innerVlan,
+        adminStatus: circuit.adminStatus,
+        operStatus: circuit.operStatus,
+        pwStatus: circuit.pwStatus,
+        macCount: circuit.macCount,
+        description: circuit.description,
+        findings: circuit.findings,
+        rawEvidence: circuit.rawEvidence,
+        discoveryRunId: runId,
+        firstSeen: now,
+        lastSeen: now,
+        source: "ssh_live",
+      });
     }
 
     // Update job to completed

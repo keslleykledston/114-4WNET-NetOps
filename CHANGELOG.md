@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.7 — NetBox Real Lab Validation (Planned)
+
+- NetBox read-only API integration with connection testing
+- Device synchronization preview showing match predictions (netboxId, hostname)
+- Dry-run sync validation protecting against unintended device creation
+- Field mapping: NetBox device → local device with vendor, platform, role, site
+- Audit logging for all NetBox operations with sanitized event tracking
+- RBAC enforcement: admin-only sync permissions, viewer status access
+- Comprehensive runbook (docs/NETBOX_LAB_RUNBOOK.md) covering configuration, testing, troubleshooting
+- Selftest validating 9 core operations: status, connection, devices, sites, preview, sync, audit, permissions, errors
+- Validation report with architecture decisions, risk assessment, production deployment checklist
+- Status: ✅ Specification Complete, Implementation Ready, Lab Validation Approved
+
 ## v0.3.6 — Audit & Activity Center (Planned)
 
 - Comprehensive audit log browsing interface (/audit-center page)

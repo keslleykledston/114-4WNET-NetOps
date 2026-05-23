@@ -227,14 +227,14 @@ export async function runSSHCommands(config: SSHConfig, commands: string[]): Pro
     const results: SSHCommandResult[] = [];
     let resolved = false;
 
-    // Timeout de 5min: running-config pode ser grande em NE8000 (60s+) + outros commands
+    // Timeout de 10min: large BGP route queries podem demorar 5-8min; running-config pode ser grande em NE8000 (60s+)
     const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true;
         conn.end();
-        reject(new Error("SSH session timed out after 5 minutes"));
+        reject(new Error("SSH session timed out after 10 minutes"));
       }
-    }, 300000);
+    }, 600000);
 
     conn.on("ready", async () => {
       try {

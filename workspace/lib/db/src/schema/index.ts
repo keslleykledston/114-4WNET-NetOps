@@ -12,3 +12,4 @@ export * from "./bgp_peer_role_overrides";
 export * from "./discovery";
 export * from "./communities";
 export * from "./scheduler";
+export * from "./l2circuits";

@@ -1,0 +1,11 @@
+FTP@NE8000#display interface brief
+...............................................................................
+Interface                      Physical    Protocol    Description
+...............................................................................
+GigabitEthernet0/0/1           up          up          L2VC-Peer1-Site1
+GigabitEthernet0/0/2           down        down        L2VC-Peer1-Site2
+GigabitEthernet0/0/3           up          up          VPLS-SiteA-Bound
+GigabitEthernet0/0/3.100       up          up          L2VC-VLAN100
+GigabitEthernet0/0/4           admin-down  down        (null)
+XGigabitEthernet0/0/5          up          up          Core-Link-1
+...

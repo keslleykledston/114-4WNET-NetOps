@@ -16,6 +16,7 @@ import collectedConfigsRouter from "./collected_configs.js";
 import snmpSnapshotsRouter from "./snmp_snapshots.js";
 import netopsRouter from "../modules/netops/routes.js";
 import discoveryRouter from "../modules/netops/device-discovery/discovery.routes.js";
+import l2CircuitsRouter from "../modules/l2circuits/l2circuits.routes.js";
 import { authorizeRequest } from "../lib/auth.js";
 import { requestContextMiddleware } from "../lib/request-context.js";
 
@@ -40,5 +41,6 @@ router.use(collectedConfigsRouter);
 router.use(snmpSnapshotsRouter);
 router.use(netopsRouter);
 router.use(discoveryRouter);
+router.use(l2CircuitsRouter);
 
 export default router;

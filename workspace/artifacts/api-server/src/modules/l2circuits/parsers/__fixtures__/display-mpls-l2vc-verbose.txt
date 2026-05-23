@@ -1,0 +1,48 @@
+FTP@NE8000#display mpls l2vc verbose
+...............................................................................
+VC ID            : 1001
+VC Type          : Ethernet
+Interface(Admin) : GigabitEthernet0/0/1
+Interface(Oper)  : up
+MTU              : 1500
+Encapsulation Type: RAW
+Tunnel Label     : 16
+VC Label         : 1001
+Admin Status     : up
+Oper Status      : up
+PW Status        : UP
+Description      : L2VC-Peer1-Site1
+Peer IP          : 192.168.1.2
+
+...............................................................................
+VC ID            : 1002
+VC Type          : Ethernet
+Interface(Admin) : GigabitEthernet0/0/2
+Interface(Oper)  : down
+MTU              : 1500
+Encapsulation Type: RAW
+Tunnel Label     : 17
+VC Label         : 1002
+Admin Status     : up
+Oper Status      : down
+PW Status        : DOWN
+Description      : L2VC-Peer1-Site2
+Peer IP          : 192.168.1.3
+
+...............................................................................
+VC ID            : 2001
+VC Type          : Ethernet VLAN
+Interface(Admin) : GigabitEthernet0/0/3.100
+Interface(Oper)  : up
+OuterVlan        : 100
+InnerVlan        : 200
+MTU              : 1500
+Encapsulation Type: RAW
+Tunnel Label     : 18
+VC Label         : 2001
+Admin Status     : up
+Oper Status      : up
+PW Status        : UP
+Description      : L2VC-Peer2-VLAN100
+Peer IP          : 192.168.1.4
+

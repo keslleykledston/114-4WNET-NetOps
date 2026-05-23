@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.6 — Audit & Activity Center (Planned)
+
+- Comprehensive audit log browsing interface (/audit-center page)
+- Advanced filtering: actor, action, date, severity, sourceIp, objectType
+- Audit summary API with statistics and sensitive event detection
+- Event severity classification (6 levels: info, operational, security, admin, export, failed)
+- CSV/JSON export with automatic sanitization (no secrets exposed)
+- Permission model: audit.read for viewing, audit.export for downloads
+- 13 sensitive event types tracked: login_failed, user_disabled, password_reset, etc.
+- Alert thresholds: 5+ failed logins in 10min, unusual exports, sensitive changes
+- Selftest validating API filtering, export, and permission enforcement
+- Status: ✅ Specification Complete, Implementation Ready
+
 ## v0.3.5 — Compliance Profile Assignment (In Development)
 
 - Added compliance profile assignment per device (complianceProfileName field)

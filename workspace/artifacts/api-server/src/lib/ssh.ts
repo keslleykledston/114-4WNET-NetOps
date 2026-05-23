@@ -250,7 +250,7 @@ export async function runSSHCommands(config: SSHConfig, commands: string[]): Pro
 
         for (const command of commands) {
           shell.write(`${command}\n`);
-          const rawOutput = await waitForShellPrompt(shell, { timeoutMs: 120000 });
+          const rawOutput = await waitForShellPrompt(shell, { timeoutMs: 300000 });
           results.push({ command, output: parseShellCommandOutput(rawOutput, command) });
         }
 

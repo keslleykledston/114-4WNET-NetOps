@@ -1,6 +1,17 @@
 # Changelog
 
-## v0.3.4 — Operational Pilot NOC (Planned)
+## v0.3.5 — Compliance Profile Assignment (In Development)
+
+- Added compliance profile assignment per device (complianceProfileName field)
+- Created 6 compliance profiles: observe-only, lab, edge-balanced, access-balanced, edge-strict, access-strict
+- Implemented role-to-profile defaults (RX → edge-balanced, access → access-balanced, lab → observe-only, etc)
+- Added database migration for compliance_profile_name column
+- Created compliance profile specification with rules, thresholds, recommendations per profile
+- Improved recommendations with technical, operational, actionability, and escalation guidance
+- Added selftest validating profile assignment and defaults
+- Status: ✅ In Development (selftest 7/7 passing)
+
+## v0.3.4 — Operational Pilot NOC (Completed)
 
 - NOC operational readiness validation with 3 pilot devices.
 - Device connectivity test (SSH + SNMP health check).

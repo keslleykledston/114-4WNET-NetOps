@@ -25,6 +25,7 @@ export const devicesTable = pgTable("devices", {
   netboxDeviceId: integer("netbox_device_id"),
   lastSeen: timestamp("last_seen"),
   status: text("status").notNull().default("unknown"),
+  complianceProfileName: text("compliance_profile_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
@@ -32,6 +33,7 @@ export const devicesTable = pgTable("devices", {
   statusIdx: index("devices_status_idx").on(table.status),
   vendorIdx: index("devices_vendor_idx").on(table.vendor),
   siteIdx: index("devices_site_idx").on(table.site),
+  complianceProfileIdx: index("idx_devices_compliance_profile").on(table.complianceProfileName),
 }));
 
 export const insertDeviceGroupSchema = createInsertSchema(deviceGroupsTable).omit({ id: true, createdAt: true });

@@ -1,6 +1,18 @@
 # Roadmap
 
-## v0.3.4 — Operational Pilot NOC (In Development)
+## v0.3.5 — Compliance Profile Assignment (In Development)
+
+- ✅ Database schema extension (complianceProfileName field)
+- ✅ 6 compliance profiles defined with rules and thresholds
+- ✅ Role-to-profile defaults implemented (edge → balanced, access → balanced, lab → observe-only)
+- ✅ Improved findings recommendations (technical, operational, actionability, escalation)
+- ✅ Selftest validating assignment logic (7/7 passing)
+- 🔄 Backend endpoint for updating device profile
+- 🔄 Frontend UI for profile selection
+- 🔄 Profile tuning UI (edit rules per profile)
+- **Target:** Reduce false positives, improve actionability, calibrated by device function
+
+## ✅ v0.3.4 — Operational Pilot NOC (Completed)
 
 - 🔄 Validate full operational workflow with 3 pilot Huawei VRP devices
 - 🔄 Device connectivity test (SSH + SNMP health)

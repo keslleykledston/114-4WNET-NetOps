@@ -1,0 +1,11 @@
+# hostname=4WNET-BVA-BRT-A_S6730-H48X6C
+# source=operador NOC (paste chat)
+# command=display mac-address vlan 612
+
+-------------------------------------------------------------------------------
+MAC Address    VLAN/VSI/BD                       Learned-From        Type      
+-------------------------------------------------------------------------------
+c0e0-18e2-a0c1 612/-/-                           Eth-Trunk2          dynamic   
+
+-------------------------------------------------------------------------------
+Total items displayed = 1

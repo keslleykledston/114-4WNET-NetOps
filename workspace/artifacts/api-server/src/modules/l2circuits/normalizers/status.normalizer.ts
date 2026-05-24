@@ -15,7 +15,10 @@ export function normalizeL2CircuitStatus(parsed: ParsedL2Circuit): NormalizedL2S
 export function normalizeAdminStatus(status?: string): L2Status {
   if (!status) return "UNKNOWN";
 
-  const normalized = status.toLowerCase().trim();
+  let normalized = status.toLowerCase().trim();
+  if (normalized.startsWith("*")) {
+    normalized = normalized.slice(1);
+  }
 
   if (normalized === "up" || normalized === "enable") return "UP";
   if (normalized === "down" || normalized === "disable" || normalized === "admin-down") return "DOWN";
@@ -29,11 +32,14 @@ export function normalizeOperStatus(status?: string, adminStatus?: L2Status): L2
     return "CONFIG_ONLY";
   }
 
-  const normalized = status.toLowerCase().trim();
+  let normalized = status.toLowerCase().trim();
+  if (normalized.startsWith("*") || normalized.startsWith("^")) {
+    normalized = normalized.slice(1);
+  }
 
   if (normalized === "up" || normalized === "active") return "UP";
+  if (normalized === "partial") return "PARTIAL";
   if (normalized === "down" || normalized === "inactive") {
-    if (adminStatus === "UP") return "DOWN";
     return "DOWN";
   }
 

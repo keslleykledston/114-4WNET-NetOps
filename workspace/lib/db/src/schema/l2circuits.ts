@@ -22,6 +22,12 @@ export const l2CircuitsTable = pgTable("l2_circuits", {
   macCount: integer("mac_count"),
   source: text("source").notNull().default("ssh_live"), // ssh_live | cached_config
   rawEvidence: text("raw_evidence"), // evidence string, max 240 chars
+  classification: text("classification"),
+  l2Transport: text("l2_transport"),
+  deviceRoleFamily: text("device_role_family"),
+  evidenceFlags: jsonb("evidence_flags").default({}).notNull(),
+  anomalyTags: jsonb("anomaly_tags").default([]).notNull(),
+  roleContext: text("role_context"),
   findings: jsonb("findings").default([]).notNull(), // array of {code, severity, message}
   firstSeen: timestamp("first_seen").notNull(),
   lastSeen: timestamp("last_seen").notNull(),

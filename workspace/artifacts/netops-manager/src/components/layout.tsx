@@ -15,6 +15,7 @@ import {
   FileBarChart,
   PlugZap,
   CalendarClock,
+  Network,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ import { useAuth } from "./auth-provider";
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/devices", icon: Server, label: "Devices" },
+  { href: "/l2-circuits", icon: Network, label: "L2 Circuits" },
   { href: "/compliance", icon: ShieldCheck, label: "Compliance" },
   { href: "/provisioning", icon: Rocket, label: "Provisioning" },
   { href: "/templates", icon: FileCode, label: "Templates" },

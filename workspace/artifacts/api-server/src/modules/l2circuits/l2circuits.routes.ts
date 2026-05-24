@@ -3,16 +3,9 @@ import { discoverL2CircuitsHandler, getL2DiscoveryJobHandler, listL2CircuitsHand
 
 const router = Router();
 
-// POST /api/l2-circuits/discover - start discovery job
-router.post("/api/l2-circuits/discover", discoverL2CircuitsHandler);
-
-// GET /api/l2-circuits/discovery-jobs/:runId - get job status
-router.get("/api/l2-circuits/discovery-jobs/:runId", getL2DiscoveryJobHandler);
-
-// GET /api/l2-circuits - list circuits with filters
-router.get("/api/l2-circuits", listL2CircuitsHandler);
-
-// GET /api/l2-circuits/:id - get single circuit
-router.get("/api/l2-circuits/:id", getL2CircuitHandler);
+router.post("/l2-circuits/discover", discoverL2CircuitsHandler);
+router.get("/l2-circuits/discovery-jobs/:runId", getL2DiscoveryJobHandler);
+router.get("/l2-circuits", listL2CircuitsHandler);
+router.get("/l2-circuits/:id", getL2CircuitHandler);
 
 export default router;

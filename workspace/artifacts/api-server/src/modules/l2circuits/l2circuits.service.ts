@@ -1,46 +1,69 @@
-import { db, l2CircuitsTable, l2DiscoveryJobsTable, devicesTable } from "@workspace/db";
+import { db, l2CircuitsTable, l2DiscoveryJobsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import type { and as andType } from "drizzle-orm";
 import type { SSHConfig } from "../../lib/ssh.js";
 import { collectL2CircuitsViaSsh } from "./collectors/ssh.collector.js";
 import { parseHuaweiL2Circuits } from "./parsers/huawei-vrp-l2.js";
 import { normalizeCircuits } from "./normalizers/status.normalizer.js";
-import { resolveL2Findings, attachFindingsToCircuits } from "./normalizers/findings.resolver.js";
-import type { L2Circuit, L2CircuitListFilter, L2DiscoveryJob, L2DiscoveryJobResponse, NormalizedL2Circuit } from "./l2circuits.types.js";
+import { enrichCircuitsWithFindings, resolveL2Findings } from "./normalizers/findings.resolver.js";
+import type { NormalizedL2Circuit } from "./l2circuits.types.js";
+import { buildL3RoleContext, hasL3ServiceEvidence, type L3EvidenceSnapshot } from "./parsers/l3-evidence.helpers.js";
+import type { L2Circuit, L2CircuitListFilter, L2DiscoveryJob, L2DiscoveryJobResponse } from "./l2circuits.types.js";
 
-export async function discoverL2Circuits(deviceId: number, sshConfig: SSHConfig): Promise<L2DiscoveryJobResponse> {
-  const runId = `disc-l2-${deviceId}-${Date.now()}`;
-  const now = new Date();
+export function createL2DiscoveryRunId(deviceId: number): string {
+  return `disc-l2-${deviceId}-${Date.now()}`;
+}
 
-  // Create job record
-  const jobRecord = await db.insert(l2DiscoveryJobsTable).values({
-    runId,
-    deviceId,
-    status: "running",
-    startedAt: now,
-  }).returning();
+export async function startL2DiscoveryJob(deviceId: number, runId: string): Promise<{ jobId: number; startedAt: Date }> {
+  const startedAt = new Date();
+  const [job] = await db
+    .insert(l2DiscoveryJobsTable)
+    .values({
+      runId,
+      deviceId,
+      status: "running",
+      startedAt,
+    })
+    .returning();
 
-  const jobId = jobRecord[0]?.id;
+  if (!job) {
+    throw new Error("Failed to create L2 discovery job");
+  }
+
+  return { jobId: job.id, startedAt };
+}
+
+export async function runL2DiscoveryJob(deviceId: number, runId: string, sshConfig: SSHConfig): Promise<void> {
+  const job = await getL2DiscoveryJob(runId);
+  if (!job) {
+    throw new Error(`Discovery job not found: ${runId}`);
+  }
+
+  const now = job.startedAt;
+
+  if (process.env.L2_DISCOVER_SSH_ENABLED !== "true") {
+    await db
+      .update(l2DiscoveryJobsTable)
+      .set({
+        status: "failed",
+        finishedAt: new Date(),
+        errorMessage: "L2 SSH discovery is disabled (set L2_DISCOVER_SSH_ENABLED=true to collect from devices)",
+      })
+      .where(eq(l2DiscoveryJobsTable.runId, runId));
+    return;
+  }
 
   try {
-    // Collect via SSH
     const rawOutput = await collectL2CircuitsViaSsh(sshConfig);
-
-    // Parse
     const parsed = parseHuaweiL2Circuits(rawOutput);
-
-    // Normalize
     const normalized = normalizeCircuits(parsed);
+    const withFindings = enrichCircuitsWithFindings(normalized, deviceId);
+    const allFindings = resolveL2Findings(normalized, deviceId);
 
-    // Resolve findings
-    const allFindings = resolveL2Findings(normalized);
-    const withFindings = attachFindingsToCircuits(normalized, allFindings);
-
-    // Insert circuits for this discovery run (MVP: no unique key for upsert yet)
     for (const circuit of withFindings) {
       await db.insert(l2CircuitsTable).values({
         deviceId,
         circuitType: circuit.circuitType,
+        serviceId: circuit.serviceId,
         name: circuit.name,
         vcId: circuit.vcId,
         vsiName: circuit.vsiName,
@@ -55,6 +78,12 @@ export async function discoverL2Circuits(deviceId: number, sshConfig: SSHConfig)
         pwStatus: circuit.pwStatus,
         macCount: circuit.macCount,
         description: circuit.description,
+        classification: circuit.classification,
+        l2Transport: circuit.l2Transport,
+        deviceRoleFamily: circuit.deviceRoleFamily,
+        evidenceFlags: circuit.evidenceFlags ?? {},
+        anomalyTags: circuit.anomalyTags ?? [],
+        roleContext: circuit.roleContext,
         findings: circuit.findings,
         rawEvidence: circuit.rawEvidence,
         discoveryRunId: runId,
@@ -64,71 +93,188 @@ export async function discoverL2Circuits(deviceId: number, sshConfig: SSHConfig)
       });
     }
 
-    // Update job to completed
-    const totalFindings = allFindings.length;
-    if (jobId) {
-      await db
-        .update(l2DiscoveryJobsTable)
-        .set({
-          status: "completed",
-          finishedAt: new Date(),
-          circuitCount: withFindings.length,
-          findingsCount: totalFindings,
-        })
-        .where(eq(l2DiscoveryJobsTable.id, jobId));
-    }
-
-    // Return response
-    return {
-      run_id: runId,
-      device_id: deviceId,
-      status: "completed",
-      started_at: now.toISOString(),
-      finished_at: new Date().toISOString(),
-      circuit_count: withFindings.length,
-      findings_count: totalFindings,
-      circuits: await getL2CircuitsByRunId(runId),
-    };
+    await db
+      .update(l2DiscoveryJobsTable)
+      .set({
+        status: "completed",
+        finishedAt: new Date(),
+        circuitCount: withFindings.length,
+        findingsCount: allFindings.length,
+      })
+      .where(eq(l2DiscoveryJobsTable.runId, runId));
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-
-    // Mark job as failed
-    if (jobId) {
-      await db
-        .update(l2DiscoveryJobsTable)
-        .set({
-          status: "failed",
-          finishedAt: new Date(),
-          errorMessage: errorMsg,
-        })
-        .where(eq(l2DiscoveryJobsTable.id, jobId));
-    }
-
+    await db
+      .update(l2DiscoveryJobsTable)
+      .set({
+        status: "failed",
+        finishedAt: new Date(),
+        errorMessage: errorMsg,
+      })
+      .where(eq(l2DiscoveryJobsTable.runId, runId));
     throw error;
   }
 }
 
+/** @deprecated Use startL2DiscoveryJob + runL2DiscoveryJob */
+export async function discoverL2Circuits(
+  deviceId: number,
+  sshConfig: SSHConfig,
+  runId: string,
+): Promise<L2DiscoveryJobResponse> {
+  await runL2DiscoveryJob(deviceId, runId, sshConfig);
+  const job = await getL2DiscoveryJob(runId);
+  const circuits = await getL2CircuitsByRunId(runId);
+
+  return {
+    run_id: runId,
+    device_id: deviceId,
+    status: job?.status ?? "failed",
+    started_at: job?.startedAt.toISOString() ?? new Date().toISOString(),
+    finished_at: job?.finishedAt?.toISOString() ?? null,
+    circuit_count: job?.circuitCount ?? circuits.length,
+    findings_count: job?.findingsCount ?? 0,
+    circuits,
+  };
+}
+
 export async function listL2Circuits(filter?: L2CircuitListFilter): Promise<L2Circuit[]> {
-  let results: any[] = [];
+  let results: (typeof l2CircuitsTable.$inferSelect)[] = [];
 
   if (filter?.deviceId) {
-    results = await (db.select() as any).from(l2CircuitsTable).where(eq(l2CircuitsTable.deviceId, filter.deviceId));
+    results = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.deviceId, filter.deviceId));
   } else if (filter?.circuitType) {
-    results = await (db.select() as any).from(l2CircuitsTable).where(eq(l2CircuitsTable.circuitType, filter.circuitType));
+    results = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.circuitType, filter.circuitType));
   } else if (filter?.vcId) {
-    results = await (db.select() as any).from(l2CircuitsTable).where(eq(l2CircuitsTable.vcId, filter.vcId));
+    results = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.vcId, filter.vcId));
   } else if (filter?.vsiName) {
-    results = await (db.select() as any).from(l2CircuitsTable).where(eq(l2CircuitsTable.vsiName, filter.vsiName));
+    results = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.vsiName, filter.vsiName));
   } else {
-    results = await (db.select() as any).from(l2CircuitsTable);
+    results = await db.select().from(l2CircuitsTable);
   }
 
-  return results.map(formatCircuit);
+  return rehydrateFindingsForRows(results).map(formatCircuit);
 }
 
 export async function getL2Circuit(id: number): Promise<L2Circuit | null> {
   const [result] = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.id, id));
-  return result ? formatCircuit(result) : null;
+  if (!result) return null;
+
+  const [rehydrated] = rehydrateFindingsForRows([result]);
+  return formatCircuit(rehydrated);
+}
+
+function inferDot1qView(row: typeof l2CircuitsTable.$inferSelect): {
+  classification?: string;
+  circuitType?: string;
+  l2Transport?: string;
+  roleContext?: string;
+} {
+  if (row.classification) {
+    return { classification: row.classification, circuitType: row.circuitType, l2Transport: row.l2Transport ?? undefined };
+  }
+
+  const dot1qTypes = new Set(["vlan_local", "vlan_orphan", "dot1q_subif", "vlan", "l3_interface", "l3_vrf_link"]);
+  if (!dot1qTypes.has(row.circuitType) || !row.localInterface) {
+    return {};
+  }
+
+  const flags = (row.evidenceFlags ?? {}) as L3EvidenceSnapshot & Record<string, boolean | undefined>;
+  if (hasL3ServiceEvidence(flags, row.rawEvidence)) {
+    const l3Flags: L3EvidenceSnapshot = {
+      ...flags,
+      hasDot1q: flags.hasDot1q ?? row.outerVlan != null,
+    };
+    const classification = flags.hasVrf ? "l3_vrf_link" : "l3_interface";
+    return {
+      classification,
+      circuitType: classification,
+      l2Transport: "l3",
+      roleContext: buildL3RoleContext(l3Flags),
+    };
+  }
+
+  const hasBinding =
+    flags.hasBridge ||
+    flags.hasL2Binding ||
+    flags.hasVeGroup ||
+    flags.hasVcId ||
+    flags.hasVsi ||
+    flags.hasSwitchingUse ||
+    flags.hasMac;
+  const hasDescription = Boolean(row.description?.trim()) || Boolean(flags.hasDescription);
+
+  if (!hasBinding && !hasDescription) {
+    return { classification: "vlan_orphan", circuitType: "vlan_orphan", l2Transport: "none" };
+  }
+
+  return {};
+}
+
+function rowToNormalized(row: typeof l2CircuitsTable.$inferSelect): NormalizedL2Circuit {
+  const inferred = inferDot1qView(row);
+  const circuitType = (inferred.circuitType ?? row.circuitType) as NormalizedL2Circuit["circuitType"];
+  const classification = (inferred.classification ?? row.classification ?? undefined) as NormalizedL2Circuit["classification"];
+
+  return {
+    circuitType,
+    serviceId: row.serviceId ?? undefined,
+    name: row.name,
+    description: row.description ?? undefined,
+    outerVlan: row.outerVlan ?? undefined,
+    innerVlan: row.innerVlan ?? undefined,
+    vcId: row.vcId ?? undefined,
+    vsiName: row.vsiName ?? undefined,
+    vsiId: row.vsiId ?? undefined,
+    localInterface: row.localInterface ?? undefined,
+    parentInterface: row.parentInterface ?? undefined,
+    peerIp: row.peerIp ?? undefined,
+    adminStatus: (row.adminStatus ?? "UNKNOWN") as NormalizedL2Circuit["adminStatus"],
+    operStatus: (row.operStatus ?? "UNKNOWN") as NormalizedL2Circuit["operStatus"],
+    pwStatus: row.pwStatus ?? undefined,
+    macCount: row.macCount ?? undefined,
+    rawEvidence: row.rawEvidence ?? "",
+    classification,
+    l2Transport: (inferred.l2Transport ?? row.l2Transport ?? undefined) as NormalizedL2Circuit["l2Transport"],
+    deviceRoleFamily: (row.deviceRoleFamily ?? undefined) as NormalizedL2Circuit["deviceRoleFamily"],
+    evidenceFlags: (row.evidenceFlags ?? {}) as NormalizedL2Circuit["evidenceFlags"],
+    anomalyTags: (row.anomalyTags as string[] | null) ?? undefined,
+    roleContext: inferred.roleContext ?? row.roleContext ?? undefined,
+    findings: [],
+  };
+}
+
+function rehydrateFindingsForRows(rows: (typeof l2CircuitsTable.$inferSelect)[]): (typeof l2CircuitsTable.$inferSelect)[] {
+  if (rows.length === 0) return rows;
+
+  const byDevice = new Map<number, typeof rows>();
+  for (const row of rows) {
+    const list = byDevice.get(row.deviceId) ?? [];
+    list.push(row);
+    byDevice.set(row.deviceId, list);
+  }
+
+  const findingsByRowId = new Map<number, NormalizedL2Circuit["findings"]>();
+
+  for (const [deviceId, deviceRows] of byDevice.entries()) {
+    const normalized = deviceRows.map(rowToNormalized);
+    const enriched = enrichCircuitsWithFindings(normalized, deviceId);
+    for (let i = 0; i < deviceRows.length; i++) {
+      findingsByRowId.set(deviceRows[i].id, enriched[i]?.findings ?? []);
+    }
+  }
+
+  return rows.map((row) => {
+    const inferred = inferDot1qView(row);
+    return {
+      ...row,
+      circuitType: inferred.circuitType ?? row.circuitType,
+      classification: inferred.classification ?? row.classification,
+      l2Transport: inferred.l2Transport ?? row.l2Transport,
+      roleContext: inferred.roleContext ?? row.roleContext,
+      findings: findingsByRowId.get(row.id) ?? row.findings,
+    };
+  });
 }
 
 export async function getL2DiscoveryJob(runId: string): Promise<L2DiscoveryJob | null> {
@@ -143,7 +289,7 @@ export async function getL2DiscoveryJob(runId: string): Promise<L2DiscoveryJob |
     id: row.id,
     runId: row.runId,
     deviceId: row.deviceId,
-    status: row.status as any,
+    status: row.status as L2DiscoveryJob["status"],
     startedAt: row.startedAt,
     finishedAt: row.finishedAt,
     circuitCount: row.circuitCount,
@@ -158,14 +304,14 @@ export async function getL2CircuitsByRunId(runId: string): Promise<L2Circuit[]> 
     .select()
     .from(l2CircuitsTable)
     .where(eq(l2CircuitsTable.discoveryRunId, runId));
-  return results.map(formatCircuit);
+  return rehydrateFindingsForRows(results).map(formatCircuit);
 }
 
 function formatCircuit(row: typeof l2CircuitsTable.$inferSelect): L2Circuit {
   return {
     id: row.id,
     deviceId: row.deviceId,
-    circuitType: row.circuitType as any,
+    circuitType: row.circuitType as L2Circuit["circuitType"],
     serviceId: row.serviceId,
     name: row.name,
     description: row.description,
@@ -177,13 +323,19 @@ function formatCircuit(row: typeof l2CircuitsTable.$inferSelect): L2Circuit {
     localInterface: row.localInterface,
     parentInterface: row.parentInterface,
     peerIp: row.peerIp,
-    adminStatus: row.adminStatus as any,
-    operStatus: row.operStatus as any,
+    adminStatus: row.adminStatus as L2Circuit["adminStatus"],
+    operStatus: row.operStatus as L2Circuit["operStatus"],
     pwStatus: row.pwStatus,
     macCount: row.macCount,
-    source: row.source as any,
+    source: row.source as L2Circuit["source"],
     rawEvidence: row.rawEvidence,
-    findings: (row.findings || []) as any,
+    classification: row.classification,
+    l2Transport: row.l2Transport,
+    deviceRoleFamily: row.deviceRoleFamily,
+    evidenceFlags: row.evidenceFlags,
+    anomalyTags: row.anomalyTags as string[] | null,
+    roleContext: row.roleContext,
+    findings: (row.findings || []) as L2Circuit["findings"],
     firstSeen: row.firstSeen,
     lastSeen: row.lastSeen,
     discoveryRunId: row.discoveryRunId,

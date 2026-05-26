@@ -9,6 +9,8 @@ export interface SnmpCollectedInterface {
   type: number | null;
   mtu: number | null;
   speed: number | null;
+  highSpeedMbps: number | null;
+  lastChangeTicks: number | null;
   mac: string | null;
   inOctets: number | null;
   outOctets: number | null;

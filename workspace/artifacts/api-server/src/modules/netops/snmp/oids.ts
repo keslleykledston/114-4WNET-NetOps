@@ -11,6 +11,7 @@ export const SNMP_OIDS = {
   ifName: "1.3.6.1.2.1.31.1.1.1.1",
   ifHCInOctets: "1.3.6.1.2.1.31.1.1.1.6",
   ifHCOutOctets: "1.3.6.1.2.1.31.1.1.1.10",
+  ifHighSpeed: "1.3.6.1.2.1.31.1.1.1.15",
   ifAlias: "1.3.6.1.2.1.31.1.1.1.18",
   bgpPeerState: "1.3.6.1.2.1.15.3.1.2",
   bgpPeerRemoteAddr: "1.3.6.1.2.1.15.3.1.7",

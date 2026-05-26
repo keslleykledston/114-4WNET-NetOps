@@ -18,6 +18,64 @@ export function isNetopsSnmpRealEnabled(): boolean {
   return process.env["NETOPS_SNMP_REAL_ENABLED"]?.trim().toLowerCase() === "true";
 }
 
+export function getSnmpFastSessionOptions(): { timeout: number; retries: number } {
+  const timeout = Number(process.env["SNMP_FAST_TIMEOUT_MS"] ?? 10000);
+  const retries = Number(process.env["SNMP_FAST_RETRIES"] ?? 2);
+  return {
+    timeout: Number.isFinite(timeout) && timeout > 0 ? timeout : 10000,
+    retries: Number.isFinite(retries) && retries >= 0 ? retries : 2,
+  };
+}
+
+/** IF-MIB only — no BGP walks (SNMP_FAST H2). */
+export async function collectSnmpInterfacesOnly(
+  device: Device,
+  community: string,
+): Promise<{
+  success: boolean;
+  errorMessage: string | null;
+  errors: string[];
+  warnings: string[];
+  interfaces: SnmpCollectedInterface[];
+  collectedAt: string;
+  source: "snmp";
+}> {
+  const collectedAt = new Date().toISOString();
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const sessionOpts = getSnmpFastSessionOptions();
+  const session = createSnmpSession(device.ipAddress, community, sessionOpts);
+
+  try {
+    const { interfaces, ifMibDiagnostics } = await collectInterfaces(session, errors, warnings);
+    if (interfaces.length === 0 && Object.values(ifMibDiagnostics).some((d) => d.status !== "ok" && d.status !== "empty")) {
+      warnings.push("IF-MIB incomplete. Check SNMP view for 1.3.6.1.2.1.2 and 1.3.6.1.2.1.31 OID access.");
+    }
+    return {
+      success: errors.length === 0,
+      errorMessage: errors.length > 0 ? errors.join("; ") : null,
+      errors,
+      warnings,
+      interfaces,
+      collectedAt,
+      source: "snmp",
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "SNMP interface collection failed";
+    return {
+      success: false,
+      errorMessage: message,
+      errors: [message],
+      warnings: [],
+      interfaces: [],
+      collectedAt,
+      source: "snmp",
+    };
+  } finally {
+    session.close();
+  }
+}
+
 export async function collectSnmpReadonly(device: Device, community: string): Promise<SnmpReadonlyCollectPayload> {
   const collectedAt = new Date().toISOString();
   const errors: string[] = [];
@@ -72,14 +130,12 @@ async function collectInterfaces(
 
   try {
     const descrResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifDescr);
-    console.log(`[IF-MIB-DEBUG] ifDescr: status=${descrResult.status} count=${descrResult.count} error=${descrResult.error?.message ?? "none"}`);
     ifMibDiagnostics.ifDescr = { oid: descrResult.oid, status: descrResult.status, count: descrResult.count };
     if (descrResult.error) {
       warnings.push(`ifDescr (1.3.6.1.2.1.2.2.1.2) failed: ${descrResult.error.message}`);
     }
 
     const ifNameResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifName);
-    console.log(`[IF-MIB-DEBUG] ifName: status=${ifNameResult.status} count=${ifNameResult.count} error=${ifNameResult.error?.message ?? "none"}`);
     ifMibDiagnostics.ifName = { oid: ifNameResult.oid, status: ifNameResult.status, count: ifNameResult.count };
     if (ifNameResult.error) {
       warnings.push(`ifName (1.3.6.1.2.1.31.1.1.1.1) failed: ${ifNameResult.error.message}`);
@@ -112,6 +168,12 @@ async function collectInterfaces(
     const outOctetsResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifHCOutOctets);
     ifMibDiagnostics.ifHCOutOctets = { oid: outOctetsResult.oid, status: outOctetsResult.status, count: outOctetsResult.count };
 
+    const lastChangeResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifLastChange);
+    ifMibDiagnostics.ifLastChange = { oid: lastChangeResult.oid, status: lastChangeResult.status, count: lastChangeResult.count };
+
+    const highSpeedResult = await snmpWalkWithDiagnostics(session, SNMP_OIDS.ifHighSpeed);
+    ifMibDiagnostics.ifHighSpeed = { oid: highSpeedResult.oid, status: highSpeedResult.status, count: highSpeedResult.count };
+
     const indexes = new Set<string>([
       ...Object.keys(descrResult.rows),
       ...Object.keys(ifNameResult.rows),
@@ -132,6 +194,13 @@ async function collectInterfaces(
         const description = ifAlias || rawDescr || null;
         const adminCode = toSnmpNumber(adminResult.rows[index]);
         const operCode = toSnmpNumber(operResult.rows[index]);
+        const speedBps = toSnmpNumber(speedResult.rows[index]);
+        const highSpeedRaw = toSnmpNumber(highSpeedResult.rows[index]);
+        const highSpeedMbps = highSpeedRaw != null && highSpeedRaw > 0
+          ? highSpeedRaw
+          : speedBps != null && speedBps > 0
+            ? Math.round(speedBps / 1_000_000)
+            : null;
 
         return {
           ifIndex: Number.isFinite(ifIndex) ? ifIndex : Number(index) || 0,
@@ -143,7 +212,9 @@ async function collectInterfaces(
           operStatus: IF_OPER_STATUS[String(operCode ?? "")] ?? "unknown",
           type: toSnmpNumber(typeResult.rows[index]),
           mtu: toSnmpNumber(mtuResult.rows[index]),
-          speed: toSnmpNumber(speedResult.rows[index]),
+          speed: speedBps,
+          highSpeedMbps,
+          lastChangeTicks: toSnmpNumber(lastChangeResult.rows[index]),
           mac: decodeSnmpMac(macResult.rows[index]),
           inOctets: toSnmpNumber(inOctetsResult.rows[index]),
           outOctets: toSnmpNumber(outOctetsResult.rows[index]),

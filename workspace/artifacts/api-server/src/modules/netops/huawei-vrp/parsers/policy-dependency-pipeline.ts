@@ -95,6 +95,8 @@ export interface ParsedPolicyDependencyConfig {
     route_policies: CatalogStatus;
   };
   bgp_peer_model?: ParsedHuaweiBgpPeerDependencyModel;
+  /** Where dependency catalogs were built from — raw_config is primary. */
+  configBuildSource?: "raw_config" | "parsed_config_cache" | "snapshot_aggregate";
 }
 
 const emptyCatalogs = (): ParsedPolicyDependencyConfig["catalogs"] => ({
@@ -348,7 +350,19 @@ export function parseHuaweiPolicyDependencyPipeline(configText: string, source: 
   return config;
 }
 
-export function buildPolicyDependencyConfigFromSnapshot(snapshot: DeviceDiscoverySnapshot): ParsedPolicyDependencyConfig {
+export function buildPolicyDependencyConfigFromSnapshot(
+  snapshot: DeviceDiscoverySnapshot,
+  options?: { rawConfig?: string },
+): ParsedPolicyDependencyConfig {
+  const rawConfig = options?.rawConfig?.trim() ?? "";
+  if (rawConfig.length > 0) {
+    const source = snapshot.sourcesUsed?.[0] ?? "ssh_running_config";
+    return {
+      ...parseHuaweiPolicyDependencyPipeline(rawConfig, source),
+      configBuildSource: "raw_config",
+    };
+  }
+
   const existing = (snapshot as unknown as { parsed_config?: ParsedPolicyDependencyConfig; parsedConfig?: ParsedPolicyDependencyConfig }).parsed_config
     ?? (snapshot as unknown as { parsedConfig?: ParsedPolicyDependencyConfig }).parsedConfig;
   if (existing?.catalogs && existing?.consumers && existing?.dependency_graph && existing?.catalog_status) {
@@ -369,6 +383,7 @@ export function buildPolicyDependencyConfigFromSnapshot(snapshot: DeviceDiscover
         ...existing.dependency_graph,
         bgp_policy_bindings: bgpBindings,
       },
+      configBuildSource: "parsed_config_cache",
     };
   }
 
@@ -472,7 +487,7 @@ export function buildPolicyDependencyConfigFromSnapshot(snapshot: DeviceDiscover
   } else {
     config.dependency_graph.bgp_policy_bindings = buildBgpPolicyBindings(config, snapshot.bgpPeers ?? [], snapshot.policies ?? []);
   }
-  return config;
+  return { ...config, configBuildSource: "snapshot_aggregate" };
 }
 
 export function resolveRoutePolicyDependency(config: ParsedPolicyDependencyConfig, dep: RoutePolicyDependency): RoutePolicyDependency {

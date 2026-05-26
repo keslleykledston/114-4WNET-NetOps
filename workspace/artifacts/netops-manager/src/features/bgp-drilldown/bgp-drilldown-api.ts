@@ -1,5 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { BgpPeerDrilldownHistoryResponse, BgpPeerDrilldownResult, BgpPeerSshDetailResult } from "./types";
+import type {
+  BgpPeerDrilldownHistoryCompareResponse,
+  BgpPeerDrilldownHistoryResponse,
+  BgpPeerDrilldownResult,
+  BgpPeerSshDetailResult,
+} from "./types";
 
 export interface BgpPeerDrilldownParams {
   deviceId: number;
@@ -9,6 +14,7 @@ export interface BgpPeerDrilldownParams {
   includePolicyObjects?: boolean;
   snapshotId?: number;
   jobId?: number;
+  forceRecompute?: boolean;
   enabled?: boolean;
 }
 
@@ -19,6 +25,7 @@ function drilldownPath(deviceId: number, peer: string, params: BgpPeerDrilldownP
   q.set("include_policy_objects", params.includePolicyObjects === false ? "false" : "true");
   if (params.snapshotId) q.set("snapshot_id", String(params.snapshotId));
   if (params.jobId) q.set("job_id", String(params.jobId));
+  if (params.forceRecompute) q.set("force_recompute", "true");
   return `/api/bgp/peers/${deviceId}/${encodeURIComponent(peer)}/drilldown?${q.toString()}`;
 }
 
@@ -43,6 +50,7 @@ export function bgpPeerDrilldownQueryKey(params: BgpPeerDrilldownParams) {
     params.jobId ?? null,
     params.includePolicies !== false,
     params.includePolicyObjects !== false,
+    params.forceRecompute === true,
   ] as const;
 }
 
@@ -84,6 +92,43 @@ export function useBgpPeerDrilldownHistory(params: BgpPeerDrilldownHistoryParams
     queryFn: () => fetchBgpPeerDrilldownHistory(params),
     enabled,
     staleTime: 30_000,
+  });
+}
+
+export interface BgpPeerDrilldownHistoryCompareParams {
+  deviceId: number;
+  peer: string;
+  leftId: number;
+  rightId: number;
+  enabled?: boolean;
+}
+
+async function fetchBgpPeerDrilldownHistoryCompare(
+  params: BgpPeerDrilldownHistoryCompareParams,
+): Promise<BgpPeerDrilldownHistoryCompareResponse> {
+  const q = new URLSearchParams({
+    left: String(params.leftId),
+    right: String(params.rightId),
+  });
+  const res = await fetch(
+    `/api/bgp/peers/${params.deviceId}/${encodeURIComponent(params.peer)}/drilldown/history/compare?${q.toString()}`,
+    { credentials: "include" },
+  );
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `History compare failed (${res.status})`);
+  }
+  return res.json() as Promise<BgpPeerDrilldownHistoryCompareResponse>;
+}
+
+export function useBgpPeerDrilldownHistoryCompare(params: BgpPeerDrilldownHistoryCompareParams) {
+  const enabled = (params.enabled ?? true) && params.deviceId > 0 && params.peer.trim().length > 0
+    && params.leftId > 0 && params.rightId > 0 && params.leftId !== params.rightId;
+  return useQuery({
+    queryKey: ["bgp-peer-drilldown-history-compare", params.deviceId, params.peer, params.leftId, params.rightId],
+    queryFn: () => fetchBgpPeerDrilldownHistoryCompare(params),
+    enabled,
+    staleTime: 60_000,
   });
 }
 

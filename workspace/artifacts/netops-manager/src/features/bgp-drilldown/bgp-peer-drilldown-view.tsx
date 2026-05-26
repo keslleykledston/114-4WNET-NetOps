@@ -11,6 +11,7 @@ import {
   DependencyStatusBadge,
   PolicySourceBadge,
 } from "./bgp-drilldown-badges";
+import { BgpDrilldownCacheStatusBanner } from "./bgp-drilldown-cache-ux";
 import { BgpPolicyTree } from "./bgp-policy-tree";
 
 interface BgpPeerDrilldownViewProps {
@@ -65,6 +66,21 @@ export function BgpPeerDrilldownView({ data, loading, error }: BgpPeerDrilldownV
     );
   }
 
+  if (data.configBuildSource === "unknown" && data.rawEvidenceRefs.length === 0) {
+    return (
+      <div className="space-y-4">
+        <BgpPeerDrilldownSafetyBanner />
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Snapshot sem raw_config utilizável</AlertTitle>
+          <AlertDescription>
+            Não há evidência raw_config suficiente para montar o drilldown completo a partir do snapshot salvo.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   const unknownDeps = data.dependencies.filter((d) => d.status === "UNKNOWN");
   const missingDeps = data.dependencies.filter((d) => d.status === "MISSING");
   const routeTables = [
@@ -76,6 +92,7 @@ export function BgpPeerDrilldownView({ data, loading, error }: BgpPeerDrilldownV
   return (
     <div className="space-y-4">
       <BgpPeerDrilldownSafetyBanner />
+      <BgpDrilldownCacheStatusBanner cache={data.cache} configBuildSource={data.configBuildSource} />
 
       {/* Resumo */}
       <Card>

@@ -15,8 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ArrowLeft, Shield, Terminal } from "lucide-react";
+import { Search, ArrowLeft, Shield, Terminal, RefreshCw } from "lucide-react";
 import {
+  BgpDrilldownHistoryPanel,
+  BgpDrilldownRecomputeNotice,
   BgpPeerDrilldownView,
   BgpPeerSshDetailError,
   useBgpPeerDrilldown,
@@ -39,6 +41,7 @@ export default function BgpPeerDrilldownPage() {
   const [deviceId, setDeviceId] = useState(initial.deviceId);
   const [peer, setPeer] = useState(initial.peer);
   const [submitted, setSubmitted] = useState<{ deviceId: number; peer: string } | null>(null);
+  const [forceRecompute, setForceRecompute] = useState(false);
   const [detailStatus, setDetailStatus] = useState<BgpPeerSshDetailStatus>("idle");
   const [detailDisabled, setDetailDisabled] = useState(false);
 
@@ -60,6 +63,7 @@ export default function BgpPeerDrilldownPage() {
     source: "snapshot",
     includePolicies: true,
     includePolicyObjects: true,
+    forceRecompute,
     enabled: Boolean(submitted),
   });
   const historyQuery = useBgpPeerDrilldownHistory({
@@ -80,6 +84,7 @@ export default function BgpPeerDrilldownPage() {
     const id = Number(deviceId);
     const peerVal = peer.trim();
     if (!id || !peerVal) return;
+    setForceRecompute(false);
     setSubmitted({ deviceId: id, peer: peerVal });
     setDetailStatus("idle");
     setDetailDisabled(false);
@@ -89,6 +94,17 @@ export default function BgpPeerDrilldownPage() {
     url.searchParams.set("peer", peerVal);
     window.history.replaceState({}, "", url.pathname + url.search);
   }
+
+  function handleRecomputeSnapshot() {
+    if (!submitted) return;
+    setForceRecompute(true);
+  }
+
+  useEffect(() => {
+    if (forceRecompute && !query.isFetching && query.data?.cache?.status === "recomputed") {
+      setForceRecompute(false);
+    }
+  }, [forceRecompute, query.isFetching, query.data?.cache?.status]);
 
   function handleSshDetail() {
     if (!submitted || detailDisabled) return;
@@ -159,8 +175,19 @@ export default function BgpPeerDrilldownPage() {
             <Search className="h-4 w-4 mr-2" />
             Consultar
           </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleRecomputeSnapshot}
+            disabled={!submitted || query.isFetching}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Recalcular snapshot
+          </Button>
         </CardContent>
       </Card>
+
+      {submitted ? <BgpDrilldownRecomputeNotice /> : null}
 
       <Card>
         <CardHeader>
@@ -232,53 +259,14 @@ export default function BgpPeerDrilldownPage() {
           />
         </TabsContent>
         <TabsContent value="history" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Histórico</CardTitle>
-              <CardDescription>Resultados persistidos do drilldown. Cache read-only; não substitui snapshot original.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {!submitted ? (
-                <p className="text-sm text-muted-foreground">Consulte um peer para carregar histórico.</p>
-              ) : historyQuery.isFetching ? (
-                <p className="text-sm text-muted-foreground">Carregando histórico...</p>
-              ) : historyQuery.error ? (
-                <Alert variant="destructive">
-                  <AlertTitle>Erro ao carregar histórico</AlertTitle>
-                  <AlertDescription>{historyQuery.error.message}</AlertDescription>
-                </Alert>
-              ) : historyQuery.data?.items.length ? (
-                <div className="overflow-x-auto rounded-md border border-border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/40 text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-medium">Collected</th>
-                        <th className="px-3 py-2 text-left font-medium">Source</th>
-                        <th className="px-3 py-2 text-left font-medium">Config source</th>
-                        <th className="px-3 py-2 text-left font-medium">Warnings</th>
-                        <th className="px-3 py-2 text-left font-medium">Expires</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {historyQuery.data.items.map((item) => (
-                        <tr key={item.id} className="border-t border-border">
-                          <td className="px-3 py-2 font-mono text-xs">{new Date(item.collectedAt).toLocaleString()}</td>
-                          <td className="px-3 py-2"><Badge variant="outline">{item.source}</Badge></td>
-                          <td className="px-3 py-2"><Badge variant="outline">{item.configBuildSource}</Badge></td>
-                          <td className="px-3 py-2 text-xs text-muted-foreground">
-                            {item.warnings.length ? item.warnings.join("; ") : "sem warnings"}
-                          </td>
-                          <td className="px-3 py-2 font-mono text-xs">{new Date(item.expiresAt).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Sem histórico persistido para este peer.</p>
-              )}
-            </CardContent>
-          </Card>
+          <BgpDrilldownHistoryPanel
+            deviceId={submitted?.deviceId ?? 0}
+            peer={submitted?.peer ?? ""}
+            items={historyQuery.data?.items}
+            loading={historyQuery.isFetching && Boolean(submitted)}
+            error={historyQuery.error}
+            hasSubmitted={Boolean(submitted)}
+          />
         </TabsContent>
       </Tabs>
     </div>

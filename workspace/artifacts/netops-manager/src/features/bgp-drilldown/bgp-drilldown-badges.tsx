@@ -85,3 +85,36 @@ export function ConfigSourceBadge({ source }: { source: string }) {
     </Badge>
   );
 }
+
+export function cacheStatusClass(status: string) {
+  switch (status) {
+    case "fresh":
+      return "bg-green-500/10 text-green-300 border-green-500/20";
+    case "stale":
+      return "bg-amber-500/10 text-amber-300 border-amber-500/20";
+    case "expired":
+      return "bg-orange-500/10 text-orange-300 border-orange-500/20";
+    case "miss":
+      return "bg-sky-500/10 text-sky-300 border-sky-500/20";
+    case "recomputed":
+      return "bg-cyan-500/10 text-cyan-300 border-cyan-500/20";
+    default:
+      return "bg-slate-500/10 text-slate-300 border-slate-500/20";
+  }
+}
+
+export function CacheStatusBadge({ status }: { status: string }) {
+  return (
+    <Badge variant="outline" className={cn("font-mono text-[10px]", cacheStatusClass(status))}>
+      cache {status}
+    </Badge>
+  );
+}
+
+export function HistoryFreshnessBadge({ status }: { status: string }) {
+  return (
+    <Badge variant="outline" className={cn("font-mono text-[10px]", cacheStatusClass(status))}>
+      {status}
+    </Badge>
+  );
+}

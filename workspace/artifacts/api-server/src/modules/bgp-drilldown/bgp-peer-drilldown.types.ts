@@ -8,12 +8,23 @@ export type DrilldownSource = "local_db" | "ssh_full_config" | "snmp" | "ssh_det
 
 export type BgpPeerRootStatus = "FOUND" | "MISSING";
 
+export type BgpPeerDrilldownCacheStatus = "fresh" | "expired" | "miss" | "recomputed";
+
+export interface BgpPeerDrilldownCacheMeta {
+  status: BgpPeerDrilldownCacheStatus;
+  servedFromCache: boolean;
+  rowId: number | null;
+  expiresAt: string | null;
+  configBuildSource: ConfigBuildSource | "unknown";
+}
+
 export interface BgpPeerDrilldownQuery {
   source?: "snapshot";
   includePolicies?: boolean;
   includePolicyObjects?: boolean;
   snapshotId?: number;
   jobId?: number;
+  forceRecompute?: boolean;
 }
 
 export interface BgpPeerRootConfig {
@@ -139,6 +150,7 @@ export interface BgpPeerDrilldownResult {
   routeTables: BgpPeerRouteTableSummary;
   warnings: string[];
   rawEvidenceRefs: RawEvidenceRef[];
+  cache?: BgpPeerDrilldownCacheMeta;
 }
 
 export const EMPTY_ROUTE_TABLES: BgpPeerRouteTableSummary = {

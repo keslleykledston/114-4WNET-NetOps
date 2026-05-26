@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requirePermission } from "../../lib/auth.js";
 import {
   getBgpPeerDrilldownHandler,
+  getBgpPeerDrilldownHistoryCompareHandler,
   getBgpPeerDrilldownHistoryHandler,
   postBgpPeerDrilldownDetailHandler,
 } from "./bgp-peer-drilldown.controller.js";
@@ -12,6 +13,12 @@ router.get(
   "/bgp/peers/:deviceId/:peer/drilldown",
   requirePermission("devices.read"),
   getBgpPeerDrilldownHandler,
+);
+
+router.get(
+  "/bgp/peers/:deviceId/:peer/drilldown/history/compare",
+  requirePermission("devices.read"),
+  getBgpPeerDrilldownHistoryCompareHandler,
 );
 
 router.get(

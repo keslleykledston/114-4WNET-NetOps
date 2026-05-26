@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import type { BgpPeerDrilldownQuery } from "./bgp-peer-drilldown.types.js";
-import { getBgpPeerDrilldown, getBgpPeerDrilldownHistory } from "./bgp-peer-drilldown.service.js";
+import { parseDrilldownQueryParams } from "./bgp-peer-drilldown-query.js";
+import { getBgpPeerDrilldown, getBgpPeerDrilldownHistory, compareBgpPeerDrilldownHistory } from "./bgp-peer-drilldown.service.js";
 import { parseSshDetailRequest } from "./bgp-peer-drilldown-ssh-detail.js";
 import { BGP_DRILLDOWN_SSH_DETAIL_DISABLED, getBgpPeerSshDetail } from "./bgp-peer-drilldown-ssh-detail.service.js";
 
@@ -21,43 +22,19 @@ function parsePeer(value: unknown): string | null {
   return decoded;
 }
 
-function parseBool(value: unknown, defaultValue: boolean): boolean {
-  if (value === undefined || value === null || value === "") return defaultValue;
-  const raw = String(value).toLowerCase();
-  if (raw === "true" || raw === "1") return true;
-  if (raw === "false" || raw === "0") return false;
-  return defaultValue;
-}
-
-function parseOptionalId(value: unknown): number | undefined {
-  if (value === undefined || value === null || value === "") return undefined;
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
-}
-
 function parseLimit(value: unknown): number {
   const parsed = Number(queryOne(value));
   return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, 100) : 20;
 }
 
+function parseOptionalId(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const parsed = Number(queryOne(value));
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 export function buildDrilldownQuery(req: Request): BgpPeerDrilldownQuery | "invalid_source" | "invalid_id" {
-  const source = req.query.source === undefined ? "snapshot" : String(req.query.source);
-  if (source !== "snapshot") return "invalid_source";
-
-  const snapshotId = parseOptionalId(req.query.snapshot_id ?? req.query.snapshotId);
-  const jobId = parseOptionalId(req.query.job_id ?? req.query.jobId);
-  if (
-    (req.query.snapshot_id !== undefined || req.query.snapshotId !== undefined) && snapshotId === undefined
-  ) return "invalid_id";
-  if ((req.query.job_id !== undefined || req.query.jobId !== undefined) && jobId === undefined) return "invalid_id";
-
-  return {
-    source: "snapshot",
-    includePolicies: parseBool(req.query.include_policies ?? req.query.includePolicies, true),
-    includePolicyObjects: parseBool(req.query.include_policy_objects ?? req.query.includePolicyObjects, true),
-    snapshotId,
-    jobId,
-  };
+  return parseDrilldownQueryParams(req.query as Record<string, unknown>);
 }
 
 export async function getBgpPeerDrilldownHandler(req: Request, res: Response): Promise<void> {
@@ -114,6 +91,42 @@ export async function getBgpPeerDrilldownHistoryHandler(req: Request, res: Respo
   }
 
   res.json({ deviceId, peer, items: result });
+}
+
+export async function getBgpPeerDrilldownHistoryCompareHandler(req: Request, res: Response): Promise<void> {
+  const deviceId = parseDeviceId(req.params.deviceId as unknown);
+  const peer = parsePeer(req.params.peer as unknown);
+  if (!deviceId) {
+    res.status(400).json({ error: "Invalid device ID" });
+    return;
+  }
+  if (!peer) {
+    res.status(400).json({ error: "Invalid peer address or name" });
+    return;
+  }
+
+  const leftId = parseOptionalId(req.query.left ?? req.query.left_id ?? req.query.leftId);
+  const rightId = parseOptionalId(req.query.right ?? req.query.right_id ?? req.query.rightId);
+  if (!leftId || !rightId) {
+    res.status(400).json({ error: "Query params left and right (snapshot row ids) are required" });
+    return;
+  }
+
+  const result = await compareBgpPeerDrilldownHistory(deviceId, peer, leftId, rightId);
+  if (result === "device_not_found") {
+    res.status(404).json({ error: "Device not found" });
+    return;
+  }
+  if (result === "same_snapshot") {
+    res.status(400).json({ error: "left and right must be different snapshot ids" });
+    return;
+  }
+  if (result === "snapshot_not_found") {
+    res.status(404).json({ error: "One or both history snapshots not found for this peer" });
+    return;
+  }
+
+  res.json({ deviceId, peer, compare: result });
 }
 
 export async function postBgpPeerDrilldownDetailHandler(req: Request, res: Response): Promise<void> {

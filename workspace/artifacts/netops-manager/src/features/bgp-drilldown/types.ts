@@ -11,6 +11,18 @@ export type BgpAfiSafi =
 
 export type ConfigBuildSource = "raw_config" | "parsed_config_cache" | "snapshot_aggregate" | "unknown";
 
+export type BgpPeerDrilldownCacheStatus = "fresh" | "expired" | "miss" | "recomputed";
+
+export type BgpPeerDrilldownHistoryFreshness = "fresh" | "stale" | "expired";
+
+export interface BgpPeerDrilldownCacheMeta {
+  status: BgpPeerDrilldownCacheStatus;
+  servedFromCache: boolean;
+  rowId: number | null;
+  expiresAt: string | null;
+  configBuildSource: ConfigBuildSource | string;
+}
+
 export interface BgpPeerDrilldownResult {
   contractVersion: string;
   deviceId: number;
@@ -97,6 +109,7 @@ export interface BgpPeerDrilldownResult {
     commandOrScope: string;
     collectedAt: string;
   }>;
+  cache?: BgpPeerDrilldownCacheMeta;
 }
 
 export type BgpPeerSshDetailStatus = "idle" | "disabled" | "running" | "completed" | "failed";
@@ -131,7 +144,25 @@ export interface BgpPeerDrilldownHistoryItem {
   collectedAt: string;
   expiresAt: string;
   warnings: string[];
+  warningsCount: number;
+  freshnessStatus: BgpPeerDrilldownHistoryFreshness;
   createdAt: string;
+}
+
+export interface BgpPeerDrilldownHistoryCompareResult {
+  left: { id: number; collectedAt: string; configBuildSource: string };
+  right: { id: number; collectedAt: string; configBuildSource: string };
+  importPolicyChanges: Array<{ afiSafi: string; vrf: string | null; left: string | null; right: string | null }>;
+  exportPolicyChanges: Array<{ afiSafi: string; vrf: string | null; left: string | null; right: string | null }>;
+  enabledFamilyChanges: Array<{ afiSafi: string; vrf: string | null; left: boolean; right: boolean }>;
+  warningsAdded: string[];
+  warningsRemoved: string[];
+}
+
+export interface BgpPeerDrilldownHistoryCompareResponse {
+  deviceId: number;
+  peer: string;
+  compare: BgpPeerDrilldownHistoryCompareResult;
 }
 
 export interface BgpPeerDrilldownHistoryResponse {

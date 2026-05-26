@@ -8,13 +8,21 @@ import {
 import type { DeviceDiscoverySnapshot } from "../netops/device-discovery/discovery.types.js";
 import {
   getFreshBgpPeerDrilldownSnapshot,
+  getBgpPeerDrilldownSnapshotById,
+  hasExpiredBgpPeerDrilldownSnapshot,
   listBgpPeerDrilldownHistory,
   persistBgpPeerDrilldownSnapshot,
 } from "./bgp-peer-drilldown-cache.js";
+import { compareBgpPeerDrilldownSnapshots } from "./bgp-peer-drilldown-comparison.js";
 import { buildBgpPeerDrilldownResult } from "./bgp-peer-drilldown.builder.js";
-import type { BgpPeerDrilldownQuery, BgpPeerDrilldownResult } from "./bgp-peer-drilldown.types.js";
+import type { BgpPeerDrilldownCacheMeta, BgpPeerDrilldownQuery, BgpPeerDrilldownResult } from "./bgp-peer-drilldown.types.js";
 
 export { buildBgpPeerDrilldownResult, resolvePeerKey } from "./bgp-peer-drilldown.builder.js";
+export { compareBgpPeerDrilldownSnapshots } from "./bgp-peer-drilldown-comparison.js";
+
+function attachCacheMeta(result: BgpPeerDrilldownResult, cache: BgpPeerDrilldownCacheMeta): BgpPeerDrilldownResult {
+  return { ...result, cache };
+}
 
 export async function getBgpPeerDrilldown(
   deviceId: number,
@@ -24,9 +32,19 @@ export async function getBgpPeerDrilldown(
   const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
   if (!device) return "device_not_found";
 
-  if (!query.snapshotId && !query.jobId && query.includePolicies !== false && query.includePolicyObjects !== false) {
+  const canUseCache = !query.snapshotId && !query.jobId && query.includePolicies !== false && query.includePolicyObjects !== false;
+
+  if (canUseCache && !query.forceRecompute) {
     const cached = await getFreshBgpPeerDrilldownSnapshot(deviceId, peer);
-    if (cached) return cached;
+    if (cached) {
+      return attachCacheMeta(cached.snapshot, {
+        status: "fresh",
+        servedFromCache: true,
+        rowId: cached.id,
+        expiresAt: cached.expiresAt.toISOString(),
+        configBuildSource: cached.snapshot.configBuildSource,
+      });
+    }
   }
 
   let snapshotRow;
@@ -99,12 +117,43 @@ export async function getBgpPeerDrilldown(
     query,
   });
 
+  const hadExpiredCache = canUseCache && !query.forceRecompute
+    ? await hasExpiredBgpPeerDrilldownSnapshot(deviceId, peer)
+    : false;
+
   await persistBgpPeerDrilldownSnapshot(result);
-  return result;
+
+  const cacheStatus = query.forceRecompute ? "recomputed" : hadExpiredCache ? "expired" : "miss";
+
+  return attachCacheMeta(result, {
+    status: cacheStatus,
+    servedFromCache: false,
+    rowId: null,
+    expiresAt: null,
+    configBuildSource: result.configBuildSource,
+  });
 }
 
 export async function getBgpPeerDrilldownHistory(deviceId: number, peer: string, limit?: number) {
   const [device] = await db.select({ id: devicesTable.id }).from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
   if (!device) return "device_not_found" as const;
   return listBgpPeerDrilldownHistory(deviceId, peer, limit);
+}
+
+export async function compareBgpPeerDrilldownHistory(
+  deviceId: number,
+  peer: string,
+  leftId: number,
+  rightId: number,
+) {
+  const [device] = await db.select({ id: devicesTable.id }).from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
+  if (!device) return "device_not_found" as const;
+  if (leftId === rightId) return "same_snapshot" as const;
+
+  const [left, right] = await Promise.all([
+    getBgpPeerDrilldownSnapshotById(deviceId, peer, leftId),
+    getBgpPeerDrilldownSnapshotById(deviceId, peer, rightId),
+  ]);
+  if (!left || !right) return "snapshot_not_found" as const;
+  return compareBgpPeerDrilldownSnapshots(leftId, rightId, left, right);
 }

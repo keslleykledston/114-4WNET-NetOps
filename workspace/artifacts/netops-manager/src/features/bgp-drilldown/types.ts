@@ -98,3 +98,25 @@ export interface BgpPeerDrilldownResult {
     collectedAt: string;
   }>;
 }
+
+export type BgpPeerSshDetailStatus = "idle" | "disabled" | "running" | "completed" | "failed";
+
+export interface BgpPeerSshDetailResult {
+  contractVersion: string;
+  deviceId: number;
+  peer: string;
+  source: "ssh_detail";
+  collectedAt: string;
+  requested: {
+    includePeerVerbose: boolean;
+    includeRoutePolicies: boolean;
+    includePolicyObjects: boolean;
+  };
+  commands: string[];
+  evidence: Array<{
+    command: string;
+    output: string;
+    error?: string;
+  }>;
+  warnings: string[];
+}

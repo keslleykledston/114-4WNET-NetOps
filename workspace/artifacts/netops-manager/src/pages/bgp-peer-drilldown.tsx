@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useListDevices } from "@workspace/api-client-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,8 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ArrowLeft } from "lucide-react";
-import { BgpPeerDrilldownView, useBgpPeerDrilldown } from "@/features/bgp-drilldown";
+import { Search, ArrowLeft, Shield, Terminal } from "lucide-react";
+import {
+  BgpPeerDrilldownView,
+  BgpPeerSshDetailError,
+  useBgpPeerDrilldown,
+  useBgpPeerSshDetail,
+} from "@/features/bgp-drilldown";
+import type { BgpPeerSshDetailStatus } from "@/features/bgp-drilldown/types";
 
 function readInitialQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -30,8 +37,11 @@ export default function BgpPeerDrilldownPage() {
   const [deviceId, setDeviceId] = useState(initial.deviceId);
   const [peer, setPeer] = useState(initial.peer);
   const [submitted, setSubmitted] = useState<{ deviceId: number; peer: string } | null>(null);
+  const [detailStatus, setDetailStatus] = useState<BgpPeerSshDetailStatus>("idle");
+  const [detailDisabled, setDetailDisabled] = useState(false);
 
   const { data: devices = [] } = useListDevices();
+  const detailMutation = useBgpPeerSshDetail();
 
   useEffect(() => {
     if (initial.auto && initial.deviceId && initial.peer) {
@@ -56,10 +66,29 @@ export default function BgpPeerDrilldownPage() {
     const peerVal = peer.trim();
     if (!id || !peerVal) return;
     setSubmitted({ deviceId: id, peer: peerVal });
+    setDetailStatus("idle");
+    setDetailDisabled(false);
+    detailMutation.reset();
     const url = new URL(window.location.href);
     url.searchParams.set("deviceId", String(id));
     url.searchParams.set("peer", peerVal);
     window.history.replaceState({}, "", url.pathname + url.search);
+  }
+
+  function handleSshDetail() {
+    if (!submitted || detailDisabled) return;
+    setDetailStatus("running");
+    detailMutation.mutate(submitted, {
+      onSuccess: () => setDetailStatus("completed"),
+      onError: (error) => {
+        if (error instanceof BgpPeerSshDetailError && error.code === "BGP_DRILLDOWN_SSH_DETAIL_DISABLED") {
+          setDetailDisabled(true);
+          setDetailStatus("disabled");
+          return;
+        }
+        setDetailStatus("failed");
+      },
+    });
   }
 
   return (
@@ -115,6 +144,63 @@ export default function BgpPeerDrilldownPage() {
             <Search className="h-4 w-4 mr-2" />
             Consultar
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Terminal className="h-4 w-4" />
+            SSH detail leve
+          </CardTitle>
+          <CardDescription>
+            Executa comandos read-only leves no equipamento. Não coleta rotas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert className="border-amber-500/30 bg-amber-500/5">
+            <Shield className="h-4 w-4 text-amber-400" />
+            <AlertTitle>Protegido por feature gate</AlertTitle>
+            <AlertDescription>
+              BGP_DRILLDOWN_SSH_DETAIL_ENABLED fica false por padrão. Com flag desativada, o backend retorna 503 antes de abrir SSH.
+            </AlertDescription>
+          </Alert>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSshDetail}
+              disabled={!submitted || detailStatus === "running" || detailDisabled}
+            >
+              <Terminal className="h-4 w-4 mr-2" />
+              {detailStatus === "running" ? "Atualizando..." : "Atualizar detalhe via SSH"}
+            </Button>
+            <Badge variant="outline" className="font-mono">
+              detail={detailStatus}
+            </Badge>
+          </div>
+          {detailMutation.error ? (
+            <p className="text-sm text-muted-foreground">
+              {detailMutation.error instanceof Error ? detailMutation.error.message : "Falha ao consultar SSH detail."}
+            </p>
+          ) : null}
+          {detailMutation.data ? (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">ssh_detail</Badge>
+                <Badge variant="outline">{new Date(detailMutation.data.collectedAt).toLocaleString()}</Badge>
+                <Badge variant="outline">{detailMutation.data.commands.length} comandos</Badge>
+              </div>
+              <div className="max-h-96 overflow-auto rounded-md border border-border bg-muted/20 p-3">
+                {detailMutation.data.evidence.map((item) => (
+                  <div key={item.command} className="mb-4">
+                    <div className="font-mono text-xs text-muted-foreground">{item.command}</div>
+                    <pre className="mt-1 whitespace-pre-wrap text-xs">{item.error ?? (item.output || "sem saída")}</pre>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 

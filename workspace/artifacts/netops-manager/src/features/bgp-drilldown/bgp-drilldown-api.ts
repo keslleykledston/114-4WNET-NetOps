@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import type { BgpPeerDrilldownResult } from "./types";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type { BgpPeerDrilldownResult, BgpPeerSshDetailResult } from "./types";
 
 export interface BgpPeerDrilldownParams {
   deviceId: number;
@@ -53,5 +53,46 @@ export function useBgpPeerDrilldown(params: BgpPeerDrilldownParams) {
     queryFn: () => fetchBgpPeerDrilldown(params),
     enabled,
     staleTime: 60_000,
+  });
+}
+
+export interface BgpPeerSshDetailParams {
+  deviceId: number;
+  peer: string;
+}
+
+export class BgpPeerSshDetailError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = "BgpPeerSshDetailError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+async function fetchBgpPeerSshDetail(params: BgpPeerSshDetailParams): Promise<BgpPeerSshDetailResult> {
+  const res = await fetch(`/api/bgp/peers/${params.deviceId}/${encodeURIComponent(params.peer)}/drilldown/detail`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      includePeerVerbose: true,
+      includeRoutePolicies: true,
+      includePolicyObjects: true,
+    }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    throw new BgpPeerSshDetailError(body.message ?? body.error ?? `SSH detail failed (${res.status})`, res.status, body.error);
+  }
+  return res.json() as Promise<BgpPeerSshDetailResult>;
+}
+
+export function useBgpPeerSshDetail() {
+  return useMutation({
+    mutationFn: fetchBgpPeerSshDetail,
   });
 }

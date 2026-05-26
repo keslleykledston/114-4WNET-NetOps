@@ -221,36 +221,47 @@ export async function testSSHConnection(config: SSHConfig): Promise<{ success: b
   });
 }
 
-export async function runSSHCommands(config: SSHConfig, commands: string[]): Promise<SSHCommandResult[]> {
+export async function runSSHCommands(
+  config: SSHConfig,
+  commands: string[],
+  options?: {
+    sessionTimeoutMs?: number;
+    setupTimeoutMs?: number;
+    commandTimeoutMs?: number;
+  },
+): Promise<SSHCommandResult[]> {
   return new Promise((resolve, reject) => {
     const conn = new Client();
     const results: SSHCommandResult[] = [];
     let resolved = false;
+    const sessionTimeoutMs = options?.sessionTimeoutMs ?? 600000;
+    const setupTimeoutMs = options?.setupTimeoutMs ?? 15000;
+    const commandTimeoutMs = options?.commandTimeoutMs ?? 300000;
 
-    // Timeout de 10min: large BGP route queries podem demorar 5-8min; running-config pode ser grande em NE8000 (60s+)
+    // Default 10min: large BGP route queries can take 5-8min; callers may pass lower timeouts for light read-only commands.
     const timeout = setTimeout(() => {
       if (!resolved) {
         resolved = true;
         conn.end();
-        reject(new Error("SSH session timed out after 10 minutes"));
+        reject(new Error(`SSH session timed out after ${sessionTimeoutMs}ms`));
       }
-    }, 600000);
+    }, sessionTimeoutMs);
 
     conn.on("ready", async () => {
       try {
         const shell = await openInteractiveShell(conn);
 
         await waitForShellPrompt(shell, {
-          timeoutMs: 15000,
+          timeoutMs: setupTimeoutMs,
           declinePasswordChange: true,
         });
 
         shell.write("screen-length 0 temporary\n");
-        await waitForShellPrompt(shell, { timeoutMs: 15000 });
+        await waitForShellPrompt(shell, { timeoutMs: setupTimeoutMs });
 
         for (const command of commands) {
           shell.write(`${command}\n`);
-          const rawOutput = await waitForShellPrompt(shell, { timeoutMs: 300000 });
+          const rawOutput = await waitForShellPrompt(shell, { timeoutMs: commandTimeoutMs });
           results.push({ command, output: parseShellCommandOutput(rawOutput, command) });
         }
 

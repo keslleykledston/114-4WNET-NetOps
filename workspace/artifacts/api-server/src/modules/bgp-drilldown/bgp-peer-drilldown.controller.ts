@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import type { BgpPeerDrilldownQuery } from "./bgp-peer-drilldown.types.js";
 import { getBgpPeerDrilldown } from "./bgp-peer-drilldown.service.js";
+import { parseSshDetailRequest } from "./bgp-peer-drilldown-ssh-detail.js";
+import { BGP_DRILLDOWN_SSH_DETAIL_DISABLED, getBgpPeerSshDetail } from "./bgp-peer-drilldown-ssh-detail.service.js";
 
 function queryOne(value: unknown): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -82,6 +84,48 @@ export async function getBgpPeerDrilldownHandler(req: Request, res: Response): P
   }
   if (result === "no_config") {
     res.status(422).json({ error: "No snapshot or collected config available for device" });
+    return;
+  }
+
+  res.json(result);
+}
+
+export async function postBgpPeerDrilldownDetailHandler(req: Request, res: Response): Promise<void> {
+  const deviceId = parseDeviceId(req.params.deviceId as unknown);
+  const peer = parsePeer(req.params.peer as unknown);
+  if (!deviceId) {
+    res.status(400).json({ error: "Invalid device ID" });
+    return;
+  }
+  if (!peer) {
+    res.status(400).json({ error: "Invalid peer address or name" });
+    return;
+  }
+
+  const body = parseSshDetailRequest(req.body);
+  if (!body) {
+    res.status(400).json({ error: "Invalid SSH detail request body" });
+    return;
+  }
+
+  const result = await getBgpPeerSshDetail(deviceId, peer, body);
+  if (result === "disabled") {
+    res.status(503).json({
+      error: BGP_DRILLDOWN_SSH_DETAIL_DISABLED,
+      message: "BGP SSH detail is disabled. Set BGP_DRILLDOWN_SSH_DETAIL_ENABLED=true to enable read-only light detail.",
+    });
+    return;
+  }
+  if (result === "device_not_found") {
+    res.status(404).json({ error: "Device not found" });
+    return;
+  }
+  if (result === "no_config") {
+    res.status(422).json({ error: "No snapshot or collected config available for device" });
+    return;
+  }
+  if (result === "no_commands") {
+    res.status(422).json({ error: "No allowed SSH detail commands for peer" });
     return;
   }
 

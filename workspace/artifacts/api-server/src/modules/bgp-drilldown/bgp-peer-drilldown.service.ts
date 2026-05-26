@@ -6,6 +6,11 @@ import {
   discoverySnapshotsTable,
 } from "@workspace/db";
 import type { DeviceDiscoverySnapshot } from "../netops/device-discovery/discovery.types.js";
+import {
+  getFreshBgpPeerDrilldownSnapshot,
+  listBgpPeerDrilldownHistory,
+  persistBgpPeerDrilldownSnapshot,
+} from "./bgp-peer-drilldown-cache.js";
 import { buildBgpPeerDrilldownResult } from "./bgp-peer-drilldown.builder.js";
 import type { BgpPeerDrilldownQuery, BgpPeerDrilldownResult } from "./bgp-peer-drilldown.types.js";
 
@@ -18,6 +23,11 @@ export async function getBgpPeerDrilldown(
 ): Promise<BgpPeerDrilldownResult | "device_not_found" | "no_config"> {
   const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
   if (!device) return "device_not_found";
+
+  if (!query.snapshotId && !query.jobId && query.includePolicies !== false && query.includePolicyObjects !== false) {
+    const cached = await getFreshBgpPeerDrilldownSnapshot(deviceId, peer);
+    if (cached) return cached;
+  }
 
   let snapshotRow;
   if (query.snapshotId) {
@@ -79,7 +89,7 @@ export async function getBgpPeerDrilldown(
 
   const collectedAt = collectedConfig?.collectedAt ?? snapshotRow?.createdAt ?? new Date();
 
-  return buildBgpPeerDrilldownResult({
+  const result = buildBgpPeerDrilldownResult({
     deviceId,
     peer,
     snapshot,
@@ -88,4 +98,13 @@ export async function getBgpPeerDrilldown(
     snapshotId: snapshotRow?.id ?? null,
     query,
   });
+
+  await persistBgpPeerDrilldownSnapshot(result);
+  return result;
+}
+
+export async function getBgpPeerDrilldownHistory(deviceId: number, peer: string, limit?: number) {
+  const [device] = await db.select({ id: devicesTable.id }).from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
+  if (!device) return "device_not_found" as const;
+  return listBgpPeerDrilldownHistory(deviceId, peer, limit);
 }

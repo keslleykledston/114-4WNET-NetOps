@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import type { BgpPeerDrilldownQuery } from "./bgp-peer-drilldown.types.js";
-import { getBgpPeerDrilldown } from "./bgp-peer-drilldown.service.js";
+import { getBgpPeerDrilldown, getBgpPeerDrilldownHistory } from "./bgp-peer-drilldown.service.js";
 import { parseSshDetailRequest } from "./bgp-peer-drilldown-ssh-detail.js";
 import { BGP_DRILLDOWN_SSH_DETAIL_DISABLED, getBgpPeerSshDetail } from "./bgp-peer-drilldown-ssh-detail.service.js";
 
@@ -33,6 +33,11 @@ function parseOptionalId(value: unknown): number | undefined {
   if (value === undefined || value === null || value === "") return undefined;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function parseLimit(value: unknown): number {
+  const parsed = Number(queryOne(value));
+  return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, 100) : 20;
 }
 
 export function buildDrilldownQuery(req: Request): BgpPeerDrilldownQuery | "invalid_source" | "invalid_id" {
@@ -88,6 +93,27 @@ export async function getBgpPeerDrilldownHandler(req: Request, res: Response): P
   }
 
   res.json(result);
+}
+
+export async function getBgpPeerDrilldownHistoryHandler(req: Request, res: Response): Promise<void> {
+  const deviceId = parseDeviceId(req.params.deviceId as unknown);
+  const peer = parsePeer(req.params.peer as unknown);
+  if (!deviceId) {
+    res.status(400).json({ error: "Invalid device ID" });
+    return;
+  }
+  if (!peer) {
+    res.status(400).json({ error: "Invalid peer address or name" });
+    return;
+  }
+
+  const result = await getBgpPeerDrilldownHistory(deviceId, peer, parseLimit(req.query.limit));
+  if (result === "device_not_found") {
+    res.status(404).json({ error: "Device not found" });
+    return;
+  }
+
+  res.json({ deviceId, peer, items: result });
 }
 
 export async function postBgpPeerDrilldownDetailHandler(req: Request, res: Response): Promise<void> {

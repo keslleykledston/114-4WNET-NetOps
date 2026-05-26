@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ import {
   BgpPeerDrilldownView,
   BgpPeerSshDetailError,
   useBgpPeerDrilldown,
+  useBgpPeerDrilldownHistory,
   useBgpPeerSshDetail,
 } from "@/features/bgp-drilldown";
 import type { BgpPeerSshDetailStatus } from "@/features/bgp-drilldown/types";
@@ -60,6 +62,19 @@ export default function BgpPeerDrilldownPage() {
     includePolicyObjects: true,
     enabled: Boolean(submitted),
   });
+  const historyQuery = useBgpPeerDrilldownHistory({
+    deviceId: submitted?.deviceId ?? 0,
+    peer: submitted?.peer ?? "",
+    enabled: Boolean(submitted),
+    limit: 20,
+  });
+  const refetchHistory = historyQuery.refetch;
+
+  useEffect(() => {
+    if (query.data) {
+      void refetchHistory();
+    }
+  }, [query.data?.collectedAt, refetchHistory]);
 
   function handleConsultar() {
     const id = Number(deviceId);
@@ -204,11 +219,68 @@ export default function BgpPeerDrilldownPage() {
         </CardContent>
       </Card>
 
-      <BgpPeerDrilldownView
-        data={query.data}
-        loading={query.isFetching && Boolean(submitted)}
-        error={query.error}
-      />
+      <Tabs defaultValue="drilldown" className="w-full">
+        <TabsList>
+          <TabsTrigger value="drilldown">Drilldown</TabsTrigger>
+          <TabsTrigger value="history">Histórico</TabsTrigger>
+        </TabsList>
+        <TabsContent value="drilldown" className="mt-4">
+          <BgpPeerDrilldownView
+            data={query.data}
+            loading={query.isFetching && Boolean(submitted)}
+            error={query.error}
+          />
+        </TabsContent>
+        <TabsContent value="history" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Histórico</CardTitle>
+              <CardDescription>Resultados persistidos do drilldown. Cache read-only; não substitui snapshot original.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!submitted ? (
+                <p className="text-sm text-muted-foreground">Consulte um peer para carregar histórico.</p>
+              ) : historyQuery.isFetching ? (
+                <p className="text-sm text-muted-foreground">Carregando histórico...</p>
+              ) : historyQuery.error ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Erro ao carregar histórico</AlertTitle>
+                  <AlertDescription>{historyQuery.error.message}</AlertDescription>
+                </Alert>
+              ) : historyQuery.data?.items.length ? (
+                <div className="overflow-x-auto rounded-md border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">Collected</th>
+                        <th className="px-3 py-2 text-left font-medium">Source</th>
+                        <th className="px-3 py-2 text-left font-medium">Config source</th>
+                        <th className="px-3 py-2 text-left font-medium">Warnings</th>
+                        <th className="px-3 py-2 text-left font-medium">Expires</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historyQuery.data.items.map((item) => (
+                        <tr key={item.id} className="border-t border-border">
+                          <td className="px-3 py-2 font-mono text-xs">{new Date(item.collectedAt).toLocaleString()}</td>
+                          <td className="px-3 py-2"><Badge variant="outline">{item.source}</Badge></td>
+                          <td className="px-3 py-2"><Badge variant="outline">{item.configBuildSource}</Badge></td>
+                          <td className="px-3 py-2 text-xs text-muted-foreground">
+                            {item.warnings.length ? item.warnings.join("; ") : "sem warnings"}
+                          </td>
+                          <td className="px-3 py-2 font-mono text-xs">{new Date(item.expiresAt).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Sem histórico persistido para este peer.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

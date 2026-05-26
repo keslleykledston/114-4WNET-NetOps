@@ -19,4 +19,5 @@ export const env = {
   adminPassword: process.env["ADMIN_PASSWORD"]?.trim() || null,
   adminName: process.env["ADMIN_NAME"]?.trim() || "Admin",
   bgpDrilldownSshDetailEnabled: parseBoolean(process.env["BGP_DRILLDOWN_SSH_DETAIL_ENABLED"], false),
+  bgpDrilldownCacheTtlSeconds: Number.parseInt(process.env["BGP_DRILLDOWN_CACHE_TTL_SECONDS"] ?? "", 10) || 7 * 24 * 60 * 60,
 };

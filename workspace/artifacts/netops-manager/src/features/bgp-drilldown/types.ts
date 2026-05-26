@@ -120,3 +120,22 @@ export interface BgpPeerSshDetailResult {
   }>;
   warnings: string[];
 }
+
+export interface BgpPeerDrilldownHistoryItem {
+  id: number;
+  deviceId: number;
+  peer: string;
+  source: string;
+  configBuildSource: ConfigBuildSource | string;
+  peerHash: string;
+  collectedAt: string;
+  expiresAt: string;
+  warnings: string[];
+  createdAt: string;
+}
+
+export interface BgpPeerDrilldownHistoryResponse {
+  deviceId: number;
+  peer: string;
+  items: BgpPeerDrilldownHistoryItem[];
+}

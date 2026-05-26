@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import type { BgpPeerDrilldownResult, BgpPeerSshDetailResult } from "./types";
+import type { BgpPeerDrilldownHistoryResponse, BgpPeerDrilldownResult, BgpPeerSshDetailResult } from "./types";
 
 export interface BgpPeerDrilldownParams {
   deviceId: number;
@@ -53,6 +53,37 @@ export function useBgpPeerDrilldown(params: BgpPeerDrilldownParams) {
     queryFn: () => fetchBgpPeerDrilldown(params),
     enabled,
     staleTime: 60_000,
+  });
+}
+
+export interface BgpPeerDrilldownHistoryParams {
+  deviceId: number;
+  peer: string;
+  enabled?: boolean;
+  limit?: number;
+}
+
+async function fetchBgpPeerDrilldownHistory(params: BgpPeerDrilldownHistoryParams): Promise<BgpPeerDrilldownHistoryResponse> {
+  const q = new URLSearchParams();
+  if (params.limit) q.set("limit", String(params.limit));
+  const suffix = q.toString() ? `?${q.toString()}` : "";
+  const res = await fetch(`/api/bgp/peers/${params.deviceId}/${encodeURIComponent(params.peer)}/drilldown/history${suffix}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `History failed (${res.status})`);
+  }
+  return res.json() as Promise<BgpPeerDrilldownHistoryResponse>;
+}
+
+export function useBgpPeerDrilldownHistory(params: BgpPeerDrilldownHistoryParams) {
+  const enabled = (params.enabled ?? true) && params.deviceId > 0 && params.peer.trim().length > 0;
+  return useQuery({
+    queryKey: ["bgp-peer-drilldown-history", params.deviceId, params.peer, params.limit ?? 20],
+    queryFn: () => fetchBgpPeerDrilldownHistory(params),
+    enabled,
+    staleTime: 30_000,
   });
 }
 

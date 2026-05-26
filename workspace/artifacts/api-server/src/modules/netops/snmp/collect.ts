@@ -12,7 +12,21 @@ import {
   type OidWalkResult,
   type SnmpSession,
 } from "./snmp-session.js";
+import {
+  preflightFailureSummary,
+  runSnmpPreflightForDevice,
+  type SnmpPreflightResult,
+} from "./snmp-preflight.js";
 import type { OidDiagnostic, SnmpCollectedBgpPeer, SnmpCollectedInterface, SnmpReadonlyCollectPayload } from "./types.js";
+
+export type SnmpFastInterfaceCollectHooks = {
+  runPreflight?: (device: Device, community: string) => Promise<SnmpPreflightResult>;
+  collectInterfacesFn?: (
+    session: SnmpSession,
+    errors: string[],
+    warnings: string[],
+  ) => ReturnType<typeof collectInterfaces>;
+};
 
 export function isNetopsSnmpRealEnabled(): boolean {
   return process.env["NETOPS_SNMP_REAL_ENABLED"]?.trim().toLowerCase() === "true";
@@ -27,13 +41,17 @@ export function getSnmpFastSessionOptions(): { timeout: number; retries: number 
   };
 }
 
-/** IF-MIB only — no BGP walks (SNMP_FAST H2). */
+/** IF-MIB only — no BGP walks (SNMP_FAST H2). sysDescr preflight before IF-MIB (H2.1E). */
 export async function collectSnmpInterfacesOnly(
   device: Device,
   community: string,
+  hooks?: SnmpFastInterfaceCollectHooks,
 ): Promise<{
   success: boolean;
   errorMessage: string | null;
+  errorCode: string | null;
+  ifMibSkipped: boolean;
+  preflightElapsedMs: number | null;
   errors: string[];
   warnings: string[];
   interfaces: SnmpCollectedInterface[];
@@ -43,17 +61,44 @@ export async function collectSnmpInterfacesOnly(
   const collectedAt = new Date().toISOString();
   const errors: string[] = [];
   const warnings: string[] = [];
+
+  const runPreflightFn = hooks?.runPreflight ?? runSnmpPreflightForDevice;
+  const preflight = await runPreflightFn(device, community);
+
+  if (!preflight.ok) {
+    const summary = preflightFailureSummary(preflight.errorCode);
+    console.warn(
+      `[snmp-fast] SNMP preflight failed deviceId=${device.id} ip=${device.ipAddress} code=${preflight.errorCode} reason=${preflight.reason} elapsedMs=${preflight.elapsedMs}`,
+    );
+    return {
+      success: false,
+      errorMessage: summary,
+      errorCode: preflight.errorCode,
+      ifMibSkipped: true,
+      preflightElapsedMs: preflight.elapsedMs,
+      errors: [summary],
+      warnings: [],
+      interfaces: [],
+      collectedAt,
+      source: "snmp",
+    };
+  }
+
   const sessionOpts = getSnmpFastSessionOptions();
   const session = createSnmpSession(device.ipAddress, community, sessionOpts);
+  const collectFn = hooks?.collectInterfacesFn ?? collectInterfaces;
 
   try {
-    const { interfaces, ifMibDiagnostics } = await collectInterfaces(session, errors, warnings);
+    const { interfaces, ifMibDiagnostics } = await collectFn(session, errors, warnings);
     if (interfaces.length === 0 && Object.values(ifMibDiagnostics).some((d) => d.status !== "ok" && d.status !== "empty")) {
       warnings.push("IF-MIB incomplete. Check SNMP view for 1.3.6.1.2.1.2 and 1.3.6.1.2.1.31 OID access.");
     }
     return {
       success: errors.length === 0,
       errorMessage: errors.length > 0 ? errors.join("; ") : null,
+      errorCode: null,
+      ifMibSkipped: false,
+      preflightElapsedMs: preflight.elapsedMs,
       errors,
       warnings,
       interfaces,
@@ -65,6 +110,9 @@ export async function collectSnmpInterfacesOnly(
     return {
       success: false,
       errorMessage: message,
+      errorCode: null,
+      ifMibSkipped: false,
+      preflightElapsedMs: preflight.elapsedMs,
       errors: [message],
       warnings: [],
       interfaces: [],

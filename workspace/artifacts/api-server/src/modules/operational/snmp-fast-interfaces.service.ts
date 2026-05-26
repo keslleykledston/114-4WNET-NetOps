@@ -127,6 +127,9 @@ export type SnmpFastCollectResult = {
   freshness: FreshnessStatus;
   errors: string[];
   warnings: string[];
+  errorCode: string | null;
+  errorSummary: string | null;
+  ifMibSkipped: boolean;
 };
 
 export class SnmpFastRateLimitError extends Error {
@@ -225,5 +228,8 @@ export async function collectSnmpFastInterfaces(
     freshness: freshnessStatus,
     errors: payload.errors,
     warnings: payload.warnings,
+    errorCode: payload.errorCode,
+    errorSummary: payload.errorMessage,
+    ifMibSkipped: payload.ifMibSkipped,
   };
 }

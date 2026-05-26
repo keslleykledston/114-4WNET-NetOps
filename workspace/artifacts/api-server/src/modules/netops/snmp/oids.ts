@@ -1,5 +1,6 @@
 /** IF-MIB + IF-MIB extensions + BGP4-MIB (RFC 1657) — read-only GET/WALK only. */
 export const SNMP_OIDS = {
+  sysDescr: "1.3.6.1.2.1.1.1.0",
   ifDescr: "1.3.6.1.2.1.2.2.1.2",
   ifType: "1.3.6.1.2.1.2.2.1.3",
   ifMtu: "1.3.6.1.2.1.2.2.1.4",

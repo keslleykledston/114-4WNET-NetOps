@@ -28,3 +28,7 @@ Discovery is now persisted in dedicated local tables:
 The in-process store remains only as a short-lived cache for the running API process. After restart, the service reads the latest `discovery_snapshots` row and keeps BGP peers/interfaces available for pre-check and compliance.
 
 New collection data is additive. Existing local facts are preserved when a fresh query lacks an item, and discovery emits candidate-removal warnings instead of deleting local data.
+
+**See also:** [Hybrid Collection Architecture](collection/HYBRID_COLLECTION_ARCHITECTURE.md) — target model for SNMP fast / SSH full-config / SSH detail layers, freshness, and source-of-truth rules (H1+).
+
+**Next phase:** [H2 SNMP_FAST Interfaces Plan](collection/H2_SNMP_FAST_INTERFACES_PLAN.md) — pilot operational interface collection (docs only until GO checklist).

@@ -1,4 +1,9 @@
 import type { BgpPeerSummary, DeviceDiscoverySnapshot, DiscoverySource, RoutePolicySummary } from "../../device-discovery/discovery.types.js";
+import {
+  buildBgpPolicyBindingsFromPeerModel,
+  parseHuaweiBgpPeerDependencies,
+  type ParsedHuaweiBgpPeerDependencyModel,
+} from "./bgp-peer-dependency-parser.js";
 import { extractRoutePolicyIfMatchDependencies, normalizePolicyLookupKey, normalizePolicyObjectName } from "./policy-utils.js";
 
 export type CatalogStatus = "loaded" | "empty" | "unknown" | "failed";
@@ -56,6 +61,9 @@ export interface BgpPolicyBindingDependency {
   status: DependencyStatus;
   evidence: string;
   reason?: string;
+  afiSafi?: string;
+  inheritedFromGroup?: boolean;
+  inheritedGroup?: string;
 }
 
 export interface ParsedPolicyDependencyConfig {
@@ -86,6 +94,7 @@ export interface ParsedPolicyDependencyConfig {
     acls: CatalogStatus;
     route_policies: CatalogStatus;
   };
+  bgp_peer_model?: ParsedHuaweiBgpPeerDependencyModel;
 }
 
 const emptyCatalogs = (): ParsedPolicyDependencyConfig["catalogs"] => ({
@@ -326,6 +335,16 @@ export function parseHuaweiPolicyDependencyPipeline(configText: string, source: 
   };
 
   config.dependency_graph.route_policy_dependencies = routePolicyDependencies.map((dep) => resolveRoutePolicyDependency(config, dep));
+  const bgpModel = parseHuaweiBgpPeerDependencies(configText, source);
+  config.bgp_peer_model = bgpModel;
+  if (bgpModel.root_context_loaded) {
+    config.dependency_graph.bgp_policy_bindings = buildBgpPolicyBindingsFromPeerModel(
+      bgpModel,
+      config.consumers.route_policies,
+      config.catalog_status.route_policies,
+      source,
+    );
+  }
   return config;
 }
 
@@ -333,13 +352,22 @@ export function buildPolicyDependencyConfigFromSnapshot(snapshot: DeviceDiscover
   const existing = (snapshot as unknown as { parsed_config?: ParsedPolicyDependencyConfig; parsedConfig?: ParsedPolicyDependencyConfig }).parsed_config
     ?? (snapshot as unknown as { parsedConfig?: ParsedPolicyDependencyConfig }).parsedConfig;
   if (existing?.catalogs && existing?.consumers && existing?.dependency_graph && existing?.catalog_status) {
+    const source = snapshot.sourcesUsed?.[0] ?? "local_db";
+    const bgpBindings = existing.bgp_peer_model?.root_context_loaded
+      ? buildBgpPolicyBindingsFromPeerModel(
+        existing.bgp_peer_model,
+        existing.consumers.route_policies,
+        existing.catalog_status.route_policies,
+        source,
+      )
+      : existing.dependency_graph.bgp_policy_bindings.length > 0
+        ? existing.dependency_graph.bgp_policy_bindings
+        : buildBgpPolicyBindings(existing, snapshot.bgpPeers ?? [], snapshot.policies ?? []);
     return {
       ...existing,
       dependency_graph: {
         ...existing.dependency_graph,
-        bgp_policy_bindings: existing.dependency_graph.bgp_policy_bindings.length > 0
-          ? existing.dependency_graph.bgp_policy_bindings
-          : buildBgpPolicyBindings(existing, snapshot.bgpPeers ?? [], snapshot.policies ?? []),
+        bgp_policy_bindings: bgpBindings,
       },
     };
   }
@@ -434,7 +462,16 @@ export function buildPolicyDependencyConfigFromSnapshot(snapshot: DeviceDiscover
     }
   }
 
-  config.dependency_graph.bgp_policy_bindings = buildBgpPolicyBindings(config, snapshot.bgpPeers ?? [], snapshot.policies ?? []);
+  if (config.bgp_peer_model?.root_context_loaded) {
+    config.dependency_graph.bgp_policy_bindings = buildBgpPolicyBindingsFromPeerModel(
+      config.bgp_peer_model,
+      config.consumers.route_policies,
+      config.catalog_status.route_policies,
+      snapshot.sourcesUsed?.[0] ?? "local_db",
+    );
+  } else {
+    config.dependency_graph.bgp_policy_bindings = buildBgpPolicyBindings(config, snapshot.bgpPeers ?? [], snapshot.policies ?? []);
+  }
   return config;
 }
 

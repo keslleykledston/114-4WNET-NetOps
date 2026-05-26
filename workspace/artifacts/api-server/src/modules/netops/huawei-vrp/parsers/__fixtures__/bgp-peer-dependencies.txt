@@ -1,0 +1,32 @@
+# Sanitized BGP peering excerpt (4WNET-BVA-BRT-RX style)
+bgp 266208
+ peer 172.28.1.138 as-number 262663
+ peer 172.28.1.138 description WIFIZAO.BRT
+ #
+ ipv4-family unicast
+  peer 172.28.1.138 enable
+  peer 172.28.1.138 route-policy AS262663-WIFIZAO.BRT-Import-IPv4 import
+  peer 172.28.1.138 route-policy AS262663-WIFIZAO.BRT-Export-IPv4 export
+  peer 172.28.1.138 default-route-advertise
+ #
+ ipv6-family unicast
+  peer 2804:5984:B000:1::D6 enable
+  peer 2804:5984:B000:1::D6 route-policy AS266208-ALLFIBER-Import-ipv6 import
+  peer 2804:5984:B000:1::D6 route-policy AS266208-ALLFIBER-Export-ipv6 export
+  peer 2804:5984:B000:1::D6 default-route-advertise
+  peer IX-AM enable
+  peer IX-AM route-policy C07-IMPORT-IPV6 import
+  peer IX-AM route-policy C07-EXPORT export
+  peer IX-AM next-hop-local
+  peer 2001:12F8:0:21::253 enable
+  peer 2001:12F8:0:21::253 group IX-AM
+  peer 2001:12F8:0:21::254 enable
+  peer 2001:12F8:0:21::254 group IX-AM
+ #
+ ipv4-family vpnv4
+  peer MALHA enable
+  peer MALHA advertise-community
+ #
+ ipv4-family vpn-instance INTERNET
+  import-route direct
+  import-route static

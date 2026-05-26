@@ -26,7 +26,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Download, FileSearch, Network, Save, Search } from "lucide-react";
+import { Link } from "wouter";
+import { Download, FileSearch, GitBranch, Network, Save, Search } from "lucide-react";
 import { BgpPeerModal } from "./bgp-peer-modal";
 import { BgpPeerRoutesModal } from "./bgp-peer-routes-modal";
 import { BgpPeerDetailModal } from "./bgp-peer-detail-modal";
@@ -476,6 +477,19 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                       <TableCell className="font-mono text-xs">
                         <div className="flex items-center gap-2">
                           <span>{peer.peerIp}</span>
+                          <Link
+                            href={`/bgp/peer-drilldown?deviceId=${device.id}&peer=${encodeURIComponent(peer.peerIp)}&auto=1`}
+                            title="Drilldown snapshot (sem SSH)"
+                          >
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-slate-800"
+                            >
+                              <GitBranch className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
                           <Button
                             type="button"
                             variant="ghost"

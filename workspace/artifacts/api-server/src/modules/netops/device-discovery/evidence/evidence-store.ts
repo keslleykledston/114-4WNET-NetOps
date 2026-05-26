@@ -152,6 +152,7 @@ function hashSnapshot(snapshot: DeviceDiscoverySnapshot): string {
     communities: snapshot.communities,
     communityLists: snapshot.communityLists,
     prefixLists: snapshot.prefixLists,
+    ipv6PrefixLists: snapshot.ipv6PrefixLists ?? [],
     vrfs: snapshot.vrfs,
     l2vpn: snapshot.l2vpn,
   })).digest("hex");

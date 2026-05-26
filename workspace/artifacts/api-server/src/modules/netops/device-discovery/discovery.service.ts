@@ -160,6 +160,7 @@ export async function getDiscoveryBgpPeerDetails(deviceId: number, peerIp: strin
     communities: [],
     communityLists: [],
     prefixLists: [],
+    ipv6PrefixLists: [],
     vrfs: [],
     l2vpn: {
       source: "snmp_snapshot",

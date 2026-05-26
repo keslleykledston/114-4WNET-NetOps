@@ -11,7 +11,12 @@ import { buildBgpPeerDetails, normalizeDiscoveryBgpPeers, primaryDirectionForRol
 import { normalizeDiscoveryInterfaces } from "./normalizers/interface.normalizer.js";
 import { emptyL2vpnSummary } from "./normalizers/l2vpn.normalizer.js";
 import { normalizeDiscoveryCommunities, normalizeDiscoveryPolicies } from "./normalizers/policy.normalizer.js";
+import { persistSshDiscoveryToNetopsStores } from "../adapters/discovery-netops.adapter.js";
 import { COMPLIANCE_PARSER_VERSION, INTERFACE_PARSER_VERSION } from "../versioning.js";
+import { parseHuaweiCommunities } from "../huawei-vrp/parsers/community-parser.js";
+import { buildBgpPolicyBindings, parseHuaweiPolicyDependencyPipeline } from "../huawei-vrp/parsers/policy-dependency-pipeline.js";
+import { parseHuaweiPolicies } from "../huawei-vrp/parsers/policy-parser.js";
+import { parseHuaweiVrfs } from "../huawei-vrp/parsers/vrf-parser.js";
 
 function parseJsonArray(value: string | null): unknown[] {
   if (!value) return [];
@@ -119,6 +124,9 @@ function localDbBgpPeers(value: string | null): NetopsBgpPeer[] {
 }
 
 function cachedFilters(value: string | null): NetopsFilter[] {
+  if (!value) return [];
+  const parsedFromConfig = parseHuaweiPolicies(value);
+  if (parsedFromConfig.length > 0) return parsedFromConfig;
   return parseJsonArray(value).map((item) => {
     const row = asRecord(item);
     return {
@@ -130,7 +138,21 @@ function cachedFilters(value: string | null): NetopsFilter[] {
   });
 }
 
+function cachedCommunities(value: string | null): NetopsCommunity[] {
+  return value ? parseHuaweiCommunities(value) : [];
+}
+
 function cachedVrfs(value: string | null): VrfSummary[] {
+  if (value) {
+    const parsedFromConfig = parseHuaweiVrfs(value).map((vrf) => ({
+      ...vrf,
+      exists: true,
+      source: "ssh_running_config" as const,
+      confidence: "high" as const,
+      evidence: `ip vpn-instance ${vrf.name}`,
+    }));
+    if (parsedFromConfig.length > 0) return parsedFromConfig;
+  }
   return parseJsonArray(value).map((item) => {
     const row = asRecord(item);
     const name = text(row["name"]) ?? "unknown";
@@ -247,6 +269,7 @@ export class CollectionOrchestrator {
     let cachedFiltersData: NetopsFilter[] = [];
     let cachedCommunitiesData: NetopsCommunity[] = [];
     let cachedVrfsData: VrfSummary[] = [];
+    let cachedRawConfig = "";
     let cachedConfigStatus: DeviceDiscoverySnapshot["sourceStatus"]["cachedConfig"] = request.useCachedConfig ? "missing" : "skipped";
     let localInterfacesData: NetopsInterface[] = [];
     let localPeersData: NetopsBgpPeer[] = [];
@@ -305,8 +328,10 @@ export class CollectionOrchestrator {
         cachedConfigStatus = ssh.success || snmp.success ? "available" : "used";
         cachedInterfacesData = cachedInterfaces(cached.parsedInterfaces);
         cachedPeersData = cachedBgpPeers(cached.parsedBgp);
-        cachedFiltersData = cachedFilters(cached.parsedVlans);
-        cachedVrfsData = cachedVrfs(cached.parsedL3vpn);
+        cachedFiltersData = cachedFilters(cached.rawConfig);
+        cachedCommunitiesData = cachedCommunities(cached.rawConfig);
+        cachedVrfsData = cachedVrfs(cached.rawConfig);
+        cachedRawConfig = cached.rawConfig ?? "";
         audit.push({ level: "info", source: "system", message: "cached config used" });
       }
     }
@@ -333,8 +358,14 @@ export class CollectionOrchestrator {
 
     const interfaces = normalizeDiscoveryInterfaces(ssh.interfaces, snmp.interfaces, cachedInterfacesData, localInterfacesData);
     const bgpPeers = await applyRoleOverrides(deviceId, normalizeDiscoveryBgpPeers(ssh.bgpPeers, snmp.bgpPeers, cachedPeersData, localPeersData));
-    const { policies, prefixLists } = normalizeDiscoveryPolicies([...cachedFiltersData, ...ssh.filters]);
+    const { policies, prefixLists, ipv6PrefixLists, asPathFilters, extcommunityFilters, aclFilters } = normalizeDiscoveryPolicies([...cachedFiltersData, ...ssh.filters]);
     const { communityFilters, communityLists } = normalizeDiscoveryCommunities([...cachedCommunitiesData, ...ssh.communities]);
+    const policyPipelineSource = ssh.success ? "ssh_running_config" as const : cachedConfigStatus === "used" || cachedConfigStatus === "available" ? "ssh_running_config" as const : "local_db" as const;
+    const policyPipelineText = [
+      ...(cachedConfigStatus === "used" || cachedConfigStatus === "available" ? [cachedRawConfig] : []),
+      ...ssh.rawOutputs.map((raw) => raw.output),
+    ].filter(Boolean).join("\n");
+    const parsedConfig = parseHuaweiPolicyDependencyPipeline(policyPipelineText, policyPipelineSource);
     const candidateWarnings = removalCandidateWarnings(
       localInterfacesData,
       localPeersData,
@@ -376,6 +407,17 @@ export class CollectionOrchestrator {
       communities: communityFilters,
       communityLists,
       prefixLists,
+      ipv6PrefixLists,
+      asPathFilters,
+      extcommunityFilters,
+      aclFilters,
+      parsed_config: {
+        ...parsedConfig,
+        dependency_graph: {
+          ...parsedConfig.dependency_graph,
+          bgp_policy_bindings: buildBgpPolicyBindings(parsedConfig, bgpPeers, policies),
+        },
+      },
       vrfs: [...cachedVrfsData, ...ssh.vrfs],
       l2vpn: ssh.l2vpn,
       warnings: [...ssh.warnings, ...snmp.warnings, ...candidateWarnings],
@@ -385,6 +427,11 @@ export class CollectionOrchestrator {
     snapshot.persistedSnapshotId = await rawEvidenceStore.finishRun(snapshot, persistedRun.id);
 
     rawEvidenceStore.saveSnapshot(snapshot);
+
+    if (request.preferLiveSsh && ssh.success) {
+      await persistSshDiscoveryToNetopsStores(deviceId, snapshot, ssh.rawOutputs);
+    }
+
     return snapshot;
   }
 

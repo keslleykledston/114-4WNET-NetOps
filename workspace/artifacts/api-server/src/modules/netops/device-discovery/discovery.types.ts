@@ -1,5 +1,6 @@
 import type { Device } from "@workspace/db";
 import type { NetopsBgpPeer, NetopsCommunity, NetopsFilter, NetopsInterface, NetopsSource } from "../types.js";
+import type { ParsedPolicyDependencyConfig } from "../huawei-vrp/parsers/policy-dependency-pipeline.js";
 
 export type DiscoveryContext = "interfaces" | "bgp" | "l2vpn" | "policies" | "vrfs";
 export type DiscoveryStatus = "full" | "partial" | "fallback" | "cached" | "failed";
@@ -62,7 +63,7 @@ export interface RoutePolicyNode {
   action: string | null;
   matches: string[];
   matchDetails?: Array<{
-    type: "community-filter" | "community-list" | "ip-prefix" | "as-path-filter" | "extcommunity-filter" | "unknown";
+    type: "community-filter" | "community-list" | "ip-prefix" | "ipv6-prefix" | "as-path-filter" | "extcommunity-filter" | "acl" | "unknown";
     name: string;
     raw: string;
     qualifier?: "basic" | "advanced" | "whole-match" | null;
@@ -87,6 +88,11 @@ export interface CommunityList extends DiscoveryEvidence {
 }
 
 export interface PrefixList extends DiscoveryEvidence {
+  name: string;
+  entries: unknown[];
+}
+
+export interface GenericPolicyCatalog extends DiscoveryEvidence {
   name: string;
   entries: unknown[];
 }
@@ -168,6 +174,11 @@ export interface DeviceDiscoverySnapshot {
   communities: CommunityFilter[];
   communityLists: CommunityList[];
   prefixLists: PrefixList[];
+  ipv6PrefixLists?: PrefixList[];
+  asPathFilters?: GenericPolicyCatalog[];
+  extcommunityFilters?: GenericPolicyCatalog[];
+  aclFilters?: GenericPolicyCatalog[];
+  parsed_config?: ParsedPolicyDependencyConfig;
   vrfs: VrfSummary[];
   l2vpn: L2vpnSummary;
   warnings: DiscoveryWarning[];

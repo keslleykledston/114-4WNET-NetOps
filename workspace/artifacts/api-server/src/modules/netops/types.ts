@@ -79,7 +79,7 @@ export interface NetopsBgpPeer {
 
 export interface NetopsFilter {
   name: string;
-  type: "ip-prefix" | "prefix-list" | "route-policy" | "acl" | "unknown";
+  type: "ip-prefix" | "ipv6-prefix" | "prefix-list" | "route-policy" | "acl" | "as-path-filter" | "extcommunity-filter" | "unknown";
   entries: unknown[];
   source: NetopsSource;
 }

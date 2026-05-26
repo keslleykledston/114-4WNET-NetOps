@@ -1,0 +1,16 @@
+# Sanitized excerpt — Huawei VRP IPv4/IPv6 prefix + route-policy (BRT-RX style)
+ip ip-prefix AS268707-4WNET index 10 permit 45.169.160.0 23 greater-equal 23 less-equal 24
+ip ip-prefix DEFAULT index 10 permit 0.0.0.0 0
+ip ip-prefix GATEWAY-IPV4 index 10 permit 0.0.0.0 0
+ip ipv6-prefix AS266208-4WNET-V6-332 index 10 permit 2804:5984:8000:: 33 greater-equal 33 less-equal 48
+ip ipv6-prefix GATEWAY-IPV6 index 10 permit :: 0
+route-policy TEST-EXPORT-V4 permit node 10
+ if-match ip-prefix AS268707-4WNET
+route-policy TEST-DEFAULT-V4 permit node 10
+ if-match ip-prefix DEFAULT
+route-policy TEST-GW-V4 permit node 10
+ if-match ip-prefix GATEWAY-IPV4
+route-policy TEST-EXPORT-V6 permit node 10
+ if-match ipv6 address prefix-list AS266208-4WNET-V6-332
+route-policy TEST-GW-V6 permit node 10
+ if-match ipv6 address prefix-list GATEWAY-IPV6

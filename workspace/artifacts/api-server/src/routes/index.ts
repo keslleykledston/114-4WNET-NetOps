@@ -18,6 +18,7 @@ import netopsRouter from "../modules/netops/routes.js";
 import discoveryRouter from "../modules/netops/device-discovery/discovery.routes.js";
 import l2CircuitsRouter from "../modules/l2circuits/l2circuits.routes.js";
 import operationalRouter from "../modules/operational/operational.routes.js";
+import operationalBgpRouter from "../modules/operational-bgp/operational-bgp.routes.js";
 import bgpDrilldownRouter from "../modules/bgp-drilldown/bgp-peer-drilldown.routes.js";
 import { authorizeRequest } from "../lib/auth.js";
 import { requestContextMiddleware } from "../lib/request-context.js";
@@ -45,6 +46,7 @@ router.use(netopsRouter);
 router.use(discoveryRouter);
 router.use(l2CircuitsRouter);
 router.use(operationalRouter);
+router.use(operationalBgpRouter);
 router.use(bgpDrilldownRouter);
 
 export default router;

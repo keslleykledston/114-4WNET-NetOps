@@ -15,3 +15,4 @@ export * from "./communities";
 export * from "./scheduler";
 export * from "./l2circuits";
 export * from "./operational";
+export * from "./operational_bgp";

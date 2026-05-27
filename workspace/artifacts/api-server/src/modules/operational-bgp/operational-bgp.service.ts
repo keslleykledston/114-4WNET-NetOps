@@ -12,6 +12,7 @@ import { SnmpFastBgpDisabledError } from "./operational-bgp.errors.js";
 import { computeBgpFreshnessStatus } from "./operational-bgp.freshness.js";
 import { isNetopsSnmpBgpRealEnabled } from "./operational-bgp.gate.js";
 import { runBgpPreflightOffline } from "./operational-bgp.preflight.js";
+import { resolveSnmpCredential } from "../netops/snmp/snmp-credential-resolver.js";
 import type {
   BgpFreshnessStatus,
   OperationalBgpCollectResult,
@@ -143,7 +144,18 @@ export async function collectOperationalBgpPeers(
 
   const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
   if (!device) throw new Error("Device not found");
-  if (!device.snmpCommunity?.trim()) {
+
+  const credential = resolveSnmpCredential({
+    device: { snmpCommunity: device.snmpCommunity ?? null },
+    // H3.2A.3: não usar env fallback aqui (evitar alterar comportamento em produção).
+    env: { snmpCommunity: null, labFallbackAllowed: false },
+    nodeEnv: process.env.NODE_ENV,
+  });
+  if (!credential.available) {
+    throw new SnmpCredentialsNotConfiguredError(deviceId);
+  }
+  if (!credential.value) {
+    // defensive: available=true deve sempre carregar value interno (redacted helper remove)
     throw new SnmpCredentialsNotConfiguredError(deviceId);
   }
 
@@ -164,7 +176,7 @@ export async function collectOperationalBgpPeers(
   const collected = await collectBgpPeers({
     deviceId,
     host: device.ipAddress,
-    community: device.snmpCommunity.trim(),
+    community: credential.value,
   });
 
   const collectedAt = new Date();

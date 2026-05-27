@@ -11,7 +11,8 @@ import { collectBgpPeers } from "./operational-bgp.collector.js";
 import { SnmpFastBgpDisabledError } from "./operational-bgp.errors.js";
 import { computeBgpFreshnessStatus } from "./operational-bgp.freshness.js";
 import { isNetopsSnmpBgpRealEnabled } from "./operational-bgp.gate.js";
-import { runBgpPreflightOffline } from "./operational-bgp.preflight.js";
+import { OperationalBgpPreflightError } from "./operational-bgp.errors.js";
+import { runBgpPreflightLive } from "./operational-bgp.preflight.js";
 import { resolveSnmpCredential } from "../netops/snmp/snmp-credential-resolver.js";
 import type {
   BgpFreshnessStatus,
@@ -159,9 +160,9 @@ export async function collectOperationalBgpPeers(
     throw new SnmpCredentialsNotConfiguredError(deviceId);
   }
 
-  const preflight = runBgpPreflightOffline();
+  const preflight = await runBgpPreflightLive(device.ipAddress, credential.value);
   if (!preflight.ok) {
-    throw new Error(preflight.message);
+    throw new OperationalBgpPreflightError(preflight.errorCode, preflight.message);
   }
 
   const [job] = await db

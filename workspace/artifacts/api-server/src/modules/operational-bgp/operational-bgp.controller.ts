@@ -1,13 +1,13 @@
 import type { Request, Response } from "express";
 import { getRequestSourceIp, logAuditEvent } from "../../lib/audit.js";
 import { getRequestContext } from "../../lib/request-context.js";
+import { OperationalBgpPreflightError, SnmpFastBgpDisabledError } from "./operational-bgp.errors.js";
 import {
   collectOperationalBgpPeers,
   getOperationalBgpPeers,
   getOperationalBgpSummary,
   OperationalPilotError,
   SnmpCredentialsNotConfiguredError,
-  SnmpFastBgpDisabledError,
 } from "./operational-bgp.service.js";
 
 export function parseOperationalBgpDeviceId(value: unknown): number | null {

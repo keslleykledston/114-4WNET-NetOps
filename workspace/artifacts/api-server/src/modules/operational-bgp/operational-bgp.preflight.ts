@@ -1,4 +1,6 @@
 /** BGP SNMP preflight OIDs (RFC4273) — no live walk in H3.1 stub mode. */
+import { snmpGetPreflightOid } from "./operational-bgp-rfc4273-snmp.js";
+
 export const BGP_PREFLIGHT_OIDS = {
   sysDescr: "1.3.6.1.2.1.1.1.0",
   bgpVersion: "1.3.6.1.2.1.15.1.1.0",
@@ -60,10 +62,31 @@ export function runBgpPreflightOffline(): BgpPreflightResult {
   };
 }
 
-/**
- * Live preflight hook (H3.2+) — sysDescr.0 + bgpVersion.0 before peer walks.
- * H3.1: not invoked when stub collection is active.
- */
-export async function runBgpPreflightLive(_host: string, _community: string): Promise<BgpPreflightResult> {
-  return runBgpPreflightOffline();
+/** Live preflight — sysDescr.0 + bgpVersion.0 before peer walks (H3.2B+). */
+export async function runBgpPreflightLive(host: string, community: string): Promise<BgpPreflightResult> {
+  const started = Date.now();
+  const options = getBgpPreflightOptions();
+
+  try {
+    await snmpGetPreflightOid(host, community, BGP_PREFLIGHT_OIDS.sysDescr, options);
+    await snmpGetPreflightOid(host, community, BGP_PREFLIGHT_OIDS.bgpVersion, options);
+    return {
+      ok: true,
+      offline: false,
+      sysDescrOid: BGP_PREFLIGHT_OIDS.sysDescr,
+      bgpVersionOid: BGP_PREFLIGHT_OIDS.bgpVersion,
+      elapsedMs: Date.now() - started,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const { reason, errorCode } = classifyBgpPreflightError(message);
+    return {
+      ok: false,
+      offline: false,
+      reason,
+      message,
+      errorCode,
+      elapsedMs: Date.now() - started,
+    };
+  }
 }

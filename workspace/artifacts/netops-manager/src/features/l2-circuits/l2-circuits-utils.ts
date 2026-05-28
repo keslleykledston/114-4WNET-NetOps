@@ -10,6 +10,8 @@ export interface L2CircuitFilters {
   vlan: string;
   vcId: string;
   peerIp: string;
+  /** When false (default), hide healthy circuits in NOC list. */
+  showHealthy: boolean;
 }
 
 export const DEFAULT_L2_FILTERS: L2CircuitFilters = {
@@ -19,7 +21,36 @@ export const DEFAULT_L2_FILTERS: L2CircuitFilters = {
   vlan: "",
   vcId: "",
   peerIp: "",
+  showHealthy: false,
 };
+
+const PROBLEM_OPER_STATUSES = new Set<L2Status>(["DOWN", "PARTIAL", "CONFIG_ONLY"]);
+
+const PROBLEM_FINDING_CODES = new Set<L2FindingCode>([
+  "CIRCUIT_DOWN",
+  "L2VC_DOWN",
+  "VSI_DOWN",
+  "REMOTE_NOT_FORWARDING",
+  "VLAN_ORPHAN",
+  "DESCRIPTION_MISSING",
+  "INCOMPLETE_L2_CONFIG",
+  "DUPLICATED_VC_ID",
+  "VLAN_CONFLICT",
+  "ROUTER_L2_VLAN_ANOMALY",
+  "VLANIF_ORPHAN",
+  "VLAN_NOT_IN_SWITCH_BATCH",
+  "CLASSIFICATION_CONFLICT",
+]);
+
+export function isProblemCircuit(circuit: L2Circuit): boolean {
+  if (PROBLEM_OPER_STATUSES.has(circuit.operStatus)) return true;
+  return circuit.findings.some((finding) => PROBLEM_FINDING_CODES.has(finding.code));
+}
+
+export function isHealthyCircuit(circuit: L2Circuit): boolean {
+  if (circuit.operStatus !== "UP") return false;
+  return circuit.findings.every((finding) => finding.severity === "info");
+}
 
 const STATUS_SORT: Record<L2Status, number> = {
   DOWN: 0,

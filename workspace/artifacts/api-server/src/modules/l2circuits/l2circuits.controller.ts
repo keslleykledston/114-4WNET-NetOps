@@ -1,8 +1,30 @@
 import type { Request, Response } from "express";
 import { db, devicesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { discoverL2Circuits, getL2DiscoveryJob, listL2Circuits, getL2Circuit } from "./l2circuits.service.js";
-import type { DiscoverL2CircuitsRequest, L2CircuitListFilter } from "./l2circuits.types.js";
+import {
+  createL2DiscoveryRunId,
+  getL2DiscoveryJob,
+  getL2Circuit,
+  listL2Circuits,
+  runL2DiscoveryJob,
+  startL2DiscoveryJob,
+} from "./l2circuits.service.js";
+import {
+  L2_OPERATIONAL_REFRESH_DISABLED,
+  L2_OPERATIONAL_SNMP_DISABLED,
+  L2OperationalRefreshDisabledError,
+  L2OperationalSnmpDisabledError,
+  OperationalPilotError,
+  SnmpCredentialsNotConfiguredError,
+  getL2DeviceOperationalMeta,
+  runL2OperationalRefresh,
+} from "./operational-refresh/l2-operational-refresh.service.js";
+import {
+  DEVICE_CREDENTIALS_NOT_CONFIGURED,
+  L2DeviceCredentialsError,
+  resolveDeviceSshConfig,
+} from "./device-ssh-config.js";
+import type { L2CircuitListFilter } from "./l2circuits.types.js";
 
 function parseDeviceId(value: string | undefined): number | null {
   const parsed = Number(value);
@@ -24,38 +46,41 @@ export async function discoverL2CircuitsHandler(req: Request, res: Response) {
   }
 
   try {
-    // Check if device exists
     const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId));
     if (!device) {
       res.status(404).json({ error: "Device not found" });
       return;
     }
 
-    // Start discovery in background (fire and forget for MVP)
-    const sshConfig = {
-      host: device.hostname || "",
-      port: 22,
-      username: "admin",
-      password: "",
-    };
+    let sshConfig;
+    try {
+      sshConfig = resolveDeviceSshConfig(device);
+    } catch (error) {
+      if (error instanceof L2DeviceCredentialsError) {
+        res.status(422).json({
+          error: DEVICE_CREDENTIALS_NOT_CONFIGURED,
+          message: error.message,
+        });
+        return;
+      }
+      throw error;
+    }
 
-    const jobPromise = discoverL2Circuits(deviceId, sshConfig);
+    const runId = createL2DiscoveryRunId(deviceId);
+    const { startedAt } = await startL2DiscoveryJob(deviceId, runId);
 
-    // Return job info immediately (async)
-    const now = new Date();
     res.status(202).json({
-      run_id: `disc-l2-${deviceId}-${Date.now()}`,
+      run_id: runId,
       device_id: deviceId,
       status: "running",
-      started_at: now.toISOString(),
+      started_at: startedAt.toISOString(),
     });
 
-    // Await in background
-    jobPromise.catch((error) => {
-      console.error(`L2 circuit discovery failed for device ${deviceId}:`, error);
+    runL2DiscoveryJob(deviceId, runId, sshConfig).catch((error) => {
+      console.error(`L2 circuit discovery failed for device ${deviceId} run ${runId}:`, error instanceof Error ? error.message : error);
     });
   } catch (error) {
-    console.error("Discovery error:", error);
+    console.error("Discovery error:", error instanceof Error ? error.message : error);
     res.status(500).json({
       error: error instanceof Error ? error.message : "Unknown error",
     });
@@ -95,7 +120,7 @@ export async function getL2DiscoveryJobHandler(req: Request, res: Response) {
       error_message: job.errorMessage,
     });
   } catch (error) {
-    console.error("Job lookup error:", error);
+    console.error("Job lookup error:", error instanceof Error ? error.message : error);
     res.status(500).json({
       error: error instanceof Error ? error.message : "Unknown error",
     });
@@ -112,7 +137,7 @@ export async function listL2CircuitsHandler(req: Request, res: Response) {
     }
 
     if (req.query.circuit_type) {
-      filter.circuitType = String(req.query.circuit_type) as any;
+      filter.circuitType = String(req.query.circuit_type) as L2CircuitListFilter["circuitType"];
     }
 
     if (req.query.vc_id) {
@@ -124,12 +149,73 @@ export async function listL2CircuitsHandler(req: Request, res: Response) {
     }
 
     const circuits = await listL2Circuits(filter);
-    res.json({
+    const payload: {
+      circuits: typeof circuits;
+      total: number;
+      operational?: Awaited<ReturnType<typeof getL2DeviceOperationalMeta>>;
+    } = {
       circuits,
       total: circuits.length,
-    });
+    };
+    if (filter.deviceId) {
+      payload.operational = (await getL2DeviceOperationalMeta(filter.deviceId)) ?? undefined;
+    }
+    res.json(payload);
   } catch (error) {
-    console.error("List error:", error);
+    console.error("List error:", error instanceof Error ? error.message : error);
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+export async function refreshL2CircuitsHandler(req: Request, res: Response) {
+  const body = req.body as unknown;
+
+  if (!body || typeof body !== "object" || !("device_id" in body)) {
+    res.status(400).json({ error: "Missing or invalid device_id in request body" });
+    return;
+  }
+
+  const deviceId = typeof body.device_id === "number" ? body.device_id : parseDeviceId(String(body.device_id));
+  if (!deviceId) {
+    res.status(400).json({ error: "Invalid device_id" });
+    return;
+  }
+
+  try {
+    const result = await runL2OperationalRefresh(deviceId);
+    res.json(result);
+  } catch (error) {
+    if (error instanceof L2OperationalRefreshDisabledError) {
+      res.status(503).json({ error: error.message, code: L2_OPERATIONAL_REFRESH_DISABLED });
+      return;
+    }
+    if (error instanceof L2OperationalSnmpDisabledError) {
+      res.status(503).json({ error: error.message, code: L2_OPERATIONAL_SNMP_DISABLED });
+      return;
+    }
+    if (error instanceof OperationalPilotError) {
+      res.status(403).json({ error: error.message });
+      return;
+    }
+    if (error instanceof SnmpCredentialsNotConfiguredError) {
+      res.status(422).json({ error: error.message });
+      return;
+    }
+    if (error instanceof L2DeviceCredentialsError) {
+      res.status(422).json({ error: DEVICE_CREDENTIALS_NOT_CONFIGURED, message: error.message });
+      return;
+    }
+    if (error instanceof Error && error.message === "Device not found") {
+      res.status(404).json({ error: error.message });
+      return;
+    }
+    if (error instanceof Error && error.message.includes("No L2 circuits stored")) {
+      res.status(404).json({ error: error.message });
+      return;
+    }
+    console.error("L2 operational refresh error:", error instanceof Error ? error.message : error);
     res.status(500).json({
       error: error instanceof Error ? error.message : "Unknown error",
     });
@@ -160,7 +246,7 @@ export async function getL2CircuitHandler(req: Request, res: Response) {
 
     res.json(circuit);
   } catch (error) {
-    console.error("Get circuit error:", error);
+    console.error("Get circuit error:", error instanceof Error ? error.message : error);
     res.status(500).json({
       error: error instanceof Error ? error.message : "Unknown error",
     });

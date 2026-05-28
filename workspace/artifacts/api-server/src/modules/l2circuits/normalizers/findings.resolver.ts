@@ -1,6 +1,19 @@
 import type { L2Finding, NormalizedL2Circuit } from "../l2circuits.types.js";
 import { buildCircuitKey, circuitLabel } from "./circuit-key.helpers.js";
 
+function isPwDown(pwStatus?: string): boolean {
+  if (!pwStatus) return false;
+  const normalized = pwStatus.toLowerCase().trim();
+  return normalized === "down" || normalized.startsWith("down");
+}
+
+function isServiceDown(circuit: NormalizedL2Circuit): boolean {
+  if (circuit.operStatus === "DOWN") return true;
+  if (isPwDown(circuit.pwStatus)) return true;
+  const session = circuit.sessionState?.toLowerCase().trim() ?? "";
+  return session === "down" || session === "inactive";
+}
+
 function addFinding(
   bucket: Map<string, L2Finding[]>,
   circuitKey: string,
@@ -80,6 +93,20 @@ export function enrichCircuitsWithFindings(
         code: "CIRCUIT_DOWN",
         severity: "error",
         message: `Circuit ${label} is operationally down`,
+      });
+    }
+    if ((circuit.circuitType === "l2vc" || circuit.circuitType === "vpws") && isPwDown(circuit.pwStatus)) {
+      addFinding(findingsByKey, circuitKey, {
+        code: "L2VC_DOWN",
+        severity: "error",
+        message: `L2VC/VPWS ${label} pseudowire is down`,
+      });
+    }
+    if ((circuit.circuitType === "vsi" || circuit.circuitType === "vpls") && isServiceDown(circuit)) {
+      addFinding(findingsByKey, circuitKey, {
+        code: "VSI_DOWN",
+        severity: "error",
+        message: `VSI/VPLS ${label} service is down`,
       });
     }
   }

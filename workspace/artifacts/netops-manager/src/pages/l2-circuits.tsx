@@ -6,12 +6,22 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Download, Eye, Filter, Layers, Network, RefreshCw } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
-import { useL2Circuits, type L2Circuit, type L2CircuitType, type L2Status } from "@/features/l2-circuits/l2-circuits-api";
+import { useToast } from "@/hooks/use-toast";
+import {
+  useL2Circuits,
+  useRefreshL2Circuits,
+  type L2Circuit,
+  type L2CircuitType,
+  type L2Status,
+} from "@/features/l2-circuits/l2-circuits-api";
 import {
   CircuitTypeBadge,
   FindingsCountBadge,
+  FreshnessBadge,
   NocFindingBadges,
   OperStatusBadge,
   circuitTypeGroup,
@@ -29,6 +39,7 @@ import {
   FILTER_ALL,
   circuitKeyField,
   formatTs,
+  isProblemCircuit,
   matchesFilters,
   nocRowClass,
   sortCircuitsForNoc,
@@ -59,8 +70,11 @@ export default function L2Circuits() {
   const [vlanFilter, setVlanFilter] = useState("");
   const [vcIdFilter, setVcIdFilter] = useState("");
   const [peerIpFilter, setPeerIpFilter] = useState("");
+  const [showHealthy, setShowHealthy] = useState(false);
   const [selectedCircuit, setSelectedCircuit] = useState<L2Circuit | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const { toast } = useToast();
+  const refreshMutation = useRefreshL2Circuits();
 
   useEffect(() => {
     const saved = loadL2CircuitFilters(user?.id);
@@ -70,6 +84,7 @@ export default function L2Circuits() {
     setVlanFilter(saved.vlan);
     setVcIdFilter(saved.vcId);
     setPeerIpFilter(saved.peerIp);
+    setShowHealthy(saved.showHealthy);
     setFiltersLoaded(true);
   }, [user?.id]);
 
@@ -83,6 +98,7 @@ export default function L2Circuits() {
         vlan: vlanFilter,
         vcId: vcIdFilter,
         peerIp: peerIpFilter,
+        showHealthy,
       },
       user?.id,
     );
@@ -95,6 +111,7 @@ export default function L2Circuits() {
     vlanFilter,
     vcIdFilter,
     peerIpFilter,
+    showHealthy,
   ]);
 
   const deviceId = deviceFilter === FILTER_ALL ? undefined : Number(deviceFilter);
@@ -116,10 +133,12 @@ export default function L2Circuits() {
         vlan: vlanFilter,
         vcId: vcIdFilter,
         peerIp: peerIpFilter,
+        showHealthy,
       }),
     );
-    return sortCircuitsForNoc(filtered);
-  }, [data?.circuits, circuitTypeFilter, statusFilter, vlanFilter, vcIdFilter, peerIpFilter]);
+    const visible = showHealthy ? filtered : filtered.filter(isProblemCircuit);
+    return sortCircuitsForNoc(visible);
+  }, [data?.circuits, circuitTypeFilter, statusFilter, vlanFilter, vcIdFilter, peerIpFilter, showHealthy]);
 
   const summary = useMemo(() => {
     const local = sortedCircuits.filter((c) => circuitTypeGroup(c.circuitType) === "local").length;
@@ -147,8 +166,42 @@ export default function L2Circuits() {
     setVlanFilter("");
     setVcIdFilter("");
     setPeerIpFilter("");
+    setShowHealthy(false);
     clearL2CircuitFilters(user?.id);
   };
+
+  const handleOperationalRefresh = () => {
+    if (!deviceId) {
+      toast({
+        title: "Selecione um device",
+        description: "Refresh operacional exige filtro de device (1 por vez).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    refreshMutation.mutate(deviceId, {
+      onSuccess: (result) => {
+        toast({
+          title: "Refresh operacional concluído",
+          description: `${result.circuits_updated} circuitos · ${result.findings_count} findings · ${result.freshness}`,
+        });
+        void refetch();
+      },
+      onError: (error) => {
+        const code = (error as Error & { code?: string }).code;
+        const status = (error as Error & { status?: number }).status;
+        toast({
+          title: code === "L2_OPERATIONAL_REFRESH_DISABLED" || status === 503 ? "Refresh desabilitado" : "Falha no refresh",
+          description: error instanceof Error ? error.message : "Erro desconhecido",
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const operational = data?.operational;
+  const refreshBusy = refreshMutation.isPending || isFetching;
 
   return (
     <div className="space-y-6">
@@ -159,8 +212,17 @@ export default function L2Circuits() {
             L2 Circuits
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Consulta read-only — vlan_local, L2VC/VPWS, VSI/VPLS. Ordenacao NOC: DOWN primeiro.
+            NOC read-only — default só problemas. Refresh operacional (SNMP + SSH ops) por device.
           </p>
+          {deviceId && operational && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <FreshnessBadge freshness={operational.freshness} />
+              <span className="text-muted-foreground">
+                Última atualização operacional:{" "}
+                {operational.last_refresh_at ? formatTs(operational.last_refresh_at) : "nunca"}
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -172,9 +234,9 @@ export default function L2Circuits() {
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? "animate-spin" : ""}`} />
-            Atualizar lista
+          <Button variant="outline" size="sm" onClick={handleOperationalRefresh} disabled={refreshBusy || !deviceId}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshBusy ? "animate-spin" : ""}`} />
+            Atualizar operacional
           </Button>
         </div>
       </div>
@@ -273,7 +335,17 @@ export default function L2Circuits() {
           <Input placeholder="VC-ID" value={vcIdFilter} onChange={(e) => setVcIdFilter(e.target.value)} />
           <Input placeholder="Peer IP" value={peerIpFilter} onChange={(e) => setPeerIpFilter(e.target.value)} />
         </CardContent>
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="l2-show-healthy"
+              checked={showHealthy}
+              onCheckedChange={(checked) => setShowHealthy(checked === true)}
+            />
+            <Label htmlFor="l2-show-healthy" className="text-sm font-normal cursor-pointer">
+              Mostrar circuitos saudáveis
+            </Label>
+          </div>
           <Button variant="ghost" size="sm" onClick={handleClearFilters}>
             Limpar filtros
           </Button>

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export type L2CircuitType =
   | "vlan"
@@ -15,8 +15,19 @@ export type L2CircuitType =
 
 export type L2Status = "UP" | "DOWN" | "PARTIAL" | "UNKNOWN" | "CONFIG_ONLY";
 
+export type L2OperationalFreshness = "fresh" | "stale" | "expired" | "unknown";
+
+export interface L2OperationalSummary {
+  device_id: number;
+  last_refresh_at: string | null;
+  freshness: L2OperationalFreshness;
+  operational_state?: Record<string, unknown>;
+}
+
 export type L2FindingCode =
   | "CIRCUIT_DOWN"
+  | "L2VC_DOWN"
+  | "VSI_DOWN"
   | "REMOTE_NOT_FORWARDING"
   | "INCOMPLETE_L2_CONFIG"
   | "DUPLICATED_VC_ID"
@@ -76,13 +87,27 @@ export interface L2Circuit {
 export interface L2CircuitListResponse {
   circuits: L2Circuit[];
   total: number;
+  operational?: L2OperationalSummary;
 }
 
-async function apiFetch<T>(path: string): Promise<T> {
-  const res = await fetch(path, { credentials: "include" });
+export interface L2OperationalRefreshResponse {
+  device_id: number;
+  last_refresh_at: string;
+  freshness: L2OperationalFreshness;
+  circuits_updated: number;
+  findings_count: number;
+  operational_state: Record<string, unknown>;
+  warnings: string[];
+}
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, { credentials: "include", ...init });
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error ?? `HTTP ${res.status}`);
+    const body = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+    const err = new Error(body.error ?? `HTTP ${res.status}`) as Error & { code?: string; status?: number };
+    err.code = body.code;
+    err.status = res.status;
+    throw err;
   }
   return res.json() as Promise<T>;
 }
@@ -114,5 +139,25 @@ export function useL2Circuit(id: number | null) {
     queryKey: ["l2-circuit", id],
     queryFn: () => fetchL2Circuit(id!),
     enabled: id != null && id > 0,
+  });
+}
+
+export function refreshL2Circuits(deviceId: number) {
+  return apiFetch<L2OperationalRefreshResponse>("/api/l2-circuits/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ device_id: deviceId }),
+  });
+}
+
+export function useRefreshL2Circuits() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (deviceId: number) => refreshL2Circuits(deviceId),
+    onSuccess: (_data, deviceId) => {
+      void queryClient.invalidateQueries({ queryKey: l2CircuitsQueryKey(deviceId) });
+      void queryClient.invalidateQueries({ queryKey: l2CircuitsQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: ["l2-circuit"] });
+    },
   });
 }

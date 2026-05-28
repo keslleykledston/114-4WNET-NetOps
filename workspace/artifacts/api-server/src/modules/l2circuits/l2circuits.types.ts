@@ -5,6 +5,8 @@ export type L2DeviceRoleFamily = "ROUTER" | "SWITCH" | "UNKNOWN";
 export type L2Status = "UP" | "DOWN" | "PARTIAL" | "UNKNOWN" | "CONFIG_ONLY";
 export type L2FindingCode =
   | "CIRCUIT_DOWN"
+  | "L2VC_DOWN"
+  | "VSI_DOWN"
   | "REMOTE_NOT_FORWARDING"
   | "INCOMPLETE_L2_CONFIG"
   | "DUPLICATED_VC_ID"
@@ -162,11 +164,35 @@ export interface L2CircuitListFilter {
   offset?: number;
 }
 
+export type L2OperationalFreshnessStatus = "fresh" | "stale" | "expired" | "unknown";
+
+export interface L2OperationalSummary {
+  device_id: number;
+  last_refresh_at: string | null;
+  freshness: L2OperationalFreshnessStatus;
+  operational_state?: Record<string, unknown>;
+}
+
 export interface L2CircuitListResponse {
   circuits: L2Circuit[];
   total: number;
-  limit: number;
-  offset: number;
+  limit?: number;
+  offset?: number;
+  operational?: L2OperationalSummary;
+}
+
+export interface L2OperationalRefreshRequest {
+  device_id: number;
+}
+
+export interface L2OperationalRefreshResponse {
+  device_id: number;
+  last_refresh_at: string;
+  freshness: L2OperationalFreshnessStatus;
+  circuits_updated: number;
+  findings_count: number;
+  operational_state: Record<string, unknown>;
+  warnings: string[];
 }
 
 export interface L2DiscoveryJobResponse {

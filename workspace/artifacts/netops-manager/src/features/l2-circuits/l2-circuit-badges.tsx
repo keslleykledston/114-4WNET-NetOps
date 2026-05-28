@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { L2CircuitType, L2Finding, L2Status } from "./l2-circuits-api";
+import type { L2CircuitType, L2Finding, L2OperationalFreshness, L2Status } from "./l2-circuits-api";
 
 export function operStatusClass(status: L2Status | string) {
   switch (status) {
@@ -97,8 +97,33 @@ export function CircuitTypeBadge({ type }: { type: L2CircuitType | string }) {
   );
 }
 
+export function FreshnessBadge({ freshness }: { freshness: L2OperationalFreshness }) {
+  const cls =
+    freshness === "fresh"
+      ? "bg-green-500/10 text-green-400 border-green-500/20"
+      : freshness === "stale"
+        ? "bg-amber-500/10 text-amber-300 border-amber-500/20"
+        : freshness === "expired"
+          ? "bg-red-500/10 text-red-400 border-red-500/20"
+          : "bg-slate-500/10 text-slate-300 border-slate-500/20";
+  const label =
+    freshness === "fresh"
+      ? "Fresh"
+      : freshness === "stale"
+        ? "Stale"
+        : freshness === "expired"
+          ? "Expired"
+          : "Unknown";
+
+  return (
+    <Badge variant="outline" className={cls}>
+      {label}
+    </Badge>
+  );
+}
+
 export function NocFindingBadges({ findings }: { findings: L2Finding[] }) {
-  const circuitDown = findings.some((f) => f.code === "CIRCUIT_DOWN");
+  const circuitDown = findings.some((f) => f.code === "CIRCUIT_DOWN" || f.code === "L2VC_DOWN" || f.code === "VSI_DOWN");
   const remoteNotForwarding = findings.some((f) => f.code === "REMOTE_NOT_FORWARDING");
   const vlanOrphan = findings.some((f) => f.code === "VLAN_ORPHAN");
 

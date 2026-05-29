@@ -67,11 +67,16 @@ async function runTests() {
 
   const token = loginRes.data?.token;
 
-  // Test 1: Audit Summary
-  log(colors.yellow, "\n=== Audit Summary API ===\n");
+  // Test 1: Audit Summary (v0.3.6 feature)
+  log(colors.yellow, "\n=== Audit Summary API (v0.3.6 - pending) ===\n");
 
   const summaryRes = await api("GET", "/audit-logs/summary", null, token);
-  test("GET /audit-logs/summary responds", summaryRes.ok || summaryRes.status === 404);
+  if (summaryRes.status === 404) {
+    log(colors.yellow, "  Audit Summary endpoint not yet implemented (v0.3.6 feature)");
+    skipped++;
+  } else {
+    test("GET /audit-logs/summary responds", summaryRes.ok);
+  }
 
   if (summaryRes.ok && summaryRes.data) {
     const summary = summaryRes.data;

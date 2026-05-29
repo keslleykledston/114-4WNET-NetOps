@@ -1,0 +1,37 @@
+FTP@NE8000#display vsi verbose
+...............................................................................
+VSI Name         : VSI-VPLS-1
+VSI ID           : 1
+BD ID            : 100
+MAC Count        : 45
+Admin Status     : up
+Oper Status      : up
+Description      : VPLS-SiteA-SiteB
+Bound Interface  : GigabitEthernet0/0/1
+Peer IP (local)  : 192.168.1.1
+Peer IP (remote) : 192.168.1.2
+
+...............................................................................
+VSI Name         : VSI-VPLS-2
+VSI ID           : 2
+BD ID           : 101
+MAC Count        : 23
+Admin Status     : up
+Oper Status      : down
+Description      : VPLS-SiteC-Down
+Bound Interface  : GigabitEthernet0/0/2
+Peer IP (local)  : 192.168.1.1
+Peer IP (remote) : 192.168.1.3
+
+...............................................................................
+VSI Name         : VSI-VPLS-3
+VSI ID           : 3
+BD ID            : 102
+MAC Count        : 156
+Admin Status     : admin-down
+Oper Status      : down
+Description      : VPLS-SiteD-AdminDown
+Bound Interface  : GigabitEthernet0/0/3
+Peer IP (local)  : 192.168.1.1
+Peer IP (remote) : 192.168.1.4
+

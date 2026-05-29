@@ -1,0 +1,40 @@
+# hostname=4WNET-BVA-BRT-A_S6730-H48X6C
+# source=operador NOC (paste chat)
+# command=display vsi verbose
+
+ ***VSI Name               : SERVICOS_CDS
+    Administrator VSI      : no
+    Isolate Spoken         : disable
+    VSI Index              : 0
+    VSI Description        : SERVICOS_CDS
+    PW Signaling           : ldp
+    Member Discovery Style : --
+    PW MAC Learn Style     : unqualify
+    Encapsulation Type     : vlan
+    MTU                    : 2000
+    Diffserv Mode          : uniform
+    Mpls Exp               : --
+    DomainId               : 255
+    Domain Name            : 
+    Ignore AcState         : disable
+    P2P VSI                : disable
+    Create Time            : 620 days, 12 hours, 16 minutes, 25 seconds
+    VSI State              : up
+ 
+    VSI ID                 : 601
+   *Peer Router ID         : 10.200.4.1
+    Negotiation-vc-id      : 601
+    primary or secondary   : primary
+    ignore-standby-state   : no
+    VC Label               : 1024
+    Peer Type              : dynamic
+    Session                : up
+    Tunnel ID              : 0x480017c3 
+    Broadcast Tunnel ID    : 0x480017c3 
+    Broad BackupTunnel ID  : 0x0 
+    CKey                   : 2
+    NKey                   : 1
+    Stp Enable             : 0
+    PwIndex                : 0
+    Control Word           : disable
+    BFD for PW             : unavailable

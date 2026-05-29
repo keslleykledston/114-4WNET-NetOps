@@ -9,9 +9,9 @@
 export interface ProvisioningJob {
   id: number;
   name: string;
-  /** l2vpn, l3vpn */
+  /** l2vpn_vpws, l2vpn_vpls, l3vpn_vrf, bgp_peer_customer, bgp_peer_provider, l2vpn, l3vpn */
   type: string;
-  /** draft, validated, executing, completed, failed, rolled_back */
+  /** draft, validated, pending_approval, approved, blocked, cancelled, executing, completed, failed, rolled_back */
   status: string;
   deviceIds: number[];
   /** @nullable */

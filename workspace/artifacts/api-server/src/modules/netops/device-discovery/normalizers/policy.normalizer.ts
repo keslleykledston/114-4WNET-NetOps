@@ -1,4 +1,4 @@
-import type { CommunityFilter, CommunityList, PrefixList, RoutePolicySummary } from "../discovery.types.js";
+import type { CommunityFilter, CommunityList, GenericPolicyCatalog, PrefixList, RoutePolicySummary } from "../discovery.types.js";
 import { sourceConfidence } from "../source-priority.js";
 import type { NetopsCommunity, NetopsFilter } from "../../types.js";
 import type { RoutePolicyMatchDetail } from "../../huawei-vrp/parsers/policy-parser.js";
@@ -10,9 +10,17 @@ function asRecord(value: unknown): Record<string, unknown> {
 export function normalizeDiscoveryPolicies(filters: NetopsFilter[]): {
   policies: RoutePolicySummary[];
   prefixLists: PrefixList[];
+  ipv6PrefixLists: PrefixList[];
+  asPathFilters: GenericPolicyCatalog[];
+  extcommunityFilters: GenericPolicyCatalog[];
+  aclFilters: GenericPolicyCatalog[];
 } {
   const policies: RoutePolicySummary[] = [];
   const prefixLists: PrefixList[] = [];
+  const ipv6PrefixLists: PrefixList[] = [];
+  const asPathFilters: GenericPolicyCatalog[] = [];
+  const extcommunityFilters: GenericPolicyCatalog[] = [];
+  const aclFilters: GenericPolicyCatalog[] = [];
 
   for (const filter of filters) {
     if (filter.type === "route-policy") {
@@ -57,9 +65,32 @@ export function normalizeDiscoveryPolicies(filters: NetopsFilter[]): {
         evidence: `${filter.type} ${filter.name}`,
       });
     }
+
+    if (filter.type === "ipv6-prefix") {
+      ipv6PrefixLists.push({
+        name: filter.name,
+        entries: filter.entries,
+        source: filter.source === "ssh" ? "ssh_running_config" : "local_db",
+        confidence: filter.source === "ssh" ? "high" : "low",
+        evidence: `${filter.type} ${filter.name}`,
+      });
+    }
+
+    if (filter.type === "as-path-filter" || filter.type === "extcommunity-filter" || filter.type === "acl") {
+      const item = {
+        name: filter.name,
+        entries: filter.entries,
+        source: filter.source === "ssh" ? "ssh_running_config" as const : "local_db" as const,
+        confidence: filter.source === "ssh" ? "high" as const : "low" as const,
+        evidence: `${filter.type} ${filter.name}`,
+      };
+      if (filter.type === "as-path-filter") asPathFilters.push(item);
+      if (filter.type === "extcommunity-filter") extcommunityFilters.push(item);
+      if (filter.type === "acl") aclFilters.push(item);
+    }
   }
 
-  return { policies, prefixLists };
+  return { policies, prefixLists, ipv6PrefixLists, asPathFilters, extcommunityFilters, aclFilters };
 }
 
 export function normalizeDiscoveryCommunities(communities: NetopsCommunity[]): {

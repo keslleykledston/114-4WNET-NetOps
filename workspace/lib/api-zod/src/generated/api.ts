@@ -1412,6 +1412,201 @@ export const RenderConfigTemplateResponse = zod.object({
 
 
 /**
+ * @summary List built-in service templates for preview workflow
+ */
+export const ListProvisioningServiceTemplatesResponseItem = zod.object({
+  "serviceType": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "configTemplateType": zod.string().optional(),
+  "requiredParameters": zod.array(zod.string()),
+  "optionalParameters": zod.array(zod.string()).optional(),
+  "parameterSchema": zod.record(zod.string(), zod.unknown()).optional()
+})
+export const ListProvisioningServiceTemplatesResponse = zod.array(ListProvisioningServiceTemplatesResponseItem)
+
+
+/**
+ * @summary List Huawei VRP provisioning templates (v0.4 catalog)
+ */
+export const ListProvisioningTemplatesResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string(),
+  "serviceType": zod.string(),
+  "parameterSchema": zod.record(zod.string(), zod.object({
+  "type": zod.string(),
+  "description": zod.string(),
+  "required": zod.boolean().optional(),
+  "sensitive": zod.boolean().optional()
+})),
+  "risks": zod.array(zod.string()),
+  "precheckHints": zod.array(zod.string()),
+  "postcheckHints": zod.array(zod.string()),
+  "supported": zod.boolean()
+})
+export const ListProvisioningTemplatesResponse = zod.array(ListProvisioningTemplatesResponseItem)
+
+
+/**
+ * @summary Get provisioning template by id
+ */
+export const GetProvisioningTemplateParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetProvisioningTemplateResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string(),
+  "serviceType": zod.string(),
+  "parameterSchema": zod.record(zod.string(), zod.object({
+  "type": zod.string(),
+  "description": zod.string(),
+  "required": zod.boolean().optional(),
+  "sensitive": zod.boolean().optional()
+})),
+  "risks": zod.array(zod.string()),
+  "precheckHints": zod.array(zod.string()),
+  "postcheckHints": zod.array(zod.string()),
+  "supported": zod.boolean()
+})
+
+
+/**
+ * @summary Generate config preview (serviceType workflow or templateId v0.4 catalog)
+ */
+export const previewProvisioningConfigBodyTwoModeDefault = `dry_run`;
+
+export const PreviewProvisioningConfigBody = zod.union([zod.object({
+  "deviceId": zod.number(),
+  "serviceType": zod.string(),
+  "parameters": zod.record(zod.string(), zod.unknown()),
+  "maintenanceWindowStart": zod.string().nullish(),
+  "maintenanceWindowEnd": zod.string().nullish(),
+  "rollbackPlan": zod.string().nullish()
+}),zod.object({
+  "deviceId": zod.number(),
+  "templateId": zod.string(),
+  "parameters": zod.record(zod.string(), zod.unknown()).optional(),
+  "mode": zod.string().default(previewProvisioningConfigBodyTwoModeDefault),
+  "maintenanceWindowStart": zod.string().nullish(),
+  "maintenanceWindowEnd": zod.string().nullish(),
+  "rollbackPlan": zod.string().nullish()
+})])
+
+export const PreviewProvisioningConfigResponse = zod.union([zod.object({
+  "deviceId": zod.number(),
+  "serviceType": zod.string(),
+  "configPreview": zod.string(),
+  "rollbackPreview": zod.string(),
+  "validations": zod.array(zod.object({
+  "name": zod.string(),
+  "passed": zod.boolean(),
+  "message": zod.string(),
+  "severity": zod.string().optional()
+})),
+  "risks": zod.array(zod.string()),
+  "missingData": zod.array(zod.string()),
+  "maintenanceWindow": zod.object({
+  "start": zod.string().nullish(),
+  "end": zod.string().nullish()
+}).nullish(),
+  "rollbackPlan": zod.string().nullish(),
+  "applyBlocked": zod.boolean(),
+  "applyBlockedReason": zod.string().nullish()
+}),zod.object({
+  "status": zod.enum(['valid', 'warning', 'blocked']),
+  "deviceId": zod.number(),
+  "templateId": zod.string(),
+  "serviceType": zod.string(),
+  "configPreview": zod.string(),
+  "rollbackPreview": zod.string(),
+  "executionPlan": zod.array(zod.string()),
+  "validations": zod.array(zod.object({
+  "name": zod.string(),
+  "passed": zod.boolean(),
+  "message": zod.string(),
+  "severity": zod.enum(['info', 'warn', 'error']).optional()
+})),
+  "risks": zod.array(zod.object({
+  "code": zod.string(),
+  "message": zod.string(),
+  "severity": zod.enum(['info', 'warn', 'error'])
+})),
+  "precheckHints": zod.array(zod.string()),
+  "postcheckHints": zod.array(zod.string()),
+  "missingData": zod.array(zod.string()),
+  "blockedReasons": zod.array(zod.string()),
+  "applyBlocked": zod.boolean(),
+  "applyBlockedReason": zod.string().nullish(),
+  "maintenanceWindow": zod.object({
+  "start": zod.string().nullish(),
+  "end": zod.string().nullish()
+}).nullish(),
+  "rollbackPlan": zod.string().nullish()
+})])
+
+
+/**
+ * @summary Export provisioning preview plan (templateId workflow)
+ */
+export const exportProvisioningPreviewBodyOneModeDefault = `dry_run`;
+
+export const ExportProvisioningPreviewBody = zod.object({
+  "deviceId": zod.number(),
+  "templateId": zod.string(),
+  "parameters": zod.record(zod.string(), zod.unknown()).optional(),
+  "mode": zod.string().default(exportProvisioningPreviewBodyOneModeDefault),
+  "maintenanceWindowStart": zod.string().nullish(),
+  "maintenanceWindowEnd": zod.string().nullish(),
+  "rollbackPlan": zod.string().nullish()
+}).and(zod.object({
+  "format": zod.enum(['markdown', 'json'])
+}))
+
+export const ExportProvisioningPreviewResponse = zod.object({
+  "format": zod.enum(['markdown', 'json']),
+  "content": zod.string(),
+  "preview": zod.object({
+  "status": zod.enum(['valid', 'warning', 'blocked']),
+  "deviceId": zod.number(),
+  "templateId": zod.string(),
+  "serviceType": zod.string(),
+  "configPreview": zod.string(),
+  "rollbackPreview": zod.string(),
+  "executionPlan": zod.array(zod.string()),
+  "validations": zod.array(zod.object({
+  "name": zod.string(),
+  "passed": zod.boolean(),
+  "message": zod.string(),
+  "severity": zod.enum(['info', 'warn', 'error']).optional()
+})),
+  "risks": zod.array(zod.object({
+  "code": zod.string(),
+  "message": zod.string(),
+  "severity": zod.enum(['info', 'warn', 'error'])
+})),
+  "precheckHints": zod.array(zod.string()),
+  "postcheckHints": zod.array(zod.string()),
+  "missingData": zod.array(zod.string()),
+  "blockedReasons": zod.array(zod.string()),
+  "applyBlocked": zod.boolean(),
+  "applyBlockedReason": zod.string().nullish(),
+  "maintenanceWindow": zod.object({
+  "start": zod.string().nullish(),
+  "end": zod.string().nullish()
+}).nullish(),
+  "rollbackPlan": zod.string().nullish()
+})
+})
+
+
+/**
  * @summary List provisioning jobs
  */
 export const ListProvisioningJobsQueryParams = zod.object({
@@ -1423,8 +1618,8 @@ export const ListProvisioningJobsQueryParams = zod.object({
 export const ListProvisioningJobsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "type": zod.string().describe('l2vpn, l3vpn'),
-  "status": zod.string().describe('draft, validated, executing, completed, failed, rolled_back'),
+  "type": zod.string().describe('l2vpn_vpws, l2vpn_vpls, l3vpn_vrf, bgp_peer_customer, bgp_peer_provider, l2vpn, l3vpn'),
+  "status": zod.string().describe('draft, validated, pending_approval, approved, blocked, cancelled, executing, completed, failed, rolled_back'),
   "deviceIds": zod.array(zod.number()),
   "templateId": zod.number().nullish(),
   "parameters": zod.string().nullish().describe('JSON of provisioning parameters'),
@@ -1513,6 +1708,123 @@ export const ValidateProvisioningJobResponse = zod.object({
   "name": zod.string(),
   "passed": zod.boolean(),
   "message": zod.string()
+}))
+})
+
+
+/**
+ * @summary Export Markdown plan for an existing job
+ */
+export const PreviewProvisioningJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PreviewProvisioningJobResponse = zod.object({
+  "previewMarkdown": zod.string().optional()
+})
+
+
+/**
+ * @summary Move validated job to pending_approval
+ */
+export const RequestProvisioningJobApprovalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RequestProvisioningJobApprovalResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "deviceIds": zod.array(zod.number()),
+  "templateId": zod.number().nullish(),
+  "parameters": zod.string().nullish(),
+  "validatedAt": zod.string().nullish(),
+  "executedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "steps": zod.array(zod.object({
+  "id": zod.number(),
+  "jobId": zod.number(),
+  "deviceId": zod.number(),
+  "deviceHostname": zod.string().nullish(),
+  "stepName": zod.string(),
+  "status": zod.string().describe('pending, running, completed, failed, skipped'),
+  "configApplied": zod.string().nullish(),
+  "output": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "executedAt": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Approve job after pending_approval (apply still blocked by default)
+ */
+export const ApproveProvisioningJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ApproveProvisioningJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "deviceIds": zod.array(zod.number()),
+  "templateId": zod.number().nullish(),
+  "parameters": zod.string().nullish(),
+  "validatedAt": zod.string().nullish(),
+  "executedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "steps": zod.array(zod.object({
+  "id": zod.number(),
+  "jobId": zod.number(),
+  "deviceId": zod.number(),
+  "deviceHostname": zod.string().nullish(),
+  "stepName": zod.string(),
+  "status": zod.string().describe('pending, running, completed, failed, skipped'),
+  "configApplied": zod.string().nullish(),
+  "output": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "executedAt": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Cancel draft/validated/pending job
+ */
+export const CancelProvisioningJobParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CancelProvisioningJobResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "deviceIds": zod.array(zod.number()),
+  "templateId": zod.number().nullish(),
+  "parameters": zod.string().nullish(),
+  "validatedAt": zod.string().nullish(),
+  "executedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "steps": zod.array(zod.object({
+  "id": zod.number(),
+  "jobId": zod.number(),
+  "deviceId": zod.number(),
+  "deviceHostname": zod.string().nullish(),
+  "stepName": zod.string(),
+  "status": zod.string().describe('pending, running, completed, failed, skipped'),
+  "configApplied": zod.string().nullish(),
+  "output": zod.string().nullish(),
+  "errorMessage": zod.string().nullish(),
+  "executedAt": zod.string().nullish()
 }))
 })
 

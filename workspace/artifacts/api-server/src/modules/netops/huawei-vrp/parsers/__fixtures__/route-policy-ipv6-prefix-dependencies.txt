@@ -1,0 +1,15 @@
+# Sanitized excerpt from 4WNET-BVA-BRT-RX export (Huawei VRP)
+ip ipv6-prefix AS266208-4WNET-V6-332 index 10 permit 2804:5984:8000:: 33 greater-equal 33 less-equal 48
+ip ipv6-prefix C17-BLOCKLIST-IPV6 index 100 permit 2001:DB8:: 32 greater-equal 32 less-equal 128
+ip ipv6-prefix C17-PREFIX-PREFERENCE-IPV6 index 100 permit 2620:FE:: 48
+ip ipv6-prefix GATEWAY-IPV6 index 10 permit :: 0
+ip ip-prefix AS268707-4WNET index 10 permit 10.0.0.0 8
+route-policy MALHA-MNS-Export-IPv6 permit node 10
+ if-match ip-prefix AS268707-4WNET
+ if-match ipv6 address prefix-list AS266208-4WNET-V6-332
+route-policy C17-IMPORT-IPV6 deny node 1001
+ if-match ipv6 address prefix-list C17-BLOCKLIST-IPV6
+route-policy C17-IMPORT-IPV6 permit node 2001
+ if-match ipv6 address prefix-list C17-PREFIX-PREFERENCE-IPV6
+route-policy C17-IMPORT-IPV6 permit node 3011
+ if-match ipv6 address prefix-list GATEWAY-IPV6

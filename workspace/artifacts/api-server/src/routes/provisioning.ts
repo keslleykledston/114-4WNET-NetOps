@@ -14,6 +14,16 @@ import { runSSHCommands } from "../lib/ssh.js";
 import { env } from "../lib/env.js";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 import { buildProvisioningJobReportMarkdown, createProvisioningReport, getProvisioningJobDetail } from "../modules/netops/provisioning.service.js";
+import {
+  buildProvisioningPreview,
+  getProvisioningServiceCatalog,
+  isAllowedJobTransition,
+} from "../modules/netops/provisioning-preview.service.js";
+import {
+  buildProvisioningPreview as buildTemplateProvisioningPreview,
+  maskParametersForAudit,
+} from "../modules/provisioning/provisioning-preview.service.js";
+import { ensureServiceTemplatesInDb } from "../modules/netops/provisioning-template-seed.js";
 
 const router = Router();
 
@@ -59,6 +69,106 @@ async function upsertStepRows(jobId: number, deviceIds: number[], status: "pendi
     await db.insert(provisioningStepsTable).values(stepRows);
   }
 }
+
+router.get("/provisioning/service-templates", async (_req, res) => {
+  res.json(getProvisioningServiceCatalog());
+});
+
+router.post("/provisioning/service-templates/seed", async (req, res) => {
+  const result = await ensureServiceTemplatesInDb();
+  await logAuditEvent({
+    action: "provisioning_templates_seed",
+    objectType: "config_template",
+    objectId: "builtin",
+    metadata: result,
+    sourceIp: getRequestSourceIp(req),
+  });
+  res.json({ ok: true, ...result });
+});
+
+router.post("/provisioning/preview", async (req, res) => {
+  const body = req.body as Record<string, unknown>;
+  const deviceId = Number(body.deviceId);
+  const templateId = typeof body.templateId === "string" ? body.templateId : "";
+  const serviceType = typeof body.serviceType === "string" ? body.serviceType : "";
+  const parameters = body.parameters && typeof body.parameters === "object" && !Array.isArray(body.parameters)
+    ? body.parameters as Record<string, unknown>
+    : {};
+
+  if (!Number.isInteger(deviceId) || deviceId < 1) {
+    res.status(400).json({ error: "deviceId is required" });
+    return;
+  }
+
+  if (templateId) {
+    const preview = await buildTemplateProvisioningPreview({
+      deviceId,
+      templateId,
+      parameters,
+      mode: typeof body.mode === "string" ? body.mode : "dry_run",
+      maintenanceWindowStart: typeof body.maintenanceWindowStart === "string" ? body.maintenanceWindowStart : null,
+      maintenanceWindowEnd: typeof body.maintenanceWindowEnd === "string" ? body.maintenanceWindowEnd : null,
+      rollbackPlan: typeof body.rollbackPlan === "string" ? body.rollbackPlan : null,
+    });
+
+    if ("error" in preview) {
+      res.status(preview.status).json({ error: preview.error });
+      return;
+    }
+
+    await logAuditEvent({
+      action: "provisioning_preview_created",
+      objectType: "device",
+      objectId: String(deviceId),
+      metadata: {
+        templateId,
+        status: preview.status,
+        validationCount: preview.validations.length,
+        riskCount: preview.risks.length,
+        applyBlocked: preview.applyBlocked,
+        parameters: maskParametersForAudit(templateId, parameters),
+      },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    res.json(preview);
+    return;
+  }
+
+  if (!serviceType) {
+    res.status(400).json({ error: "serviceType or templateId is required" });
+    return;
+  }
+
+  const preview = await buildProvisioningPreview({
+    deviceId,
+    serviceType,
+    parameters,
+    maintenanceWindowStart: typeof body.maintenanceWindowStart === "string" ? body.maintenanceWindowStart : null,
+    maintenanceWindowEnd: typeof body.maintenanceWindowEnd === "string" ? body.maintenanceWindowEnd : null,
+    rollbackPlan: typeof body.rollbackPlan === "string" ? body.rollbackPlan : null,
+  });
+
+  if ("error" in preview) {
+    res.status(preview.status).json({ error: preview.error });
+    return;
+  }
+
+  await logAuditEvent({
+    action: "provisioning_preview",
+    objectType: "device",
+    objectId: String(deviceId),
+    metadata: {
+      serviceType,
+      validationCount: preview.validations.length,
+      missingCount: preview.missingData.length,
+      applyBlocked: preview.applyBlocked,
+    },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  res.json(preview);
+});
 
 router.get("/provisioning-jobs", async (req, res) => {
   const query = ListProvisioningJobsQueryParams.safeParse(req.query);
@@ -149,19 +259,27 @@ router.post("/provisioning-jobs/:id/validate", async (req, res) => {
   checks.push({ name: "Conflict check", passed: true, message: "No conflicting provisioning jobs detected" });
 
   const valid = checks.every((check) => check.passed);
-  if (valid) {
+  if (valid && detail.status === "draft") {
+    if (!isAllowedJobTransition(detail.status, "validated")) {
+      res.status(409).json({ error: `Cannot validate from status ${detail.status}` });
+      return;
+    }
     await db.update(provisioningJobsTable).set({ status: "validated", validatedAt: new Date() }).where(eq(provisioningJobsTable.id, params.data.id));
+  } else if (valid && detail.status !== "draft" && detail.status !== "validated") {
+    checks.push({ name: "Status gate", passed: false, message: `Job must be draft to validate (current: ${detail.status})` });
   }
+
+  const finalValid = checks.every((check) => check.passed);
 
   await logAuditEvent({
     action: "provisioning_validate",
     objectType: "provisioning_job",
     objectId: String(params.data.id),
-    metadata: { valid, checks, jobName: detail.name, jobType: detail.type },
+    metadata: { valid: finalValid, checks, jobName: detail.name, jobType: detail.type },
     sourceIp: getRequestSourceIp(req),
   });
 
-  res.json({ valid, checks });
+  res.json({ valid: finalValid, checks });
 });
 
 router.post("/provisioning-jobs/:id/preview", async (req, res) => {
@@ -189,6 +307,38 @@ router.post("/provisioning-jobs/:id/preview", async (req, res) => {
   res.json({ ...detail, previewMarkdown });
 });
 
+router.post("/provisioning-jobs/:id/request-approval", async (req, res) => {
+  const params = ValidateProvisioningJobParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const detail = await buildJobDetail(params.data.id);
+  if (!detail) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  if (!isAllowedJobTransition(detail.status, "pending_approval")) {
+    res.status(409).json({ error: `Cannot request approval from status ${detail.status}. Validate the job first.` });
+    return;
+  }
+
+  await db.update(provisioningJobsTable).set({ status: "pending_approval" }).where(eq(provisioningJobsTable.id, params.data.id));
+
+  await logAuditEvent({
+    action: "provisioning_request_approval",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: { jobName: detail.name, jobType: detail.type, previousStatus: detail.status },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  const updated = await buildJobDetail(params.data.id);
+  res.json(updated);
+});
+
 router.post("/provisioning-jobs/:id/approve", async (req, res) => {
   const params = ValidateProvisioningJobParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) {
@@ -202,17 +352,59 @@ router.post("/provisioning-jobs/:id/approve", async (req, res) => {
     return;
   }
 
+  if (!isAllowedJobTransition(detail.status, "approved")) {
+    res.status(409).json({ error: `Cannot approve from status ${detail.status}. Job must be pending_approval.` });
+    return;
+  }
+
   await db.update(provisioningJobsTable).set({ status: "approved" }).where(eq(provisioningJobsTable.id, params.data.id));
 
   await logAuditEvent({
     action: "provisioning_approve",
     objectType: "provisioning_job",
     objectId: String(params.data.id),
-    metadata: { jobName: detail.name, jobType: detail.type },
+    metadata: { jobName: detail.name, jobType: detail.type, applyBlocked: env.configApplyEnabled !== true },
     sourceIp: getRequestSourceIp(req),
   });
 
-  res.json({ ...detail, status: "approved" });
+  const updated = await buildJobDetail(params.data.id);
+  res.json(updated);
+});
+
+router.post("/provisioning-jobs/:id/cancel", async (req, res) => {
+  const params = ValidateProvisioningJobParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const detail = await buildJobDetail(params.data.id);
+  if (!detail) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  if (!isAllowedJobTransition(detail.status, "cancelled")) {
+    res.status(409).json({ error: `Cannot cancel from status ${detail.status}` });
+    return;
+  }
+
+  await db.update(provisioningJobsTable).set({
+    status: "cancelled",
+    completedAt: new Date(),
+    errorMessage: "Cancelled by operator",
+  }).where(eq(provisioningJobsTable.id, params.data.id));
+
+  await logAuditEvent({
+    action: "provisioning_cancel",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: { jobName: detail.name, previousStatus: detail.status },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  const updated = await buildJobDetail(params.data.id);
+  res.json(updated);
 });
 
 router.post("/provisioning-jobs/:id/report", async (req, res) => {
@@ -259,6 +451,11 @@ router.post("/provisioning-jobs/:id/execute", async (req, res) => {
   const blocked = env.configApplyEnabled !== true;
   const dryRun = env.dryRunDefault || blocked;
   const blockedMessage = "Execução real bloqueada. CONFIG_APPLY_ENABLED=false.";
+
+  if (job.status !== "approved" && !blocked) {
+    res.status(409).json({ error: "Job must be approved before execute. Current status: " + job.status });
+    return;
+  }
 
   if (blocked || dryRun) {
     await db.update(provisioningJobsTable).set({

@@ -1,5 +1,6 @@
 /** IF-MIB + IF-MIB extensions + BGP4-MIB (RFC 1657) — read-only GET/WALK only. */
 export const SNMP_OIDS = {
+  sysDescr: "1.3.6.1.2.1.1.1.0",
   ifDescr: "1.3.6.1.2.1.2.2.1.2",
   ifType: "1.3.6.1.2.1.2.2.1.3",
   ifMtu: "1.3.6.1.2.1.2.2.1.4",
@@ -11,6 +12,7 @@ export const SNMP_OIDS = {
   ifName: "1.3.6.1.2.1.31.1.1.1.1",
   ifHCInOctets: "1.3.6.1.2.1.31.1.1.1.6",
   ifHCOutOctets: "1.3.6.1.2.1.31.1.1.1.10",
+  ifHighSpeed: "1.3.6.1.2.1.31.1.1.1.15",
   ifAlias: "1.3.6.1.2.1.31.1.1.1.18",
   bgpPeerState: "1.3.6.1.2.1.15.3.1.2",
   bgpPeerRemoteAddr: "1.3.6.1.2.1.15.3.1.7",

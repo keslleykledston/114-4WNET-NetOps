@@ -1,0 +1,1019 @@
+# device_id=1 hostname=4WNET-BVA-BRT-RX
+# collected_at=2026-05-23T21:01:40.269Z
+# collector=noc_readonly_script
+# command=display current-configuration interface
+#
+interface Eth-Trunk0
+ portswitch
+ description DOWNLINK-BRT-BO:A_S6730
+ port link-type trunk
+#
+interface Eth-Trunk0.77
+ vlan-type dot1q 77
+ description EN-4WNET-BVA-CDS-RX_M4
+ ipv6 enable
+ ip address 10.20.255.9 255.255.255.252
+ ipv6 address 2804:5984:B000:1::B9/126
+#
+interface Eth-Trunk0.84
+ vlan-type dot1q 84
+ ip address 10.20.0.17 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk0.85
+ vlan-type dot1q 85
+ description VRF-CDN
+ ipv6 enable
+ ip address 10.20.0.25 255.255.255.252
+ ipv6 address 2804:5984:B000:1::71/126
+ statistic enable
+#
+interface Eth-Trunk0.89
+#
+interface Eth-Trunk0.112
+#
+interface Eth-Trunk0.155
+ vlan-type dot1q 155
+ description PTP-4WNET_RX-BKP
+ ip address 172.28.0.29 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk0.414
+ vlan-type dot1q 414
+ description PROV-PRONET
+ ip address 172.28.1.85 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk0.652
+ vlan-type dot1q 652
+ description BGP-BVA-MNS
+ ip address 10.20.1.6 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk0.810
+ vlan-type dot1q 810
+ description CL-VTELL-BVA-((724)MJE TELC)
+ ipv6 enable
+ ip address 172.28.1.185 255.255.255.252
+ ipv6 address 2804:5984:B000:1::D9/126
+ statistic enable
+#
+interface Eth-Trunk0.811
+ vlan-type dot1q 811
+ description CL-TIXUS-ULTRANET-BVA-((45) I. S. MARQUES)
+ ipv6 enable
+ ip address 172.28.1.189 255.255.255.252
+ ipv6 address 2804:5984:B000:1::DD/126
+ statistic enable
+ qos car cir 4500000 cbs 18700000 green pass red discard inbound
+ qos car cir 4500000 cbs 18700000 green pass red discard outbound
+#
+interface Eth-Trunk0.812
+ vlan-type dot1q 812
+ description CL-MACARAO-BVA-(725) E G DOS SANTOS
+ ipv6 enable
+ ip address 172.28.1.193 255.255.255.252
+ ipv6 address 2804:5984:B000:1::E1/126
+ statistic enable
+ qos car cir 1200000 cbs 15000000 green pass red discard inbound
+ qos car cir 1200000 cbs 15000000 green pass red discard outbound
+#
+interface Eth-Trunk0.813
+ vlan-type dot1q 813
+ description AS263934-INFORR-BACKUP
+ ipv6 enable
+ ip address 172.28.0.50 255.255.255.252
+ ipv6 address 2804:2800:8003:4::62/126
+ statistic enable
+#
+interface Eth-Trunk0.814
+ vlan-type dot1q 814
+ description CL-VLX-BVA-((87) VELOXTER TELECOMUNICACOES LTDA)
+ ipv6 enable
+ ip address 172.28.1.197 255.255.255.252
+ ipv6 address 2804:5984:B000:1::91/126
+ statistic enable
+ qos car cir 1000000 cbs 18700000 green pass red discard inbound
+ qos car cir 1000000 cbs 18700000 green pass red discard outbound
+#
+interface Eth-Trunk0.819
+ vlan-type dot1q 819
+ description PTP-VIANET-VIA-CDS
+ ipv6 enable
+ ip address 172.28.1.101 255.255.255.252
+ ipv6 address 2804:5984:8F00::21/126
+ statistic enable
+#
+interface Eth-Trunk0.890
+ vlan-type dot1q 890
+ description ISP-UPLINK-IP
+ ipv6 enable
+ ip address 172.28.1.37 255.255.255.252
+ ipv6 address 2804:5984:B000:1::69/126
+ statistic enable
+#
+interface Eth-Trunk0.894
+ vlan-type dot1q 894
+ description ALLFIBER-CROSSCONNECT-4WNET
+ ipv6 enable
+ statistic enable
+#
+interface Eth-Trunk0.899
+ vlan-type dot1q 899
+ description ISP-UPLINK-IP-II
+ ipv6 enable
+ ip address 172.28.1.45 255.255.255.252
+ ipv6 address 2804:5984:B000:1::A1/126
+ statistic enable
+#
+interface Eth-Trunk0.1002
+ vlan-type dot1q 1002
+ description AS263934-INFORR-DIRETO
+ ipv6 enable
+ ip address 172.28.0.26 255.255.255.252
+ ipv6 address 2804:2800:8003::36/126
+ statistic enable
+#
+interface Eth-Trunk0.1121
+ vlan-type dot1q 1121
+ description UPSTREAM-AS26615-TIM
+ ipv6 enable
+ ip address 179.54.45.34 255.255.255.252
+ ipv6 address 2804:20:1:191::D/127
+ statistic enable
+#
+interface Eth-Trunk0.1161
+ vlan-type dot1q 1161
+ description CL-4WNET-BVA-(717)AMAZON-ACO
+ ipv6 enable
+ ip address 45.169.160.197 255.255.255.252
+ ipv6 address 2804:5984:B000:6::29/126
+ statistic enable
+#
+interface Eth-Trunk0.1777
+ vlan-type dot1q 1777
+ description PTP-VIANET
+ ipv6 enable
+ ip address 10.77.79.1 255.255.255.252
+ ipv6 address 2804:5984:8F00::5/126
+ statistic enable
+#
+interface Eth-Trunk0.4010
+ vlan-type dot1q 4010
+ description IX-MAO-V4
+ ip address 187.16.198.69 255.255.255.0
+ statistic enable
+ traffic-policy FILTER-PORTS-OUTPUT-V4 inbound
+ traffic-policy FILTER-PORTS-OUTPUT-V4 outbound
+ mac-address 9016-baa4-c242
+#
+interface Eth-Trunk0.4011
+ vlan-type dot1q 4011
+ description IX-MAO-V6
+ ipv6 enable
+ ipv6 address 2001:12F8:0:21::69/64
+ statistic enable
+ traffic-policy FILTER-PORTS-OUTPUT-V4 inbound
+ traffic-policy FILTER-PORTS-OUTPUT-V4 outbound
+ mac-address 9016-baa4-c242
+#
+interface Eth-Trunk1
+ portswitch
+ description SW_HW_CORE_0_BVB_4WNET
+ port link-type trunk
+#
+interface Eth-Trunk1.10
+ vlan-type dot1q 10
+ description PTP_BGP_AS270966
+ shutdown
+ ipv6 enable
+ ip address 100.64.42.21 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.22
+ vlan-type dot1q 22
+ description EN-ROTEADORES
+ ipv6 enable
+ ip address 172.28.0.33 255.255.255.248
+ ipv6 address 2804:5984:B000::D/126
+#
+interface Eth-Trunk1.38
+ vlan-type dot1q 38
+ description CL-EXATA-CARGO-PJ-IP
+ ipv6 enable
+ statistic enable
+#
+interface Eth-Trunk1.44
+ vlan-type dot1q 44
+ description NETFAST
+ ipv6 enable
+ ip address 10.201.185.1 255.255.255.252
+ ipv6 address 2804:540C:3000::2/64
+ statistic enable
+#
+interface Eth-Trunk1.80
+ vlan-type dot1q 80
+ description 4WNET-BVA-BRT-A
+ ipv6 enable
+ ip address 10.20.0.9 255.255.255.252
+ ipv6 address 2804:5984:B000::9/126
+ statistic enable
+ ospf network-type p2p
+ mpls
+ mpls ldp
+#
+interface Eth-Trunk1.83
+ vlan-type dot1q 83
+ description Peer BGP Antigo v6
+ ipv6 enable
+ ipv6 address 2804:5984:B000::5/126
+#
+interface Eth-Trunk1.86
+ vlan-type dot1q 86
+#
+interface Eth-Trunk1.88
+ vlan-type dot1q 88
+ description EN-BVA-4WNET-BRT-02
+ ipv6 enable
+ ip address 10.20.0.41 255.255.255.252
+ ipv6 address 2804:5984:B000:1::89/126
+ statistic enable
+#
+interface Eth-Trunk1.89
+ vlan-type dot1q 89
+#
+interface Eth-Trunk1.90
+ vlan-type dot1q 90
+#
+interface Eth-Trunk1.92
+ vlan-type dot1q 92
+#
+interface Eth-Trunk1.93
+ vlan-type dot1q 93
+ ip address 10.20.0.1 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.94
+ vlan-type dot1q 94
+#
+interface Eth-Trunk1.95
+ vlan-type dot1q 95
+ description SN_NET
+ ipv6 enable
+ ip address 172.28.0.53 255.255.255.252
+ ipv6 address 2804:5984:B000:1::11/126
+ statistic enable
+#
+interface Eth-Trunk1.100
+ vlan-type dot1q 100
+ statistic enable
+#
+interface Eth-Trunk1.115
+ vlan-type dot1q 115
+#
+interface Eth-Trunk1.118
+ vlan-type dot1q 118
+ description PTP_PE_BVB_4WNET_EDENILTON_VIRTUAL_BT_01
+ ipv6 enable
+ ip address 172.28.1.89 255.255.255.252
+ ipv6 address 2804:5984:8F00::11/126
+ statistic enable
+#
+interface Eth-Trunk1.120
+ vlan-type dot1q 120
+ description PTP_BGP_4WNET-RZ
+ ipv6 enable
+ statistic enable
+#
+interface Eth-Trunk1.121
+ vlan-type dot1q 121
+ description PTP-4WNET-CLIENTES
+ ipv6 enable
+ ip address 10.20.0.49 255.255.255.252
+ ip address 10.33.11.5 255.255.255.252 sub
+ ipv6 address 2804:5984:B000:1::1/126
+ statistic enable
+#
+interface Eth-Trunk1.122
+ vlan-type dot1q 122
+ description PTP-PE_BVB_4WNET_VIANET_VIRTUAL_BT_01
+ ipv6 enable
+ ip address 172.28.1.93 255.255.255.252
+ ipv6 address 2804:5984:8F00::29/126
+ statistic enable
+#
+interface Eth-Trunk1.134
+ vlan-type dot1q 134
+ description FNA-4WNET
+ shutdown
+ ipv6 enable
+ ip address 45.169.161.5 255.255.255.252
+ ipv6 address 2804:5984:B000:1::45/126
+ statistic enable
+#
+interface Eth-Trunk1.135
+ vlan-type dot1q 135
+#
+interface Eth-Trunk1.144
+ vlan-type dot1q 144
+ description CL-ENEVA-PJ-IP
+ ipv6 enable
+ ip address 172.28.0.1 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.161
+ vlan-type dot1q 161
+ description EN-BRT-BOB-V6
+ ipv6 enable
+ ipv6 address 2804:5984:B000:1::99/126
+ statistic enable
+#
+interface Eth-Trunk1.227
+ vlan-type dot1q 227
+ description MS-FIBRA
+ ipv6 enable
+ ip address 172.22.151.21 255.255.255.252
+ ipv6 address 2804:5984:B000:1::41/126
+ statistic enable
+#
+interface Eth-Trunk1.228
+ vlan-type dot1q 228
+ description IX_AS270966-4WNET-MNS
+ shutdown
+ ipv6 enable
+ ip address 172.28.1.30 255.255.255.252
+ ipv6 address 2804:5984:B400::16/126
+ statistic enable
+#
+interface Eth-Trunk1.312
+ vlan-type dot1q 312
+ description CIRCUITO-404 - TIXUS
+ ipv6 enable
+ statistic enable
+#
+interface Eth-Trunk1.313
+ vlan-type dot1q 313
+ description CIRCUITO-404 - TIXUS
+ ipv6 enable
+ ip address 10.20.242.37 255.255.255.252
+ ipv6 address 2804:5984:B000:2::15/126
+ statistic enable
+#
+interface Eth-Trunk1.404
+ vlan-type dot1q 404
+ description PTP-PTL
+ shutdown
+ ipv6 enable
+ ip address 45.169.161.25 255.255.255.252
+ ipv6 address 2804:5984:8F00::D/126
+ statistic enable
+#
+interface Eth-Trunk1.411
+ vlan-type dot1q 411
+ description PTP-TECHINT
+ shutdown
+ ipv6 enable
+ ip address 100.64.42.1 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.487
+ vlan-type dot1q 487
+ description VLAN_487_INTERNET_SAT_ENEVA
+ shutdown
+ ipv6 enable
+ ip address 45.169.161.109 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.552
+ vlan-type dot1q 552
+ description RT-ISP-AIRNET-IP
+ ipv6 enable
+ ip address 172.28.1.1 255.255.255.252
+ ipv6 address 2804:5984:B000:1::D/126
+ statistic enable
+#
+interface Eth-Trunk1.555
+ vlan-type dot1q 555
+ description ISP-AIRNET-VIRTUAL
+ ipv6 enable
+ ip address 45.169.161.58 255.255.255.252
+ ipv6 address 2804:5984:8F00::2D/126
+ statistic enable
+#
+interface Eth-Trunk1.559
+ vlan-type dot1q 559
+ description RT-ISP-OLA-TELECOM-IP
+ ipv6 enable
+ ip address 172.28.1.17 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.560
+ vlan-type dot1q 560
+ description PTP_HC-PNEUS
+ shutdown
+ ipv6 enable
+ ip address 100.64.8.5 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.600
+ vlan-type dot1q 600
+ description UPLINK-INFORR
+ ipv6 enable
+ ip address 172.16.115.38 255.255.255.252
+ ipv6 address 2804:5984:8100::2/126
+ statistic enable
+#
+interface Eth-Trunk1.605
+ vlan-type dot1q 605
+ description ROTA_GCA_INFORR
+ shutdown
+ ipv6 enable
+ ip address 172.28.0.22 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.612
+ vlan-type dot1q 612
+ description 4WNET-MNS-KTG-RX
+ shutdown
+ ipv6 enable
+ ip address 10.20.255.6 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.621
+ vlan-type dot1q 621
+ description ISP-NICK NET
+ ipv6 enable
+ ip address 172.28.1.145 255.255.255.252
+ ipv6 address 2804:5984:B000:1::B1/126
+ statistic enable
+#
+interface Eth-Trunk1.651
+ vlan-type dot1q 651
+ description LAN2LAN-BVA<>MNS>IP>DWDM-INFORR
+ ipv6 enable
+ statistic enable
+#
+interface Eth-Trunk1.653
+ vlan-type dot1q 653
+ description LAN2LAN-BVA<>MNS>IP>DWDM-INFORR
+ ipv6 enable
+ ip address 10.20.1.2 255.255.255.252
+ ipv6 address 2804:5984:B400:1::22/126
+ statistic enable
+#
+interface Eth-Trunk1.654
+ vlan-type dot1q 654
+ description LAN2LAN-BVA-EMBRATEL-MNS/IP/08754_4WNET_BVB
+ ipv6 enable
+ ip address 189.23.156.122 255.255.255.252
+ ipv6 address 2804:A8:2:A8::468E/126
+ statistic enable
+#
+interface Eth-Trunk1.665
+ vlan-type dot1q 665
+ description PTP-CS-FIBRA
+ shutdown
+ ipv6 enable
+ ip address 45.169.161.65 255.255.255.252
+ ip address 100.64.40.1 255.255.255.252 sub
+ ipv6 address 2804:5984:B000:1::5/126
+ statistic enable
+#
+interface Eth-Trunk1.802
+ vlan-type dot1q 802
+#
+interface Eth-Trunk1.803
+ vlan-type dot1q 803
+#
+interface Eth-Trunk1.804
+ vlan-type dot1q 804
+ description VLAN_896_AS268625-NETFAST-IP
+ ipv6 enable
+ ip address 172.28.1.9 255.255.255.252
+ ipv6 address 2804:5984:B000:1::61/126
+ statistic enable
+#
+interface Eth-Trunk1.805
+ vlan-type dot1q 805
+#
+interface Eth-Trunk1.807
+ vlan-type dot1q 807
+ description EN-4WNET-BVA-CDS-RZ
+ ipv6 enable
+ ip address 172.28.1.253 255.255.255.252
+ ipv6 address 2804:5984:B000:1::9/126
+ ipv6 address 2804:5984:B000:1::E5/126
+ statistic enable
+#
+interface Eth-Trunk1.825
+ vlan-type dot1q 825
+ description PE-SMF-BVA-BLV
+ ip address 172.28.1.201 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.832
+ vlan-type dot1q 832
+ description AS53153-IMPACTUS
+ ipv6 enable
+ ip address 172.22.151.25 255.255.255.252
+ ipv6 address 2804:5984:B000:1::85/126
+ statistic enable
+#
+interface Eth-Trunk1.833
+ vlan-type dot1q 833
+ description AS268707-IMPACTUS
+ ipv6 enable
+ ip address 172.28.1.149 255.255.255.252
+ ipv6 address 2804:5984:B000:1::B5/126
+ statistic enable
+#
+interface Eth-Trunk1.834
+ vlan-type dot1q 834
+ description CL-NETDOVIZINHO-BVA-(699)PHC
+ ipv6 enable
+ ip address 172.28.1.81 255.255.255.252
+ ipv6 address 2804:5984:B000:1::BD/126
+ statistic enable
+#
+interface Eth-Trunk1.835
+ vlan-type dot1q 835
+#
+interface Eth-Trunk1.836
+ vlan-type dot1q 836
+#
+interface Eth-Trunk1.837
+ vlan-type dot1q 837
+ description RN-CL-NETDOVIZINHO-BVA-(699)PHC
+ ipv6 enable
+ ip address 172.28.1.209 255.255.255.252
+ ipv6 address 2804:5984:B000:1::C1/126
+ statistic enable
+#
+interface Eth-Trunk1.847
+ vlan-type dot1q 847
+ description WIFIZAO.TPL
+ ipv6 enable
+ ip address 172.28.1.141 255.255.255.252
+ ipv6 address 2804:5984:B000:1::AD/126
+ statistic enable
+#
+interface Eth-Trunk1.849
+ vlan-type dot1q 849
+ description CL-VIANET-(ALFATELECOM)-FTTH
+ ipv6 enable
+ ip address 10.180.18.1 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.867
+ vlan-type dot1q 867
+ description CL-XPAND-CDN
+ ip address 172.28.1.97 255.255.255.252
+#
+interface Eth-Trunk1.879
+ vlan-type dot1q 879
+ description ISP-UPLINK-CONNECTBV8-IP
+ ip address 172.28.1.73 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.880
+ vlan-type dot1q 880
+#
+interface Eth-Trunk1.885
+ vlan-type dot1q 885
+ description UPLINK_ZAP-IP
+ ipv6 enable
+ ip address 172.28.1.61 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.886
+ vlan-type dot1q 886
+#
+interface Eth-Trunk1.888
+ vlan-type dot1q 888
+#
+interface Eth-Trunk1.891
+ vlan-type dot1q 891
+#
+interface Eth-Trunk1.893
+ vlan-type dot1q 893
+#
+interface Eth-Trunk1.896
+ vlan-type dot1q 896
+#
+interface Eth-Trunk1.897
+ vlan-type dot1q 897
+#
+interface Eth-Trunk1.900
+ vlan-type dot1q 900
+#
+interface Eth-Trunk1.1038
+ vlan-type dot1q 1038
+ description CL-EXATA-CARGO-PJ-IP
+ ipv6 enable
+ ip address 10.83.140.1 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.1118
+ vlan-type dot1q 1118
+ description GW_SERVIOS_NAO_DELETAR
+ ipv6 enable
+ ip address 45.169.161.129 255.255.255.252
+ ip address 45.169.160.117 255.255.255.252 sub
+ ip address 45.169.160.125 255.255.255.252 sub
+ ip address 45.169.161.14 255.255.255.248 sub
+ ip address 45.169.161.22 255.255.255.248 sub
+ ipv6 address 2804:5984:B000:1::E9/126
+ ipv6 address 2804:5984:B000:3::1/64
+ ipv6 address 2804:5984:B000:B::1/64
+ ipv6 address 2804:5984:B200:9::1/64
+ ipv6 address 2804:5984:B200:10::1/64
+ statistic enable
+#
+interface Eth-Trunk1.1120
+ vlan-type dot1q 1120
+ description CGNAT
+ shutdown
+ ipv6 enable
+ ip address 100.64.42.13 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.1121
+ vlan-type dot1q 1121
+ description PE_BVB_4WNET_BT_02
+ shutdown
+ ipv6 enable
+ statistic enable
+#
+interface Eth-Trunk1.1125
+ vlan-type dot1q 1125
+ description VM-CDN-TV
+ ipv6 enable
+ ip address 45.169.160.225 255.255.255.248
+ statistic enable
+#
+interface Eth-Trunk1.1154
+ vlan-type dot1q 1154
+ description CL-MARDISA-C2
+ ipv6 enable
+ ip address 172.28.0.129 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.1155
+ vlan-type dot1q 1155
+ description CL-MARDISA
+ ipv6 enable
+ ip address 172.28.0.9 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.1156
+ vlan-type dot1q 1156
+ description (543) CMA SOLUCOES LTDA
+ ipv6 enable
+ ip address 45.169.161.144 255.255.255.254
+ statistic enable
+#
+interface Eth-Trunk1.1157
+ vlan-type dot1q 1157
+ description CL-(677) CB BOA VISTA COMERCIO DE ALIMENTOS LTDA
+ ipv6 enable
+ ip address 172.28.0.117 255.255.255.252
+ ipv6 address 2804:5984:B000:6::5/126
+ statistic enable
+#
+interface Eth-Trunk1.1158
+ vlan-type dot1q 1158
+ description CL-(58) TRANSNORTE ENERGIA S.A
+ ipv6 enable
+ ip address 172.28.0.229 255.255.255.252
+ ipv6 address 2804:5984:B000:6::1/126
+ statistic enable
+#
+interface Eth-Trunk1.1159
+ vlan-type dot1q 1159
+ description CL-4WNET-BVA-(503)MEGA-INFRA-INSS
+ ipv6 enable
+ ip address 172.28.0.233 255.255.255.252
+ ipv6 address 2804:5984:B000:6::9/126
+ statistic enable
+#
+interface Eth-Trunk1.1160
+ vlan-type dot1q 1160
+ description CL-4WNET-BVA-(667)-JUMASA
+ ipv6 enable
+ ip address 172.28.0.237 255.255.255.252
+ ipv6 address 2804:5984:B000:6::11/126
+ statistic enable
+#
+interface Eth-Trunk1.1168
+ vlan-type dot1q 1168
+ description PTTRR
+ ipv6 enable
+ ip address 172.16.116.5 255.255.255.252
+ ipv6 address 2001:DB8:710:8707:172:16:116:5/64
+ statistic enable
+#
+interface Eth-Trunk1.1190
+ vlan-type dot1q 1190
+ description PTP_ISP_UPLINK_
+ ipv6 enable
+ ip address 100.64.42.89 255.255.255.252
+ ipv6 address 2804:5984:B000:1::15/126
+ statistic enable
+#
+interface Eth-Trunk1.1345
+#
+interface Eth-Trunk1.1805
+ vlan-type dot1q 1805
+ description GTA_BR
+ ipv6 enable
+ ip address 45.169.161.117 255.255.255.252
+ ipv6 address 2804:5984:B000:1::31/126
+ statistic enable
+#
+interface Eth-Trunk1.1806
+ vlan-type dot1q 1806
+ description GTA_VEN
+ ipv6 enable
+ ip address 45.169.161.121 255.255.255.252
+ ipv6 address 2804:5984:B000:1::35/126
+ statistic enable
+#
+interface Eth-Trunk1.1807
+ vlan-type dot1q 1807
+ description GTA_BR_2
+ ipv6 enable
+ ipv6 address 2804:5984:B000:1::39/126
+ statistic enable
+#
+interface Eth-Trunk1.2022
+ vlan-type dot1q 2022
+#
+interface Eth-Trunk1.2030
+ vlan-type dot1q 2030
+ description OPEN_CDN_MSN
+ shutdown
+ ipv6 enable
+ ip address 168.181.21.93 255.255.255.254
+ ipv6 address 2801:80:17B1::21:93/127
+ statistic enable
+ mac-address 9016-baa4-c242
+#
+interface Eth-Trunk1.2051
+ vlan-type dot1q 2051
+ description RT-ISP-VLX-IBIS-IP
+ ipv6 enable
+ ip address 172.28.0.45 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.2140
+ vlan-type dot1q 2140
+ description ISP-TIXUS-IP
+ shutdown
+ ipv6 enable
+ ip address 45.169.161.62 255.255.255.252
+ ipv6 address 2804:5984:B000:1::25/126
+ statistic enable
+#
+interface Eth-Trunk1.2402
+ vlan-type dot1q 2402
+ description CE-BVA-4WNET-(16) HC PNEUS SA
+ ipv6 enable
+ ip address 172.28.28.5 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.2406
+ vlan-type dot1q 2406
+ description CL-IP-(503)MEGA INFRA SOLUCOES EM INFRAESTRUTURA LTDA
+ ipv6 enable
+ ip address 172.28.28.21 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk1.3030
+ vlan-type dot1q 3030
+ description IX_BOAVISTA_BR_V4
+ ipv6 enable
+ ip address 200.219.146.4 255.255.255.0
+ statistic enable
+ mac-address 488f-5ac0-f4d4
+#
+interface Eth-Trunk1.3031
+ vlan-type dot1q 3031
+ description IX_BOAVISTA_BR_V6
+ ipv6 enable
+ ipv6 address 2001:12F8:0:36::4/64
+ statistic enable
+ mac-address 488f-5ac0-f4d4
+#
+interface Eth-Trunk1.3055
+ vlan-type dot1q 3055
+#
+interface Eth-Trunk1.3056
+ vlan-type dot1q 3056
+#
+interface Eth-Trunk1.3944
+ vlan-type dot1q 3944
+ description CL-IP-(32) MARQUES & MELO LTDA
+ ipv6 enable
+ ip address 172.28.28.9 255.255.255.252
+ statistic enable
+#
+interface Eth-Trunk2
+ mtu 9216
+ description EN-4WNET-BVB-BRT-B-(100GE0/0/1)
+ mode lacp-static
+#
+interface Eth-Trunk2.23
+ vlan-type dot1q 23
+ description PE-BVA-4LTE
+ ipv6 enable
+ ip address 172.28.28.29 255.255.255.252
+#
+interface Eth-Trunk2.78
+ vlan-type dot1q 78
+ description PE-BVA-WIFIZAO-BRT-01
+ ipv6 enable
+ ip address 10.20.0.77 255.255.255.252
+#
+interface Eth-Trunk2.152
+ vlan-type dot1q 152
+ mtu 9216
+ ipv6 enable
+ ip address 10.20.0.57 255.255.255.252
+ ipv6 address 2804:5984:B000:1::9D/126
+ statistic enable
+ ospf network-type p2p
+#
+interface Eth-Trunk2.846
+ vlan-type dot1q 846
+ description WIFIZAO.BRT
+ ipv6 enable
+ ip address 172.28.1.137 255.255.255.252
+ ipv6 address 2804:5984:B000:1::A9/126
+ statistic enable
+#
+interface Eth-Trunk2.895
+ vlan-type dot1q 895
+ description CL-ALLFIBER-895
+ ipv6 enable
+ ip address 172.28.1.205 255.255.255.252
+ ipv6 address 2804:5984:B000:1::D5/126
+ statistic enable
+ lldp enable
+ qos car cir 5100000 cbs 18700000 green pass red discard inbound
+ qos car cir 5100000 cbs 18700000 green pass red discard outbound
+#
+interface Eth-Trunk2.2001
+ vlan-type dot1q 2001
+ ipv6 enable
+ ip address 187.40.215.75 255.255.255.254
+ ipv6 address 2804:D40:9A:8005::3/64
+#
+interface Eth-Trunk44
+#
+interface Eth-Trunk600
+#
+interface Ethernet0/0/0
+ speed auto
+ duplex auto
+ undo shutdown
+ ip binding vpn-instance __LOCAL_OAM_VPN__
+ ip address 192.168.0.1 255.255.255.0
+#
+interface Virtual-Template0
+ ppp authentication-mode auto
+#
+interface GigabitEthernet0/1/0
+ undo shutdown
+ dcn
+#
+interface GigabitEthernet0/1/1
+ undo shutdown
+ dcn
+#
+interface GigabitEthernet0/1/2
+ undo shutdown
+ eth-trunk 1
+ dcn
+#
+interface GigabitEthernet0/1/3
+ undo shutdown
+ eth-trunk 1
+ dcn
+#
+interface GigabitEthernet0/1/4
+ shutdown
+ dcn
+#
+interface GigabitEthernet0/1/5
+ undo shutdown
+ eth-trunk 1
+ dcn
+#
+interface GigabitEthernet0/1/6
+ undo shutdown
+ eth-trunk 1
+ dcn
+#
+interface GigabitEthernet0/1/7
+ undo shutdown
+ eth-trunk 1
+ dcn
+#
+interface GigabitEthernet0/1/8
+ undo shutdown
+ eth-trunk 1
+ dcn
+#
+interface GigabitEthernet0/1/9
+ undo shutdown
+ eth-trunk 1
+ dcn
+#
+interface 100GE0/5/0
+ description EN-4WNET-BVB-BRT-A(100GE0/0/1)(Eth-Trunk0)
+ undo shutdown
+ eth-trunk 0
+ dcn
+#
+interface 100GE0/5/1
+ description EN-4WNET-BVB-BRT-B(100GE0/0/1)(Eth-Trunk2)
+ undo shutdown
+ eth-trunk 2
+ undo dcn
+#
+interface LoopBack0
+ ip address 10.200.1.255 255.255.255.255
+#
+interface LoopBack1
+ ipv6 enable
+ ip address 45.169.161.255 255.255.255.255
+ ipv6 address 2804:5984:8F00::1/128
+ binding tunnel gre
+#
+interface LoopBack2
+#
+interface LoopBack10
+ ip binding vpn-instance INTERNET
+#
+interface LoopBack1023
+ description DCN loopback interface
+ ip binding vpn-instance __dcn_vpn__
+ ip address 128.132.239.83 255.255.0.0
+#
+interface Virtual-Ethernet0/2/2
+ ve-group 2 l2-terminate
+#
+interface Virtual-Ethernet0/2/2.100
+ vlan-type dot1q 100
+#
+interface Virtual-Ethernet0/2/2.101
+ vlan-type dot1q 101
+#
+interface Virtual-Ethernet0/2/21
+ ve-group 2 l3-access
+ mac-address c4b8-b434-ab45
+#
+interface Virtual-Ethernet0/2/21.100
+ vlan-type dot1q 100
+ description EN-NETFAST-BVA-BRT-VSI
+ ipv6 enable
+ ip address 10.20.255.1 255.255.255.252
+ statistic enable
+ mpls
+ mpls ldp
+#
+interface Virtual-Ethernet0/2/21.101
+ vlan-type dot1q 101
+ ipv6 enable
+ statistic enable
+#
+interface Virtual-Ethernet0/3/3
+ ve-group 3 l2-terminate
+#
+interface Virtual-Ethernet0/3/3.100
+ vlan-type dot1q 100
+#
+interface Virtual-Ethernet0/3/3.101
+ vlan-type dot1q 101
+#
+interface Virtual-Ethernet0/3/31
+ ve-group 3 l3-access
+#
+interface Virtual-Ethernet0/3/31.100
+ vlan-type dot1q 100
+#
+interface Virtual-Ethernet0/3/31.101
+ vlan-type dot1q 101
+#
+interface Tunnel0
+#
+interface Tunnel1
+ description GRE-GGC-MNS_to_BVA
+ ip address 10.92.1.5 255.255.255.252
+ tunnel-protocol gre
+ source 45.169.161.255
+ destination 200.242.78.58
+#
+interface NULL0
+#
+return

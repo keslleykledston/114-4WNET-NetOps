@@ -1118,12 +1118,213 @@ export interface TemplateRenderResult {
   warnings?: string[];
 }
 
+export type ProvisioningServiceTemplateParameterSchema = { [key: string]: unknown };
+
+export interface ProvisioningServiceTemplate {
+  serviceType: string;
+  name: string;
+  description: string;
+  configTemplateType?: string;
+  requiredParameters: string[];
+  optionalParameters?: string[];
+  parameterSchema?: ProvisioningServiceTemplateParameterSchema;
+}
+
+export type ProvisioningPreviewInputParameters = { [key: string]: unknown };
+
+export interface ProvisioningPreviewInput {
+  deviceId: number;
+  serviceType: string;
+  parameters: ProvisioningPreviewInputParameters;
+  /** @nullable */
+  maintenanceWindowStart?: string | null;
+  /** @nullable */
+  maintenanceWindowEnd?: string | null;
+  /** @nullable */
+  rollbackPlan?: string | null;
+}
+
+export interface ProvisioningPreviewValidation {
+  name: string;
+  passed: boolean;
+  message: string;
+  severity?: string;
+}
+
+/**
+ * @nullable
+ */
+export type ProvisioningPreviewResultMaintenanceWindow = {
+  /** @nullable */
+  start?: string | null;
+  /** @nullable */
+  end?: string | null;
+} | null;
+
+export interface ProvisioningPreviewResult {
+  deviceId: number;
+  serviceType: string;
+  configPreview: string;
+  rollbackPreview: string;
+  validations: ProvisioningPreviewValidation[];
+  risks: string[];
+  missingData: string[];
+  /** @nullable */
+  maintenanceWindow?: ProvisioningPreviewResultMaintenanceWindow;
+  /** @nullable */
+  rollbackPlan?: string | null;
+  applyBlocked: boolean;
+  /** @nullable */
+  applyBlockedReason?: string | null;
+}
+
+export interface ProvisioningParameterField {
+  type: string;
+  description: string;
+  required?: boolean;
+  sensitive?: boolean;
+}
+
+export type ProvisioningTemplateParameterSchema = {[key: string]: ProvisioningParameterField};
+
+export interface ProvisioningTemplate {
+  id: string;
+  name: string;
+  description: string;
+  vendor: string;
+  platform: string;
+  serviceType: string;
+  parameterSchema: ProvisioningTemplateParameterSchema;
+  risks: string[];
+  precheckHints: string[];
+  postcheckHints: string[];
+  supported: boolean;
+}
+
+export type ProvisioningValidationItemSeverity = typeof ProvisioningValidationItemSeverity[keyof typeof ProvisioningValidationItemSeverity];
+
+
+export const ProvisioningValidationItemSeverity = {
+  info: 'info',
+  warn: 'warn',
+  error: 'error',
+} as const;
+
+export interface ProvisioningValidationItem {
+  name: string;
+  passed: boolean;
+  message: string;
+  severity?: ProvisioningValidationItemSeverity;
+}
+
+export type ProvisioningRiskSeverity = typeof ProvisioningRiskSeverity[keyof typeof ProvisioningRiskSeverity];
+
+
+export const ProvisioningRiskSeverity = {
+  info: 'info',
+  warn: 'warn',
+  error: 'error',
+} as const;
+
+export interface ProvisioningRisk {
+  code: string;
+  message: string;
+  severity: ProvisioningRiskSeverity;
+}
+
+export type ProvisioningPreviewRequestParameters = { [key: string]: unknown };
+
+export interface ProvisioningPreviewRequest {
+  deviceId: number;
+  templateId: string;
+  parameters?: ProvisioningPreviewRequestParameters;
+  mode?: string;
+  /** @nullable */
+  maintenanceWindowStart?: string | null;
+  /** @nullable */
+  maintenanceWindowEnd?: string | null;
+  /** @nullable */
+  rollbackPlan?: string | null;
+}
+
+export type ProvisioningPreviewResponseStatus = typeof ProvisioningPreviewResponseStatus[keyof typeof ProvisioningPreviewResponseStatus];
+
+
+export const ProvisioningPreviewResponseStatus = {
+  valid: 'valid',
+  warning: 'warning',
+  blocked: 'blocked',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ProvisioningPreviewResponseMaintenanceWindow = {
+  /** @nullable */
+  start?: string | null;
+  /** @nullable */
+  end?: string | null;
+} | null;
+
+export interface ProvisioningPreviewResponse {
+  status: ProvisioningPreviewResponseStatus;
+  deviceId: number;
+  templateId: string;
+  serviceType: string;
+  configPreview: string;
+  rollbackPreview: string;
+  executionPlan: string[];
+  validations: ProvisioningValidationItem[];
+  risks: ProvisioningRisk[];
+  precheckHints: string[];
+  postcheckHints: string[];
+  missingData: string[];
+  blockedReasons: string[];
+  applyBlocked: boolean;
+  /** @nullable */
+  applyBlockedReason?: string | null;
+  /** @nullable */
+  maintenanceWindow?: ProvisioningPreviewResponseMaintenanceWindow;
+  /** @nullable */
+  rollbackPlan?: string | null;
+}
+
+export type ProvisioningPreviewExportRequestFormat = typeof ProvisioningPreviewExportRequestFormat[keyof typeof ProvisioningPreviewExportRequestFormat];
+
+
+export const ProvisioningPreviewExportRequestFormat = {
+  markdown: 'markdown',
+  json: 'json',
+} as const;
+
+export type ProvisioningPreviewExportRequest = ProvisioningPreviewRequest & {
+  format: ProvisioningPreviewExportRequestFormat;
+};
+
+export type ProvisioningPreviewExportResultFormat = typeof ProvisioningPreviewExportResultFormat[keyof typeof ProvisioningPreviewExportResultFormat];
+
+
+export const ProvisioningPreviewExportResultFormat = {
+  markdown: 'markdown',
+  json: 'json',
+} as const;
+
+export interface ProvisioningPreviewExportResult {
+  format: ProvisioningPreviewExportResultFormat;
+  content: string;
+  preview: ProvisioningPreviewResponse;
+}
+
+export interface ProvisioningJobPreviewResponse {
+  previewMarkdown?: string;
+}
+
 export interface ProvisioningJob {
   id: number;
   name: string;
-  /** l2vpn, l3vpn */
+  /** l2vpn_vpws, l2vpn_vpls, l3vpn_vrf, bgp_peer_customer, bgp_peer_provider, l2vpn, l3vpn */
   type: string;
-  /** draft, validated, executing, completed, failed, rolled_back */
+  /** draft, validated, pending_approval, approved, blocked, cancelled, executing, completed, failed, rolled_back */
   status: string;
   deviceIds: number[];
   /** @nullable */

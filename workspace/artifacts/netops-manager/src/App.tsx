@@ -21,6 +21,9 @@ import Policies from "@/pages/policies";
 import ConfigCollection from "@/pages/config-collection";
 import SnmpHistory from "@/pages/snmp-history";
 import NetopsOperations from "@/pages/netops-operations";
+import L2Circuits from "@/pages/l2-circuits";
+import BgpPeerDrilldownPage from "@/pages/bgp-peer-drilldown";
+import OperationalBgpPage from "@/pages/operational-bgp";
 import Users from "@/pages/users";
 import NotFound from "@/pages/not-found";
 
@@ -75,6 +78,10 @@ function Router() {
         <Route path="/config-collection" component={ConfigCollection} />
         <Route path="/snmp-history" component={SnmpHistory} />
         <Route path="/netops-operations" component={NetopsOperations} />
+        <Route path="/l2-circuits" component={L2Circuits} />
+        <Route path="/bgp/peer-drilldown" component={BgpPeerDrilldownPage} />
+        <Route path="/operational/bgp" component={OperationalBgpPage} />
+        <Route path="/bgp/operations" component={OperationalBgpPage} />
         <Route path="/users" component={Users} />
         <Route component={NotFound} />
       </Switch>

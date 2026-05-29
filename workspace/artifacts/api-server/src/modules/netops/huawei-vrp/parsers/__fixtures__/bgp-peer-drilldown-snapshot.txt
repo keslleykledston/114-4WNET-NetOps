@@ -1,0 +1,39 @@
+# BGP peer drilldown snapshot fixture (sanitized)
+route-policy AS262663-WIFIZAO.BRT-Import-IPv4 permit node 10
+ if-match ip-prefix AS262663-WIFIZAO
+route-policy AS262663-WIFIZAO.BRT-Export-IPv4 permit node 10
+ apply community 65000:1
+route-policy AS266208-ALLFIBER-Import-ipv6 permit node 10
+ if-match ipv6 address prefix-list AS266208-ALLFIBER-V6
+route-policy AS266208-ALLFIBER-Export-ipv6 permit node 10
+ apply community 65000:2
+route-policy C07-IMPORT-IPV6 permit node 10
+ if-match ipv6 address prefix-list C07-V6
+route-policy C07-EXPORT permit node 10
+ apply community 65000:3
+ip ip-prefix AS262663-WIFIZAO index 10 permit 45.169.160.0 23
+ip ipv6-prefix AS266208-ALLFIBER-V6 index 10 permit 2804:5984:: 32
+ip ipv6-prefix C07-V6 index 10 permit 2001:db8:: 32
+bgp 266208
+ peer 172.28.1.138 as-number 262663
+ peer 172.28.1.138 description WIFIZAO.BRT
+ #
+ ipv4-family unicast
+  peer 172.28.1.138 enable
+  peer 172.28.1.138 route-policy AS262663-WIFIZAO.BRT-Import-IPv4 import
+  peer 172.28.1.138 route-policy AS262663-WIFIZAO.BRT-Export-IPv4 export
+  peer 172.28.1.138 default-route-advertise
+ #
+ ipv6-family unicast
+  peer 2804:5984:B000:1::D6 enable
+  peer 2804:5984:B000:1::D6 route-policy AS266208-ALLFIBER-Import-ipv6 import
+  peer 2804:5984:B000:1::D6 route-policy AS266208-ALLFIBER-Export-ipv6 export
+  peer 2804:5984:B000:1::D6 default-route-advertise
+  peer IX-AM enable
+  peer IX-AM route-policy C07-IMPORT-IPV6 import
+  peer IX-AM route-policy C07-EXPORT export
+  peer IX-AM next-hop-local
+  peer 2001:12F8:0:21::253 enable
+  peer 2001:12F8:0:21::253 group IX-AM
+  peer 2001:12F8:0:21::254 enable
+  peer 2001:12F8:0:21::254 group IX-AM

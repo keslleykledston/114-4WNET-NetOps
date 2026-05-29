@@ -1,0 +1,28 @@
+# Synthetic fixture — Huawei S6730 VSI RN-141 multipoint (3 peers, 1 down)
+ ***VSI Name               : RN-141
+    Administrator VSI      : no
+    VSI Description        : RN-141
+    Encapsulation Type     : vlan
+    P2P VSI                : disable
+    VSI State              : up
+    VSI ID                 : 141
+    Bound Interface        : Vlanif141
+   *Peer Router ID         : 10.200.4.1
+    Session                : up
+    PW State               : up
+    VC Label               : 2004
+    Local VC Label         : 2004
+    Remote VC Label        : 3004
+    Tunnel ID              : 0x480017c3
+    Out Interface          : GigabitEthernet0/0/1
+    Last Up Time           : 2026/05/20 10:15:30
+   *Peer Router ID         : 10.200.3.1
+    Session                : up
+    PW State               : up
+    VC Label               : 2003
+    Tunnel ID              : 0x480017c4
+   *Peer Router ID         : 10.200.2.1
+    Session                : down
+    PW State               : down
+    VC Label               : 2002
+    Tunnel ID              : 0x480017c5

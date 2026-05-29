@@ -60,11 +60,18 @@
 - armazenamento de findings
 - visão de resumo e histórico
 
-### Provisioning
+### Provisioning (v0.4.0 preview engine — apply bloqueado)
 
-- jobs de provisionamento
-- steps por dispositivo
-- templates de configuração
+- **Preview engine:** `workspace/artifacts/api-server/src/modules/provisioning/`
+- Endpoints: `GET /api/provisioning/templates`, `GET /api/provisioning/templates/:id`, `POST /api/provisioning/preview`, `POST /api/provisioning/preview/export`
+- 9 templates Huawei VRP (BGP, L3VPN, L2VPN, subinterface, route-policy, community, prefix-list)
+- Permissão `provisioning.read` (viewer/operator/admin)
+- Validação com discovery snapshot (warnings para conflitos)
+- Audit: `provisioning_preview_created`, `provisioning_preview_export`
+- Docs: `docs/PROVISIONING_PREVIEW_ENGINE.md`, `docs/PROVISIONING_TEMPLATE_MODEL.md`
+- Selftest: `tools/provisioning-preview-selftest.mjs`
+- guards: `CONFIG_APPLY_ENABLED=false`, `DRY_RUN_DEFAULT=true`
+- Jobs legados `/provisioning-jobs` preservados; execute/rollback continuam bloqueados
 
 ### Auth / RBAC local
 

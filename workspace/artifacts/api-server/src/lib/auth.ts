@@ -13,6 +13,7 @@ export type UserPermissions = {
   integrations?: { read?: boolean; write?: boolean };
   users?: { read?: boolean; write?: boolean };
   audit?: { read?: boolean };
+  provisioning?: { read?: boolean; write?: boolean; export?: boolean };
 };
 
 export const AUTH_COOKIE_NAME = "netops_session";
@@ -298,6 +299,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       integrations: { read: true, write: true },
       users: { read: true, write: true },
       audit: { read: true },
+      provisioning: { read: true, write: true, export: true },
     };
   }
   if (role === "operator") {
@@ -308,6 +310,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       integrations: { read: true, write: false },
       users: { read: true, write: false },
       audit: { read: true },
+      provisioning: { read: true, write: true, export: true },
     };
   }
   // viewer
@@ -318,6 +321,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
     integrations: { read: true, write: false },
     users: { read: true, write: false },
     audit: { read: true },
+    provisioning: { read: true, write: false, export: true },
   };
 }
 

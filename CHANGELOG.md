@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.4.0 — Provisioning Preview Engine (2026-05-28)
+
+- Added safe provisioning preview module (`workspace/artifacts/api-server/src/modules/provisioning/`).
+- New endpoints: `GET /api/provisioning/templates`, `GET /api/provisioning/templates/:id`, `POST /api/provisioning/preview`, `POST /api/provisioning/preview/export`.
+- Nine Huawei VRP service templates (BGP, L3VPN, L2VPN, subinterface, route-policy, community, prefix-list).
+- Validations: required parameters, ASN/IP/VLAN, vendor/platform, discovery conflict hints (warnings).
+- Permission `provisioning.read` for viewer/operator/admin.
+- Audit actions: `provisioning_preview_created`, `provisioning_preview_export`.
+- Sensitive parameters masked in preview/export/audit.
+- Selftest: `tools/provisioning-preview-selftest.mjs`.
+- Docs: `docs/PROVISIONING_PREVIEW_ENGINE.md`, `docs/PROVISIONING_TEMPLATE_MODEL.md`.
+- Apply remains blocked: `CONFIG_APPLY_ENABLED=false`.
+
 ## v0.3.7 — NetBox Real Lab Validation (Planned)
 
 - NetBox read-only API integration with connection testing

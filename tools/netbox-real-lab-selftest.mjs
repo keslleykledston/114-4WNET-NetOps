@@ -74,7 +74,8 @@ async function runTests() {
   log(colors.yellow, "\n=== NetBox Real Lab Selftest ===\n");
 
   if (!NETBOX_ENABLED) {
-    log(colors.cyan, "NetBox disabled (NETBOX_ENABLED=false). Skipping tests.");
+    log(colors.cyan, "⊘ NetBox disabled (NETBOX_ENABLED=false). Test skipped.");
+    console.log("(This is expected when NetBox lab is not configured)");
     process.exit(0);
   }
 

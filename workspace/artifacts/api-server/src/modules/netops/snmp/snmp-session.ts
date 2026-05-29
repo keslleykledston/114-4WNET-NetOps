@@ -8,6 +8,7 @@ const snmp = require("net-snmp") as {
 
 export interface SnmpSession {
   close: () => void;
+  get: (oids: string[], callback: (error: Error | null, varbinds?: SnmpVarbind[]) => void) => void;
   subtree: (
     oid: string,
     maxRepetitions: number,
@@ -28,6 +29,23 @@ export function createSnmpSession(ipAddress: string, community: string, options?
     timeout: options?.timeout ?? 30000,
     retries: options?.retries ?? 3,
     idBitsSize: 32,
+  });
+}
+
+export function snmpGet(session: SnmpSession, oid: string): Promise<{ oid: string; value: unknown }> {
+  return new Promise((resolve, reject) => {
+    session.get([oid], (error, varbinds) => {
+      if (error) {
+        reject(error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
+      const vb = varbinds?.[0];
+      if (!vb) {
+        reject(new Error("SNMP GET returned no varbind"));
+        return;
+      }
+      resolve({ oid: vb.oid, value: vb.value });
+    });
   });
 }
 

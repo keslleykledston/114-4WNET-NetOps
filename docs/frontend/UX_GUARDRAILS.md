@@ -82,6 +82,14 @@ Alteracao permitida:
 - Empty state de BGP sem snapshot deve orientar "Execute discovery para carregar peers BGP."
 - Snapshot vindo de cache persistido deve aparecer como aviso operacional, nao como erro visual.
 
+## BGP peer drilldown snapshot UI
+
+- `/bgp/peer-drilldown` deve consumir somente `GET /api/bgp/peers/:deviceId/:peer/drilldown` com `source=snapshot`.
+- Nao usar hooks de discovery, SSH detail, SNMP, route query ou POST nesta feature.
+- Header deve deixar claro: snapshot salvo, read-only, sem comandos no equipamento.
+- `received-routes`, `accepted-routes` e `advertised-routes` devem ficar disabled/not requested ate fase futura com confirmacao.
+- Raw evidence sensivel nao deve ser renderizado; mostrar somente refs sanitizadas.
+
 ## Compliance grouping UI
 
 - Agrupamento de findings deve consumir `/api/compliance-findings-groups`; nao calcular grupos como fonte primaria se o endpoint existir.

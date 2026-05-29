@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { startSnmpPoller } from "./lib/snmp-poller.js";
 import { ensureLocalAdminUser } from "./lib/auth.js";
 import { startScheduler } from "./modules/scheduler/scheduler.runner.js";
+import { ensureServiceTemplatesInDb } from "./modules/netops/provisioning-template-seed.js";
 
 const rawPort = process.env["PORT"];
 
@@ -20,6 +21,12 @@ if (Number.isNaN(port) || port <= 0) {
 
 void (async () => {
   await ensureLocalAdminUser();
+  try {
+    const seed = await ensureServiceTemplatesInDb();
+    logger.info(seed, "Provisioning service templates ensured");
+  } catch (err) {
+    logger.warn({ err }, "Provisioning template seed skipped");
+  }
   app.listen(port, (err) => {
     if (err) {
       logger.error({ err }, "Error listening on port");

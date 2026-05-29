@@ -22,6 +22,7 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 - Scheduler local: [docs/SCHEDULER_MODEL.md](docs/SCHEDULER_MODEL.md)
 - NetBox read-only sync: [docs/NETBOX_READONLY_SYNC.md](docs/NETBOX_READONLY_SYNC.md)
 - Compliance v2 source/confidence: [docs/COMPLIANCE_ENGINE_V2.md](docs/COMPLIANCE_ENGINE_V2.md)
+- Provisioning preview engine (v0.4.0): [docs/PROVISIONING_PREVIEW_ENGINE.md](docs/PROVISIONING_PREVIEW_ENGINE.md)
 
 ## Subir com Docker
 

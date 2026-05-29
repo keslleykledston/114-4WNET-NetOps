@@ -1306,7 +1306,108 @@ paths:
               schema:
                 $ref: "#/components/schemas/TemplateRenderResult"
 
+  # ── PROVISIONING PREVIEW (v0.4.0) ─────────────────────────────────────────────
+  /provisioning/service-templates:
+    get:
+      operationId: listProvisioningServiceTemplates
+      tags: [provisioning-jobs]
+      summary: List built-in service templates for preview workflow
+      responses:
+        "200":
+          description: Service template catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProvisioningServiceTemplate"
+
+
+  /provisioning/templates:
+    get:
+      operationId: listProvisioningTemplates
+      tags: [provisioning]
+      summary: List Huawei VRP provisioning templates (v0.4 catalog)
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProvisioningTemplate"
+
+  /provisioning/templates/{id}:
+    get:
+      operationId: getProvisioningTemplate
+      tags: [provisioning]
+      summary: Get provisioning template by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningTemplate"
+        "404":
+          description: Not found
+
+  /provisioning/preview:
+    post:
+      operationId: previewProvisioningConfig
+      tags: [provisioning-jobs]
+      summary: Generate config preview (serviceType workflow or templateId v0.4 catalog)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/ProvisioningPreviewInput"
+                - $ref: "#/components/schemas/ProvisioningPreviewRequest"
+      responses:
+        "200":
+          description: Preview result
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ProvisioningPreviewResult"
+                  - $ref: "#/components/schemas/ProvisioningPreviewResponse"
+        "400":
+          description: Invalid input
+        "404":
+          description: Device not found
+
   # ── PROVISIONING JOBS ────────────────────────────────────────────────────────
+
+  /provisioning/preview/export:
+    post:
+      operationId: exportProvisioningPreview
+      tags: [provisioning]
+      summary: Export provisioning preview plan (templateId workflow)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProvisioningPreviewExportRequest"
+      responses:
+        "200":
+          description: Exported preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningPreviewExportResult"
+
+
   /provisioning-jobs:
     get:
       operationId: listProvisioningJobs
@@ -1402,6 +1503,88 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ValidationResult"
+
+  /provisioning-jobs/{id}/preview:
+    post:
+      operationId: previewProvisioningJob
+      tags: [provisioning-jobs]
+      summary: Export Markdown plan for an existing job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job preview with Markdown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningJobPreviewResponse"
+
+  /provisioning-jobs/{id}/request-approval:
+    post:
+      operationId: requestProvisioningJobApproval
+      tags: [provisioning-jobs]
+      summary: Move validated job to pending_approval
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job pending approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningJobDetail"
+        "409":
+          description: Invalid status transition
+
+  /provisioning-jobs/{id}/approve:
+    post:
+      operationId: approveProvisioningJob
+      tags: [provisioning-jobs]
+      summary: Approve job after pending_approval (apply still blocked by default)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Approved job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningJobDetail"
+        "409":
+          description: Invalid status transition
+
+  /provisioning-jobs/{id}/cancel:
+    post:
+      operationId: cancelProvisioningJob
+      tags: [provisioning-jobs]
+      summary: Cancel draft/validated/pending job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cancelled job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvisioningJobDetail"
+        "409":
+          description: Invalid status transition
 
   /provisioning-jobs/{id}/execute:
     post:
@@ -4034,6 +4217,296 @@ components:
           items:
             type: string
 
+    # ── PROVISIONING PREVIEW (v0.4.0) ───────────────────────────────────────────
+    ProvisioningServiceTemplate:
+      type: object
+      required: [serviceType, name, description, requiredParameters]
+      properties:
+        serviceType:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        configTemplateType:
+          type: string
+        requiredParameters:
+          type: array
+          items:
+            type: string
+        optionalParameters:
+          type: array
+          items:
+            type: string
+        parameterSchema:
+          type: object
+          additionalProperties: true
+
+    ProvisioningPreviewInput:
+      type: object
+      required: [deviceId, serviceType, parameters]
+      properties:
+        deviceId:
+          type: integer
+        serviceType:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        maintenanceWindowStart:
+          type: ["string", "null"]
+        maintenanceWindowEnd:
+          type: ["string", "null"]
+        rollbackPlan:
+          type: ["string", "null"]
+
+    ProvisioningPreviewValidation:
+      type: object
+      required: [name, passed, message]
+      properties:
+        name:
+          type: string
+        passed:
+          type: boolean
+        message:
+          type: string
+        severity:
+          type: string
+
+    ProvisioningPreviewResult:
+      type: object
+      required: [deviceId, serviceType, configPreview, rollbackPreview, validations, risks, missingData, applyBlocked]
+      properties:
+        deviceId:
+          type: integer
+        serviceType:
+          type: string
+        configPreview:
+          type: string
+        rollbackPreview:
+          type: string
+        validations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProvisioningPreviewValidation"
+        risks:
+          type: array
+          items:
+            type: string
+        missingData:
+          type: array
+          items:
+            type: string
+        maintenanceWindow:
+          type: ["object", "null"]
+          properties:
+            start:
+              type: ["string", "null"]
+            end:
+              type: ["string", "null"]
+        rollbackPlan:
+          type: ["string", "null"]
+        applyBlocked:
+          type: boolean
+        applyBlockedReason:
+          type: ["string", "null"]
+
+    ProvisioningParameterField:
+      type: object
+      required: [type, description]
+      properties:
+        type:
+          type: string
+        description:
+          type: string
+        required:
+          type: boolean
+        sensitive:
+          type: boolean
+
+    ProvisioningTemplate:
+      type: object
+      required: [id, name, description, vendor, platform, serviceType, parameterSchema, risks, precheckHints, postcheckHints, supported]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+        serviceType:
+          type: string
+        parameterSchema:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ProvisioningParameterField"
+        risks:
+          type: array
+          items:
+            type: string
+        precheckHints:
+          type: array
+          items:
+            type: string
+        postcheckHints:
+          type: array
+          items:
+            type: string
+        supported:
+          type: boolean
+
+    ProvisioningValidationItem:
+      type: object
+      required: [name, passed, message]
+      properties:
+        name:
+          type: string
+        passed:
+          type: boolean
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warn, error]
+
+    ProvisioningRisk:
+      type: object
+      required: [code, message, severity]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warn, error]
+
+    ProvisioningPreviewRequest:
+      type: object
+      required: [deviceId, templateId]
+      properties:
+        deviceId:
+          type: integer
+        templateId:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        mode:
+          type: string
+          default: dry_run
+        maintenanceWindowStart:
+          type: ["string", "null"]
+        maintenanceWindowEnd:
+          type: ["string", "null"]
+        rollbackPlan:
+          type: ["string", "null"]
+
+    ProvisioningPreviewResponse:
+      type: object
+      required:
+        - status
+        - deviceId
+        - templateId
+        - serviceType
+        - configPreview
+        - rollbackPreview
+        - executionPlan
+        - validations
+        - risks
+        - precheckHints
+        - postcheckHints
+        - missingData
+        - blockedReasons
+        - applyBlocked
+      properties:
+        status:
+          type: string
+          enum: [valid, warning, blocked]
+        deviceId:
+          type: integer
+        templateId:
+          type: string
+        serviceType:
+          type: string
+        configPreview:
+          type: string
+        rollbackPreview:
+          type: string
+        executionPlan:
+          type: array
+          items:
+            type: string
+        validations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProvisioningValidationItem"
+        risks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProvisioningRisk"
+        precheckHints:
+          type: array
+          items:
+            type: string
+        postcheckHints:
+          type: array
+          items:
+            type: string
+        missingData:
+          type: array
+          items:
+            type: string
+        blockedReasons:
+          type: array
+          items:
+            type: string
+        applyBlocked:
+          type: boolean
+        applyBlockedReason:
+          type: ["string", "null"]
+        maintenanceWindow:
+          type: ["object", "null"]
+          properties:
+            start:
+              type: ["string", "null"]
+            end:
+              type: ["string", "null"]
+        rollbackPlan:
+          type: ["string", "null"]
+
+    ProvisioningPreviewExportRequest:
+      allOf:
+        - $ref: "#/components/schemas/ProvisioningPreviewRequest"
+        - type: object
+          required: [format]
+          properties:
+            format:
+              type: string
+              enum: [markdown, json]
+
+    ProvisioningPreviewExportResult:
+      type: object
+      required: [format, content, preview]
+      properties:
+        format:
+          type: string
+          enum: [markdown, json]
+        content:
+          type: string
+        preview:
+          $ref: "#/components/schemas/ProvisioningPreviewResponse"
+
+    ProvisioningJobPreviewResponse:
+      type: object
+      properties:
+        previewMarkdown:
+          type: string
+
     # ── PROVISIONING JOBS ──────────────────────────────────────────────────────
     ProvisioningJob:
       type: object
@@ -4045,10 +4518,10 @@ components:
           type: string
         type:
           type: string
-          description: "l2vpn, l3vpn"
+          description: "l2vpn_vpws, l2vpn_vpls, l3vpn_vrf, bgp_peer_customer, bgp_peer_provider, l2vpn, l3vpn"
         status:
           type: string
-          description: "draft, validated, executing, completed, failed, rolled_back"
+          description: "draft, validated, pending_approval, approved, blocked, cancelled, executing, completed, failed, rolled_back"
         deviceIds:
           type: array
           items:

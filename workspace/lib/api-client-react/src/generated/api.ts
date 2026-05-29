@@ -108,7 +108,16 @@ import type {
   ProvisioningJob,
   ProvisioningJobDetail,
   ProvisioningJobInput,
+  ProvisioningJobPreviewResponse,
+  ProvisioningPreviewExportRequest,
+  ProvisioningPreviewExportResult,
+  ProvisioningPreviewInput,
+  ProvisioningPreviewRequest,
+  ProvisioningPreviewResponse,
+  ProvisioningPreviewResult,
+  ProvisioningServiceTemplate,
   ProvisioningStats,
+  ProvisioningTemplate,
   Report,
   ReportListResponse,
   ResetPasswordRequest,
@@ -4934,6 +4943,379 @@ export const useRenderConfigTemplate = <TError = ErrorType<unknown>,
       return useMutation(getRenderConfigTemplateMutationOptions(options));
     }
 
+export const getListProvisioningServiceTemplatesUrl = () => {
+
+
+
+
+  return `/api/provisioning/service-templates`
+}
+
+/**
+ * @summary List built-in service templates for preview workflow
+ */
+export const listProvisioningServiceTemplates = async ( options?: RequestInit): Promise<ProvisioningServiceTemplate[]> => {
+
+  return customFetch<ProvisioningServiceTemplate[]>(getListProvisioningServiceTemplatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProvisioningServiceTemplatesQueryKey = () => {
+    return [
+    `/api/provisioning/service-templates`
+    ] as const;
+    }
+
+
+export const getListProvisioningServiceTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listProvisioningServiceTemplates>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProvisioningServiceTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProvisioningServiceTemplatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProvisioningServiceTemplates>>> = ({ signal }) => listProvisioningServiceTemplates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProvisioningServiceTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProvisioningServiceTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listProvisioningServiceTemplates>>>
+export type ListProvisioningServiceTemplatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List built-in service templates for preview workflow
+ */
+
+export function useListProvisioningServiceTemplates<TData = Awaited<ReturnType<typeof listProvisioningServiceTemplates>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProvisioningServiceTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProvisioningServiceTemplatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListProvisioningTemplatesUrl = () => {
+
+
+
+
+  return `/api/provisioning/templates`
+}
+
+/**
+ * @summary List Huawei VRP provisioning templates (v0.4 catalog)
+ */
+export const listProvisioningTemplates = async ( options?: RequestInit): Promise<ProvisioningTemplate[]> => {
+
+  return customFetch<ProvisioningTemplate[]>(getListProvisioningTemplatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProvisioningTemplatesQueryKey = () => {
+    return [
+    `/api/provisioning/templates`
+    ] as const;
+    }
+
+
+export const getListProvisioningTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listProvisioningTemplates>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProvisioningTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProvisioningTemplatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProvisioningTemplates>>> = ({ signal }) => listProvisioningTemplates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProvisioningTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProvisioningTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listProvisioningTemplates>>>
+export type ListProvisioningTemplatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List Huawei VRP provisioning templates (v0.4 catalog)
+ */
+
+export function useListProvisioningTemplates<TData = Awaited<ReturnType<typeof listProvisioningTemplates>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProvisioningTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProvisioningTemplatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetProvisioningTemplateUrl = (id: string,) => {
+
+
+
+
+  return `/api/provisioning/templates/${id}`
+}
+
+/**
+ * @summary Get provisioning template by id
+ */
+export const getProvisioningTemplate = async (id: string, options?: RequestInit): Promise<ProvisioningTemplate> => {
+
+  return customFetch<ProvisioningTemplate>(getGetProvisioningTemplateUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProvisioningTemplateQueryKey = (id: string,) => {
+    return [
+    `/api/provisioning/templates/${id}`
+    ] as const;
+    }
+
+
+export const getGetProvisioningTemplateQueryOptions = <TData = Awaited<ReturnType<typeof getProvisioningTemplate>>, TError = ErrorType<void>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProvisioningTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProvisioningTemplateQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProvisioningTemplate>>> = ({ signal }) => getProvisioningTemplate(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProvisioningTemplate>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProvisioningTemplateQueryResult = NonNullable<Awaited<ReturnType<typeof getProvisioningTemplate>>>
+export type GetProvisioningTemplateQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get provisioning template by id
+ */
+
+export function useGetProvisioningTemplate<TData = Awaited<ReturnType<typeof getProvisioningTemplate>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProvisioningTemplate>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProvisioningTemplateQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPreviewProvisioningConfigUrl = () => {
+
+
+
+
+  return `/api/provisioning/preview`
+}
+
+/**
+ * @summary Generate config preview (serviceType workflow or templateId v0.4 catalog)
+ */
+export const previewProvisioningConfig = async (provisioningPreviewInputProvisioningPreviewRequest: ProvisioningPreviewInput | ProvisioningPreviewRequest, options?: RequestInit): Promise<ProvisioningPreviewResult | ProvisioningPreviewResponse> => {
+
+  return customFetch<ProvisioningPreviewResult | ProvisioningPreviewResponse>(getPreviewProvisioningConfigUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      provisioningPreviewInputProvisioningPreviewRequest,)
+  }
+);}
+
+
+
+
+export const getPreviewProvisioningConfigMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewProvisioningConfig>>, TError,{data: BodyType<ProvisioningPreviewInput | ProvisioningPreviewRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewProvisioningConfig>>, TError,{data: BodyType<ProvisioningPreviewInput | ProvisioningPreviewRequest>}, TContext> => {
+
+const mutationKey = ['previewProvisioningConfig'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewProvisioningConfig>>, {data: BodyType<ProvisioningPreviewInput | ProvisioningPreviewRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewProvisioningConfig(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewProvisioningConfigMutationResult = NonNullable<Awaited<ReturnType<typeof previewProvisioningConfig>>>
+    export type PreviewProvisioningConfigMutationBody = BodyType<ProvisioningPreviewInput | ProvisioningPreviewRequest>
+    export type PreviewProvisioningConfigMutationError = ErrorType<void>
+
+    /**
+ * @summary Generate config preview (serviceType workflow or templateId v0.4 catalog)
+ */
+export const usePreviewProvisioningConfig = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewProvisioningConfig>>, TError,{data: BodyType<ProvisioningPreviewInput | ProvisioningPreviewRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewProvisioningConfig>>,
+        TError,
+        {data: BodyType<ProvisioningPreviewInput | ProvisioningPreviewRequest>},
+        TContext
+      > => {
+      return useMutation(getPreviewProvisioningConfigMutationOptions(options));
+    }
+
+export const getExportProvisioningPreviewUrl = () => {
+
+
+
+
+  return `/api/provisioning/preview/export`
+}
+
+/**
+ * @summary Export provisioning preview plan (templateId workflow)
+ */
+export const exportProvisioningPreview = async (provisioningPreviewExportRequest: ProvisioningPreviewExportRequest, options?: RequestInit): Promise<ProvisioningPreviewExportResult> => {
+
+  return customFetch<ProvisioningPreviewExportResult>(getExportProvisioningPreviewUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      provisioningPreviewExportRequest,)
+  }
+);}
+
+
+
+
+export const getExportProvisioningPreviewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportProvisioningPreview>>, TError,{data: BodyType<ProvisioningPreviewExportRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof exportProvisioningPreview>>, TError,{data: BodyType<ProvisioningPreviewExportRequest>}, TContext> => {
+
+const mutationKey = ['exportProvisioningPreview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportProvisioningPreview>>, {data: BodyType<ProvisioningPreviewExportRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  exportProvisioningPreview(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExportProvisioningPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof exportProvisioningPreview>>>
+    export type ExportProvisioningPreviewMutationBody = BodyType<ProvisioningPreviewExportRequest>
+    export type ExportProvisioningPreviewMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Export provisioning preview plan (templateId workflow)
+ */
+export const useExportProvisioningPreview = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportProvisioningPreview>>, TError,{data: BodyType<ProvisioningPreviewExportRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof exportProvisioningPreview>>,
+        TError,
+        {data: BodyType<ProvisioningPreviewExportRequest>},
+        TContext
+      > => {
+      return useMutation(getExportProvisioningPreviewMutationOptions(options));
+    }
+
 export const getListProvisioningJobsUrl = (params?: ListProvisioningJobsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -5311,6 +5693,286 @@ export const useValidateProvisioningJob = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getValidateProvisioningJobMutationOptions(options));
+    }
+
+export const getPreviewProvisioningJobUrl = (id: number,) => {
+
+
+
+
+  return `/api/provisioning-jobs/${id}/preview`
+}
+
+/**
+ * @summary Export Markdown plan for an existing job
+ */
+export const previewProvisioningJob = async (id: number, options?: RequestInit): Promise<ProvisioningJobPreviewResponse> => {
+
+  return customFetch<ProvisioningJobPreviewResponse>(getPreviewProvisioningJobUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPreviewProvisioningJobMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewProvisioningJob>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewProvisioningJob>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['previewProvisioningJob'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewProvisioningJob>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  previewProvisioningJob(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewProvisioningJobMutationResult = NonNullable<Awaited<ReturnType<typeof previewProvisioningJob>>>
+
+    export type PreviewProvisioningJobMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Export Markdown plan for an existing job
+ */
+export const usePreviewProvisioningJob = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewProvisioningJob>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewProvisioningJob>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getPreviewProvisioningJobMutationOptions(options));
+    }
+
+export const getRequestProvisioningJobApprovalUrl = (id: number,) => {
+
+
+
+
+  return `/api/provisioning-jobs/${id}/request-approval`
+}
+
+/**
+ * @summary Move validated job to pending_approval
+ */
+export const requestProvisioningJobApproval = async (id: number, options?: RequestInit): Promise<ProvisioningJobDetail> => {
+
+  return customFetch<ProvisioningJobDetail>(getRequestProvisioningJobApprovalUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRequestProvisioningJobApprovalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestProvisioningJobApproval>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestProvisioningJobApproval>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['requestProvisioningJobApproval'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestProvisioningJobApproval>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  requestProvisioningJobApproval(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestProvisioningJobApprovalMutationResult = NonNullable<Awaited<ReturnType<typeof requestProvisioningJobApproval>>>
+
+    export type RequestProvisioningJobApprovalMutationError = ErrorType<void>
+
+    /**
+ * @summary Move validated job to pending_approval
+ */
+export const useRequestProvisioningJobApproval = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestProvisioningJobApproval>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestProvisioningJobApproval>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRequestProvisioningJobApprovalMutationOptions(options));
+    }
+
+export const getApproveProvisioningJobUrl = (id: number,) => {
+
+
+
+
+  return `/api/provisioning-jobs/${id}/approve`
+}
+
+/**
+ * @summary Approve job after pending_approval (apply still blocked by default)
+ */
+export const approveProvisioningJob = async (id: number, options?: RequestInit): Promise<ProvisioningJobDetail> => {
+
+  return customFetch<ProvisioningJobDetail>(getApproveProvisioningJobUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getApproveProvisioningJobMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveProvisioningJob>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveProvisioningJob>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['approveProvisioningJob'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveProvisioningJob>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  approveProvisioningJob(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveProvisioningJobMutationResult = NonNullable<Awaited<ReturnType<typeof approveProvisioningJob>>>
+
+    export type ApproveProvisioningJobMutationError = ErrorType<void>
+
+    /**
+ * @summary Approve job after pending_approval (apply still blocked by default)
+ */
+export const useApproveProvisioningJob = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveProvisioningJob>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveProvisioningJob>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getApproveProvisioningJobMutationOptions(options));
+    }
+
+export const getCancelProvisioningJobUrl = (id: number,) => {
+
+
+
+
+  return `/api/provisioning-jobs/${id}/cancel`
+}
+
+/**
+ * @summary Cancel draft/validated/pending job
+ */
+export const cancelProvisioningJob = async (id: number, options?: RequestInit): Promise<ProvisioningJobDetail> => {
+
+  return customFetch<ProvisioningJobDetail>(getCancelProvisioningJobUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCancelProvisioningJobMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelProvisioningJob>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelProvisioningJob>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['cancelProvisioningJob'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelProvisioningJob>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cancelProvisioningJob(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelProvisioningJobMutationResult = NonNullable<Awaited<ReturnType<typeof cancelProvisioningJob>>>
+
+    export type CancelProvisioningJobMutationError = ErrorType<void>
+
+    /**
+ * @summary Cancel draft/validated/pending job
+ */
+export const useCancelProvisioningJob = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelProvisioningJob>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelProvisioningJob>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCancelProvisioningJobMutationOptions(options));
     }
 
 export const getExecuteProvisioningJobUrl = (id: number,) => {

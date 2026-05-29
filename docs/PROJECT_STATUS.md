@@ -60,11 +60,15 @@
 - armazenamento de findings
 - visão de resumo e histórico
 
-### Provisioning
+### Provisioning (v0.4.0 preview MVP — apply bloqueado)
 
-- jobs de provisionamento
-- steps por dispositivo
-- templates de configuração
+- service templates built-in: L2VPN VPWS/VPLS, L3VPN/VRF, BGP customer/provider (Huawei VRP)
+- `POST /api/provisioning/preview` — render config + rollback + validações
+- workflow: draft → validated → pending_approval → approved → blocked (execute)
+- UI `/provisioning` — wizard preview, jobs, approval, export Markdown
+- UI `/templates` — lista + create + delete (view/edit pendente v0.4.1)
+- guards: `CONFIG_APPLY_ENABLED=false`, `DRY_RUN_DEFAULT=true`
+- plano operacional v0.4.x: `reports/V0_4_PROVISIONING_OPERATIONAL_PLAN.md`
 
 ### Auth / RBAC local
 
@@ -317,6 +321,16 @@
 7. ✅ OpenAPI + Orval codegen.
 8. ✅ Selftest suite (16/16 tests).
 **Status:** ✅ Completed (v0.3.3) — Production Ready
+
+### v0.4.x — Provisioning operacional seguro (Planned)
+
+1. v0.4.0 — Completar preview engine + templates faltantes + selftests
+2. v0.4.1 — UI wizard + `/templates` view/edit + export
+3. v0.4.2 — Approval workflow + RBAC approve + audit timeline
+4. v0.4.3 — Dry-run validation vs discovery/compliance
+5. v0.4.4 — Controlled apply readiness (documentação only; flags permanecem false)
+
+Plano: `reports/V0_4_PROVISIONING_OPERATIONAL_PLAN.md`
 
 ### v0.3.4 — Pilot operacional NOC (In Development)
 

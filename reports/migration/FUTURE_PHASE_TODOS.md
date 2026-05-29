@@ -15,11 +15,60 @@
 - FASE 5.1.fix concluida: IF-MIB agora coleta 164 interfaces. Root cause: net-snmp doneCallback passa varbind array em error param. Fix: type-check error antes de rejeitar.
 - FASE 5.2 planejada: inventario persistido (interfaces/vrfs/config), SSH config collection read-only.
 - FASE 5.3 concluida: Device Discovery persistente com `discovery_runs`, `discovery_snapshots`, `discovery_evidence`, OpenAPI atualizado e client Orval regenerado.
-- v0.4.0 concluida: Provisioning preview & approval workflow — templates L2/L3/BGP, `POST /api/provisioning/preview`, estados draft→approved, UI `/provisioning`, apply bloqueado, docs `PROVISIONING_PREVIEW_WORKFLOW.md`.
+- v0.4.0 preview MVP concluida: Provisioning preview & approval workflow — templates L2/L3/BGP (5 tipos), `POST /api/provisioning/preview`, estados draft→approved, UI `/provisioning`, apply bloqueado, docs `PROVISIONING_PREVIEW_WORKFLOW.md`.
+- v0.4.x planejada: Provisioning operacional seguro — ver `reports/V0_4_PROVISIONING_OPERATIONAL_PLAN.md` (v0.4.0 engine → v0.4.4 apply readiness doc only).
+
+---
+
+# v0.4.x — Provisioning Operacional Seguro
+
+Plano completo: `reports/V0_4_PROVISIONING_OPERATIONAL_PLAN.md`
+
+## v0.4.0 — Provisioning Preview Engine
+
+- [ ] Completar templates: interface/subinterface, route-policy, community, prefix-list
+- [ ] Schema Zod por template + validação PT
+- [ ] Render config + rollback preview unificado
+- [ ] Selftest `tools/provisioning-preview-selftest.mjs`
+- [ ] Seed idempotente `config_templates` ↔ `SERVICE_TEMPLATES`
+- [ ] Manter `CONFIG_APPLY_ENABLED=false`
+
+## v0.4.1 — Provisioning UI
+
+- [ ] Wizard `/provisioning` com RBAC por botão
+- [ ] `/templates`: view read-only (viewer), edit (operator/admin)
+- [ ] Formulário dinâmico driven by `parameterSchema`
+- [ ] Preview side-by-side config/rollback
+- [ ] Export plano Markdown/JSON
+
+## v0.4.2 — Approval Workflow
+
+- [ ] Estados: draft, validated, pending_approval, approved, rejected, cancelled
+- [ ] Permissão `provisioning.approve` (admin ou dedicada)
+- [ ] Janela manutenção obrigatória
+- [ ] Rollback plan textual obrigatório
+- [ ] Audit timeline por job na UI
+
+## v0.4.3 — Dry-run Validation
+
+- [ ] Pré-check read-only vs `discovery_snapshots`
+- [ ] Comparar com compliance findings (BLOCKER_REAL bloqueia)
+- [ ] Detectar conflito VLAN/VRF/BGP/policy
+- [ ] Validar refs route-policy/community/prefix-list na config coletada
+
+## v0.4.4 — Controlled Apply Readiness (doc only)
+
+- [ ] Documentar requisitos para `CONFIG_APPLY_ENABLED=true`
+- [ ] Design dupla aprovação + janela manutenção
+- [ ] Substituir execute path legado Cisco por adapter Huawei
+- [ ] **Não habilitar apply default; sem SSH write em piloto**
+
+---
+
 - FASE 6 planejada: BGP import policy editor preview (seguro, sem apply), route-policy parser, community library read-only.
 - FASE 7 planejada: apply real com RBAC, duplo check, auditoria completa, SSH write controlado.
-- FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.
 - FASE 8+ pendente: export policy, provisioning seguro com aprovacao.
+- FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.
 
 # FASE 5.1.fix: IF-MIB Debugging ✅ CONCLUIDA
 
@@ -842,6 +891,12 @@ Objetivo: migrar favicon/icone K3G do `60-bgp_manager` sem trocar layout, tema o
 - [ ] Validar conectividade e permissao read-only.
 - [ ] Validar comandos permitidos por vendor.
 - [ ] Validar backup/snapshot antes de qualquer plano write futuro.
+
+## D4 - BGP drilldown next phase
+
+- [ ] Definir se API `source` deve expor `snapshot` ou evidencia (`ssh_full_config`) sem ambiguidade na UI.
+- [ ] Planejar consultas de rotas com confirmacao explicita, limite, auditoria e timeout.
+- [ ] Adicionar smoke browser automatizado quando Playwright estiver disponivel no workspace.
 
 ## FASE 8 - Plano de configuracao
 

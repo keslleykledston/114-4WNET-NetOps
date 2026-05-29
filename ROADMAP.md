@@ -1,5 +1,23 @@
 # Roadmap
 
+## v0.4.x — Provisioning Operacional Seguro (Planned)
+
+Plano completo: `reports/V0_4_PROVISIONING_OPERATIONAL_PLAN.md`
+
+| Fase | Escopo | Apply real |
+|------|--------|------------|
+| **v0.4.0** | Preview engine, 7+ templates, schema, rollback, selftests | ❌ Bloqueado |
+| **v0.4.1** | UI wizard `/provisioning`, `/templates` view/edit, export plano | ❌ Bloqueado |
+| **v0.4.2** | Approval workflow (draft→approved/rejected), audit timeline, RBAC approve | ❌ Bloqueado |
+| **v0.4.3** | Dry-run validation vs discovery/compliance, conflitos VLAN/VRF/BGP | ❌ Bloqueado |
+| **v0.4.4** | Controlled apply readiness (doc + design only) | ❌ Default false |
+
+**Guardrails permanentes nesta trilha:** `CONFIG_APPLY_ENABLED=false`, `DRY_RUN_DEFAULT=true`, sem SSH write/config mode.
+
+**Base já entregue (v0.4.0 preview MVP):** service templates L2/L3/BGP, `POST /provisioning/preview`, UI `/provisioning`, workflow draft→approved, execute blocked.
+
+---
+
 ## v0.3.5 — Compliance Profile Assignment (In Development)
 
 - ✅ Database schema extension (complianceProfileName field)

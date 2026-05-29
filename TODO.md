@@ -1,5 +1,37 @@
 # TODO
 
+## v0.4.x — Provisioning Operacional Seguro (Planned — aguardando aprovação)
+
+Plano: `reports/V0_4_PROVISIONING_OPERATIONAL_PLAN.md`
+
+### v0.4.0 — Preview Engine
+- [ ] Completar templates: interface/subinterface, route-policy, community, prefix-list
+- [ ] Selftest `tools/provisioning-preview-selftest.mjs`
+- [ ] Unificar seed `config_templates` ↔ `SERVICE_TEMPLATES`
+- [ ] Manter `CONFIG_APPLY_ENABLED=false`
+
+### v0.4.1 — Provisioning UI
+- [ ] `/templates`: view read-only (viewer), edit (operator/admin)
+- [ ] Wizard `/provisioning`: RBAC por botão, preview side-by-side
+- [ ] Export plano Markdown/JSON
+
+### v0.4.2 — Approval Workflow
+- [ ] Estados rejected + audit timeline UI
+- [ ] Permissão `provisioning.approve`
+- [ ] Janela manutenção + rollback plan obrigatórios
+
+### v0.4.3 — Dry-run Validation
+- [ ] Pré-check vs discovery_snapshots (VRF, interface, BGP)
+- [ ] Bloqueio por findings BLOCKER_REAL
+- [ ] Detecção conflito VLAN/VRF/BGP/policy
+
+### v0.4.4 — Controlled Apply Readiness (doc only)
+- [ ] Documentar requisitos para `CONFIG_APPLY_ENABLED=true`
+- [ ] Design dupla aprovação + SSH adapter Huawei
+- [ ] **Não habilitar apply em piloto**
+
+---
+
 ## v0.3.4 — Operational Pilot NOC (In Development)
 
 - [ ] TAREFA 1: Select pilot devices (3 devices, create device matrix) — ✅ DONE

@@ -1,0 +1,7 @@
+route-policy C15-EXPORT permit node 2013
+ if-match ip-prefix CDN-NETFLIX
+ if-match community-filter GLOBAL-EXPORT-UPSTREAM-P3
+ apply as-path 268707 268707 additive
+#
+ip ip-prefix CDN-NETFLIX index 10 permit 45.169.161.192 26
+ip community-filter basic GLOBAL-EXPORT-UPSTREAM-P3 permit 64777:99903

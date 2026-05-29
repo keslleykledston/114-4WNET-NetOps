@@ -1,0 +1,15 @@
+# device_id=1 hostname=4WNET-BVA-BRT-RX
+# collected_at=2026-05-23T21:01:45.823Z
+# collector=noc_readonly_script
+# command=display mac-address vsi
+^
+Error: Incomplete command found at '^' position.
+
+--- command: display mac-address vsi ---
+^
+Error: Incomplete command found at '^' position.
+
+--- command: display mac-address bridge-domain ---
+^
+Error: Incomplete command found at '^' position.
+

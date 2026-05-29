@@ -96,3 +96,9 @@
 - `/api/compliance-findings` e `/api/compliance-findings-groups` aceitam `latestJobOnly` e `freshness`.
 - `/api/compliance-findings-freshness-summary` separa current, stale, legacy e superseded.
 - `/compliance` oculta historico por padrao e mostra toggle explicito para incluir findings antigos.
+
+## BGP peer drilldown D3
+
+- `/bgp/peer-drilldown` adiciona analise read-only de um peer usando snapshot/raw_config do endpoint D2.
+- UI mostra root, address families, policies efetivas, dependency tree, policy detail, warnings e route tables disabled.
+- Fica fora de escopo: SSH detail, SNMP, discovery, NetBox e received/accepted/advertised routes.

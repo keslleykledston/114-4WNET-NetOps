@@ -124,13 +124,19 @@ export function FreshnessBadge({ freshness }: { freshness: L2OperationalFreshnes
 
 export function NocFindingBadges({ findings }: { findings: L2Finding[] }) {
   const circuitDown = findings.some((f) => f.code === "CIRCUIT_DOWN" || f.code === "L2VC_DOWN" || f.code === "VSI_DOWN");
+  const pwPartial = findings.some((f) => f.code === "PW_PARTIAL_DOWN");
   const remoteNotForwarding = findings.some((f) => f.code === "REMOTE_NOT_FORWARDING");
   const vlanOrphan = findings.some((f) => f.code === "VLAN_ORPHAN");
 
-  if (!circuitDown && !remoteNotForwarding && !vlanOrphan) return null;
+  if (!circuitDown && !pwPartial && !remoteNotForwarding && !vlanOrphan) return null;
 
   return (
     <div className="flex flex-wrap gap-1">
+      {pwPartial && !circuitDown && (
+        <Badge variant="outline" className="bg-amber-500/15 text-amber-200 border-amber-500/40 text-[10px] uppercase tracking-wide">
+          PW partial
+        </Badge>
+      )}
       {circuitDown && (
         <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/40 text-[10px] uppercase tracking-wide">
           Circuit DOWN

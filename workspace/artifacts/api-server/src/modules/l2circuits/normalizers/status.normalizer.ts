@@ -1,6 +1,16 @@
 import type { L2Status, NormalizedL2Circuit, NormalizedL2Status, ParsedL2Circuit } from "../l2circuits.types.js";
+import { applyVsiMultipointToParsed, hasMultipointVsiPeers } from "../parsers/vsi-multipoint.helpers.js";
 
 export function normalizeL2CircuitStatus(parsed: ParsedL2Circuit): NormalizedL2Status {
+  if (hasMultipointVsiPeers(parsed)) {
+    const withStatus = applyVsiMultipointToParsed(parsed);
+    return {
+      adminStatus: normalizeAdminStatus(withStatus.vsiState ?? withStatus.adminStatus),
+      operStatus: withStatus.operStatus as L2Status,
+      pwStatus: withStatus.pwStatus as L2Status | undefined,
+    };
+  }
+
   const adminStatus = normalizeAdminStatus(parsed.adminStatus);
   const operStatus = normalizeOperStatus(parsed.operStatus, adminStatus);
   const pwStatus = parsed.pwStatus ? normalizePwStatus(parsed.pwStatus) : undefined;
@@ -58,11 +68,13 @@ export function normalizePwStatus(status: string): L2Status {
 
 export function normalizeCircuits(parsed: ParsedL2Circuit[]): NormalizedL2Circuit[] {
   return parsed.map((circuit) => {
-    const status = normalizeL2CircuitStatus(circuit);
+    const withPeers = hasMultipointVsiPeers(circuit) ? applyVsiMultipointToParsed(circuit) : circuit;
+    const status = normalizeL2CircuitStatus(withPeers);
     return {
-      ...circuit,
+      ...withPeers,
       adminStatus: status.adminStatus,
       operStatus: status.operStatus,
+      pwStatus: status.pwStatus,
       findings: [],
     };
   });

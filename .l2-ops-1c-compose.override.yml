@@ -1,0 +1,12 @@
+# L2-OPS pilot: real SNMP + SSH ops (CSV device IDs)
+services:
+  api:
+    environment:
+      L2_OPERATIONAL_REFRESH_ENABLED: "true"
+      L2_OPERATIONAL_REFRESH_SSH_CONFIG: "false"
+      L2_DISCOVER_SSH_ENABLED: "false"
+      NETOPS_SNMP_REAL_ENABLED: "true"
+      NETOPS_SNMP_BGP_REAL_ENABLED: "false"
+      SNMP_FAST_PILOT_DEVICE_IDS: "1,2"
+      SNMP_POLL_ENABLED: "false"
+      BGP_DRILLDOWN_SSH_DETAIL_ENABLED: "false"

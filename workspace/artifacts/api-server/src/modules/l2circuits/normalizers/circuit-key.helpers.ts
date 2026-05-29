@@ -38,7 +38,7 @@ export function buildCircuitKey(circuit: CircuitKeyInput, deviceId = 0): string 
   }
 
   if (type === "vsi" || type === "vpls") {
-    return `${device}|${type}|${circuit.vsiName ?? ""}|${circuit.vsiId ?? ""}|${circuit.peerIp ?? ""}|${iface}`;
+    return `${device}|${type}|${circuit.vsiName ?? ""}|${circuit.vsiId ?? ""}|${iface}`;
   }
 
   return `${device}|${type}|${circuit.serviceId ?? iface}|${circuit.outerVlan ?? ""}`;

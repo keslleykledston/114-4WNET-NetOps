@@ -3,6 +3,8 @@ import { circuitTypeGroup, circuitTypeLabel } from "./l2-circuit-badges";
 
 export const FILTER_ALL = "all";
 
+export const OPERATIONAL_STALE_TAG = "OPERATIONAL_STALE";
+
 export interface L2CircuitFilters {
   device: string;
   circuitType: string;
@@ -12,6 +14,8 @@ export interface L2CircuitFilters {
   peerIp: string;
   /** When false (default), hide healthy circuits in NOC list. */
   showHealthy: boolean;
+  /** When false (default), hide circuits marked obsolete after operational refresh. */
+  showStaleInventory: boolean;
 }
 
 export const DEFAULT_L2_FILTERS: L2CircuitFilters = {
@@ -22,6 +26,7 @@ export const DEFAULT_L2_FILTERS: L2CircuitFilters = {
   vcId: "",
   peerIp: "",
   showHealthy: false,
+  showStaleInventory: false,
 };
 
 const PROBLEM_OPER_STATUSES = new Set<L2Status>(["DOWN", "PARTIAL", "CONFIG_ONLY"]);
@@ -30,6 +35,7 @@ const PROBLEM_FINDING_CODES = new Set<L2FindingCode>([
   "CIRCUIT_DOWN",
   "L2VC_DOWN",
   "VSI_DOWN",
+  "PW_PARTIAL_DOWN",
   "REMOTE_NOT_FORWARDING",
   "VLAN_ORPHAN",
   "DESCRIPTION_MISSING",
@@ -42,7 +48,12 @@ const PROBLEM_FINDING_CODES = new Set<L2FindingCode>([
   "CLASSIFICATION_CONFLICT",
 ]);
 
+export function isOperationalStaleCircuit(circuit: L2Circuit): boolean {
+  return (circuit.anomalyTags ?? []).includes(OPERATIONAL_STALE_TAG);
+}
+
 export function isProblemCircuit(circuit: L2Circuit): boolean {
+  if (isOperationalStaleCircuit(circuit)) return false;
   if (PROBLEM_OPER_STATUSES.has(circuit.operStatus)) return true;
   return circuit.findings.some((finding) => PROBLEM_FINDING_CODES.has(finding.code));
 }
@@ -114,8 +125,14 @@ export function hasFinding(circuit: L2Circuit, code: L2FindingCode) {
 }
 
 export function nocRowClass(circuit: L2Circuit): string {
+  if (isOperationalStaleCircuit(circuit)) {
+    return "opacity-70 border-l-2 border-l-slate-500 bg-slate-500/5 hover:bg-slate-500/10";
+  }
   if (hasFinding(circuit, "CIRCUIT_DOWN")) {
     return "border-l-2 border-l-red-500 bg-red-500/[0.07] hover:bg-red-500/10";
+  }
+  if (hasFinding(circuit, "PW_PARTIAL_DOWN")) {
+    return "border-l-2 border-l-amber-500 bg-amber-500/[0.07] hover:bg-amber-500/10";
   }
   if (hasFinding(circuit, "REMOTE_NOT_FORWARDING")) {
     return "border-l-2 border-l-amber-500 bg-amber-500/[0.07] hover:bg-amber-500/10";

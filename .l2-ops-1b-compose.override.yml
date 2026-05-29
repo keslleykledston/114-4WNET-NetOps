@@ -1,0 +1,11 @@
+# L2-OPS.1B — ephemeral smoke: all collection OFF
+services:
+  api:
+    environment:
+      L2_OPERATIONAL_REFRESH_ENABLED: "false"
+      L2_OPERATIONAL_REFRESH_SSH_CONFIG: "false"
+      L2_DISCOVER_SSH_ENABLED: "false"
+      NETOPS_SNMP_REAL_ENABLED: "false"
+      NETOPS_SNMP_BGP_REAL_ENABLED: "false"
+      SNMP_POLL_ENABLED: "false"
+      BGP_DRILLDOWN_SSH_DETAIL_ENABLED: "false"

@@ -1,0 +1,2526 @@
+{
+  "summary": {
+    "mode": "db-read-plus-fixture-reclass",
+    "db_rows_readonly": 261,
+    "fixture_records_analyzed": 146,
+    "total_records_analyzed": 407,
+    "changed_records": 144,
+    "corrected_vpws": 135,
+    "invalid_vpws_after": 0,
+    "pure_dot1q_vpws_after": 0,
+    "go_no_go": "GO"
+  },
+  "sources": [
+    {
+      "name": "l2_circuits",
+      "kind": "db-readonly",
+      "status": "read",
+      "rows": 261
+    },
+    {
+      "name": "manual-device-1",
+      "kind": "fixture",
+      "files": [
+        "display_current_config_interface.txt",
+        "display_interface_description.txt"
+      ]
+    },
+    {
+      "name": "manual-s6730-brt-a",
+      "kind": "fixture",
+      "files": [
+        "display_mpls_l2vc.txt",
+        "display_vsi_verbose.txt",
+        "display_mac-address_vlan_612.txt"
+      ]
+    },
+    {
+      "name": "parser-ne8000-l2vc-vsi",
+      "kind": "fixture",
+      "files": [
+        "display-mpls-l2vc-verbose.txt",
+        "display-vsi-verbose.txt"
+      ]
+    },
+    {
+      "name": "synthetic-edge-cases",
+      "kind": "inline-fixture",
+      "files": []
+    }
+  ],
+  "before": {
+    "circuit_type": {
+      "vpws": 137,
+      "vsi": 4,
+      "l2vc": 2,
+      "vlan_orphan": 2,
+      "l3_interface": 1
+    },
+    "classification": {
+      "legacy_dot1q_false_vpws": 135,
+      "vpws": 2,
+      "vsi": 4,
+      "l2vc": 2,
+      "vlanif_orphan": 1,
+      "l3_interface": 1,
+      "vlan_not_in_switch_batch": 1
+    },
+    "status": {
+      "UP": 79,
+      "DOWN": 48,
+      "CONFIG_ONLY": 19
+    },
+    "findings": {}
+  },
+  "after": {
+    "circuit_type": {
+      "l3_vrf_link": 95,
+      "vlan_orphan": 31,
+      "vlan_local": 11,
+      "vpws": 2,
+      "vsi": 4,
+      "l2vc": 2,
+      "l3_interface": 1
+    },
+    "classification": {
+      "l3_vrf_link": 95,
+      "vlan_orphan": 29,
+      "vlan_local": 11,
+      "vpws": 2,
+      "vsi": 4,
+      "l2vc": 2,
+      "vlanif_orphan": 1,
+      "l3_interface": 1,
+      "vlan_not_in_switch_batch": 1
+    },
+    "status": {
+      "UP": 79,
+      "DOWN": 48,
+      "CONFIG_ONLY": 19
+    },
+    "findings": {
+      "VLAN_ORPHAN": 29,
+      "ROUTER_L2_VLAN_ANOMALY": 41,
+      "VLANIF_ORPHAN": 1,
+      "VLAN_NOT_IN_SWITCH_BATCH": 1,
+      "CIRCUIT_DOWN": 48,
+      "VLAN_MULTI_INTERFACE_LOCAL": 3,
+      "VLAN_USED_IN_L3_VRF": 96,
+      "VLAN_USED_IN_L2VC": 2,
+      "VLAN_USED_IN_VSI": 4,
+      "REMOTE_NOT_FORWARDING": 1,
+      "DESCRIPTION_MISSING": 34
+    }
+  },
+  "changed": [
+    {
+      "id": "Eth-Trunk0.77:vlan-77",
+      "name": "EN-4WNET-BVA-CDS-RX_M4",
+      "local_interface": "Eth-Trunk0.77",
+      "outer_vlan": 77,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.77"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.84:vlan-84",
+      "name": "Eth-Trunk0.84",
+      "local_interface": "Eth-Trunk0.84",
+      "outer_vlan": 84,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.84"
+      },
+      "findings": [
+        "VLAN_USED_IN_L3_VRF",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk0.85:vlan-85",
+      "name": "VRF-CDN",
+      "local_interface": "Eth-Trunk0.85",
+      "outer_vlan": 85,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.85"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.155:vlan-155",
+      "name": "PTP-4WNET_RX-BKP",
+      "local_interface": "Eth-Trunk0.155",
+      "outer_vlan": 155,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.155"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.414:vlan-414",
+      "name": "PROV-PRONET",
+      "local_interface": "Eth-Trunk0.414",
+      "outer_vlan": 414,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.414"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.652:vlan-652",
+      "name": "BGP-BVA-MNS",
+      "local_interface": "Eth-Trunk0.652",
+      "outer_vlan": 652,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.652"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.810:vlan-810",
+      "name": "CL-VTELL-BVA-((724)MJE TELC)",
+      "local_interface": "Eth-Trunk0.810",
+      "outer_vlan": 810,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.810"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.811:vlan-811",
+      "name": "CL-TIXUS-ULTRANET-BVA-((45) I. S. MARQUES)",
+      "local_interface": "Eth-Trunk0.811",
+      "outer_vlan": 811,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.811"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.812:vlan-812",
+      "name": "CL-MACARAO-BVA-(725) E G DOS SANTOS",
+      "local_interface": "Eth-Trunk0.812",
+      "outer_vlan": 812,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.812"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.813:vlan-813",
+      "name": "AS263934-INFORR-BACKUP",
+      "local_interface": "Eth-Trunk0.813",
+      "outer_vlan": 813,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.813"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.814:vlan-814",
+      "name": "CL-VLX-BVA-((87) VELOXTER TELECOMUNICACOES LTDA)",
+      "local_interface": "Eth-Trunk0.814",
+      "outer_vlan": 814,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.814"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.819:vlan-819",
+      "name": "PTP-VIANET-VIA-CDS",
+      "local_interface": "Eth-Trunk0.819",
+      "outer_vlan": 819,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.819"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.890:vlan-890",
+      "name": "ISP-UPLINK-IP",
+      "local_interface": "Eth-Trunk0.890",
+      "outer_vlan": 890,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.890"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.894:vlan-894",
+      "name": "ALLFIBER-CROSSCONNECT-4WNET",
+      "local_interface": "Eth-Trunk0.894",
+      "outer_vlan": 894,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk0.894"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk0.899:vlan-899",
+      "name": "ISP-UPLINK-IP-II",
+      "local_interface": "Eth-Trunk0.899",
+      "outer_vlan": 899,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.899"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.1002:vlan-1002",
+      "name": "AS263934-INFORR-DIRETO",
+      "local_interface": "Eth-Trunk0.1002",
+      "outer_vlan": 1002,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.1002"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.1121:vlan-1121",
+      "name": "UPSTREAM-AS26615-TIM",
+      "local_interface": "Eth-Trunk0.1121",
+      "outer_vlan": 1121,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.1121"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.1161:vlan-1161",
+      "name": "CL-4WNET-BVA-(717)AMAZON-ACO",
+      "local_interface": "Eth-Trunk0.1161",
+      "outer_vlan": 1161,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.1161"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.1777:vlan-1777",
+      "name": "PTP-VIANET",
+      "local_interface": "Eth-Trunk0.1777",
+      "outer_vlan": 1777,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.1777"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.4010:vlan-4010",
+      "name": "IX-MAO-V4",
+      "local_interface": "Eth-Trunk0.4010",
+      "outer_vlan": 4010,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.4010"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.4011:vlan-4011",
+      "name": "IX-MAO-V6",
+      "local_interface": "Eth-Trunk0.4011",
+      "outer_vlan": 4011,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk0.4011"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.10:vlan-10",
+      "name": "PTP_BGP_AS270966",
+      "local_interface": "Eth-Trunk1.10",
+      "outer_vlan": 10,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.10"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.22:vlan-22",
+      "name": "EN-ROTEADORES",
+      "local_interface": "Eth-Trunk1.22",
+      "outer_vlan": 22,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.22"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.38:vlan-38",
+      "name": "CL-EXATA-CARGO-PJ-IP",
+      "local_interface": "Eth-Trunk1.38",
+      "outer_vlan": 38,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.38"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.44:vlan-44",
+      "name": "NETFAST",
+      "local_interface": "Eth-Trunk1.44",
+      "outer_vlan": 44,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.44"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.80:vlan-80",
+      "name": "4WNET-BVA-BRT-A",
+      "local_interface": "Eth-Trunk1.80",
+      "outer_vlan": 80,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.80"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.83:vlan-83",
+      "name": "Peer BGP Antigo v6",
+      "local_interface": "Eth-Trunk1.83",
+      "outer_vlan": 83,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.83"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.86:vlan-86",
+      "name": "Eth-Trunk1.86",
+      "local_interface": "Eth-Trunk1.86",
+      "outer_vlan": 86,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.86"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "VLAN_USED_IN_L3_VRF",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.88:vlan-88",
+      "name": "EN-BVA-4WNET-BRT-02",
+      "local_interface": "Eth-Trunk1.88",
+      "outer_vlan": 88,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.88"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.89:vlan-89",
+      "name": "Eth-Trunk1.89",
+      "local_interface": "Eth-Trunk1.89",
+      "outer_vlan": 89,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.89"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "CIRCUIT_DOWN",
+        "CIRCUIT_DOWN",
+        "CIRCUIT_DOWN",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING",
+        "DESCRIPTION_MISSING",
+        "DESCRIPTION_MISSING",
+        "DESCRIPTION_MISSING",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.90:vlan-90",
+      "name": "Eth-Trunk1.90",
+      "local_interface": "Eth-Trunk1.90",
+      "outer_vlan": 90,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.90"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.92:vlan-92",
+      "name": "Eth-Trunk1.92",
+      "local_interface": "Eth-Trunk1.92",
+      "outer_vlan": 92,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.92"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.93:vlan-93",
+      "name": "Eth-Trunk1.93",
+      "local_interface": "Eth-Trunk1.93",
+      "outer_vlan": 93,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.93"
+      },
+      "findings": [
+        "VLAN_USED_IN_L3_VRF",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.94:vlan-94",
+      "name": "Eth-Trunk1.94",
+      "local_interface": "Eth-Trunk1.94",
+      "outer_vlan": 94,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.94"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.95:vlan-95",
+      "name": "SN_NET",
+      "local_interface": "Eth-Trunk1.95",
+      "outer_vlan": 95,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.95"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.100:vlan-100",
+      "name": "Eth-Trunk1.100",
+      "local_interface": "Eth-Trunk1.100",
+      "outer_vlan": 100,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_local",
+        "classification": "vlan_local",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.100"
+      },
+      "findings": [
+        "ROUTER_L2_VLAN_ANOMALY",
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "VLAN_MULTI_INTERFACE_LOCAL",
+        "DESCRIPTION_MISSING",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.115:vlan-115",
+      "name": "Eth-Trunk1.115",
+      "local_interface": "Eth-Trunk1.115",
+      "outer_vlan": 115,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.115"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "VLAN_USED_IN_L3_VRF",
+        "VLAN_USED_IN_L3_VRF",
+        "VLAN_USED_IN_L3_VRF",
+        "VLAN_USED_IN_L3_VRF",
+        "VLAN_USED_IN_L3_VRF",
+        "VLAN_USED_IN_L3_VRF",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.118:vlan-118",
+      "name": "PTP_PE_BVB_4WNET_EDENILTON_VIRTUAL_BT_01",
+      "local_interface": "Eth-Trunk1.118",
+      "outer_vlan": 118,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.118"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.120:vlan-120",
+      "name": "PTP_BGP_4WNET-RZ",
+      "local_interface": "Eth-Trunk1.120",
+      "outer_vlan": 120,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.120"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.121:vlan-121",
+      "name": "PTP-4WNET-CLIENTES",
+      "local_interface": "Eth-Trunk1.121",
+      "outer_vlan": 121,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.121"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.122:vlan-122",
+      "name": "PTP-PE_BVB_4WNET_VIANET_VIRTUAL_BT_01",
+      "local_interface": "Eth-Trunk1.122",
+      "outer_vlan": 122,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.122"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.134:vlan-134",
+      "name": "FNA-4WNET",
+      "local_interface": "Eth-Trunk1.134",
+      "outer_vlan": 134,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.134"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.135:vlan-135",
+      "name": "Eth-Trunk1.135",
+      "local_interface": "Eth-Trunk1.135",
+      "outer_vlan": 135,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.135"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.144:vlan-144",
+      "name": "CL-ENEVA-PJ-IP",
+      "local_interface": "Eth-Trunk1.144",
+      "outer_vlan": 144,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.144"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.161:vlan-161",
+      "name": "EN-BRT-BOB-V6",
+      "local_interface": "Eth-Trunk1.161",
+      "outer_vlan": 161,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.161"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.227:vlan-227",
+      "name": "MS-FIBRA",
+      "local_interface": "Eth-Trunk1.227",
+      "outer_vlan": 227,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.227"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.228:vlan-228",
+      "name": "IX_AS270966-4WNET-MNS",
+      "local_interface": "Eth-Trunk1.228",
+      "outer_vlan": 228,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.228"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.312:vlan-312",
+      "name": "CIRCUITO-404 - TIXUS",
+      "local_interface": "Eth-Trunk1.312",
+      "outer_vlan": 312,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.312"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.313:vlan-313",
+      "name": "CIRCUITO-404 - TIXUS",
+      "local_interface": "Eth-Trunk1.313",
+      "outer_vlan": 313,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.313"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.404:vlan-404",
+      "name": "PTP-PTL",
+      "local_interface": "Eth-Trunk1.404",
+      "outer_vlan": 404,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.404"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.411:vlan-411",
+      "name": "PTP-TECHINT",
+      "local_interface": "Eth-Trunk1.411",
+      "outer_vlan": 411,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.411"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.487:vlan-487",
+      "name": "VLAN_487_INTERNET_SAT_ENEVA",
+      "local_interface": "Eth-Trunk1.487",
+      "outer_vlan": 487,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.487"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.552:vlan-552",
+      "name": "RT-ISP-AIRNET-IP",
+      "local_interface": "Eth-Trunk1.552",
+      "outer_vlan": 552,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.552"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.555:vlan-555",
+      "name": "ISP-AIRNET-VIRTUAL",
+      "local_interface": "Eth-Trunk1.555",
+      "outer_vlan": 555,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.555"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.559:vlan-559",
+      "name": "RT-ISP-OLA-TELECOM-IP",
+      "local_interface": "Eth-Trunk1.559",
+      "outer_vlan": 559,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.559"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.560:vlan-560",
+      "name": "PTP_HC-PNEUS",
+      "local_interface": "Eth-Trunk1.560",
+      "outer_vlan": 560,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.560"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.600:vlan-600",
+      "name": "UPLINK-INFORR",
+      "local_interface": "Eth-Trunk1.600",
+      "outer_vlan": 600,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.600"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.605:vlan-605",
+      "name": "ROTA_GCA_INFORR",
+      "local_interface": "Eth-Trunk1.605",
+      "outer_vlan": 605,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.605"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.612:vlan-612",
+      "name": "4WNET-MNS-KTG-RX",
+      "local_interface": "Eth-Trunk1.612",
+      "outer_vlan": 612,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.612"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.621:vlan-621",
+      "name": "ISP-NICK NET",
+      "local_interface": "Eth-Trunk1.621",
+      "outer_vlan": 621,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.621"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.651:vlan-651",
+      "name": "LAN2LAN-BVA<>MNS>IP>DWDM-INFORR",
+      "local_interface": "Eth-Trunk1.651",
+      "outer_vlan": 651,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.651"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.653:vlan-653",
+      "name": "LAN2LAN-BVA<>MNS>IP>DWDM-INFORR",
+      "local_interface": "Eth-Trunk1.653",
+      "outer_vlan": 653,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.653"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.654:vlan-654",
+      "name": "LAN2LAN-BVA-EMBRATEL-MNS/IP/08754_4WNET_BVB",
+      "local_interface": "Eth-Trunk1.654",
+      "outer_vlan": 654,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.654"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.665:vlan-665",
+      "name": "PTP-CS-FIBRA",
+      "local_interface": "Eth-Trunk1.665",
+      "outer_vlan": 665,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.665"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.802:vlan-802",
+      "name": "Eth-Trunk1.802",
+      "local_interface": "Eth-Trunk1.802",
+      "outer_vlan": 802,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.802"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.803:vlan-803",
+      "name": "Eth-Trunk1.803",
+      "local_interface": "Eth-Trunk1.803",
+      "outer_vlan": 803,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "CONFIG_ONLY",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "CONFIG_ONLY",
+        "local_interface": "Eth-Trunk1.803"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.804:vlan-804",
+      "name": "VLAN_896_AS268625-NETFAST-IP",
+      "local_interface": "Eth-Trunk1.804",
+      "outer_vlan": 804,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.804"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.805:vlan-805",
+      "name": "Eth-Trunk1.805",
+      "local_interface": "Eth-Trunk1.805",
+      "outer_vlan": 805,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.805"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.807:vlan-807",
+      "name": "EN-4WNET-BVA-CDS-RZ",
+      "local_interface": "Eth-Trunk1.807",
+      "outer_vlan": 807,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.807"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.825:vlan-825",
+      "name": "PE-SMF-BVA-BLV",
+      "local_interface": "Eth-Trunk1.825",
+      "outer_vlan": 825,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.825"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.832:vlan-832",
+      "name": "AS53153-IMPACTUS",
+      "local_interface": "Eth-Trunk1.832",
+      "outer_vlan": 832,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.832"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.833:vlan-833",
+      "name": "AS268707-IMPACTUS",
+      "local_interface": "Eth-Trunk1.833",
+      "outer_vlan": 833,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.833"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.834:vlan-834",
+      "name": "CL-NETDOVIZINHO-BVA-(699)PHC",
+      "local_interface": "Eth-Trunk1.834",
+      "outer_vlan": 834,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.834"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.835:vlan-835",
+      "name": "Eth-Trunk1.835",
+      "local_interface": "Eth-Trunk1.835",
+      "outer_vlan": 835,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "CONFIG_ONLY",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "CONFIG_ONLY",
+        "local_interface": "Eth-Trunk1.835"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.836:vlan-836",
+      "name": "Eth-Trunk1.836",
+      "local_interface": "Eth-Trunk1.836",
+      "outer_vlan": 836,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "CONFIG_ONLY",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "CONFIG_ONLY",
+        "local_interface": "Eth-Trunk1.836"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.837:vlan-837",
+      "name": "RN-CL-NETDOVIZINHO-BVA-(699)PHC",
+      "local_interface": "Eth-Trunk1.837",
+      "outer_vlan": 837,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.837"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.847:vlan-847",
+      "name": "WIFIZAO.TPL",
+      "local_interface": "Eth-Trunk1.847",
+      "outer_vlan": 847,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.847"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.849:vlan-849",
+      "name": "CL-VIANET-(ALFATELECOM)-FTTH",
+      "local_interface": "Eth-Trunk1.849",
+      "outer_vlan": 849,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.849"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.867:vlan-867",
+      "name": "CL-XPAND-CDN",
+      "local_interface": "Eth-Trunk1.867",
+      "outer_vlan": 867,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.867"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.879:vlan-879",
+      "name": "ISP-UPLINK-CONNECTBV8-IP",
+      "local_interface": "Eth-Trunk1.879",
+      "outer_vlan": 879,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.879"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.880:vlan-880",
+      "name": "Eth-Trunk1.880",
+      "local_interface": "Eth-Trunk1.880",
+      "outer_vlan": 880,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.880"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.885:vlan-885",
+      "name": "UPLINK_ZAP-IP",
+      "local_interface": "Eth-Trunk1.885",
+      "outer_vlan": 885,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.885"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.886:vlan-886",
+      "name": "Eth-Trunk1.886",
+      "local_interface": "Eth-Trunk1.886",
+      "outer_vlan": 886,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.886"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.888:vlan-888",
+      "name": "Eth-Trunk1.888",
+      "local_interface": "Eth-Trunk1.888",
+      "outer_vlan": 888,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.888"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.891:vlan-891",
+      "name": "Eth-Trunk1.891",
+      "local_interface": "Eth-Trunk1.891",
+      "outer_vlan": 891,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.891"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.893:vlan-893",
+      "name": "Eth-Trunk1.893",
+      "local_interface": "Eth-Trunk1.893",
+      "outer_vlan": 893,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.893"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.896:vlan-896",
+      "name": "Eth-Trunk1.896",
+      "local_interface": "Eth-Trunk1.896",
+      "outer_vlan": 896,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.896"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.897:vlan-897",
+      "name": "Eth-Trunk1.897",
+      "local_interface": "Eth-Trunk1.897",
+      "outer_vlan": 897,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.897"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.900:vlan-900",
+      "name": "Eth-Trunk1.900",
+      "local_interface": "Eth-Trunk1.900",
+      "outer_vlan": 900,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_orphan",
+        "classification": "vlan_orphan",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.900"
+      },
+      "findings": [
+        "VLAN_ORPHAN",
+        "ROUTER_L2_VLAN_ANOMALY",
+        "CIRCUIT_DOWN",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.1038:vlan-1038",
+      "name": "CL-EXATA-CARGO-PJ-IP",
+      "local_interface": "Eth-Trunk1.1038",
+      "outer_vlan": 1038,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.1038"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.1118:vlan-1118",
+      "name": "GW_SERVIOS_NAO_DELETAR",
+      "local_interface": "Eth-Trunk1.1118",
+      "outer_vlan": 1118,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.1118"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.1120:vlan-1120",
+      "name": "CGNAT",
+      "local_interface": "Eth-Trunk1.1120",
+      "outer_vlan": 1120,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.1120"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.1121:vlan-1121",
+      "name": "PE_BVB_4WNET_BT_02",
+      "local_interface": "Eth-Trunk1.1121",
+      "outer_vlan": 1121,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "DOWN",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "vlan_local",
+        "classification": "vlan_local",
+        "status": "DOWN",
+        "local_interface": "Eth-Trunk1.1121"
+      },
+      "findings": [
+        "CIRCUIT_DOWN"
+      ]
+    },
+    {
+      "id": "Eth-Trunk1.1125:vlan-1125",
+      "name": "VM-CDN-TV",
+      "local_interface": "Eth-Trunk1.1125",
+      "outer_vlan": 1125,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.1125"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.1154:vlan-1154",
+      "name": "CL-MARDISA-C2",
+      "local_interface": "Eth-Trunk1.1154",
+      "outer_vlan": 1154,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.1154"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.1155:vlan-1155",
+      "name": "CL-MARDISA",
+      "local_interface": "Eth-Trunk1.1155",
+      "outer_vlan": 1155,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.1155"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.1156:vlan-1156",
+      "name": "(543) CMA SOLUCOES LTDA",
+      "local_interface": "Eth-Trunk1.1156",
+      "outer_vlan": 1156,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.1156"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.1157:vlan-1157",
+      "name": "CL-(677) CB BOA VISTA COMERCIO DE ALIMENTOS LTDA",
+      "local_interface": "Eth-Trunk1.1157",
+      "outer_vlan": 1157,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.1157"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.1158:vlan-1158",
+      "name": "CL-(58) TRANSNORTE ENERGIA S.A",
+      "local_interface": "Eth-Trunk1.1158",
+      "outer_vlan": 1158,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.1158"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk1.1159:vlan-1159",
+      "name": "CL-4WNET-BVA-(503)MEGA-INFRA-INSS",
+      "local_interface": "Eth-Trunk1.1159",
+      "outer_vlan": 1159,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk1.1159"
+      },
+      "findings": []
+    }
+  ],
+  "changed_examples": [
+    {
+      "id": "Eth-Trunk0.77:vlan-77",
+      "name": "EN-4WNET-BVA-CDS-RX_M4",
+      "local_interface": "Eth-Trunk0.77",
+      "outer_vlan": 77,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.77"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.84:vlan-84",
+      "name": "Eth-Trunk0.84",
+      "local_interface": "Eth-Trunk0.84",
+      "outer_vlan": 84,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.84"
+      },
+      "findings": [
+        "VLAN_USED_IN_L3_VRF",
+        "DESCRIPTION_MISSING"
+      ]
+    },
+    {
+      "id": "Eth-Trunk0.85:vlan-85",
+      "name": "VRF-CDN",
+      "local_interface": "Eth-Trunk0.85",
+      "outer_vlan": 85,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.85"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.155:vlan-155",
+      "name": "PTP-4WNET_RX-BKP",
+      "local_interface": "Eth-Trunk0.155",
+      "outer_vlan": 155,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.155"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.414:vlan-414",
+      "name": "PROV-PRONET",
+      "local_interface": "Eth-Trunk0.414",
+      "outer_vlan": 414,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.414"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.652:vlan-652",
+      "name": "BGP-BVA-MNS",
+      "local_interface": "Eth-Trunk0.652",
+      "outer_vlan": 652,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.652"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.810:vlan-810",
+      "name": "CL-VTELL-BVA-((724)MJE TELC)",
+      "local_interface": "Eth-Trunk0.810",
+      "outer_vlan": 810,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.810"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.811:vlan-811",
+      "name": "CL-TIXUS-ULTRANET-BVA-((45) I. S. MARQUES)",
+      "local_interface": "Eth-Trunk0.811",
+      "outer_vlan": 811,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.811"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.812:vlan-812",
+      "name": "CL-MACARAO-BVA-(725) E G DOS SANTOS",
+      "local_interface": "Eth-Trunk0.812",
+      "outer_vlan": 812,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.812"
+      },
+      "findings": []
+    },
+    {
+      "id": "Eth-Trunk0.813:vlan-813",
+      "name": "AS263934-INFORR-BACKUP",
+      "local_interface": "Eth-Trunk0.813",
+      "outer_vlan": 813,
+      "before": {
+        "circuit_type": "vpws",
+        "classification": "legacy_dot1q_false_vpws",
+        "status": "UP",
+        "findings": []
+      },
+      "after": {
+        "circuit_type": "l3_vrf_link",
+        "classification": "l3_vrf_link",
+        "status": "UP",
+        "local_interface": "Eth-Trunk0.813"
+      },
+      "findings": []
+    }
+  ],
+  "warnings": [],
+  "db_readonly_sample": [
+    {
+      "id": 261,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "RN-EDE-3512",
+      "peer_ip": "10.200.4.1",
+      "oper_status": "UP",
+      "findings": []
+    },
+    {
+      "id": 260,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "LTE-4WNET-2053",
+      "peer_ip": "10.200.4.1",
+      "oper_status": "UP",
+      "findings": []
+    },
+    {
+      "id": 259,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "RN-4WNET-2400",
+      "peer_ip": "10.200.4.1",
+      "oper_status": "UP",
+      "findings": []
+    },
+    {
+      "id": 258,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "UPLINK-LINK-CDN-900",
+      "peer_ip": "10.200.1.3",
+      "oper_status": "UP",
+      "findings": []
+    },
+    {
+      "id": 257,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "UPLINK-LINK-CDN-891",
+      "peer_ip": "10.200.1.3",
+      "oper_status": "UP",
+      "findings": []
+    },
+    {
+      "id": 256,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "UPLINK-LINK-IP-899",
+      "peer_ip": "10.200.1.3",
+      "oper_status": "UP",
+      "findings": []
+    },
+    {
+      "id": 255,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "UPLINK-LINK-IP-890",
+      "peer_ip": "10.200.1.3",
+      "oper_status": "UP",
+      "findings": []
+    },
+    {
+      "id": 254,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "RN-UPLINK-3471",
+      "peer_ip": "10.200.1.3",
+      "oper_status": "UP",
+      "findings": []
+    },
+    {
+      "id": 253,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "RN-UPLINK-2282",
+      "peer_ip": null,
+      "oper_status": "DOWN",
+      "findings": [
+        {
+          "code": "CIRCUIT_DOWN",
+          "message": "Circuit RN-UPLINK-2282 is operationally down",
+          "severity": "error"
+        }
+      ]
+    },
+    {
+      "id": 252,
+      "device_id": 2,
+      "circuit_type": "vsi",
+      "local_interface": null,
+      "outer_vlan": null,
+      "vc_id": null,
+      "vsi_name": "RN-UPLINK-178",
+      "peer_ip": "10.200.1.3",
+      "oper_status": "UP",
+      "findings": []
+    }
+  ],
+  "go_no_go": "GO"
+}

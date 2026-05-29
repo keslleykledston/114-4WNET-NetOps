@@ -6,9 +6,15 @@ import {
   normalizeOperStatus,
 } from "../normalizers/status.normalizer.js";
 import type { NormalizedL2Circuit, ParsedL2Circuit } from "../l2circuits.types.js";
+import { applyVsiMultipointToParsed } from "../parsers/vsi-multipoint.helpers.js";
 
+/** Normalize Huawei-style names so GE/GigabitEthernet and Eth-/Ethernet- align. */
 export function normalizeInterfaceName(name: string): string {
-  return name.trim().toLowerCase().replace(/\s+/g, "");
+  let normalized = name.trim().toLowerCase().replace(/\s+/g, "");
+  normalized = normalized.replace(/^gigabitethernet/, "ge");
+  normalized = normalized.replace(/^ethernet/, "eth");
+  normalized = normalized.replace(/^ten-gigabitethernet/, "xge");
+  return normalized;
 }
 
 export function buildInterfaceStatusMap(interfaces: SnmpCollectedInterface[]): Map<string, SnmpCollectedInterface> {
@@ -72,6 +78,23 @@ export function applyLiveOpsToCircuit(
   const live = liveByKey.get(key);
   if (!live) return false;
 
+  if (live.peers?.length) {
+    circuit.peers = live.peers;
+    circuit.vsiState = live.vsiState ?? circuit.vsiState;
+    circuit.pwSummary = live.pwSummary;
+    circuit.peerIps = live.peerIps;
+    circuit.primaryPeerIp = live.primaryPeerIp;
+    circuit.peerIp = live.primaryPeerIp ?? live.peerIp ?? circuit.peerIp;
+    const applied = applyVsiMultipointToParsed(circuit);
+    circuit.adminStatus = normalizeAdminStatus(applied.vsiState ?? applied.adminStatus);
+    circuit.operStatus = applied.operStatus as NormalizedL2Circuit["operStatus"];
+    circuit.pwStatus = applied.pwStatus;
+    if (live.description?.trim()) {
+      circuit.description = live.description;
+    }
+    return true;
+  }
+
   if (live.adminStatus) {
     circuit.adminStatus = normalizeAdminStatus(live.adminStatus);
   }
@@ -97,4 +120,40 @@ export function applyLiveOpsToCircuit(
     circuit.description = live.description;
   }
   return true;
+}
+
+export const OPERATIONAL_STALE_TAG = "OPERATIONAL_STALE";
+
+const LIVE_TRACKED_CIRCUIT_TYPES = new Set(["l2vc", "vpws", "vsi", "vpls"]);
+
+export interface OperationalStaleCheckInput {
+  snmpCollected: boolean;
+  sshOpsCollected: boolean;
+  snmpMatched: boolean;
+  liveMatched: boolean;
+  localInterface?: string | null;
+  circuitType: string;
+  circuitKey: string;
+  liveKeys: Set<string>;
+}
+
+/** Mark DB rows that no longer appear on the device during operational refresh. */
+export function shouldMarkOperationalStale(input: OperationalStaleCheckInput): boolean {
+  const iface = input.localInterface?.trim();
+  if (input.snmpCollected && iface) {
+    if (!input.snmpMatched) {
+      return true;
+    }
+  }
+
+  if (
+    input.sshOpsCollected &&
+    input.liveKeys.size > 0 &&
+    LIVE_TRACKED_CIRCUIT_TYPES.has(input.circuitType) &&
+    !input.liveMatched
+  ) {
+    return true;
+  }
+
+  return false;
 }

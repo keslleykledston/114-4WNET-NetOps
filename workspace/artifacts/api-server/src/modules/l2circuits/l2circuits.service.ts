@@ -1,5 +1,5 @@
-import { db, l2CircuitsTable, l2DiscoveryJobsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, l2CircuitsTable, l2DeviceOperationalTable, l2DiscoveryJobsTable } from "@workspace/db";
+import { eq, inArray } from "drizzle-orm";
 import type { SSHConfig } from "../../lib/ssh.js";
 import { collectL2CircuitsViaSsh } from "./collectors/ssh.collector.js";
 import { parseHuaweiL2Circuits } from "./parsers/huawei-vrp-l2.js";
@@ -8,6 +8,11 @@ import { enrichCircuitsWithFindings, resolveL2Findings } from "./normalizers/fin
 import type { NormalizedL2Circuit } from "./l2circuits.types.js";
 import { buildL3RoleContext, hasL3ServiceEvidence, type L3EvidenceSnapshot } from "./parsers/l3-evidence.helpers.js";
 import type { L2Circuit, L2CircuitListFilter, L2DiscoveryJob, L2DiscoveryJobResponse } from "./l2circuits.types.js";
+import { OPERATIONAL_STALE_TAG } from "./operational-refresh/l2-operational-merge.js";
+import {
+  mergeVsiOperationalEvidence,
+  readVsiOperationalFromEvidence,
+} from "./parsers/vsi-multipoint.helpers.js";
 
 export function createL2DiscoveryRunId(deviceId: number): string {
   return `disc-l2-${deviceId}-${Date.now()}`;
@@ -70,7 +75,7 @@ export async function runL2DiscoveryJob(deviceId: number, runId: string, sshConf
         vsiId: circuit.vsiId,
         localInterface: circuit.localInterface,
         parentInterface: circuit.parentInterface,
-        peerIp: circuit.peerIp,
+        peerIp: circuit.primaryPeerIp ?? circuit.peerIp,
         outerVlan: circuit.outerVlan,
         innerVlan: circuit.innerVlan,
         adminStatus: circuit.adminStatus,
@@ -81,7 +86,7 @@ export async function runL2DiscoveryJob(deviceId: number, runId: string, sshConf
         classification: circuit.classification,
         l2Transport: circuit.l2Transport,
         deviceRoleFamily: circuit.deviceRoleFamily,
-        evidenceFlags: circuit.evidenceFlags ?? {},
+        evidenceFlags: mergeVsiOperationalEvidence(circuit.evidenceFlags, circuit),
         anomalyTags: circuit.anomalyTags ?? [],
         roleContext: circuit.roleContext,
         findings: circuit.findings,
@@ -153,14 +158,14 @@ export async function listL2Circuits(filter?: L2CircuitListFilter): Promise<L2Ci
     results = await db.select().from(l2CircuitsTable);
   }
 
-  return rehydrateFindingsForRows(results).map(formatCircuit);
+  return (await rehydrateFindingsForRows(results)).map(formatCircuit);
 }
 
 export async function getL2Circuit(id: number): Promise<L2Circuit | null> {
   const [result] = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.id, id));
   if (!result) return null;
 
-  const [rehydrated] = rehydrateFindingsForRows([result]);
+  const [rehydrated] = await rehydrateFindingsForRows([result]);
   return formatCircuit(rehydrated);
 }
 
@@ -215,6 +220,7 @@ function rowToNormalized(row: typeof l2CircuitsTable.$inferSelect): NormalizedL2
   const inferred = inferDot1qView(row);
   const circuitType = (inferred.circuitType ?? row.circuitType) as NormalizedL2Circuit["circuitType"];
   const classification = (inferred.classification ?? row.classification ?? undefined) as NormalizedL2Circuit["classification"];
+  const vsiOps = readVsiOperationalFromEvidence(row.evidenceFlags);
 
   return {
     circuitType,
@@ -228,7 +234,12 @@ function rowToNormalized(row: typeof l2CircuitsTable.$inferSelect): NormalizedL2
     vsiId: row.vsiId ?? undefined,
     localInterface: row.localInterface ?? undefined,
     parentInterface: row.parentInterface ?? undefined,
-    peerIp: row.peerIp ?? undefined,
+    peerIp: vsiOps.primaryPeerIp ?? row.peerIp ?? undefined,
+    primaryPeerIp: vsiOps.primaryPeerIp ?? row.peerIp ?? undefined,
+    peerIps: vsiOps.peerIps,
+    peers: vsiOps.peers,
+    pwSummary: vsiOps.pwSummary,
+    vsiState: vsiOps.vsiState,
     adminStatus: (row.adminStatus ?? "UNKNOWN") as NormalizedL2Circuit["adminStatus"],
     operStatus: (row.operStatus ?? "UNKNOWN") as NormalizedL2Circuit["operStatus"],
     pwStatus: row.pwStatus ?? undefined,
@@ -244,7 +255,28 @@ function rowToNormalized(row: typeof l2CircuitsTable.$inferSelect): NormalizedL2
   };
 }
 
-function rehydrateFindingsForRows(rows: (typeof l2CircuitsTable.$inferSelect)[]): (typeof l2CircuitsTable.$inferSelect)[] {
+const OPERATIONAL_REFRESH_TS_TOLERANCE_MS = 5_000;
+
+function rowHasOperationalStaleTag(row: typeof l2CircuitsTable.$inferSelect): boolean {
+  const tags = row.anomalyTags;
+  return Array.isArray(tags) && tags.includes(OPERATIONAL_STALE_TAG);
+}
+
+function rowWasUpdatedByOperationalRefresh(
+  row: typeof l2CircuitsTable.$inferSelect,
+  lastRefreshAt: Date | null | undefined,
+): boolean {
+  if (!lastRefreshAt || !row.lastSeen) return false;
+  return Math.abs(row.lastSeen.getTime() - lastRefreshAt.getTime()) <= OPERATIONAL_REFRESH_TS_TOLERANCE_MS;
+}
+
+function persistedFindings(row: typeof l2CircuitsTable.$inferSelect): NormalizedL2Circuit["findings"] {
+  return (row.findings ?? []) as NormalizedL2Circuit["findings"];
+}
+
+async function rehydrateFindingsForRows(
+  rows: (typeof l2CircuitsTable.$inferSelect)[],
+): Promise<(typeof l2CircuitsTable.$inferSelect)[]> {
   if (rows.length === 0) return rows;
 
   const byDevice = new Map<number, typeof rows>();
@@ -254,13 +286,38 @@ function rehydrateFindingsForRows(rows: (typeof l2CircuitsTable.$inferSelect)[])
     byDevice.set(row.deviceId, list);
   }
 
+  const deviceIds = [...byDevice.keys()];
+  const operationalRows =
+    deviceIds.length > 0
+      ? await db
+          .select()
+          .from(l2DeviceOperationalTable)
+          .where(inArray(l2DeviceOperationalTable.deviceId, deviceIds))
+      : [];
+  const lastRefreshByDevice = new Map(
+    operationalRows.map((row) => [row.deviceId, row.lastRefreshAt] as const),
+  );
+
   const findingsByRowId = new Map<number, NormalizedL2Circuit["findings"]>();
 
   for (const [deviceId, deviceRows] of byDevice.entries()) {
-    const normalized = deviceRows.map(rowToNormalized);
+    const lastRefreshAt = lastRefreshByDevice.get(deviceId);
+    const rowsToRehydrate: (typeof l2CircuitsTable.$inferSelect)[] = [];
+
+    for (const row of deviceRows) {
+      if (rowHasOperationalStaleTag(row) || rowWasUpdatedByOperationalRefresh(row, lastRefreshAt)) {
+        findingsByRowId.set(row.id, persistedFindings(row));
+      } else {
+        rowsToRehydrate.push(row);
+      }
+    }
+
+    if (rowsToRehydrate.length === 0) continue;
+
+    const normalized = rowsToRehydrate.map(rowToNormalized);
     const enriched = enrichCircuitsWithFindings(normalized, deviceId);
-    for (let i = 0; i < deviceRows.length; i++) {
-      findingsByRowId.set(deviceRows[i].id, enriched[i]?.findings ?? []);
+    for (let i = 0; i < rowsToRehydrate.length; i++) {
+      findingsByRowId.set(rowsToRehydrate[i].id, enriched[i]?.findings ?? []);
     }
   }
 
@@ -272,7 +329,7 @@ function rehydrateFindingsForRows(rows: (typeof l2CircuitsTable.$inferSelect)[])
       classification: inferred.classification ?? row.classification,
       l2Transport: inferred.l2Transport ?? row.l2Transport,
       roleContext: inferred.roleContext ?? row.roleContext,
-      findings: findingsByRowId.get(row.id) ?? row.findings,
+      findings: findingsByRowId.get(row.id) ?? persistedFindings(row),
     };
   });
 }
@@ -304,10 +361,12 @@ export async function getL2CircuitsByRunId(runId: string): Promise<L2Circuit[]> 
     .select()
     .from(l2CircuitsTable)
     .where(eq(l2CircuitsTable.discoveryRunId, runId));
-  return rehydrateFindingsForRows(results).map(formatCircuit);
+  return (await rehydrateFindingsForRows(results)).map(formatCircuit);
 }
 
 function formatCircuit(row: typeof l2CircuitsTable.$inferSelect): L2Circuit {
+  const vsiOps = readVsiOperationalFromEvidence(row.evidenceFlags);
+
   return {
     id: row.id,
     deviceId: row.deviceId,
@@ -322,7 +381,11 @@ function formatCircuit(row: typeof l2CircuitsTable.$inferSelect): L2Circuit {
     vsiId: row.vsiId,
     localInterface: row.localInterface,
     parentInterface: row.parentInterface,
-    peerIp: row.peerIp,
+    peerIp: row.peerIp ?? vsiOps.primaryPeerIp,
+    primaryPeerIp: vsiOps.primaryPeerIp ?? row.peerIp,
+    peerIps: vsiOps.peerIps ?? null,
+    peers: vsiOps.peers ?? null,
+    pwSummary: vsiOps.pwSummary ?? null,
     adminStatus: row.adminStatus as L2Circuit["adminStatus"],
     operStatus: row.operStatus as L2Circuit["operStatus"],
     pwStatus: row.pwStatus,

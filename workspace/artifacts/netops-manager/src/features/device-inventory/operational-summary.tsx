@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Server } from "lucide-react";
 import { CollectSnmpButton } from "./collect-snmp-button";
+import { CollectSshButton } from "./collect-ssh-button";
 
 function SummaryCounters({ summary }: { summary: NetopsDeviceSummary }) {
   const items = [
@@ -38,7 +39,10 @@ export function OperationalSummary({ device }: { device: Device }) {
           <Server className="h-5 w-5" />
           Device
         </CardTitle>
-        <CollectSnmpButton device={device} />
+        <div className="flex flex-wrap items-center gap-2">
+          <CollectSnmpButton device={device} />
+          <CollectSshButton device={device} />
+        </div>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="grid gap-4 text-sm md:grid-cols-2 lg:grid-cols-4">

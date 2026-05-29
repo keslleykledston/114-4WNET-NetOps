@@ -81,7 +81,8 @@ assert.equal(vsi.peerIp, "10.200.4.1");
 assert.equal(vsi.circuitType, "vsi");
 assert.equal(vsi.classification, "vsi");
 assert.equal(vsi.l2Transport, "multipoint");
-assert.equal(vsi.operStatus, "up");
+assert.equal(vsi.operStatus, "UP");
+assert.equal(vsi.peers?.length, 1);
 
 const ne = parseHuaweiL2Circuits({
   "display mpls l2vc verbose": fixtures.neL2vc,

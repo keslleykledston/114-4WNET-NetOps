@@ -1,0 +1,6 @@
+services:
+  api:
+    environment:
+      SNMP_POLL_ENABLED: "false"
+      NETOPS_SNMP_BGP_REAL_ENABLED: "true"
+      BGP_DRILLDOWN_SSH_DETAIL_ENABLED: "false"

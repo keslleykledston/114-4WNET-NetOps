@@ -14,6 +14,7 @@ import {
   L2DeviceCredentialsError,
   resolveDeviceSshConfig,
 } from "../device-ssh-config.js";
+import { buildCircuitKey } from "../normalizers/circuit-key.helpers.js";
 import { enrichCircuitsWithFindings, resolveL2Findings } from "../normalizers/findings.resolver.js";
 import { parseHuaweiL2Circuits } from "../parsers/huawei-vrp-l2.js";
 import type { NormalizedL2Circuit } from "../l2circuits.types.js";
@@ -25,6 +26,7 @@ import {
   L2OperationalRefreshDisabledError,
   L2OperationalSnmpDisabledError,
 } from "./l2-operational-refresh.errors.js";
+import { mergeVsiOperationalEvidence } from "../parsers/vsi-multipoint.helpers.js";
 import { computeL2OperationalFreshness, type L2OperationalFreshnessStatus } from "./l2-operational-refresh.freshness.js";
 import { collectL2OperationalViaSsh } from "./l2-operational-ssh-ops.collector.js";
 import {
@@ -32,6 +34,8 @@ import {
   applySnmpInterfaceStatus,
   buildInterfaceStatusMap,
   buildLiveOpsByKey,
+  OPERATIONAL_STALE_TAG,
+  shouldMarkOperationalStale,
 } from "./l2-operational-merge.js";
 
 export {
@@ -164,6 +168,7 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
   let sshOpsCollected = false;
   let sshConfigCollected = false;
   const liveByKey = new Map<string, import("../l2circuits.types.js").ParsedL2Circuit>();
+  let staleMarked = 0;
 
   try {
     const sshConfig = resolveDeviceSshConfig(device);
@@ -183,13 +188,39 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
     }
   }
 
+  const liveKeys = new Set(liveByKey.keys());
+
   const normalizedRows = rows.map((row) => {
     const normalized = rowToNormalized(row);
-    if (applySnmpInterfaceStatus(normalized, interfaceMap)) {
+    const didSnmp = applySnmpInterfaceStatus(normalized, interfaceMap);
+    if (didSnmp) {
       snmpMatched += 1;
     }
-    applyLiveOpsToCircuit(normalized, liveByKey, deviceId);
-    return { id: row.id, normalized };
+    const didLive = applyLiveOpsToCircuit(normalized, liveByKey, deviceId);
+    const key = buildCircuitKey(normalized, deviceId);
+    let stale = false;
+
+    if (
+      shouldMarkOperationalStale({
+        snmpCollected: snmpResult.interfaces.length > 0,
+        sshOpsCollected,
+        snmpMatched: didSnmp,
+        liveMatched: didLive,
+        localInterface: normalized.localInterface,
+        circuitType: normalized.circuitType,
+        circuitKey: key,
+        liveKeys,
+      })
+    ) {
+      normalized.operStatus = "UNKNOWN";
+      normalized.adminStatus = "UNKNOWN";
+      normalized.pwStatus = undefined;
+      normalized.anomalyTags = [...new Set([...(normalized.anomalyTags ?? []), OPERATIONAL_STALE_TAG])];
+      stale = true;
+      staleMarked += 1;
+    }
+
+    return { id: row.id, normalized, stale };
   });
 
   const allNormalized = normalizedRows.map((entry) => entry.normalized);
@@ -197,21 +228,26 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
   const allFindings = resolveL2Findings(allNormalized, deviceId);
 
   for (let i = 0; i < normalizedRows.length; i++) {
-    const { id, normalized } = normalizedRows[i];
-    const circuit = enriched[i] ?? normalized;
+    const entry = normalizedRows[i];
+    const circuit = entry.stale ? entry.normalized : (enriched[i] ?? entry.normalized);
+    const findings = entry.stale ? [] : circuit.findings;
+
     await db
       .update(l2CircuitsTable)
       .set({
         adminStatus: circuit.adminStatus,
         operStatus: circuit.operStatus,
         pwStatus: circuit.pwStatus ?? null,
+        peerIp: circuit.primaryPeerIp ?? circuit.peerIp ?? null,
         description: circuit.description ?? null,
-        findings: circuit.findings,
+        findings,
+        evidenceFlags: mergeVsiOperationalEvidence(entry.normalized.evidenceFlags, circuit),
+        anomalyTags: entry.normalized.anomalyTags ?? [],
         lastSeen: refreshAt,
         updatedAt: refreshAt,
         source: sshOpsCollected ? "ssh_live" : "cached_config",
       })
-      .where(eq(l2CircuitsTable.id, id));
+      .where(eq(l2CircuitsTable.id, entry.id));
   }
 
   const freshness = computeL2OperationalFreshness(refreshAt);
@@ -223,6 +259,7 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
     ssh_ops: sshOpsCollected,
     ssh_config: sshConfigCollected,
     findings_count: allFindings.length,
+    stale_marked: staleMarked,
   };
 
   await db

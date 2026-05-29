@@ -1,6 +1,8 @@
 import { bgpPeerRoleOverridesTable, db, devicesTable, snmpSnapshotsTable } from "@workspace/db";
 import { desc, eq, sql } from "drizzle-orm";
 import { snapshotToNetopsData } from "./adapters/snapshot-adapter.js";
+import { mergeNetopsInventory } from "./adapters/discovery-netops.adapter.js";
+import { getLatestDiscoverySnapshot } from "./device-discovery/discovery.service.js";
 import { deriveDeviceKind } from "./device-profile/device-profile-resolver.js";
 import { snmpReadonlyAdapter } from "./adapters/snmp-readonly-adapter.js";
 import type {
@@ -23,6 +25,7 @@ import type {
   NetopsLatestSnmpSnapshot,
   NetopsLogEntry,
   NetopsReadonlyCollectionResult,
+  NetopsSnapshotData,
 } from "./types.js";
 import { toSafeDevice } from "./types.js";
 
@@ -42,12 +45,25 @@ async function getLatestSnapshot(deviceId: number) {
   return snapshot ?? null;
 }
 
+async function getNetopsInventory(deviceId: number): Promise<NetopsSnapshotData | null> {
+  if (!(await getDeviceOrNull(deviceId))) return null;
+  const discovery = await getLatestDiscoverySnapshot(deviceId);
+  const snmpSnapshot = await getLatestSnapshot(deviceId);
+  return mergeNetopsInventory(snmpSnapshot, discovery);
+}
+
 export async function getNetopsSummary(deviceId: number): Promise<NetopsDeviceSummary | null> {
   const device = await getDeviceOrNull(deviceId);
   if (!device) return null;
 
-  const data = snapshotToNetopsData(await getLatestSnapshot(deviceId));
+  const data = await getNetopsInventory(deviceId);
+  if (!data) return null;
+
+  const discovery = await getLatestDiscoverySnapshot(deviceId);
   const bgpEstablished = data.bgpPeers.filter((peer) => peer.state === "Established").length;
+  const lastSnapshotAt = discovery?.sourceStatus.ssh === "success"
+    ? discovery.finishedAt
+    : data.snapshot?.collectedAt.toISOString() ?? null;
 
   return {
     device: toSafeDevice(device),
@@ -59,14 +75,14 @@ export async function getNetopsSummary(deviceId: number): Promise<NetopsDeviceSu
       filters: data.filters.length,
       communities: data.communities.length,
     },
-    lastSnapshotAt: data.snapshot?.collectedAt.toISOString() ?? null,
+    lastSnapshotAt,
     deviceKind: deriveDeviceKind(device),
   };
 }
 
 export async function listNetopsInterfaces(deviceId: number): Promise<NetopsInterface[] | null> {
-  if (!(await getDeviceOrNull(deviceId))) return null;
-  return snapshotToNetopsData(await getLatestSnapshot(deviceId)).interfaces;
+  const data = await getNetopsInventory(deviceId);
+  return data?.interfaces ?? null;
 }
 
 function filterBgpPeers(
@@ -139,8 +155,8 @@ function applyRoleOverrides(peers: NetopsBgpPeer[], overrides: NetopsBgpPeerRole
 }
 
 async function getSnapshotDataOrNull(deviceId: number) {
-  if (!(await getDeviceOrNull(deviceId))) return null;
-  const data = snapshotToNetopsData(await getLatestSnapshot(deviceId));
+  const data = await getNetopsInventory(deviceId);
+  if (!data) return null;
   return {
     ...data,
     bgpPeers: applyRoleOverrides(data.bgpPeers, await getRoleOverrides(deviceId)),
@@ -157,13 +173,13 @@ export async function listNetopsBgpPeers(
 }
 
 export async function listNetopsFilters(deviceId: number): Promise<NetopsFilter[] | null> {
-  if (!(await getDeviceOrNull(deviceId))) return null;
-  return snapshotToNetopsData(await getLatestSnapshot(deviceId)).filters;
+  const data = await getNetopsInventory(deviceId);
+  return data?.filters ?? null;
 }
 
 export async function listNetopsCommunities(deviceId: number): Promise<NetopsCommunity[] | null> {
-  if (!(await getDeviceOrNull(deviceId))) return null;
-  return snapshotToNetopsData(await getLatestSnapshot(deviceId)).communities;
+  const data = await getNetopsInventory(deviceId);
+  return data?.communities ?? null;
 }
 
 export async function listNetopsLogs(deviceId: number): Promise<NetopsLogEntry[] | null> {
@@ -171,6 +187,7 @@ export async function listNetopsLogs(deviceId: number): Promise<NetopsLogEntry[]
   if (!device) return null;
 
   const snapshot = await getLatestSnapshot(deviceId);
+  const discovery = await getLatestDiscoverySnapshot(deviceId);
   const overrides = await getRoleOverrides(deviceId);
   const roleLogs: NetopsLogEntry[] = overrides
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -182,6 +199,16 @@ export async function listNetopsLogs(deviceId: number): Promise<NetopsLogEntry[]
       message: `Papel do peer ${override.peerIp} atualizado para ${override.role}.`,
       source: "local",
     }));
+
+  if (discovery?.sourceStatus.ssh === "success") {
+    return [...roleLogs, {
+      timestamp: discovery.finishedAt,
+      level: discovery.status === "failed" ? "ERROR" : "SUCCESS",
+      scope: "SSH",
+      message: `SSH discovery ${discovery.discoveryRunId}: ${discovery.interfaces.length} interfaces, ${discovery.bgpPeers.length} BGP peers, ${discovery.policies.length} policies, ${discovery.l2vpn.l2vcs.length + discovery.l2vpn.vsis.length} L2 entries.`,
+      source: "system",
+    }];
+  }
 
   if (!snapshot) {
     return [...roleLogs, {
@@ -196,10 +223,10 @@ export async function listNetopsLogs(deviceId: number): Promise<NetopsLogEntry[]
   return [...roleLogs, {
     timestamp: snapshot.collectedAt.toISOString(),
     level: snapshot.success ? "SUCCESS" : "ERROR",
-    scope: "SNMP",
+    scope: snapshot.collector === "ssh" ? "SSH" : "SNMP",
     message: snapshot.success
-      ? `Latest SNMP snapshot loaded for ${device.hostname}.`
-      : snapshot.errorMessage ?? `Latest SNMP snapshot failed for ${device.hostname}.`,
+      ? `Latest ${snapshot.collector === "ssh" ? "SSH" : "SNMP"} snapshot loaded for ${device.hostname}.`
+      : snapshot.errorMessage ?? `Latest snapshot failed for ${device.hostname}.`,
     source: "system",
   }];
 }

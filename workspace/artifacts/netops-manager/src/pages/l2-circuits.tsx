@@ -39,6 +39,7 @@ import {
   FILTER_ALL,
   circuitKeyField,
   formatTs,
+  isOperationalStaleCircuit,
   isProblemCircuit,
   matchesFilters,
   nocRowClass,
@@ -71,6 +72,7 @@ export default function L2Circuits() {
   const [vcIdFilter, setVcIdFilter] = useState("");
   const [peerIpFilter, setPeerIpFilter] = useState("");
   const [showHealthy, setShowHealthy] = useState(false);
+  const [showStaleInventory, setShowStaleInventory] = useState(false);
   const [selectedCircuit, setSelectedCircuit] = useState<L2Circuit | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const { toast } = useToast();
@@ -85,6 +87,7 @@ export default function L2Circuits() {
     setVcIdFilter(saved.vcId);
     setPeerIpFilter(saved.peerIp);
     setShowHealthy(saved.showHealthy);
+    setShowStaleInventory(saved.showStaleInventory);
     setFiltersLoaded(true);
   }, [user?.id]);
 
@@ -99,6 +102,7 @@ export default function L2Circuits() {
         vcId: vcIdFilter,
         peerIp: peerIpFilter,
         showHealthy,
+        showStaleInventory,
       },
       user?.id,
     );
@@ -112,6 +116,7 @@ export default function L2Circuits() {
     vcIdFilter,
     peerIpFilter,
     showHealthy,
+    showStaleInventory,
   ]);
 
   const deviceId = deviceFilter === FILTER_ALL ? undefined : Number(deviceFilter);
@@ -134,11 +139,24 @@ export default function L2Circuits() {
         vcId: vcIdFilter,
         peerIp: peerIpFilter,
         showHealthy,
+        showStaleInventory,
       }),
     );
-    const visible = showHealthy ? filtered : filtered.filter(isProblemCircuit);
+    const withoutStale = showStaleInventory
+      ? filtered
+      : filtered.filter((circuit) => !isOperationalStaleCircuit(circuit));
+    const visible = showHealthy ? withoutStale : withoutStale.filter(isProblemCircuit);
     return sortCircuitsForNoc(visible);
-  }, [data?.circuits, circuitTypeFilter, statusFilter, vlanFilter, vcIdFilter, peerIpFilter, showHealthy]);
+  }, [
+    data?.circuits,
+    circuitTypeFilter,
+    statusFilter,
+    vlanFilter,
+    vcIdFilter,
+    peerIpFilter,
+    showHealthy,
+    showStaleInventory,
+  ]);
 
   const summary = useMemo(() => {
     const local = sortedCircuits.filter((c) => circuitTypeGroup(c.circuitType) === "local").length;
@@ -167,6 +185,7 @@ export default function L2Circuits() {
     setVcIdFilter("");
     setPeerIpFilter("");
     setShowHealthy(false);
+    setShowStaleInventory(false);
     clearL2CircuitFilters(user?.id);
   };
 
@@ -182,9 +201,13 @@ export default function L2Circuits() {
 
     refreshMutation.mutate(deviceId, {
       onSuccess: (result) => {
+        const staleMarked =
+          typeof result.operational_state?.stale_marked === "number"
+            ? result.operational_state.stale_marked
+            : 0;
         toast({
           title: "Refresh operacional concluído",
-          description: `${result.circuits_updated} circuitos · ${result.findings_count} findings · ${result.freshness}`,
+          description: `${result.circuits_updated} circuitos · ${result.findings_count} findings · ${staleMarked} obsoletos · ${result.freshness}`,
         });
         void refetch();
       },
@@ -336,15 +359,27 @@ export default function L2Circuits() {
           <Input placeholder="Peer IP" value={peerIpFilter} onChange={(e) => setPeerIpFilter(e.target.value)} />
         </CardContent>
         <CardContent className="pt-0 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="l2-show-healthy"
-              checked={showHealthy}
-              onCheckedChange={(checked) => setShowHealthy(checked === true)}
-            />
-            <Label htmlFor="l2-show-healthy" className="text-sm font-normal cursor-pointer">
-              Mostrar circuitos saudáveis
-            </Label>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="l2-show-healthy"
+                checked={showHealthy}
+                onCheckedChange={(checked) => setShowHealthy(checked === true)}
+              />
+              <Label htmlFor="l2-show-healthy" className="text-sm font-normal cursor-pointer">
+                Mostrar circuitos saudáveis
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="l2-show-stale"
+                checked={showStaleInventory}
+                onCheckedChange={(checked) => setShowStaleInventory(checked === true)}
+              />
+              <Label htmlFor="l2-show-stale" className="text-sm font-normal cursor-pointer">
+                Mostrar inventário obsoleto
+              </Label>
+            </div>
           </div>
           <Button variant="ghost" size="sm" onClick={handleClearFilters}>
             Limpar filtros

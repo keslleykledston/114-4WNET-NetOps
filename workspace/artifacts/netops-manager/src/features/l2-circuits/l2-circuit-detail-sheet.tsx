@@ -2,12 +2,14 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useL2Circuit, type L2Circuit } from "./l2-circuits-api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useL2Circuit, type L2Circuit, type L2VsiPeer } from "./l2-circuits-api";
 import {
   CircuitTypeBadge,
   FindingSeverityBadge,
   OperStatusBadge,
   circuitTypeGroup,
+  operStatusClass,
 } from "./l2-circuit-badges";
 
 function formatTs(value?: string | null) {
@@ -51,7 +53,19 @@ function DetailFields({ circuit }: { circuit: L2Circuit }) {
       {group === "mpls" && <OptionalField label="Peer IP" value={circuit.peerIp} />}
       {group === "vsi" && <OptionalField label="VSI name" value={circuit.vsiName} />}
       {group === "vsi" && <OptionalField label="VSI ID" value={circuit.vsiId} />}
-      {group === "vsi" && <OptionalField label="Peer IP" value={circuit.peerIp} />}
+      {group === "vsi" && <OptionalField label="Primary peer IP" value={circuit.primaryPeerIp ?? circuit.peerIp} />}
+      {group === "vsi" && circuit.peerIps && circuit.peerIps.length > 1 && (
+        <div className="col-span-2 md:col-span-3">
+          <FieldBlock label="Peer IPs" value={circuit.peerIps.join(", ")} mono />
+        </div>
+      )}
+      {group === "vsi" && circuit.pwSummary && (
+        <>
+          <FieldBlock label="PW total" value={String(circuit.pwSummary.total)} />
+          <FieldBlock label="PW up" value={String(circuit.pwSummary.up)} />
+          <FieldBlock label="PW down" value={String(circuit.pwSummary.down)} />
+        </>
+      )}
       <FieldBlock label="Admin status" value={circuit.adminStatus} />
       <FieldBlock label="Oper status" value={circuit.operStatus} />
       <OptionalField label="PW status" value={circuit.pwStatus} />
@@ -125,6 +139,13 @@ export function L2CircuitDetailSheet({ circuitId, fallback, open, onOpenChange }
 
             <DetailFields circuit={circuit} />
 
+            {circuitTypeGroup(circuit.circuitType) === "vsi" && (circuit.peers?.length ?? 0) > 0 && (
+              <>
+                <Separator />
+                <VsiPeersSection peers={circuit.peers ?? []} />
+              </>
+            )}
+
             <Separator />
 
             <Section title={`Findings (${circuit.findings.length})`}>
@@ -158,6 +179,57 @@ export function L2CircuitDetailSheet({ circuitId, fallback, open, onOpenChange }
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function peerStateBadge(state?: string) {
+  const normalized = (state ?? "unknown").toUpperCase();
+  if (normalized === "UP") {
+    return <Badge className={operStatusClass("UP")}>UP</Badge>;
+  }
+  if (normalized === "DOWN") {
+    return <Badge className={operStatusClass("DOWN")}>DOWN</Badge>;
+  }
+  return <Badge className={operStatusClass("UNKNOWN")}>UNKNOWN</Badge>;
+}
+
+function VsiPeersSection({ peers }: { peers: L2VsiPeer[] }) {
+  return (
+    <Section title="Pseudowires / Peers">
+      <div className="rounded-md border overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Peer IP</TableHead>
+              <TableHead>Session</TableHead>
+              <TableHead>PW State</TableHead>
+              <TableHead className="hidden md:table-cell">Tunnel ID</TableHead>
+              <TableHead className="hidden lg:table-cell">Out Interface</TableHead>
+              <TableHead className="hidden xl:table-cell">Last Up</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {peers.map((peer) => (
+              <TableRow key={peer.peer_ip}>
+                <TableCell className="font-mono text-xs">
+                  {peer.peer_ip}
+                  {peer.primary ? (
+                    <Badge variant="outline" className="ml-2 text-[10px]">
+                      primary
+                    </Badge>
+                  ) : null}
+                </TableCell>
+                <TableCell>{peerStateBadge(peer.session_state)}</TableCell>
+                <TableCell>{peerStateBadge(peer.pw_state ?? peer.session_state)}</TableCell>
+                <TableCell className="hidden md:table-cell font-mono text-xs">{peer.tunnel_id ?? "—"}</TableCell>
+                <TableCell className="hidden lg:table-cell font-mono text-xs">{peer.out_interface ?? "—"}</TableCell>
+                <TableCell className="hidden xl:table-cell text-xs">{peer.last_up_time ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </Section>
   );
 }
 

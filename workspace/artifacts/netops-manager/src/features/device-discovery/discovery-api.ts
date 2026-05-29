@@ -83,11 +83,31 @@ const DEFAULT_DISCOVERY_REQUEST: DeviceDiscoveryRequest = {
   useCachedConfig: true,
 };
 
+export const SSH_DISCOVERY_REQUEST: DeviceDiscoveryRequest = {
+  contexts: ["interfaces", "bgp", "l2vpn", "policies", "vrfs"],
+  preferLiveSsh: true,
+  allowSnmpFallback: false,
+  useCachedConfig: true,
+};
+
 export function useDiscoverySnapshot(deviceId: number) {
   return useQuery({
     queryKey: getGetDeviceDiscoverySnapshotQueryKey(deviceId),
     queryFn: async () => getDeviceDiscoverySnapshot(deviceId) as Promise<DiscoverySnapshot | null>,
     enabled: !!deviceId,
+  });
+}
+
+export function useRunSshDiscovery(deviceId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => discoverDevice(deviceId, SSH_DISCOVERY_REQUEST) as Promise<DiscoverySnapshot>,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetDeviceDiscoverySnapshotQueryKey(deviceId) }),
+        queryClient.invalidateQueries({ queryKey: getListDeviceBgpPeersQueryKey(deviceId) }),
+      ]);
+    },
   });
 }
 

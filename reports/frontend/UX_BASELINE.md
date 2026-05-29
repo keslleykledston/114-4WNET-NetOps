@@ -76,3 +76,10 @@
 - Historico continua acessivel por toggle explicito `Incluir histórico`.
 - Findings exibem badge de freshness: Atual, Stale, Legado ou Substituído.
 - Alertas de stale/legacy devem informar que dados antigos nao foram apagados.
+
+## Baseline D3 BGP peer drilldown
+
+- `/bgp/peer-drilldown` segue layout NOC existente: sidebar global, pagina `p-6`, cards/tabelas shadcn e badges compactos.
+- Entrada de menu `BGP Drilldown` adicionada sem mudar estrutura da sidebar.
+- Tela e read-only e snapshot-only: nao executa SSH, SNMP, discovery, NetBox ou consultas de rotas.
+- Route tables aparecem desabilitadas como `not requested`.

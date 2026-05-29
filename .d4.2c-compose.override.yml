@@ -1,0 +1,6 @@
+# Ephemeral D4.2C smoke — do not commit
+services:
+  api:
+    environment:
+      SNMP_POLL_ENABLED: "false"
+      BGP_DRILLDOWN_SSH_DETAIL_ENABLED: "true"

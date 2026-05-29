@@ -7,6 +7,7 @@ export type L2FindingCode =
   | "CIRCUIT_DOWN"
   | "L2VC_DOWN"
   | "VSI_DOWN"
+  | "PW_PARTIAL_DOWN"
   | "REMOTE_NOT_FORWARDING"
   | "INCOMPLETE_L2_CONFIG"
   | "DUPLICATED_VC_ID"
@@ -29,6 +30,26 @@ export interface L2Finding {
   message: string;
 }
 
+export interface L2VsiPeer {
+  peer_ip: string;
+  session_state?: string;
+  pw_state?: string;
+  vc_label?: string;
+  local_vc_label?: string;
+  remote_vc_label?: string;
+  tunnel_id?: string;
+  out_interface?: string;
+  last_up_time?: string;
+  primary?: boolean;
+}
+
+export interface L2PwSummary {
+  total: number;
+  up: number;
+  down: number;
+  unknown: number;
+}
+
 export interface ParsedL2Circuit {
   circuitType: L2CircuitType;
   serviceId?: string;
@@ -42,6 +63,12 @@ export interface ParsedL2Circuit {
   localInterface?: string;
   parentInterface?: string;
   peerIp?: string;
+  /** All peer IPs for multipoint VSI/VPLS. */
+  peerIps?: string[];
+  primaryPeerIp?: string;
+  vsiState?: string;
+  peers?: L2VsiPeer[];
+  pwSummary?: L2PwSummary;
   adminStatus?: string;
   operStatus?: string;
   pwStatus?: string;
@@ -79,6 +106,11 @@ export interface ParsedL2Circuit {
     hasStatisticEnable?: boolean;
     hasSwitchingUse?: boolean;
     vlanDeclaredGlobal?: boolean;
+    vsiPeers?: L2VsiPeer[];
+    pwSummary?: L2PwSummary;
+    vsiState?: string;
+    peerIps?: string[];
+    primaryPeerIp?: string;
   };
   anomalyTags?: string[];
   roleContext?: string;
@@ -111,6 +143,10 @@ export interface L2Circuit {
   localInterface?: string | null;
   parentInterface?: string | null;
   peerIp?: string | null;
+  primaryPeerIp?: string | null;
+  peerIps?: string[] | null;
+  peers?: L2VsiPeer[] | null;
+  pwSummary?: L2PwSummary | null;
   adminStatus: L2Status;
   operStatus: L2Status;
   pwStatus?: string | null;

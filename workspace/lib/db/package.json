@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "push-l2": "drizzle-kit push --config ./drizzle.config.ts --force --tables-filter l2_circuits,l2_discovery_jobs"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

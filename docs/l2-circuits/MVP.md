@@ -1,19 +1,35 @@
 # L2 Circuits Discovery MVP
 
+## Validation status (FASE 1.7 — 2026-05-23)
+
+**MVP CLOSED — GO for controlled NOC use** (SSH off by default).
+
+| Device | ID | Profile | Live result |
+|--------|-----|---------|-------------|
+| `4WNET-BVA-BRT-RX` | 1 | NE/VRP dot1q, VE | 131 `vlan_local` |
+| `4WNET-BVA-BRT-A_S6730-H48X6C` | 2 (`4WNET-BVA-BRT-RA`) | S6730 L2VC/VSI | 130 (82 L2VC/VPWS + 48 VSI) |
+
+**Ops docs:** `RUNBOOK_L2_DISCOVERY.md`, `SAFE_EXECUTION_CHECKLIST.md`, `SUPPORTED_SCENARIOS.md`  
+**Closure report:** `reports/l2-circuits/MVP_L2_DISCOVERY_CLOSURE_REPORT.md`
+
+**Flag:** `L2_DISCOVER_SSH_ENABLED=false` (default). Enable only per runbook + mandatory rollback.
+
+---
+
 ## Overview
 
 Module for read-only discovery of Layer 2 circuits on Huawei VRP devices. Discovers MPLS L2VC, VSI/VPLS, VLANs, and subinterface configurations via SSH. Provides normalized status classification, finding detection, and RESTful API for querying results.
 
 ## Scope
 
-**In scope (MVP):**
-- SSH read-only discovery from Huawei VRP devices
-- MPLS L2VC (Pseudowire)
-- VSI/VPLS (Virtual Service Instance / VPLS)
-- VLAN and Q-in-Q (dot1q subinterface)
+**In scope (MVP — validated):**
+- SSH read-only discovery from Huawei VRP devices (NE edge + S6730 switch)
+- MPLS L2VC / VPWS (NE8000 verbose + S6730 `display mpls l2vc`)
+- VSI/VPLS (NE8000 + S6730 `Peer Router ID` format)
+- VLAN local dot1q subinterfaces (`vlan_local`) + VE/ve-group
 - Async job-based discovery with polling
 - Status normalization (UP, DOWN, PARTIAL, UNKNOWN, CONFIG_ONLY)
-- Automatic finding detection (5 finding types)
+- Finding detection (6 finding types)
 - RESTful API with filtering and pagination
 
 **Out of scope (future phases):**
@@ -23,22 +39,20 @@ Module for read-only discovery of Layer 2 circuits on Huawei VRP devices. Discov
 - Real-time streaming updates
 - Active monitoring (heartbeat, OAM checks)
 
-## Read-Only Commands
+## Read-Only Commands (L2 collector — 6 commands)
 
-All commands are **display** (read-only). No `system-view`, no configuration changes, no device alterations.
+All commands are **display** (read-only). Validated via allowlist before SSH.
 
 ```
-display mpls l2vc verbose
-display vsi verbose
-display vsi <VSI_NAME> verbose
+display mpls l2vc verbose      # NE8000-style L2VC
+display mpls l2vc              # S6730-style L2VC (fallback)
+display vsi verbose            # VSI NE8000 + S6730
 display interface brief
-display interface description
-display mac-address vsi
-display mac-address vsi <VSI_NAME>
-display mac-address vlan
-display mac-address vlan <VLAN_ID>
-display current-configuration interface <INTERFACE>
+display interface description  # dot1q status merge
+display current-configuration interface  # dot1q / VE / ve-group
 ```
+
+Also allowlisted (not in default L2 collector): `display mac-address vlan <VLAN_ID>`, `display mac-address vsi <VSI_NAME>` — **not dynamically collected in MVP**.
 
 **Safety:**
 - Blocked tokens: `system-view`, `configure terminal`, `commit`, `save`, `undo`, `reset`, `clear bgp`, `refresh bgp`
@@ -47,13 +61,15 @@ display current-configuration interface <INTERFACE>
 
 ## Circuit Types
 
-| Type | Source Command | Example | Use Case |
-|------|----------------|---------|----------|
-| `l2vc` | `display mpls l2vc verbose` | VC-ID 1001 to peer 192.168.1.2 | Pseudowire, point-to-point L2VC |
-| `vpws` | `display mpls l2vc verbose` (etype=Ethernet VLAN) | VC-ID 2001, Outer VLAN 100, Inner VLAN 200 | MPLS L2VC with VLAN tagging |
-| `vsi` | `display vsi verbose` | VSI-VPLS-1, BD-100, peer 192.168.1.2 | VPLS service instance, multipoint |
-| `vlan` | `display current-configuration interface` | VLAN 100, 1000 MACs | Access VLAN on interface |
-| `dot1q_subif` | `display interface brief` + `display current-configuration interface` | Gi0/0/3.100, outer 100, inner 200 | Q-in-Q subinterface |
+| Type | Source Command | Example | Validated |
+|------|----------------|---------|-----------|
+| `vlan_local` | `display current-configuration interface` + `display interface description` | Eth-Trunk0.77, VLAN 77 | device 1 live |
+| `l2vc` | `display mpls l2vc verbose` or `display mpls l2vc` | VC-ID 1001 | fixture / S6730 |
+| `vpws` | `display mpls l2vc` (VC type VLAN) | VC 15, Vlanif15 | device 2 live |
+| `vsi` | `display vsi verbose` | SERVICOS_CDS, peer 10.200.4.1 | device 2 live |
+| `vpls` | `display vsi verbose` | encapsulation vlan | parser support |
+| `vlan` | legacy | — | use `vlan_local` |
+| `dot1q_subif` | legacy alias | — | use `vlan_local` |
 
 ## Status Normalization
 
@@ -84,9 +100,15 @@ Final status logic:
 
 ### CIRCUIT_DOWN
 **Severity:** ERROR  
-**Condition:** `admin_status == UP AND oper_status == DOWN`  
-**Meaning:** Circuit is enabled but not passing traffic.  
+**Condition:** `oper_status == DOWN`  
+**Meaning:** Circuit not passing traffic operationally.  
 **Action:** Investigate peer connectivity, PW status, interface physical status.
+
+### REMOTE_NOT_FORWARDING
+**Severity:** WARNING  
+**Condition:** L2VC/VPWS with `remote forwarding state = not forwarding` (S6730).  
+**Meaning:** Local tunnel/session may be up but remote PW not forwarding.  
+**Action:** Check peer device, PW status code, remote AC.
 
 ### INCOMPLETE_L2_CONFIG
 **Severity:** WARNING  
@@ -108,8 +130,8 @@ Final status logic:
 
 ### DESCRIPTION_MISSING
 **Severity:** INFO  
-**Condition:** `description` field is null, empty, or "(null)".  
-**Meaning:** Circuit lacks operational documentation.  
+**Condition:** `description` null/empty — **skipped** for `l2vc`, `vpws`, `vsi`, `vpls` (no description in CLI).  
+**Meaning:** Circuit lacks operational documentation (mainly `vlan_local`).  
 **Action:** Optional; add descriptions for operational clarity.
 
 ## API Endpoints
@@ -195,7 +217,7 @@ Response (HTTP 200):
 
 Query params (all optional):
 - device_id=N — filter by device
-- circuit_type=<vlan|dot1q_subif|l2vc|vpws|vsi|vpls> — filter by type
+- circuit_type=<vlan|vlan_local|dot1q_subif|l2vc|vpws|vsi|vpls> — filter by type
 - status=<UP|DOWN|PARTIAL|UNKNOWN|CONFIG_ONLY> — filter by current status
 - vc_id=<ID> — exact match on VC ID (for l2vc/vpws)
 - vsi_name=<NAME> — exact match on VSI name (for vsi)
@@ -223,7 +245,7 @@ Response (HTTP 404): { "error": "Circuit not found" }
 {
   id: number;
   device_id: number;
-  circuit_type: "vlan" | "dot1q_subif" | "l2vc" | "vpws" | "vsi" | "vpls";
+  circuit_type: "vlan" | "vlan_local" | "dot1q_subif" | "l2vc" | "vpws" | "vsi" | "vpls";
   service_id?: string;
   name: string; // e.g., "L2VC-1001", "VSI-VPLS-1"
   description?: string;
@@ -272,25 +294,18 @@ Response (HTTP 404): { "error": "Circuit not found" }
 1. **Request received:** `POST /api/l2-circuits/discover { device_id: 1 }`
 2. **Create job record** in `l2_discovery_jobs` with status="running", runId="disc-l2-1-timestamp"
 3. **Return HTTP 202** immediately with job info
-4. **Background: SSH Collect**
-   - Resolve device credentials from DB
-   - SSH to device.hostname:22
-   - Execute read-only commands (with timeouts, allowlist validation)
-   - Collect outputs: display mpls l2vc verbose, display vsi verbose, display interface brief, etc.
+4. **Background: SSH Collect** (only if `L2_DISCOVER_SSH_ENABLED=true`)
+   - Resolve device credentials from DB (encrypted password + SESSION_SECRET)
+   - SSH to device IP:22
+   - Execute 6 read-only L2 commands (allowlist validation)
 5. **Background: Parse**
-   - Parse outputs with state machine (huawei-vrp-l2.ts)
-   - Extract VC ID, VSI name, VLAN, interface, peer IP, status, etc.
-   - Each parsed circuit includes rawEvidence snippet
+   - `huawei-vrp-l2.ts` — NE8000 L2VC/VSI verbose
+   - `dot1q-local.parser.ts` — vlan_local from config + interface description
+   - `s6730-l2.parser.ts` — S6730 `display mpls l2vc` + VSI dialect
 6. **Background: Normalize**
-   - Map admin_status (up/down/unknown) to L2Status
-   - Map oper_status similarly
-   - Compound: (admin=UP + oper=DOWN) → status=DOWN (alert)
 7. **Background: Resolve Findings**
-   - Scan all circuits for CIRCUIT_DOWN, INCOMPLETE_L2_CONFIG, DUPLICATED_VC_ID, VLAN_CONFLICT, DESCRIPTION_MISSING
-   - Attach findings array to each circuit
-8. **Background: Upsert to DB**
-   - For each circuit, INSERT into l2_circuits with all normalized data
-   - Use CONFLICT handling to update lastSeen if circuit exists
+   - CIRCUIT_DOWN, REMOTE_NOT_FORWARDING, INCOMPLETE_L2_CONFIG, DUPLICATED_VC_ID, VLAN_CONFLICT, DESCRIPTION_MISSING
+8. **Background: Insert to DB** (per discovery run)
 9. **Background: Update Job**
    - Update l2_discovery_jobs: status="completed", finished_at=now, circuit_count, findings_count
 10. **Client polls:** `GET /api/l2-circuits/discovery-jobs/disc-l2-1-timestamp` until status != "running"
@@ -298,14 +313,17 @@ Response (HTTP 404): { "error": "Circuit not found" }
 
 ## Limitations
 
-### Current MVP
-- **Huawei VRP only** — no Cisco, Juniper, Arista, Nokia in v0.1
-- **SSH only** — SNMP discovery planned for future phase
-- **Read-only** — zero writes to device, zero config changes
-- **No NetBox write** — discovery data stays in local DB; manual NetBox sync TBD
-- **Static credentials** — uses device.hostname + hardcoded admin/password from request context (improve later)
-- **Async discovery only** — no synchronous blocking discovery (by design)
-- **No bulk discovery** — one device at a time (multi-device discovery is background job)
+### Current MVP (validated + known gaps)
+
+- **Huawei VRP only** — NE edge (dot1q) + S6730 (L2VC/VSI) validated live
+- **SSH only** — gated by `L2_DISCOVER_SSH_ENABLED` (default false)
+- **Read-only** — zero writes to device
+- **No NetBox write** — local DB only
+- **Encrypted credentials** — `password_encrypted` + `SESSION_SECRET`
+- **One device per discover job** — no bulk validation
+- **MAC not dynamic** — `display mac-address vlan/vsi` requires parameter; not in collector
+- **SNMP** — not implemented
+- **Device 2 naming** — NetOps `BRT-RA` vs CLI `BRT-A_S6730-H48X6C` (cosmetic rename optional)
 
 ### Known Gaps (Design, Not Bugs)
 - **No MAC aging tracking** — mac_count is snapshot, not historical
@@ -317,24 +335,18 @@ Response (HTTP 404): { "error": "Circuit not found" }
 
 ### Manual Testing with Fixtures
 
-Fixtures in `src/modules/l2circuits/parsers/__fixtures__/`:
+Fixtures and selftests:
 
 ```bash
-# Test parser directly (example: Node REPL or unit test)
-import { parseHuaweiL2Circuits } from "./parsers/huawei-vrp-l2.js";
-import fs from "fs";
-
-const mpls = fs.readFileSync("__fixtures__/display-mpls-l2vc-verbose.txt", "utf-8");
-const vsi = fs.readFileSync("__fixtures__/display-vsi-verbose.txt", "utf-8");
-
-const parsed = parseHuaweiL2Circuits({
-  "display mpls l2vc verbose": mpls,
-  "display vsi verbose": vsi,
-});
-
-console.log(parsed);
-// Expected: 5 circuits (3 l2vc, 2 vsi) with all fields populated
+node tools/l2-dot1q-parser-selftest.mjs      # device 1 fixture: 131 vlan_local
+node tools/l2-s6730-parser-selftest.mjs      # S6730 fixture + regression
+node tools/l2-collector-selftest.mjs         # 6 commands allowlisted
 ```
+
+Fixtures paths:
+- `__fixtures__/manual-device-1/` — BRT-RX dot1q
+- `__fixtures__/manual-s6730-brt-a/` — S6730 L2VC/VSI sample
+- `parsers/__fixtures__/` — NE8000 synthetic L2VC/VSI
 
 ### API Integration Test (curl)
 

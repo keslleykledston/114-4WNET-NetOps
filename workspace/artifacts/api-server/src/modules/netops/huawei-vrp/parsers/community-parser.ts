@@ -6,10 +6,12 @@ import { normalizePolicyLookupKey, normalizePolicyObjectName } from "./policy-ut
 
 export interface CommunityFilterEntry {
   matchType: "basic" | "advanced";
+  type?: "basic" | "advanced";
   name: string;
   index: number | null;
   action: "permit" | "deny";
   value: string;
+  raw?: string;
 }
 
 export interface CommunityListEntry {
@@ -68,7 +70,7 @@ export interface ParsedRunningConfigCommunities {
   routePolicyApplyCommunity: RoutePolicyApplyCommunity[];
 }
 
-const RE_FILTER = /^\s*ip\s+community-filter\s+(basic|advanced)\s+(\S+)\s+(?:index\s+(\d+)\s+)?(permit|deny)\s+(.+?)\s*$/i;
+const RE_FILTER = /^\s*ip\s+community-filter\s+(basic|advanced)\s+(\S+)(?:\s+index\s+(\d+))?\s+(permit|deny)\s+(.+?)\s*$/i;
 const RE_FILTER_DISPLAY_HEADER = /^\s*Named\s+Community\s+(basic|advanced)\s+filter:\s+(\S+)\s+\(ListID\s*=\s*(\d+)\)\s*$/i;
 const RE_FILTER_DISPLAY_LINE = /^\s*(?:index\s+(\d+)\s+)?(permit|deny)\s+(.+?)\s*$/i;
 const RE_LIST_HEADER = /^\s*ip\s+community-list\s+(\S+)\s*$/i;
@@ -147,10 +149,12 @@ function pushFilterEntry(
 ): void {
   out.communityFilters.push({
     matchType: entry.matchType,
+    type: entry.matchType,
     name: normalizePolicyObjectName(entry.name),
     index: entry.index,
     action: entry.action,
     value: entry.value,
+    raw: entry.raw,
   });
 }
 
@@ -343,6 +347,7 @@ export function parseRunningConfigCommunities(configText: string): ParsedRunning
           index: Number.isFinite(idx ?? NaN) ? idx : null,
           action: act.toLowerCase() as "permit" | "deny",
           value: (val || "").trim(),
+          raw: line,
         });
         currentList = null;
         continue;
@@ -379,7 +384,7 @@ export function parseRunningConfigCommunities(configText: string): ParsedRunning
       const mRp = RE_RP_HEADER.exec(line);
       if (mRp) {
         rpName = mRp[1];
-        rpNode = mRp[2] || mRp[3] || null;
+        rpNode = mRp[3] || null;
         currentList = null;
         continue;
       }
@@ -516,7 +521,7 @@ export function parseHuaweiCommunities(output: string): NetopsCommunity[] {
       index: filter.index,
       action: filter.action,
       value: filter.value,
-      line: buildFilterLine(filter),
+      line: filter.raw ?? buildFilterLine(filter),
     });
     groupedFilters.set(key, current);
   };

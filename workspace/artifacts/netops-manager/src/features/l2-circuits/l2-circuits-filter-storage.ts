@@ -22,6 +22,7 @@ export function loadL2CircuitFilters(userId?: number | null): L2CircuitFilters {
       vcId: typeof parsed.vcId === "string" ? parsed.vcId : "",
       peerIp: typeof parsed.peerIp === "string" ? parsed.peerIp : "",
       showHealthy: parsed.showHealthy === true,
+      showStaleInventory: parsed.showStaleInventory === true,
     };
   } catch {
     return DEFAULT_L2_FILTERS;

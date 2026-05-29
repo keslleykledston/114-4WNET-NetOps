@@ -3,16 +3,18 @@ import { runSSHCommands } from "../../../lib/ssh.js";
 import { validateReadonlyCommand } from "../../netops/huawei-vrp/commands.js";
 import type { SSHCollectorOutput } from "../l2circuits.types.js";
 
-const L2_COMMANDS = [
+export const L2_SSH_COMMANDS = [
   "display mpls l2vc verbose",
+  "display mpls l2vc",
   "display vsi verbose",
   "display interface brief",
   "display interface description",
-];
+  "display current-configuration interface",
+] as const;
 
 export async function collectL2CircuitsViaSsh(sshConfig: SSHConfig): Promise<SSHCollectorOutput> {
   // Validate commands before sending
-  for (const cmd of L2_COMMANDS) {
+  for (const cmd of L2_SSH_COMMANDS) {
     const check = validateReadonlyCommand(cmd);
     if (!check.allowed) {
       throw new Error(`Command not allowed: ${cmd} — ${check.reason}`);
@@ -20,7 +22,7 @@ export async function collectL2CircuitsViaSsh(sshConfig: SSHConfig): Promise<SSH
   }
 
   try {
-    const results = await runSSHCommands(sshConfig, L2_COMMANDS);
+    const results = await runSSHCommands(sshConfig, [...L2_SSH_COMMANDS]);
 
     const output: Record<string, string> = {};
     for (const result of results) {

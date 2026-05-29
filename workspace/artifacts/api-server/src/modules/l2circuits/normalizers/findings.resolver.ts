@@ -1,4 +1,9 @@
 import type { L2Finding, NormalizedL2Circuit } from "../l2circuits.types.js";
+import {
+  deriveVsiMultipointStatus,
+  hasMultipointVsiPeers,
+  normalizeCliState,
+} from "../parsers/vsi-multipoint.helpers.js";
 import { buildCircuitKey, circuitLabel } from "./circuit-key.helpers.js";
 
 function isPwDown(pwStatus?: string): boolean {
@@ -88,6 +93,43 @@ export function enrichCircuitsWithFindings(
   for (const circuit of circuits) {
     const circuitKey = keyOf(circuit);
     const label = circuitLabel(circuit);
+    const vsiName = circuit.vsiName ?? circuit.name;
+
+    if (hasMultipointVsiPeers(circuit)) {
+      const peers = circuit.peers ?? [];
+      const vsiState = normalizeCliState(circuit.vsiState ?? circuit.adminStatus);
+      const summary = circuit.pwSummary ?? deriveVsiMultipointStatus(circuit.vsiState ?? circuit.adminStatus, peers).pwSummary;
+
+      if (vsiState === "DOWN") {
+        addFinding(findingsByKey, circuitKey, {
+          code: "VSI_DOWN",
+          severity: "error",
+          message: `VSI/VPLS ${vsiName} service is down (VSI State down)`,
+        });
+        continue;
+      }
+
+      if (circuit.operStatus === "PARTIAL" && summary.down > 0 && summary.up > 0) {
+        addFinding(findingsByKey, circuitKey, {
+          code: "PW_PARTIAL_DOWN",
+          severity: "warning",
+          message: `VSI ${vsiName} is partially degraded: ${summary.up}/${summary.total} pseudowires are up, ${summary.down}/${summary.total} down`,
+        });
+        continue;
+      }
+
+      if (circuit.operStatus === "DOWN" && summary.up === 0 && summary.total > 0) {
+        addFinding(findingsByKey, circuitKey, {
+          code: "CIRCUIT_DOWN",
+          severity: "error",
+          message: `Circuit ${vsiName} is operationally down (all pseudowires down)`,
+        });
+        continue;
+      }
+
+      continue;
+    }
+
     if (circuit.operStatus === "DOWN") {
       addFinding(findingsByKey, circuitKey, {
         code: "CIRCUIT_DOWN",

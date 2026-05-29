@@ -30,9 +30,9 @@ export function parseHuaweiL2Circuits(rawOutputs: Record<string, string | undefi
     circuits.push(...parseS6730MplsL2vc(rawOutputs["display mpls l2vc"], deviceRoleFamily));
   }
 
-  // Parse VSI verbose (NE8000 dot blocks + S6730 ***VSI Name blocks)
-  if (rawOutputs["display vsi verbose"]) {
-    circuits.push(...parseVsiVerbose(rawOutputs["display vsi verbose"], deviceRoleFamily));
+  const vsiOutput = collectDisplayVsiOutputs(rawOutputs);
+  if (vsiOutput) {
+    circuits.push(...parseVsiVerbose(vsiOutput, deviceRoleFamily));
   }
 
   const { globalVlans, hasGlobalVlanEvidence } = parseGlobalVlans(
@@ -65,6 +65,15 @@ export function parseHuaweiL2Circuits(rawOutputs: Record<string, string | undefi
   }
 
   return dedupeCircuits(circuits);
+}
+
+/** Merge all `display vsi …` collector keys (verbose, per-name, etc.). */
+function collectDisplayVsiOutputs(rawOutputs: Record<string, string | undefined>): string | undefined {
+  const chunks = Object.entries(rawOutputs)
+    .filter(([key, value]) => /^display vsi\b/i.test(key) && Boolean(value?.trim()))
+    .map(([, value]) => value!.trim());
+  if (chunks.length === 0) return undefined;
+  return chunks.join("\n\n");
 }
 
 function dedupeCircuits(circuits: ParsedL2Circuit[]): ParsedL2Circuit[] {

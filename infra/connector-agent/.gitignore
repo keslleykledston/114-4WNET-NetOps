@@ -1,0 +1,4 @@
+.env
+logs/
+config/wireguard/*.conf
+!config/wireguard/.gitkeep

@@ -1,0 +1,15 @@
+services:
+  netops-connector-agent:
+    build: .
+    container_name: netops-connector-agent
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    env_file:
+      - .env
+    volumes:
+      - ./config:/etc/netops-connector
+      - ./logs:/var/log/netops-connector

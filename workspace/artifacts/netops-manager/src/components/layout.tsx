@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   FileBarChart,
   PlugZap,
+  Waypoints,
   CalendarClock,
   Network,
   Users,
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/audit", icon: ShieldAlert, label: "Audit" },
   { href: "/reports", icon: FileBarChart, label: "Reports" },
   { href: "/integrations", icon: PlugZap, label: "Integrations" },
+  { href: "/infrastructure/connectors", icon: Waypoints, label: "Conectores" },
   { href: "/scheduler", icon: CalendarClock, label: "Scheduler" },
 ];
 

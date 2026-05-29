@@ -25,6 +25,8 @@ import L2Circuits from "@/pages/l2-circuits";
 import BgpPeerDrilldownPage from "@/pages/bgp-peer-drilldown";
 import OperationalBgpPage from "@/pages/operational-bgp";
 import Users from "@/pages/users";
+import ConnectorsPage from "@/pages/connectors";
+import ConnectorDetailPage from "@/pages/connector-detail";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -73,6 +75,8 @@ function Router() {
         <Route path="/audit" component={Audit} />
         <Route path="/reports" component={Reports} />
         <Route path="/integrations" component={Integrations} />
+        <Route path="/infrastructure/connectors" component={ConnectorsPage} />
+        <Route path="/infrastructure/connectors/:id" component={ConnectorDetailPage} />
         <Route path="/scheduler" component={Scheduler} />
         <Route path="/policies" component={Policies} />
         <Route path="/config-collection" component={ConfigCollection} />

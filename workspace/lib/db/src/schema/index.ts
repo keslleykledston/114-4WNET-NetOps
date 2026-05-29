@@ -17,3 +17,4 @@ export * from "./l2circuits";
 export * from "./l2_operational";
 export * from "./operational";
 export * from "./operational_bgp";
+export * from "./connectors";

@@ -10,3 +10,7 @@ workspace/.vite/
 workspace/.cache/
 
 docker/postgres-data/
+infra/wireguard-hub/secrets/
+deploy/bastion/.env
+deploy/bastion/logs/*
+!deploy/bastion/logs/.gitkeep

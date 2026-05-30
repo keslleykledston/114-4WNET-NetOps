@@ -8,6 +8,17 @@ NetOps Server  ←HTTP→  Connector Agent (host network)  → SSH/SNMP/ICMP  �
 
 ## Quick start
 
+**Recomendado (cliente com netops-cli):**
+
+```bash
+cd deploy/bastion
+./install-from-netops-cli.sh
+docker compose up -d --build
+docker logs -f netops-connector-agent
+```
+
+**Somente agent:**
+
 ```bash
 cd infra/connector-agent
 cp .env.example .env

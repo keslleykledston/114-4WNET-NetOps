@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     iputils-ping \
     traceroute \
     openssh-client \
+    sshpass \
     snmp \
     wireguard-tools \
     curl \

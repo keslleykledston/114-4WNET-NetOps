@@ -8,7 +8,7 @@ import {
   useUpdateDevice,
 } from "@workspace/api-client-react";
 import type { DeviceUpdate } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,25 @@ export default function DeviceDetail() {
 
   const { data: complianceJobs } = useListComplianceJobs({ deviceId });
   const { data: provisioningJobs } = useListProvisioningJobs({ deviceId });
+  const collectionStatusQuery = useQuery({
+    queryKey: ["device-collection-status", deviceId],
+    queryFn: async () => {
+      const res = await fetch(`/api/devices/${deviceId}/collection-status`);
+      if (!res.ok) return null;
+      return res.json() as Promise<{
+        lastSshBundleAt: string | null;
+        parserStatus: string | null;
+        parserError: string | null;
+        bgpPeerCount: number;
+        l2CircuitCount: number;
+        snmpConfigured: boolean;
+        connectorName: string | null;
+        accessMode: string;
+      }>;
+    },
+    enabled: !!deviceId,
+    refetchInterval: 15000,
+  });
 
   if (deviceLoading) {
     return <div className="space-y-6"><Skeleton className="h-12 w-1/3" /><Skeleton className="h-64 w-full" /></div>;
@@ -49,8 +68,21 @@ export default function DeviceDetail() {
     return <div>Device not found</div>;
   }
 
+  const extendedDevice = device as typeof device & {
+    connectorId?: number | null;
+    connectorName?: string | null;
+    tenantId?: number | null;
+    tenantName?: string | null;
+    accessMode?: "connector" | "direct";
+  };
+  const accessLabel =
+    extendedDevice.accessMode === "connector" && extendedDevice.connectorName
+      ? `Via ${extendedDevice.connectorName}`
+      : "Direto";
+  const tenantLabel = extendedDevice.tenantName ?? (extendedDevice.tenantId ? `Tenant #${extendedDevice.tenantId}` : null);
+
   const handleUpdate = (values: DeviceFormValues) => {
-    const payload: DeviceUpdate = {
+    const payload: DeviceUpdate & { connectorId?: number | null } = {
       hostname: values.hostname,
       ipAddress: values.ipAddress,
       vendor: values.vendor,
@@ -59,6 +91,7 @@ export default function DeviceDetail() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || "",
+      connectorId: values.connectorId ? Number(values.connectorId) : null,
     };
 
     if (values.snmpCommunity.trim().length > 0) {
@@ -69,7 +102,7 @@ export default function DeviceDetail() {
       payload.password = values.password;
     }
 
-    updateDevice.mutate({ id: device.id, data: payload }, {
+    updateDevice.mutate({ id: device.id, data: payload as DeviceUpdate }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetDeviceQueryKey(device.id) });
         queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
@@ -103,6 +136,8 @@ export default function DeviceDetail() {
             </Badge>
             <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded">{device.ipAddress}</span>
             <span className="text-sm text-muted-foreground capitalize">{device.vendor} {device.platform}</span>
+            {tenantLabel ? <Badge variant="secondary">Tenant: {tenantLabel}</Badge> : null}
+            <Badge variant="outline">Acesso: {accessLabel}</Badge>
           </div>
         </div>
 
@@ -193,7 +228,73 @@ export default function DeviceDetail() {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Coleta via Connector</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-muted-foreground mb-1">Modo de acesso</div>
+                    <div>{collectionStatusQuery.data?.connectorName ? `Via ${collectionStatusQuery.data.connectorName}` : accessLabel}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground mb-1">Último bundle SSH</div>
+                    <div>{collectionStatusQuery.data?.lastSshBundleAt ? new Date(collectionStatusQuery.data.lastSshBundleAt).toLocaleString() : "Nunca"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground mb-1">Status do parse</div>
+                    <Badge variant="outline">{collectionStatusQuery.data?.parserStatus ?? "PENDING"}</Badge>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground mb-1">SNMP configurado</div>
+                    <div>{collectionStatusQuery.data?.snmpConfigured ? "Sim" : "Não"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground mb-1">Peers BGP parseados</div>
+                    <div>{collectionStatusQuery.data?.bgpPeerCount ?? 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground mb-1">Circuitos L2 parseados</div>
+                    <div>{collectionStatusQuery.data?.l2CircuitCount ?? 0}</div>
+                  </div>
+                </div>
+                {collectionStatusQuery.data?.parserError && (
+                  <p className="text-destructive text-xs">{collectionStatusQuery.data.parserError}</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Diagnóstico via {accessLabel}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/api/devices/${device.id}/diagnostics`, { method: "POST", credentials: "include" });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error ?? "Falha no diagnóstico");
+                    toast({
+                      title: `Diagnóstico (${data.mode})`,
+                      description: `SSH: ${data.ssh?.success ? "OK" : "fail"} · SNMP: ${data.snmp?.success ? "OK" : "fail"} · Ping: ${data.ping?.success ? "OK" : data.ping?.message ?? "—"}`,
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "Erro no diagnóstico",
+                      description: error instanceof Error ? error.message : "Falha",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Executar ping / TCP / SNMP / SSH
+              </Button>
+            </CardContent>
+          </Card>
           <DiscoveryPanel device={device} />
         </TabsContent>
 

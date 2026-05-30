@@ -67,7 +67,10 @@ export const connectorJobsTable = pgTable(
     targetIp: text("target_ip"),
     targetPort: integer("target_port"),
     payloadJson: jsonb("payload_json").$type<Record<string, unknown>>().notNull().default({}),
+    maskedPayloadJson: jsonb("masked_payload_json").$type<Record<string, unknown>>().notNull().default({}),
     status: text("status").notNull().default("PENDING"),
+    deviceId: integer("device_id"),
+    correlationId: text("correlation_id"),
     createdBy: integer("created_by").references(() => usersTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     startedAt: timestamp("started_at"),
@@ -76,6 +79,8 @@ export const connectorJobsTable = pgTable(
   },
   (table) => ({
     connectorStatusIdx: index("connector_jobs_connector_status_idx").on(table.connectorId, table.status),
+    deviceIdx: index("connector_jobs_device_id_idx").on(table.deviceId),
+    correlationIdx: index("connector_jobs_correlation_id_idx").on(table.correlationId),
   }),
 );
 

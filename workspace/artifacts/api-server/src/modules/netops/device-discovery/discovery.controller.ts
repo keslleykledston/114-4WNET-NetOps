@@ -1,11 +1,13 @@
 import type { Request, Response } from "express";
 import {
+  assertDeviceExists,
+  enqueueDeviceDiscovery,
   getDiscoveryBgpPeerDetails,
+  getDiscoveryRunStatus,
   getLatestDiscoverySnapshot,
   listDiscoveryBgpPeers,
   normalizeDiscoveryRequest,
   queryDiscoveryRoutes,
-  runDeviceDiscovery,
 } from "./discovery.service.js";
 import { getRequestSourceIp, logAuditEvent } from "../../../lib/audit.js";
 
@@ -25,21 +27,21 @@ function peerIp(value: string | string[] | undefined): string {
 export async function discoverDevice(req: Request, res: Response) {
   const deviceId = parseDeviceId(req.params.id);
   if (!deviceId) { res.status(400).json({ error: "Invalid device ID" }); return; }
-  const snapshot = await runDeviceDiscovery(deviceId, normalizeDiscoveryRequest(req.body));
-  if (!snapshot) { res.status(404).json({ error: "Device not found" }); return; }
-  await logAuditEvent({
-    action: "discover",
-    objectType: "device",
-    objectId: String(deviceId),
-    metadata: {
-      contexts: snapshot.contexts,
-      status: snapshot.status,
-      sourcesUsed: snapshot.sourcesUsed,
-      warnings: snapshot.warnings.length,
-    },
-    sourceIp: getRequestSourceIp(req),
+  if (!(await assertDeviceExists(deviceId))) { res.status(404).json({ error: "Device not found" }); return; }
+  const request = normalizeDiscoveryRequest(req.body);
+  enqueueDeviceDiscovery(deviceId, request, { sourceIp: getRequestSourceIp(req) });
+  res.status(202).json({
+    accepted: true,
+    status: "running",
+    deviceId,
+    message: "Discovery enfileirado. Consulte discovery-status ou aguarde atualização do snapshot.",
   });
-  res.status(202).json(snapshot);
+}
+
+export async function getDiscoveryStatus(req: Request, res: Response) {
+  const deviceId = parseDeviceId(req.params.id);
+  if (!deviceId) { res.status(400).json({ error: "Invalid device ID" }); return; }
+  res.json(await getDiscoveryRunStatus(deviceId));
 }
 
 export async function getDiscoverySnapshot(req: Request, res: Response) {

@@ -1,4 +1,5 @@
 import type { L2DeviceRoleFamily, ParsedL2Circuit } from "../l2circuits.types.js";
+import { normalizeServiceVlanId } from "../../netops/service-vlan-policy.js";
 
 export interface ParserContext {
   deviceRoleFamily: L2DeviceRoleFamily;
@@ -37,13 +38,12 @@ export function parseGlobalVlans(configOutput?: string, vlanOutput?: string): {
     }
     const vlanBlock = content.match(/^vlan\s+(\d{1,4})$/i);
     if (vlanBlock) {
-      globalVlans.add(parseInt(vlanBlock[1], 10));
+      addVlan(globalVlans, vlanBlock[1]);
       continue;
     }
     const displayVlan = content.match(/^(\d{1,4})\s+(?:common|enable|disable|\S+)/i);
     if (displayVlan && !/^[-\s]*$/.test(content)) {
-      const id = parseInt(displayVlan[1], 10);
-      if (id > 0 && id <= 4094) globalVlans.add(id);
+      addVlan(globalVlans, displayVlan[1]);
     }
   }
 
@@ -64,7 +64,7 @@ export function parseSwitchingVlans(configOutput?: string): Set<number> {
       continue;
     }
     const def = content.match(/^port\s+default\s+vlan\s+(\d{1,4})$/i);
-    if (def) vlans.add(parseInt(def[1], 10));
+    if (def) addVlan(vlans, def[1]);
   }
   return vlans;
 }
@@ -74,7 +74,7 @@ export function parseMacVlans(output?: string): Set<number> {
   if (!output) return vlans;
   for (const line of output.split(/\r?\n/)) {
     const match = line.match(/\b(?:vlan|vid)\s*[:=]?\s*(\d{1,4})\b/i) ?? line.match(/^\s*(\d{1,4})\s+[0-9a-f]{4}/i);
-    if (match) vlans.add(parseInt(match[1], 10));
+    if (match) addVlan(vlans, match[1]);
   }
   return vlans;
 }
@@ -123,7 +123,7 @@ function addVlanList(target: Set<number>, value: string): void {
     }
     const id = token.match(/^(\d{1,4})$/);
     if (id) {
-      target.add(parseInt(id[1], 10));
+      addVlan(target, id[1]);
     }
   }
 
@@ -134,7 +134,12 @@ function addVlanList(target: Set<number>, value: string): void {
 }
 
 function addRange(target: Set<number>, start: number, end: number): void {
-  const low = Math.max(1, Math.min(start, end));
+  const low = Math.max(2, Math.min(start, end));
   const high = Math.min(4094, Math.max(start, end));
-  for (let id = low; id <= high; id += 1) target.add(id);
+  for (let id = low; id <= high; id += 1) addVlan(target, id);
+}
+
+function addVlan(target: Set<number>, value: number | string): void {
+  const vlan = normalizeServiceVlanId(value);
+  if (vlan !== null) target.add(vlan);
 }

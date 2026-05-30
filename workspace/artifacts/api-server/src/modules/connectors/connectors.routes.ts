@@ -15,17 +15,31 @@ import {
   getConnectorWireGuardStatus,
   getWireGuardConfigForConnector,
   listConnectorJobs,
+  listConnectorJobsEnriched,
+  getConnectorJobDetail,
   listConnectors,
   listPendingJobsForConnector,
   listTenants,
   processHeartbeat,
   regenerateWireGuardKeys,
   revokeConnector,
+  provisionWireGuardForConnector,
+  WireGuardServerKeyMissingError,
   submitJobResult,
   updateConnector,
 } from "./connectors.service.js";
 import type { ConnectorHeartbeatPayload, ConnectorJobResultPayload, ConnectorJobType } from "./connectors.types.js";
+import { ConflictError } from "../../lib/db-errors.js";
 import { maskConnectorToken } from "./connector-token.js";
+import { processConfigBundleAfterSubmit } from "./connector-config-collect.service.js";
+
+function sendRouteError(res: import("express").Response, error: unknown, fallback: string) {
+  if (error instanceof ConflictError) {
+    res.status(409).json({ error: error.message });
+    return;
+  }
+  res.status(500).json({ error: error instanceof Error ? error.message : fallback });
+}
 
 export const connectorAgentRouter = Router();
 
@@ -57,9 +71,50 @@ connectorAgentRouter.post("/connectors/jobs/:jobId/result", requireConnectorAuth
       return;
     }
     const result = await submitJobResult(req.connector!.id, jobId, req.body as ConnectorJobResultPayload);
+    void processConfigBundleAfterSubmit(req.connector!.id, jobId).catch((error) => {
+      console.error("config bundle post-process failed:", error);
+    });
     res.json(result);
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : "Failed to submit job result" });
+  }
+});
+
+function sendWireGuardProvisionError(res: import("express").Response, error: unknown) {
+  if (error instanceof WireGuardServerKeyMissingError) {
+    res.status(503).json({
+      error: error.message,
+      code: error.code,
+      hint: "Configure NETOPS_WG_SERVER_PUBLIC_KEY on the NetOps API server (WireGuard hub public key, base64).",
+    });
+    return;
+  }
+  res.status(400).json({ error: error instanceof Error ? error.message : "WireGuard provision failed" });
+}
+
+connectorAgentRouter.post("/connectors/wireguard/provision", requireConnectorAuth, async (req: ConnectorAuthedRequest, res) => {
+  try {
+    const provision = await provisionWireGuardForConnector(req.connector!.id);
+    if (!provision) {
+      res.status(404).json({ error: "WireGuard not configured for connector", code: "WG_NOT_CONFIGURED" });
+      return;
+    }
+    res.json(provision);
+  } catch (error) {
+    sendWireGuardProvisionError(res, error);
+  }
+});
+
+connectorAgentRouter.get("/connectors/wireguard/provision", requireConnectorAuth, async (req: ConnectorAuthedRequest, res) => {
+  try {
+    const provision = await provisionWireGuardForConnector(req.connector!.id);
+    if (!provision) {
+      res.status(404).json({ error: "WireGuard not configured for connector", code: "WG_NOT_CONFIGURED" });
+      return;
+    }
+    res.json(provision);
+  } catch (error) {
+    sendWireGuardProvisionError(res, error);
   }
 });
 
@@ -77,13 +132,17 @@ management.get("/connectors/tenants", async (_req, res) => {
 });
 
 management.post("/connectors/tenants", requireRole(["admin"]), async (req, res) => {
-  const name = typeof req.body?.name === "string" ? req.body.name : "";
-  if (!name.trim()) {
-    res.status(400).json({ error: "name is required" });
-    return;
+  try {
+    const name = typeof req.body?.name === "string" ? req.body.name : "";
+    if (!name.trim()) {
+      res.status(400).json({ error: "name is required" });
+      return;
+    }
+    const tenant = await createTenant({ name, slug: req.body?.slug });
+    res.status(201).json(tenant);
+  } catch (error) {
+    sendRouteError(res, error, "Failed to create tenant");
   }
-  const tenant = await createTenant({ name, slug: req.body?.slug });
-  res.status(201).json(tenant);
 });
 
 management.post("/connectors", requireRole(["admin", "operator"]), async (req, res) => {
@@ -108,19 +167,24 @@ management.post("/connectors", requireRole(["admin", "operator"]), async (req, r
     const user = getRequestContext()?.user ?? null;
     await logAuditEvent({
       actorId: user?.id ?? null,
-      action: "connector_created",
+      action: created.reprovisioned ? "connector_reprovisioned" : "connector_created",
       objectType: "connector",
       objectId: String(created.id),
       metadata: {
         name: created.name,
         tenant_id: created.tenant_id,
         token_preview: maskConnectorToken(created.connector_token),
+        reprovisioned: Boolean(created.reprovisioned),
       },
       sourceIp: getRequestSourceIp(req),
     });
 
     res.status(201).json(created);
   } catch (error) {
+    if (error instanceof ConflictError) {
+      res.status(409).json({ error: error.message });
+      return;
+    }
     res.status(400).json({ error: error instanceof Error ? error.message : "Failed to create connector" });
   }
 });
@@ -151,7 +215,31 @@ management.put("/connectors/:id", requireRole(["admin"]), async (req, res) => {
 
 management.delete("/connectors/:id", requireRole(["admin"]), async (req, res) => {
   const id = Number(req.params.id);
-  await deleteConnector(id);
+  if (!Number.isInteger(id) || id < 1) {
+    res.status(400).json({ error: "Invalid connector id" });
+    return;
+  }
+
+  const deleted = await deleteConnector(id);
+  if (!deleted) {
+    res.status(404).json({ error: "Connector not found" });
+    return;
+  }
+
+  const user = getRequestContext()?.user ?? null;
+  await logAuditEvent({
+    actorId: user?.id ?? null,
+    action: "connector_deleted",
+    objectType: "connector",
+    objectId: String(id),
+    metadata: {
+      name: deleted.name,
+      tenant_id: deleted.tenantId,
+      status: deleted.status,
+    },
+    sourceIp: getRequestSourceIp(req),
+  });
+
   res.status(204).end();
 });
 
@@ -209,8 +297,19 @@ management.post("/connectors/:id/networks", requireRole(["admin", "operator"]), 
 
 management.get("/connectors/:id/jobs", async (req, res) => {
   const id = Number(req.params.id);
-  const jobs = await listConnectorJobs(id);
+  const jobs = await listConnectorJobsEnriched(id);
   res.json(jobs);
+});
+
+management.get("/connectors/:connectorId/jobs/:jobId", async (req, res) => {
+  const jobId = Number(req.params.jobId);
+  const connectorId = Number(req.params.connectorId);
+  const job = await getConnectorJobDetail(jobId);
+  if (!job || job.connector_id !== connectorId) {
+    res.status(404).json({ error: "Job not found" });
+    return;
+  }
+  res.json(job);
 });
 
 management.post("/connectors/:id/jobs", requireRole(["admin", "operator"]), async (req, res) => {
@@ -239,6 +338,10 @@ management.post("/connectors/:id/jobs", requireRole(["admin", "operator"]), asyn
 
     res.status(201).json(job);
   } catch (error) {
+    if (error instanceof ConflictError) {
+      res.status(409).json({ error: error.message });
+      return;
+    }
     res.status(400).json({ error: error instanceof Error ? error.message : "Failed to create job" });
   }
 });

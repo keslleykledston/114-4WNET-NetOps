@@ -1,5 +1,6 @@
 import type { L2DeviceRoleFamily, ParsedL2Circuit } from "../l2circuits.types.js";
 import { truncateL2Evidence } from "../redact-l2-output.js";
+import { normalizeServiceVlanId } from "../../netops/service-vlan-policy.js";
 import {
   addPseudowireEvidence,
   addVsiEvidence,
@@ -124,10 +125,10 @@ function parseL2vcVerbose(output: string, role: L2DeviceRoleFamily): ParsedL2Cir
         circuit.operStatus = operStatus;
       } else if (line.match(/^OuterVlan\s*:/i)) {
         const vlan = line.split(/:\s*/, 2)[1];
-        circuit.outerVlan = parseInt(vlan, 10);
+        circuit.outerVlan = normalizeServiceVlanId(vlan) ?? undefined;
       } else if (line.match(/^InnerVlan\s*:/i)) {
         const vlan = line.split(/:\s*/, 2)[1];
-        circuit.innerVlan = parseInt(vlan, 10);
+        circuit.innerVlan = normalizeServiceVlanId(vlan) ?? undefined;
       } else if (line.match(/^Peer IP\s*:/i)) {
         circuit.peerIp = line.split(/:\s*/, 2)[1];
       } else if (line.match(/^Admin Status\s*:/i)) {
@@ -189,7 +190,7 @@ function parseVsiVerbose(output: string, role: L2DeviceRoleFamily): ParsedL2Circ
         circuit.vsiId = line.split(/:\s*/, 2)[1];
       } else if (line.match(/^BD ID\s*:/i)) {
         const bdId = line.split(/:\s*/, 2)[1];
-        circuit.outerVlan = parseInt(bdId, 10);
+        circuit.outerVlan = normalizeServiceVlanId(bdId) ?? undefined;
       } else if (line.match(/^MAC Count\s*:/i)) {
         const count = line.split(/:\s*/, 2)[1];
         circuit.macCount = parseInt(count, 10);
@@ -236,14 +237,18 @@ function parseVsiVerbose(output: string, role: L2DeviceRoleFamily): ParsedL2Circ
 }
 
 function parseDisplayVlanOrphans(output: string, existing: ParsedL2Circuit[], context: ParserContext): ParsedL2Circuit[] {
-  const usedVlans = new Set(existing.map((c) => c.outerVlan).filter((v): v is number => v !== undefined));
+  const usedVlans = new Set(
+    existing
+      .map((c) => normalizeServiceVlanId(c.outerVlan))
+      .filter((v): v is number => v !== null),
+  );
   const circuits: ParsedL2Circuit[] = [];
 
   for (const line of output.split(/\r?\n/)) {
     const match = line.trim().match(/^(\d{1,4})\s+(?:common|enable|disable|\S+)/i);
     if (!match) continue;
-    const vlanId = parseInt(match[1], 10);
-    if (vlanId <= 0 || vlanId > 4094 || usedVlans.has(vlanId)) continue;
+    const vlanId = normalizeServiceVlanId(match[1]);
+    if (vlanId === null || usedVlans.has(vlanId)) continue;
     circuits.push({
       circuitType: "vlan_orphan",
       serviceId: `vlan-${vlanId}:orphan`,

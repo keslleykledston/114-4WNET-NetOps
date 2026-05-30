@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.5.1 — Connector Agent Container (2026-05-28)
+
+- Phase 2: `infra/connector-agent/` Python agent (Docker, host network, read-only jobs).
+- Heartbeat, job poll, PING/TCP/SSH/SNMP/WG executors, security policy, healthcheck.
+- Selftest: `tools/connector-agent-selftest.py`.
+
+## v0.5.0 — Connectors / Bastion (2026-05-28)
+
+- Connectors module: WireGuard transport + Connector Agent API (heartbeat, job queue).
+- DB: `tenants`, `connectors`, `connector_networks`, `connector_jobs`, `connector_job_results`, `connector_heartbeats`, `devices.connector_id`.
+- Management UI: **Infraestrutura → Conectores** (`/infrastructure/connectors`).
+- Security: per-connector token (hashed), encrypted WG private keys, read-only SSH policy on jobs.
+- Agent endpoints (Bearer token): `POST /connectors/heartbeat`, `GET /connectors/jobs/pending`, `POST /connectors/jobs/:id/result`.
+- Docs: `docs/connectors/`, report `reports/connectors/PHASE_1_IMPLEMENTATION_REPORT.md`.
+- Selftest: `tools/connectors-selftest.mjs`.
+
 ## v0.4.0 — Provisioning Preview Engine (2026-05-28)
 
 - Added safe provisioning preview module (`workspace/artifacts/api-server/src/modules/provisioning/`).

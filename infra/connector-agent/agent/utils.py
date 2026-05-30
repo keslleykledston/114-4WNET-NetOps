@@ -59,6 +59,7 @@ def run_command(
     timeout: int,
     *,
     check: bool = False,
+    env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         args,
@@ -66,4 +67,5 @@ def run_command(
         text=True,
         timeout=timeout,
         check=check,
+        env=env,
     )

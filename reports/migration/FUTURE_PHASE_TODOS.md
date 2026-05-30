@@ -15,6 +15,7 @@
 - FASE 5.1.fix concluida: IF-MIB agora coleta 164 interfaces. Root cause: net-snmp doneCallback passa varbind array em error param. Fix: type-check error antes de rejeitar.
 - FASE 5.2 planejada: inventario persistido (interfaces/vrfs/config), SSH config collection read-only.
 - FASE 5.3 concluida: Device Discovery persistente com `discovery_runs`, `discovery_snapshots`, `discovery_evidence`, OpenAPI atualizado e client Orval regenerado.
+- **FASE 5.4 planejada (2026-05-30):** backup automático de config no SSH via connector — ver `docs/connectors/SSH_CONFIG_BACKUP_PLAN.md`.
 - v0.4.0 preview MVP concluida: Provisioning preview & approval workflow — templates L2/L3/BGP (5 tipos), `POST /api/provisioning/preview`, estados draft→approved, UI `/provisioning`, apply bloqueado, docs `PROVISIONING_PREVIEW_WORKFLOW.md`.
 - v0.4.x planejada: Provisioning operacional seguro — ver `reports/V0_4_PROVISIONING_OPERATIONAL_PLAN.md` (v0.4.0 engine → v0.4.4 apply readiness doc only).
 
@@ -98,6 +99,75 @@ Modified snmp-session.ts feedCallback + doneCallback:
 
 Commit: `fix: resolve IF-MIB collection returning 0 interfaces`  
 Report: `reports/migration/PHASE_5_1_FIX_IFMIB_RESOLVED.md`
+
+---
+
+# FASE 5.4 — Backup automático de config no SSH (via Connector)
+
+**Checkpoint:** NetOps CLI + SSH/SNMP probe OK; BGP e L2 **não** são coletados no teste atual.
+
+**Plano detalhado:** `docs/connectors/SSH_CONFIG_BACKUP_PLAN.md`
+
+## Objetivo
+
+Toda conexão SSH bem-sucedida (via connector) dispara coleta read-only completa, persistência em `collected_configs`, parsers Huawei VRP, e alimentação dos módulos BGP / L2 Circuits.
+
+## Fase A — Contrato e executor (P0)
+
+- [x] Job type `SSH_CONFIG_BUNDLE` (batch correlacionado no connector).
+- [x] Payload: `commands[]`, `vendor`, `device_id`, timeout 300s.
+- [x] NetOps CLI: bundle com `screen-length 0 temporary` + comandos allowlist.
+- [x] Agregar stdout com separadores `! === command ===`.
+
+## Fase B — Hook pós-SSH OK (P0)
+
+- [x] `POST /devices/:id/test-connection` (connector): após SSH OK → enfileirar coleta (não bloquear HTTP).
+- [x] `POST /devices/:id/test-connectivity`: idem quando SSH OK.
+- [x] Resposta API inclui `configCollect: queued | failed` + `jobId`.
+- [x] Servidor grava bundle bruto em `collected_configs` ao receber resultado.
+- [x] Parse assíncrono inicial via `parseConfig()` (Fase C expande parsers L2/BGP dedicados).
+
+## Fase C — Persistência e parse (P0)
+
+- [ ] Serviço `connector-config-collect.service.ts`: parse + `INSERT collected_configs`.
+- [ ] Preencher `parsed_vlans`, `parsed_interfaces`, `parsed_bgp`, `parsed_l2vpn`, `parsed_l3vpn`.
+- [ ] Audit `device_config_collected_via_connector`.
+- [ ] `device.status = active` após coleta+parse (não só após probe).
+
+## Fase D — BGP e L2 a partir da config (P1)
+
+- [ ] Refresh L2 Circuits discovery a partir de `parsed_l2vpn` + interface config.
+- [ ] Sincronizar peers BGP parseados com painel BGP (`source: ssh|snapshot`).
+- [ ] UI device detail: timestamp última config, contadores BGP/L2.
+
+## Fase E — Histórico, diff, consulta (P1)
+
+- [ ] Listar versões anteriores de config por device.
+- [ ] Endpoint diff entre duas coletas (`collected_configs` a vs b).
+- [ ] UI diff side-by-side; export Markdown/JSON.
+
+## Fase F — Scheduler e retenção (P2)
+
+- [ ] Re-coleta agendada (diária/semanal) por device ou site.
+- [ ] Política de retenção de histórico (ex.: 90 dias).
+
+## Comandos Huawei (bundle mínimo)
+
+```text
+display current-configuration
+display interface brief
+display bgp peer
+display mpls l2vc verbose
+display vsi verbose
+display ip vpn-instance
+```
+
+## Critérios de aceite
+
+- [ ] Device 43 (4WNET-BVA): após test-connection OK → linha em `collected_configs` com raw > 10 KB.
+- [ ] `parsed_bgp` / `parsed_l2vpn` populados quando aplicável.
+- [ ] Painéis BGP e L2 Circuits refletem dados sem SSH manual.
+- [ ] Segunda coleta gera histórico; diff funcional.
 
 ---
 
@@ -939,5 +1009,7 @@ Objetivo: migrar favicon/icone K3G do `60-bgp_manager` sem trocar layout, tema o
 - [x] Adicionar modulo read-only `device-discovery` com SSH primary e SNMP fallback/complement.
 - [x] Expor peers BGP e detalhes normalizados sem CLI/OID cru para o frontend.
 - [x] Proteger consultas de rotas contra full dump automatico.
-- [ ] Persistir discovery/evidencias em tabelas dedicadas.
+- [x] Persistir discovery/evidencias em tabelas dedicadas.
+- [x] Enfileirar discovery direto apos SSH OK na aba Devices para alimentar compliance, parse e cache.
+- [x] Corrigir UI de coleta SSH para aguardar o endpoint assíncrono antes de resumir resultado.
 - [ ] Completar parsers Huawei VRP para nodes de route-policy, community-list, L2VC e VSI.

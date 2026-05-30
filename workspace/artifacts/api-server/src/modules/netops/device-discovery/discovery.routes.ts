@@ -4,6 +4,7 @@ import {
   getDiscoveryBgpPeers,
   getDiscoveryPeerDetails,
   getDiscoverySnapshot,
+  getDiscoveryStatus,
   postDiscoveryRouteQuery,
 } from "./discovery.controller.js";
 import {
@@ -22,6 +23,7 @@ const router = Router();
 
 // Discovery
 router.post("/devices/:id/discover", discoverDevice);
+router.get("/devices/:id/discovery-status", getDiscoveryStatus);
 router.get("/devices/:id/discovery-snapshot", getDiscoverySnapshot);
 
 // BGP

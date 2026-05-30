@@ -28,7 +28,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-netops}:${POSTGRES_PASSWORD:-netops}@db:5432/${POSTGRES_DB:-netops}
       SESSION_SECRET: ${SESSION_SECRET:-netops-default-secret-key-32bytes}
-    command: ["pnpm", "--filter", "@workspace/db", "run", "push"]
+    command: ["pnpm", "--filter", "@workspace/db", "run", "migrate:safe"]
     restart: "no"
 
   api:
@@ -64,6 +64,11 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_NAME: ${ADMIN_NAME:-Admin}
+      NETOPS_WG_SERVER_PUBLIC_KEY: ${NETOPS_WG_SERVER_PUBLIC_KEY:-}
+      NETOPS_WG_ENDPOINT: ${NETOPS_WG_ENDPOINT:-vpn.netops.local:51820}
+      NETOPS_WG_DEFAULT_ALLOWED_IPS: ${NETOPS_WG_DEFAULT_ALLOWED_IPS:-10.0.0.0/8,192.168.0.0/16}
+      NETOPS_WG_SERVER_ADDRESS: ${NETOPS_WG_SERVER_ADDRESS:-10.255.0.1}
+      NETOPS_WG_IP_POOL_BASE: ${NETOPS_WG_IP_POOL_BASE:-10.255.0.}
     healthcheck:
       test:
         [
@@ -77,6 +82,22 @@ services:
       retries: 10
     ports:
       - "${API_PORT:-8080}:8080"
+
+  wg-hub:
+    build:
+      context: ./infra/wireguard-hub
+    container_name: netops-wg-hub
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "${NETOPS_WG_PORT:-51820}:51820/udp"
+    volumes:
+      - ./infra/wireguard-hub/secrets/wg0.conf:/etc/wireguard/wg0.conf:ro
 
   web:
     build:

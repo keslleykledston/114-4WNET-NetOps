@@ -1,24 +1,38 @@
 import { useState } from "react";
-import { Link, useRoute } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ShieldOff, Terminal } from "lucide-react";
+import { ArrowLeft, ShieldOff, Terminal, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
 import {
   createDiagnosticJob,
+  deleteConnector,
   getConnector,
+  getConnectorJob,
   getWireGuardConfig,
   listConnectorJobs,
   revokeConnector,
 } from "@/features/connectors/connectors-api";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function ConnectorDetailPage() {
   const [, params] = useRoute("/infrastructure/connectors/:id");
+  const [, navigate] = useLocation();
   const id = Number(params?.id);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -30,6 +44,8 @@ export default function ConnectorDetailPage() {
   const [sshTarget, setSshTarget] = useState("");
   const [sshCommand, setSshCommand] = useState("display version");
   const [wgConfig, setWgConfig] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Record<string, unknown> | null>(null);
 
   const connectorQuery = useQuery({
     queryKey: ["connector", id],
@@ -48,7 +64,24 @@ export default function ConnectorDetailPage() {
     mutationFn: () => revokeConnector(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["connector", id] });
-      toast({ title: "Connector revogado" });
+      void queryClient.invalidateQueries({ queryKey: ["connector-jobs", id] });
+      toast({
+        title: "Connector revogado",
+        description: "Jobs pendentes cancelados. Crie novamente com o mesmo nome para emitir um novo token.",
+      });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteConnector(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["connectors"] });
+      toast({
+        title: "Connector removido",
+        description: "O registro foi excluído. Dispositivos vinculados ficaram sem connector atribuído.",
+      });
+      navigate("/infrastructure/connectors");
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
@@ -117,11 +150,24 @@ export default function ConnectorDetailPage() {
               </p>
             </CardContent>
           </Card>
-          {isAdmin && c.status !== "REVOKED" && (
-            <Button variant="destructive" onClick={() => revokeMutation.mutate()} disabled={revokeMutation.isPending}>
-              <ShieldOff className="h-4 w-4 mr-2" />
-              Revogar connector
-            </Button>
+          {isAdmin && (
+            <div className="flex flex-wrap gap-2">
+              {c.status !== "REVOKED" && (
+                <Button variant="destructive" onClick={() => revokeMutation.mutate()} disabled={revokeMutation.isPending}>
+                  <ShieldOff className="h-4 w-4 mr-2" />
+                  Revogar connector
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                onClick={() => setDeleteDialogOpen(true)}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remover connector
+              </Button>
+            </div>
           )}
         </TabsContent>
 
@@ -150,16 +196,52 @@ export default function ConnectorDetailPage() {
         <TabsContent value="jobs" className="mt-4">
           <Card>
             <CardContent className="pt-6">
-              <ul className="space-y-2 text-sm">
-                {(jobsQuery.data ?? []).map((job) => (
-                  <li key={String(job.id)} className="border-b border-border pb-2 font-mono text-xs">
-                    #{String(job.id)} {String(job.job_type)} → {String(job.status)} {String(job.target_ip ?? "")}
-                  </li>
-                ))}
-                {(jobsQuery.data ?? []).length === 0 && (
-                  <li className="text-muted-foreground">Nenhum job ainda.</li>
-                )}
-              </ul>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Device</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Duração</TableHead>
+                    <TableHead>Criado por</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(jobsQuery.data ?? []).map((job) => (
+                    <TableRow key={String(job.id)}>
+                      <TableCell className="text-xs">{job.created_at ? new Date(String(job.created_at)).toLocaleString() : "—"}</TableCell>
+                      <TableCell>{String(job.device_hostname ?? job.device_id ?? "—")}</TableCell>
+                      <TableCell className="font-mono text-xs">{String(job.job_type)}</TableCell>
+                      <TableCell className="font-mono text-xs">{String(job.target_ip ?? "—")}</TableCell>
+                      <TableCell>{String(job.status)}</TableCell>
+                      <TableCell>{job.duration_ms != null ? `${job.duration_ms}ms` : "—"}</TableCell>
+                      <TableCell>{String(job.created_by_name ?? "—")}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            const detail = await getConnectorJob(id, Number(job.id));
+                            setSelectedJob(detail);
+                          }}
+                        >
+                          Ver resultado
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {(jobsQuery.data ?? []).length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
+                        Nenhum job ainda.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -208,6 +290,55 @@ export default function ConnectorDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover connector?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso excluirá permanentemente <strong>{c.name}</strong> ({c.tenant_name}), incluindo jobs e histórico de
+              heartbeat. Dispositivos vinculados ({c.device_count}) ficarão sem connector. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteMutation.mutate()}
+              disabled={deleteMutation.isPending}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={Boolean(selectedJob)} onOpenChange={(open) => !open && setSelectedJob(null)}>
+        <AlertDialogContent className="max-w-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Job #{String(selectedJob?.id ?? "")}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-left text-sm">
+                <p>Status: {String(selectedJob?.status)} · Duração: {String(selectedJob?.duration_ms ?? "—")}ms</p>
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40">
+                  {JSON.stringify(selectedJob?.payload_json ?? {}, null, 2)}
+                </pre>
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-48 whitespace-pre-wrap">
+                  {String((selectedJob?.result as { stdout?: string } | undefined)?.stdout ?? "—")}
+                </pre>
+                {(selectedJob?.result as { stderr?: string } | undefined)?.stderr ? (
+                  <pre className="text-xs bg-destructive/10 p-3 rounded-md overflow-auto max-h-32 whitespace-pre-wrap">
+                    {String((selectedJob?.result as { stderr?: string }).stderr)}
+                  </pre>
+                ) : null}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Fechar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -66,7 +66,12 @@ export default function ConnectorsPage() {
       setCreatedToken(data);
       setConnectorName("");
       void queryClient.invalidateQueries({ queryKey: ["connectors"] });
-      toast({ title: "Connector criado", description: "Copie o token agora — não será exibido novamente." });
+      toast({
+        title: data.reprovisioned ? "Connector reemitido" : "Connector criado",
+        description: data.reprovisioned
+          ? "Connector revogado reativado com novo token. Copie o token agora — não será exibido novamente."
+          : "Copie o token agora — não será exibido novamente.",
+      });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
@@ -95,11 +100,19 @@ export default function ConnectorsPage() {
             <CardHeader>
               <CardTitle className="text-base">Novo tenant</CardTitle>
             </CardHeader>
-            <CardContent className="flex gap-2">
-              <Input placeholder="Cliente A" value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
-              <Button disabled={!tenantName.trim() || createTenantMutation.isPending} onClick={() => createTenantMutation.mutate()}>
-                <Plus className="h-4 w-4" />
-              </Button>
+            <CardContent className="space-y-2">
+              <div className="flex gap-2">
+                <Input placeholder="Cliente A" value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
+                <Button disabled={!tenantName.trim() || createTenantMutation.isPending} onClick={() => createTenantMutation.mutate()}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {(tenantsQuery.data ?? []).length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Tenants existentes: {(tenantsQuery.data ?? []).map((t) => t.name).join(", ")}.
+                  Após revogar um connector, reutilize o tenant e o mesmo nome — um novo token será emitido automaticamente.
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -132,6 +145,9 @@ export default function ConnectorsPage() {
                   Criar
                 </Button>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Se o connector com esse nome estiver revogado, ele será reemitido (mesmo ID, novo token e chaves WireGuard).
+              </p>
             </CardContent>
           </Card>
         </div>

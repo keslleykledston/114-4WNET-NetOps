@@ -30,8 +30,8 @@ export function DiscoveryPanel({ device }: { device: Device }) {
           Discovery
         </CardTitle>
         <Button type="button" variant="outline" size="sm" onClick={execute} disabled={runDiscovery.isPending}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          {runDiscovery.isPending ? "Executando..." : "Executar discovery"}
+          <RefreshCw className={`mr-2 h-4 w-4 ${runDiscovery.isPending ? "animate-spin" : ""}`} />
+          {runDiscovery.isPending ? "Executando via connector..." : "Executar discovery"}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">

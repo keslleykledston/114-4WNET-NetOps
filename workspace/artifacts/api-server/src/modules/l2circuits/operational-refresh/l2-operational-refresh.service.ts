@@ -6,6 +6,7 @@ import {
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { collectSnmpInterfacesOnly, isNetopsSnmpRealEnabled } from "../../netops/snmp/collect.js";
+import { collectSnmpInterfacesViaConnector } from "../../connectors/connector-snmp-collect.js";
 import { resolveSnmpCredential } from "../../netops/snmp/snmp-credential-resolver.js";
 import { assertSnmpFastPilotDevice, OperationalPilotError } from "../../operational/pilot.js";
 import { SnmpCredentialsNotConfiguredError } from "../../operational/operational-errors.js";
@@ -151,7 +152,9 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
   const refreshAt = new Date();
   const warnings: string[] = [];
 
-  const snmpResult = await collectSnmpInterfacesOnly(device, credential.value);
+  const snmpResult = device.connectorId
+    ? await collectSnmpInterfacesViaConnector(device, credential.value)
+    : await collectSnmpInterfacesOnly(device, credential.value);
   if (!snmpResult.success && snmpResult.interfaces.length === 0) {
     throw new Error(snmpResult.errorMessage ?? "SNMP_FAST interface collection failed");
   }
@@ -171,9 +174,9 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
   let staleMarked = 0;
 
   try {
-    const sshConfig = resolveDeviceSshConfig(device);
+    resolveDeviceSshConfig(device);
     const includeConfig = isL2OperationalRefreshSshConfigEnabled();
-    const sshOutput = await collectL2OperationalViaSsh(sshConfig, { includeConfig });
+    const sshOutput = await collectL2OperationalViaSsh(device, { includeConfig });
     sshOpsCollected = true;
     sshConfigCollected = includeConfig;
     const parsed = parseHuaweiL2Circuits(sshOutput);

@@ -1,6 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Device } from "@workspace/api-client-react";
+import { listConnectors, listTenants } from "@/features/connectors/connectors-api";
+import {
+  connectorsForTenant,
+  getTenantIdForConnector,
+  pickConnectorForTenant,
+} from "@/features/devices/device-connector-utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,6 +25,8 @@ export interface DeviceFormValues {
   role: string;
   snmpCommunity: string;
   sshPort: number;
+  tenantId: string;
+  connectorId: string;
 }
 
 interface DeviceFormDialogProps {
@@ -41,6 +50,8 @@ const DEFAULT_VALUES: DeviceFormValues = {
   role: "",
   snmpCommunity: "",
   sshPort: 22,
+  tenantId: "",
+  connectorId: "",
 };
 
 export function DeviceFormDialog({
@@ -53,11 +64,34 @@ export function DeviceFormDialog({
   trigger,
 }: DeviceFormDialogProps) {
   const [form, setForm] = useState<DeviceFormValues>(DEFAULT_VALUES);
+  const connectorsQuery = useQuery({ queryKey: ["connectors"], queryFn: listConnectors });
+  const tenantsQuery = useQuery({ queryKey: ["connectors", "tenants"], queryFn: listTenants });
+
+  const connectors = connectorsQuery.data ?? [];
+  const tenants = tenantsQuery.data ?? [];
+
+  const tenantConnectors = useMemo(() => {
+    if (!form.tenantId) return [];
+    return connectorsForTenant(Number(form.tenantId), connectors);
+  }, [connectors, form.tenantId]);
+
+  const selectedConnector = useMemo(
+    () => connectors.find((c) => String(c.id) === form.connectorId) ?? null,
+    [connectors, form.connectorId],
+  );
 
   useEffect(() => {
     if (!open) return;
 
     if (mode === "edit" && device) {
+      const extended = device as Device & {
+        connectorId?: number | null;
+        tenantId?: number | null;
+      };
+      const tenantId =
+        extended.tenantId ??
+        getTenantIdForConnector(extended.connectorId, connectors) ??
+        null;
       setForm({
         hostname: device.hostname,
         ipAddress: device.ipAddress,
@@ -69,18 +103,35 @@ export function DeviceFormDialog({
         role: device.role ?? "",
         snmpCommunity: "",
         sshPort: device.sshPort,
+        tenantId: tenantId ? String(tenantId) : "",
+        connectorId: extended.connectorId ? String(extended.connectorId) : "",
       });
       return;
     }
 
     setForm(DEFAULT_VALUES);
-  }, [device, mode, open]);
+  }, [device, mode, open, connectors]);
+
+  const applyTenantSelection = (tenantId: string) => {
+    if (!tenantId) {
+      setForm((prev) => ({ ...prev, tenantId: "", connectorId: "" }));
+      return;
+    }
+    const picked = pickConnectorForTenant(Number(tenantId), connectors);
+    setForm((prev) => ({
+      ...prev,
+      tenantId,
+      connectorId: picked ? String(picked.id) : "",
+    }));
+  };
 
   const title = mode === "create" ? "Cadastrar Novo Dispositivo" : `Editar ${device?.hostname ?? "Dispositivo"}`;
   const description = mode === "create"
     ? "Preencha credenciais SSH e, opcionalmente, a comunidade SNMP."
     : "Atualize dados de acesso. Senha e comunidade SNMP em branco mantêm os valores atuais.";
   const submitLabel = mode === "create" ? "Adicionar Dispositivo" : "Salvar Alterações";
+
+  const tenantMissingConnector = Boolean(form.tenantId && !form.connectorId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -195,14 +246,64 @@ export function DeviceFormDialog({
                 placeholder={mode === "edit" ? "Deixe em branco para manter" : "public"}
               />
             </FormField>
+
+            <FormField label="Tenant">
+              <Select
+                value={form.tenantId || "none"}
+                onValueChange={(value) => applyTenantSelection(value === "none" ? "" : value)}
+              >
+                <SelectTrigger><SelectValue placeholder="Sem tenant — acesso direto" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem tenant — acesso direto</SelectItem>
+                  {tenants.map((tenant) => (
+                    <SelectItem key={tenant.id} value={String(tenant.id)}>
+                      {tenant.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+
+            {form.tenantId && tenantConnectors.length > 1 ? (
+              <FormField label="Connector">
+                <Select
+                  value={form.connectorId || "none"}
+                  onValueChange={(value) =>
+                    setForm({ ...form, connectorId: value === "none" ? "" : value })
+                  }
+                >
+                  <SelectTrigger><SelectValue placeholder="Escolha o connector" /></SelectTrigger>
+                  <SelectContent>
+                    {tenantConnectors.map((connector) => (
+                      <SelectItem key={connector.id} value={String(connector.id)}>
+                        {connector.name} ({connector.status})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            ) : null}
           </div>
 
-          <p className="text-sm text-muted-foreground">
-            SNMP será usado para coletar interfaces e peerings BGP periodicamente a cada 5 minutos.
-          </p>
+          {form.tenantId && selectedConnector ? (
+            <p className="text-sm text-muted-foreground">
+              Acesso via bastião: <span className="font-medium text-foreground">{selectedConnector.name}</span>
+              {" "}
+              <span className="text-xs">({selectedConnector.status})</span>
+              — coletas SSH/SNMP enfileiradas no connector.
+            </p>
+          ) : form.tenantId && tenantMissingConnector ? (
+            <p className="text-sm text-destructive">
+              Este tenant não tem connector ativo. Crie um em Infraestrutura → Conectores ou escolha acesso direto.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Sem tenant, o dispositivo usa acesso direto do servidor NetOps. Com tenant, o connector é escolhido automaticamente.
+            </p>
+          )}
 
           <DialogFooter>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || tenantMissingConnector}>
               {isPending ? "Salvando..." : submitLabel}
             </Button>
           </DialogFooter>

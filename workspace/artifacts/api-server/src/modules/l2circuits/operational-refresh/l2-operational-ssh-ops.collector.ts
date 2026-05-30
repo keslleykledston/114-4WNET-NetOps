@@ -1,5 +1,5 @@
-import type { SSHConfig } from "../../../lib/ssh.js";
-import { runSSHCommands } from "../../../lib/ssh.js";
+import type { Device } from "@workspace/db";
+import { runSSHCommandsForDevice } from "../../connectors/connector-aware-transport.js";
 import { validateReadonlyCommand } from "../../netops/huawei-vrp/commands.js";
 import type { SSHCollectorOutput } from "../l2circuits.types.js";
 
@@ -17,7 +17,7 @@ export const L2_OPERATIONAL_SSH_CONFIG_COMMANDS = [
 ] as const;
 
 export async function collectL2OperationalViaSsh(
-  sshConfig: SSHConfig,
+  device: Device,
   options?: { includeConfig?: boolean },
 ): Promise<SSHCollectorOutput> {
   const commands: string[] = [...L2_OPERATIONAL_SSH_OPS_COMMANDS];
@@ -32,7 +32,7 @@ export async function collectL2OperationalViaSsh(
     }
   }
 
-  const results = await runSSHCommands(sshConfig, [...commands]);
+  const results = await runSSHCommandsForDevice(device, [...commands]);
   const output: Record<string, string> = {};
   for (const result of results) {
     if (result.output) {

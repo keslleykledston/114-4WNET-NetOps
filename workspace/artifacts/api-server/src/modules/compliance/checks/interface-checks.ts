@@ -1,5 +1,6 @@
 import type { ComplianceContext, StructuredFinding } from "../compliance-context.js";
 import { isHuaweiInterfaceName, isHuaweiSubinterfaceName } from "../interface-identifiers.js";
+import { isDefaultVlanInterface } from "../../netops/service-vlan-policy.js";
 
 export function runInterfaceChecks(ctx: ComplianceContext): StructuredFinding[] {
   const interfaces = ctx.snapshot?.interfaces ?? [];
@@ -26,6 +27,10 @@ export function runInterfaceChecks(ctx: ComplianceContext): StructuredFinding[] 
     const row = item as unknown as Record<string, unknown>;
     const name = typeof item.name === "string" ? item.name : (typeof row.ifName === "string" ? row.ifName : null);
     if (!name || !isHuaweiInterfaceName(name)) continue;
+    if (isDefaultVlanInterface(name)) {
+      names.add(name);
+      continue;
+    }
     if (names.has(name)) {
       findings.push({
         policyKey: "huawei-interface-duplicate",

@@ -1,6 +1,5 @@
-import { db, l2CircuitsTable, l2DeviceOperationalTable, l2DiscoveryJobsTable } from "@workspace/db";
+import { db, l2CircuitsTable, l2DeviceOperationalTable, l2DiscoveryJobsTable, type Device } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
-import type { SSHConfig } from "../../lib/ssh.js";
 import { collectL2CircuitsViaSsh } from "./collectors/ssh.collector.js";
 import { parseHuaweiL2Circuits } from "./parsers/huawei-vrp-l2.js";
 import { normalizeCircuits } from "./normalizers/status.normalizer.js";
@@ -37,7 +36,7 @@ export async function startL2DiscoveryJob(deviceId: number, runId: string): Prom
   return { jobId: job.id, startedAt };
 }
 
-export async function runL2DiscoveryJob(deviceId: number, runId: string, sshConfig: SSHConfig): Promise<void> {
+export async function runL2DiscoveryJob(deviceId: number, runId: string, device: Device): Promise<void> {
   const job = await getL2DiscoveryJob(runId);
   if (!job) {
     throw new Error(`Discovery job not found: ${runId}`);
@@ -58,7 +57,7 @@ export async function runL2DiscoveryJob(deviceId: number, runId: string, sshConf
   }
 
   try {
-    const rawOutput = await collectL2CircuitsViaSsh(sshConfig);
+    const rawOutput = await collectL2CircuitsViaSsh(device);
     const parsed = parseHuaweiL2Circuits(rawOutput);
     const normalized = normalizeCircuits(parsed);
     const withFindings = enrichCircuitsWithFindings(normalized, deviceId);
@@ -124,10 +123,10 @@ export async function runL2DiscoveryJob(deviceId: number, runId: string, sshConf
 /** @deprecated Use startL2DiscoveryJob + runL2DiscoveryJob */
 export async function discoverL2Circuits(
   deviceId: number,
-  sshConfig: SSHConfig,
+  device: Device,
   runId: string,
 ): Promise<L2DiscoveryJobResponse> {
-  await runL2DiscoveryJob(deviceId, runId, sshConfig);
+  await runL2DiscoveryJob(deviceId, runId, device);
   const job = await getL2DiscoveryJob(runId);
   const circuits = await getL2CircuitsByRunId(runId);
 

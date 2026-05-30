@@ -1,4 +1,5 @@
 import type { SnmpCollectedInterface } from "../snmp/types.js";
+import { normalizeServiceVlanId } from "../service-vlan-policy.js";
 import type { InterfaceKind, NormalizedInterface } from "./types.js";
 
 export function classifyInterface(iface: SnmpCollectedInterface): InterfaceKind {
@@ -18,10 +19,12 @@ export function classifyInterface(iface: SnmpCollectedInterface): InterfaceKind 
 function extractSubinterfaceInfo(name: string): { parent: string; vlanId: number } | null {
   const match = name.match(/^(.+?)\.(\d+)$/);
   if (!match) return null;
+  const vlanId = normalizeServiceVlanId(match[2]);
+  if (vlanId === null) return null;
 
   return {
     parent: match[1],
-    vlanId: Number(match[2]),
+    vlanId,
   };
 }
 

@@ -81,6 +81,7 @@
 - Persistencia local adicionada em `discovery_runs`, `discovery_snapshots` e `discovery_evidence`.
 - OpenAPI/Orval atualizado para os endpoints de discovery.
 - Parser Huawei VRP cobre primeira melhoria de route-policy nodes, community-filter/list e L2VC/VSI basico.
+- A aba Devices agora enfileira discovery SSH/SNMP para acesso direto apos SSH OK, mantendo parse/cache em `collected_configs` para compliance.
 - Ainda pendente: parser Huawei VRP completo para variantes adicionais de plataforma/versao.
 
 ## Compliance grouping UI v0.2.8

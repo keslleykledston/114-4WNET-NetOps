@@ -57,6 +57,7 @@
 ## Baseline apos discovery
 
 - Device detail inclui bloco `Discovery` no overview.
+- Botao de coleta SSH aguarda discovery assíncrono concluir antes de mostrar contadores e status.
 - BGP panel mantem tabela densa e filtros existentes, mas busca peers no endpoint estruturado de discovery.
 - A lista BGP respeita override local de papel, reaplica o valor salvo mesmo no fallback SNMP e trata peers VRF-aware como registros distintos.
 - Modal de peer mantem desenho escuro redesenhado e adiciona source/confidence/evidence curta.

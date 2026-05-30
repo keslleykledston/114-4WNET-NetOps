@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import logging
+import os
 import socket
 import time
 from typing import Any
-
-import paramiko
 
 from .config import Config
 from .security import SecurityPolicyError, validate_ssh_command
@@ -215,28 +214,32 @@ def run_ssh_command(target_ip: str, payload: dict[str, Any], config: Config) -> 
             "result_json": {"duration_ms": _duration_ms(start), "blocked": True},
         }
 
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    try:
-        client.connect(
-            target_ip,
-            port=port,
-            username=username,
-            password=password,
-            timeout=config.ssh_connect_timeout,
-            allow_agent=False,
-            look_for_keys=False,
-        )
-        _stdin, stdout, stderr = client.exec_command(command, timeout=config.ssh_command_timeout)
-        out = stdout.read().decode("utf-8", errors="replace")
-        err = stderr.read().decode("utf-8", errors="replace")
-        exit_code = stdout.channel.recv_exit_status()
-        return {
-            "success": exit_code == 0,
-            "stdout": out,
-            "stderr": err,
-            "exit_code": exit_code,
-            "result_json": {"duration_ms": _duration_ms(start), "executor": "netops-connector-agent"},
-        }
-    finally:
-        client.close()
+    env = os.environ.copy()
+    env["SSHPASS"] = password
+    proc = run_command(
+        [
+            "sshpass",
+            "-e",
+            "ssh",
+            "-n",
+            "-o",
+            "StrictHostKeyChecking=no",
+            "-o",
+            f"ConnectTimeout={config.ssh_connect_timeout}",
+            "-o",
+            "UserKnownHostsFile=/dev/null",
+            "-p",
+            str(port),
+            f"{username}@{target_ip}",
+            command,
+        ],
+        timeout=config.ssh_command_timeout + config.ssh_connect_timeout,
+        env=env,
+    )
+    return {
+        "success": proc.returncode == 0,
+        "stdout": proc.stdout,
+        "stderr": proc.stderr,
+        "exit_code": proc.returncode,
+        "result_json": {"duration_ms": _duration_ms(start), "executor": "netops-connector-agent"},
+    }

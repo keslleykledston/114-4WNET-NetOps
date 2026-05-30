@@ -34,6 +34,18 @@ grep "executing job" logs/agent.log
 grep "job id=" logs/agent.log
 ```
 
+## Instalação com netops-cli (bastião completo)
+
+O **netops-cli** (UI/VPN) não executa a fila de jobs da API. Instale também o **connector-agent**:
+
+```bash
+cd deploy/bastion
+./install-from-netops-cli.sh
+docker compose up -d --build
+```
+
+Ver [docs/connectors/BASTION_CLIENT_PRODUCT.md](../../../docs/connectors/BASTION_CLIENT_PRODUCT.md).
+
 ## WireGuard (futuro)
 
 1. Gerar config no NetOps (`GET /api/connectors/{id}/wireguard/config`)

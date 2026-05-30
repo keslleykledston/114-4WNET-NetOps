@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { findConnectorByToken } from "./connectors.service.js";
-import type { Connector } from "@workspace/db/schema/connectors.js";
+import type { Connector } from "@workspace/db";
 
 export type ConnectorAuthedRequest = Request & {
   connector?: Connector;

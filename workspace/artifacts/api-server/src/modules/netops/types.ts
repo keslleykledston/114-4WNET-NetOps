@@ -47,12 +47,14 @@ export interface NetopsInterface {
   operStatus: "up" | "down" | "unknown";
   ipv4: string[];
   ipv6: string[];
+  /** Service VLAN only. Default/reserved VLAN 1 is normalized to null. */
   vlan: number | null;
   vrf: string | null;
   source: NetopsSource;
   ifIndex?: number;
   kind?: "physical" | "aggregate" | "subinterface" | "vlanif" | "loopback" | "tunnel" | "virtual_template" | "null" | "other";
   parentInterface?: string;
+  /** Service VLAN only. Default/reserved VLAN 1 is omitted. */
   vlanId?: number;
   encapsulation?: string;
 }

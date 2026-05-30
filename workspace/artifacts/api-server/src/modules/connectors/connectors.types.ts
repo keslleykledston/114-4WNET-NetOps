@@ -6,6 +6,7 @@ export const CONNECTOR_JOB_TYPES = [
   "TRACEROUTE",
   "TCP_CHECK",
   "SSH_COMMAND",
+  "SSH_CONFIG_BUNDLE",
   "SNMP_GET",
   "SNMP_WALK",
   "ROUTE_CHECK",
@@ -60,8 +61,11 @@ export type CreateConnectorJobInput = {
   target_ip?: string | null;
   target_port?: number | null;
   payload_json?: Record<string, unknown>;
+  masked_payload_json?: Record<string, unknown>;
   timeout_seconds?: number;
   created_by?: number | null;
+  device_id?: number | null;
+  correlation_id?: string | null;
 };
 
 export type ConnectorPublicView = {
@@ -91,4 +95,5 @@ export type ConnectorDetailView = ConnectorPublicView & {
 export type ConnectorCreateResponse = ConnectorDetailView & {
   connector_token: string;
   wireguard_config_preview: string;
+  reprovisioned?: boolean;
 };

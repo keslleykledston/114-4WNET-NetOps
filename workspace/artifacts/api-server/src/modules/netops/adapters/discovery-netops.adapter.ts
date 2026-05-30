@@ -2,6 +2,7 @@ import { collectedConfigsTable, db, devicesTable, snmpSnapshotsTable } from "@wo
 import type { SnmpSnapshot } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import type { DeviceDiscoverySnapshot } from "../device-discovery/discovery.types.js";
+import { normalizeServiceVlanId } from "../service-vlan-policy.js";
 import type { NetopsBgpPeer, NetopsCommunity, NetopsFilter, NetopsInterface, NetopsSnapshotData, NetopsSource } from "../types.js";
 import { snapshotToNetopsData } from "./snapshot-adapter.js";
 
@@ -13,24 +14,27 @@ function mapSource(source: string | undefined): NetopsSource {
 }
 
 function discoveryInterfaces(snapshot: DeviceDiscoverySnapshot): NetopsInterface[] {
-  return snapshot.interfaces.map((item) => ({
-    name: item.name,
-    description: item.description,
-    alias: item.alias,
-    rawDescr: item.rawDescr,
-    adminStatus: item.adminStatus,
-    operStatus: item.operStatus,
-    ipv4: item.ipv4,
-    ipv6: item.ipv6,
-    vlan: item.vlan,
-    vrf: item.vrf,
-    source: mapSource(item.source),
-    ifIndex: item.ifIndex,
-    kind: item.kind,
-    parentInterface: item.parentInterface,
-    vlanId: item.vlanId,
-    encapsulation: item.encapsulation,
-  }));
+  return snapshot.interfaces.map((item) => {
+    const vlanId = normalizeServiceVlanId(item.vlanId ?? item.vlan);
+    return {
+      name: item.name,
+      description: item.description,
+      alias: item.alias,
+      rawDescr: item.rawDescr,
+      adminStatus: item.adminStatus,
+      operStatus: item.operStatus,
+      ipv4: item.ipv4,
+      ipv6: item.ipv6,
+      vlan: vlanId,
+      vrf: item.vrf,
+      source: mapSource(item.source),
+      ifIndex: item.ifIndex,
+      kind: item.kind,
+      parentInterface: item.parentInterface,
+      vlanId: vlanId ?? undefined,
+      encapsulation: item.encapsulation,
+    };
+  });
 }
 
 function discoveryBgpPeers(snapshot: DeviceDiscoverySnapshot): NetopsBgpPeer[] {
@@ -170,6 +174,16 @@ function extractRunningConfig(rawOutputs: Array<{ command?: string; output: stri
   return match?.output?.trim() ?? "";
 }
 
+function parsedSummary(snapshot: DeviceDiscoverySnapshot) {
+  return {
+    bgpPeerCount: snapshot.bgpPeers.length,
+    l2CircuitCount: (snapshot.l2vpn?.l2vcs.length ?? 0) + (snapshot.l2vpn?.vsis.length ?? 0),
+    interfaceCount: snapshot.interfaces.length,
+    vlanCount: snapshot.interfaces.filter((item) => normalizeServiceVlanId(item.vlanId ?? item.vlan) !== null).length,
+    errors: snapshot.warnings.filter((item) => item.level === "error").map((item) => item.message),
+  };
+}
+
 export async function persistSshDiscoveryToNetopsStores(
   deviceId: number,
   snapshot: DeviceDiscoverySnapshot,
@@ -200,13 +214,18 @@ export async function persistSshDiscoveryToNetopsStores(
   });
 
   if (rawConfig) {
+    const summary = parsedSummary(snapshot);
     await db.insert(collectedConfigsTable).values({
       deviceId,
+      source: "ssh_live",
       rawConfig,
       parsedInterfaces: inventory.interfaces.length > 0 ? JSON.stringify(inventory.interfaces) : null,
       parsedBgp: inventory.bgpPeers.length > 0 ? JSON.stringify(inventory.bgpPeers) : null,
       parsedL2vpn: snapshot.l2vpn ? JSON.stringify(snapshot.l2vpn) : null,
       parsedL3vpn: snapshot.vrfs.length > 0 ? JSON.stringify(snapshot.vrfs) : null,
+      parserStatus: summary.errors.length > 0 ? "PARTIAL" : "SUCCESS",
+      parserError: summary.errors.length > 0 ? summary.errors.join("; ") : null,
+      parsedSummaryJson: summary,
     });
   }
 

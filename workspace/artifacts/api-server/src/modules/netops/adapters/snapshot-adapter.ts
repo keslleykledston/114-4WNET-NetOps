@@ -13,6 +13,7 @@ import type {
   NetopsInterface,
   NetopsSnapshotData,
 } from "../types.js";
+import { normalizeServiceVlanId } from "../service-vlan-policy.js";
 
 function parseJsonArray(value: string | null): unknown[] {
   if (!value) return [];
@@ -67,7 +68,7 @@ function normalizeStatus(value: unknown): "up" | "down" | "unknown" {
 
 function extractVlan(name: string): number | null {
   const match = name.match(/\.(\d{1,4})$/);
-  return match ? Number(match[1]) : null;
+  return match ? normalizeServiceVlanId(match[1]) : null;
 }
 
 function normalizeInterfaces(snapshot: SnmpSnapshot): NetopsInterface[] {
@@ -86,8 +87,8 @@ function normalizeInterfaces(snapshot: SnmpSnapshot): NetopsInterface[] {
       kind = extractKind(name);
     }
 
-    let vlanId = numberValue(row["vlanId"]);
-    if (!vlanId) {
+    let vlanId = normalizeServiceVlanId(numberValue(row["vlanId"]) ?? numberValue(row["vlan"]));
+    if (vlanId === null) {
       vlanId = extractVlan(name);
     }
 
@@ -109,7 +110,7 @@ function normalizeInterfaces(snapshot: SnmpSnapshot): NetopsInterface[] {
     if (kind) result.kind = kind as any;
     const parentIfText = text(row["parentInterface"]);
     if (parentIfText) result.parentInterface = parentIfText;
-    if (vlanId) result.vlanId = vlanId;
+    if (vlanId !== null) result.vlanId = vlanId;
     const encapText = text(row["encapsulation"]);
     if (encapText) result.encapsulation = encapText;
 

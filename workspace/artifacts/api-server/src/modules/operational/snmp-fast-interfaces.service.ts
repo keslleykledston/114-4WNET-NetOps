@@ -1,6 +1,8 @@
 import { db, devicesTable, operationalCollectionJobsTable, operationalInterfacesTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { collectSnmpInterfacesOnly, isNetopsSnmpRealEnabled } from "../netops/snmp/collect.js";
+import { collectSnmpInterfacesViaConnector } from "../connectors/connector-snmp-collect.js";
+import { deviceUsesConnector } from "../connectors/connector-execution.service.js";
 import { computeFreshnessStatus, type FreshnessStatus } from "./freshness.js";
 import { mapSnmpInterfaceToOperationalRow } from "./operational-interface-mapper.js";
 import { assertSnmpFastPilotDevice, OperationalPilotError } from "./pilot.js";
@@ -185,7 +187,9 @@ export async function collectSnmpFastInterfaces(
     .returning();
 
   const community = device.snmpCommunity.trim();
-  const payload = await collectSnmpInterfacesOnly(device, community);
+  const payload = deviceUsesConnector(device)
+    ? await collectSnmpInterfacesViaConnector(device, community)
+    : await collectSnmpInterfacesOnly(device, community);
   const collectedAt = new Date(payload.collectedAt);
   const freshnessStatus = computeFreshnessStatus(collectedAt);
 

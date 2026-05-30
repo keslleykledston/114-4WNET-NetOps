@@ -76,6 +76,7 @@ Alteracao permitida:
 ## Discovery UI
 
 - Mostrar discovery como bloco operacional no detalhe do device, usando cards compactos.
+- Acoes de coleta SSH iniciadas pela UI devem tratar `/api/devices/:id/discover` como assíncrono: iniciar, aguardar `discovery-status` sair de `running`, buscar snapshot e so entao exibir resumo.
 - BGP deve consumir dados estruturados da API; nao interpretar CLI nem OID no frontend.
 - Evidence deve aparecer como source/confidence curto, sem payload bruto grande.
 - Alertas de compliance/confianca devem usar `Alert` compacto e manter densidade NOC.

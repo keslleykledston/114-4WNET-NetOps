@@ -1,0 +1,26 @@
+# NetOps Bastion — instalação no host do cliente
+# Executa o connector-agent (fila de jobs) com network_mode: host.
+# Use junto com netops-cli (UI/VPN) ou standalone.
+
+services:
+  netops-connector-agent:
+    build:
+      context: ../../infra/connector-agent
+    container_name: netops-connector-agent
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    env_file:
+      - .env
+    volumes:
+      - ./config:/etc/netops-connector
+      - ./logs:/var/log/netops-connector
+    healthcheck:
+      test: ["CMD", "/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

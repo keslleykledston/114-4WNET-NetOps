@@ -20,13 +20,12 @@ import {
 } from "@/features/l2-circuits/l2-circuits-api";
 import {
   CircuitTypeBadge,
-  FindingsCountBadge,
   FreshnessBadge,
-  NocFindingBadges,
   OperStatusBadge,
   circuitTypeGroup,
   circuitTypeLabel,
 } from "@/features/l2-circuits/l2-circuit-badges";
+import { DeviceCell, FindingsCell, PeerCell } from "@/features/l2-circuits/l2-circuit-table-cells";
 import { L2CircuitDetailSheet } from "@/features/l2-circuits/l2-circuit-detail-sheet";
 import { downloadL2CircuitsCsv } from "@/features/l2-circuits/l2-circuits-export";
 import { L2CircuitsEmptyState } from "@/features/l2-circuits/l2-circuits-empty-state";
@@ -392,34 +391,31 @@ export default function L2Circuits() {
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <CircuitTypeBadge type={circuit.circuitType} />
-                      <FindingsCountBadge findings={circuit.findings} />
-                      <NocFindingBadges findings={circuit.findings} />
+                      <FindingsCell findings={circuit.findings} />
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-1 text-xs font-mono text-muted-foreground">
-                      <span>{circuit.localInterface ?? "—"}</span>
-                      <span>{circuit.peerIp ?? "—"}</span>
+                      <PeerCell circuit={circuit} />
                       <span>{circuitKeyField(circuit)}</span>
-                      <span>{formatTs(circuit.lastSeen)}</span>
+                      <span className="col-span-2">{formatTs(circuit.lastSeen)}</span>
                     </div>
                   </button>
                 ))}
               </div>
 
               <div className="hidden md:block rounded-md border overflow-x-auto">
-                <Table className="min-w-[960px]">
+                <Table className="min-w-[900px] text-sm">
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky left-0 z-10 bg-background">ID</TableHead>
-                      <TableHead>Device</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead className="hidden lg:table-cell">Nome</TableHead>
-                      <TableHead className="hidden xl:table-cell">Interface</TableHead>
-                      <TableHead>VLAN/VC/VSI</TableHead>
-                      <TableHead className="hidden lg:table-cell">Peer</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Findings</TableHead>
-                      <TableHead className="hidden sm:table-cell">Last seen</TableHead>
-                      <TableHead className="w-12" />
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="sticky left-0 z-10 bg-background h-8 px-2 w-14">ID</TableHead>
+                      <TableHead className="h-8 px-2 min-w-[200px]">Device</TableHead>
+                      <TableHead className="h-8 px-2 w-24">Tipo</TableHead>
+                      <TableHead className="hidden lg:table-cell h-8 px-2 min-w-[120px]">Nome</TableHead>
+                      <TableHead className="h-8 px-2 w-28">VLAN/VC/VSI</TableHead>
+                      <TableHead className="h-8 px-2 min-w-[150px]">Peer</TableHead>
+                      <TableHead className="h-8 px-2 w-24">Status</TableHead>
+                      <TableHead className="h-8 px-2 min-w-[160px]">Findings</TableHead>
+                      <TableHead className="hidden sm:table-cell h-8 px-2 w-36">Last seen</TableHead>
+                      <TableHead className="h-8 w-10 px-1" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -429,38 +425,36 @@ export default function L2Circuits() {
                         className={`cursor-pointer ${nocRowClass(circuit)}`}
                         onClick={() => openDetail(circuit)}
                       >
-                        <TableCell className="sticky left-0 z-10 bg-inherit font-mono text-xs">#{circuit.id}</TableCell>
-                        <TableCell>
-                          <div className="text-sm truncate max-w-[120px]" title={deviceNameById.get(circuit.deviceId)}>
-                            {deviceNameById.get(circuit.deviceId) ?? "—"}
-                          </div>
-                          <div className="text-xs text-muted-foreground">ID {circuit.deviceId}</div>
+                        <TableCell className="sticky left-0 z-10 bg-inherit font-mono text-xs py-1 px-2">
+                          #{circuit.id}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-1 px-2">
+                          <DeviceCell hostname={deviceNameById.get(circuit.deviceId)} />
+                        </TableCell>
+                        <TableCell className="py-1 px-2">
                           <CircuitTypeBadge type={circuit.circuitType} />
                         </TableCell>
-                        <TableCell className="hidden lg:table-cell max-w-[160px] truncate" title={circuit.name}>
+                        <TableCell className="hidden lg:table-cell py-1 px-2 max-w-[180px] truncate" title={circuit.name}>
                           {circuit.name}
                         </TableCell>
-                        <TableCell className="hidden xl:table-cell font-mono text-xs max-w-[140px] truncate" title={circuit.localInterface ?? ""}>
-                          {circuit.localInterface ?? "—"}
+                        <TableCell className="font-mono text-xs py-1 px-2">{circuitKeyField(circuit)}</TableCell>
+                        <TableCell className="py-1 px-2">
+                          <PeerCell circuit={circuit} />
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{circuitKeyField(circuit)}</TableCell>
-                        <TableCell className="hidden lg:table-cell font-mono text-xs">{circuit.peerIp ?? "—"}</TableCell>
-                        <TableCell>
+                        <TableCell className="py-1 px-2">
                           <OperStatusBadge status={circuit.operStatus} />
                         </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <FindingsCountBadge findings={circuit.findings} />
-                            <NocFindingBadges findings={circuit.findings} />
-                          </div>
+                        <TableCell className="py-1 px-2 align-top">
+                          <FindingsCell findings={circuit.findings} />
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell text-xs whitespace-nowrap">{formatTs(circuit.lastSeen)}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs whitespace-nowrap py-1 px-2">
+                          {formatTs(circuit.lastSeen)}
+                        </TableCell>
+                        <TableCell className="py-1 px-1">
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-7 w-7"
                             onClick={(e) => {
                               e.stopPropagation();
                               openDetail(circuit);

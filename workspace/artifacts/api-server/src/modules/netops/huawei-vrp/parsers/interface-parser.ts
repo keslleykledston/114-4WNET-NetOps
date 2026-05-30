@@ -1,5 +1,6 @@
 import type { NetopsInterface } from "../../types.js";
 import { isHuaweiInterfaceName } from "../../../compliance/interface-identifiers.js";
+import { normalizeServiceVlanId } from "../../service-vlan-policy.js";
 
 function normalizeStatus(value: string | undefined): NetopsInterface["operStatus"] {
   const normalized = value?.toLowerCase();
@@ -10,7 +11,7 @@ function normalizeStatus(value: string | undefined): NetopsInterface["operStatus
 
 function extractVlan(name: string): number | null {
   const match = name.match(/\.(\d{1,4})$/);
-  return match ? Number(match[1]) : null;
+  return match ? normalizeServiceVlanId(match[1]) : null;
 }
 
 function inferKind(name: string): NetopsInterface["kind"] {
@@ -71,9 +72,21 @@ export function parseHuaweiInterfaces(output: string): NetopsInterface[] {
       continue;
     }
     if (current && /^encapsulation\s+dot1q\s+(\d+)/i.test(trimmed)) {
-      const vlan = Number(trimmed.match(/^encapsulation\s+dot1q\s+(\d+)/i)?.[1]);
-      current.vlanId = Number.isFinite(vlan) ? vlan : current.vlanId;
-      current.encapsulation = `dot1q ${current.vlanId}`;
+      const vlan = normalizeServiceVlanId(trimmed.match(/^encapsulation\s+dot1q\s+(\d+)/i)?.[1]);
+      if (vlan !== null) {
+        current.vlanId = vlan;
+        current.vlan = current.vlan ?? vlan;
+        current.encapsulation = `dot1q ${vlan}`;
+      }
+      continue;
+    }
+    if (current && /^vlan-type\s+dot1q\s+(\d+)/i.test(trimmed)) {
+      const vlan = normalizeServiceVlanId(trimmed.match(/^vlan-type\s+dot1q\s+(\d+)/i)?.[1]);
+      if (vlan !== null) {
+        current.vlanId = vlan;
+        current.vlan = current.vlan ?? vlan;
+        current.encapsulation = `dot1q ${vlan}`;
+      }
       continue;
     }
     if (current && /^encapsulation\s+qinq\s+vlan\s+(\d+)\s+to\s+(\d+)/i.test(trimmed)) {

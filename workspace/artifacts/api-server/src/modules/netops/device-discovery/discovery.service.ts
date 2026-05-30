@@ -1,8 +1,9 @@
 import type { DeviceDiscoveryRequest, DeviceDiscoverySnapshot, DiscoveryStatus, DiscoveryWarning } from "./discovery.types.js";
 import { collectionOrchestrator } from "./discovery.orchestrator.js";
 import { rawEvidenceStore } from "./evidence/evidence-store.js";
-import { bgpPeerRoleOverridesTable, db, snmpSnapshotsTable } from "@workspace/db";
+import { bgpPeerRoleOverridesTable, db, devicesTable, snmpSnapshotsTable } from "@workspace/db";
 import { desc, eq as ormEq } from "drizzle-orm";
+import { logAuditEvent } from "../../../lib/audit.js";
 import { normalizeDiscoveryBgpPeers, primaryDirectionForRole } from "./normalizers/bgp.normalizer.js";
 import { snapshotToNetopsData } from "../adapters/snapshot-adapter.js";
 
@@ -45,8 +46,68 @@ export function normalizeDiscoveryRequest(body: unknown): DeviceDiscoveryRequest
   };
 }
 
+export async function assertDeviceExists(deviceId: number) {
+  const [device] = await db.select({ id: devicesTable.id }).from(devicesTable).where(ormEq(devicesTable.id, deviceId)).limit(1);
+  return device ?? null;
+}
+
 export async function runDeviceDiscovery(deviceId: number, request: DeviceDiscoveryRequest) {
   return collectionOrchestrator.run(deviceId, request);
+}
+
+export async function getDiscoveryRunStatus(deviceId: number) {
+  const run = await rawEvidenceStore.getLatestPersistentRun(deviceId);
+  if (!run) {
+    return { deviceId, status: "idle" as const, runId: null, finishedAt: null, summary: null };
+  }
+  return {
+    deviceId,
+    status: run.status as "running" | "full" | "partial" | "fallback" | "cached" | "failed" | "idle",
+    runId: run.id,
+    finishedAt: run.finishedAt?.toISOString() ?? null,
+    summary: run.summaryJson as Record<string, unknown> | null,
+    sshStatus: run.sshStatus,
+    snmpStatus: run.snmpStatus,
+  };
+}
+
+export function enqueueDeviceDiscovery(
+  deviceId: number,
+  request: DeviceDiscoveryRequest,
+  audit?: { sourceIp?: string | null },
+): void {
+  setImmediate(() => {
+    void (async () => {
+      try {
+        const snapshot = await runDeviceDiscovery(deviceId, request);
+        if (!snapshot) return;
+        await logAuditEvent({
+          action: "discover",
+          objectType: "device",
+          objectId: String(deviceId),
+          metadata: {
+            contexts: snapshot.contexts,
+            status: snapshot.status,
+            sourcesUsed: snapshot.sourcesUsed,
+            warnings: snapshot.warnings.length,
+            async: true,
+          },
+          sourceIp: audit?.sourceIp ?? undefined,
+        });
+      } catch (error) {
+        const run = await rawEvidenceStore.getLatestPersistentRun(deviceId);
+        if (run?.status === "running") {
+          const { discoveryRunsTable, db } = await import("@workspace/db");
+          const { eq } = await import("drizzle-orm");
+          await db.update(discoveryRunsTable).set({
+            status: "failed",
+            finishedAt: new Date(),
+            sshMessage: error instanceof Error ? error.message : String(error),
+          }).where(eq(discoveryRunsTable.id, run.id));
+        }
+      }
+    })();
+  });
 }
 
 async function getLatestSnmpBgpPeers(deviceId: number) {

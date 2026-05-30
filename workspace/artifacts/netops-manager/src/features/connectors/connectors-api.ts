@@ -38,6 +38,7 @@ export type ConnectorDetail = ConnectorListItem & {
 export type ConnectorCreateResult = ConnectorDetail & {
   connector_token: string;
   wireguard_config_preview: string;
+  reprovisioned?: boolean;
 };
 
 export type Tenant = {
@@ -83,12 +84,27 @@ export function revokeConnector(id: number) {
   return apiFetch<ConnectorDetail>(`/api/connectors/${id}/revoke`, { method: "POST" });
 }
 
+export async function deleteConnector(id: number): Promise<void> {
+  const response = await fetch(`/api/connectors/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error ?? `Request failed (${response.status})`);
+  }
+}
+
 export function getWireGuardConfig(id: number) {
   return apiFetch<{ config: string; wireguard_ip: string | null }>(`/api/connectors/${id}/wireguard/config`);
 }
 
 export function listConnectorJobs(id: number) {
   return apiFetch<Array<Record<string, unknown>>>(`/api/connectors/${id}/jobs`);
+}
+
+export function getConnectorJob(connectorId: number, jobId: number) {
+  return apiFetch<Record<string, unknown>>(`/api/connectors/${connectorId}/jobs/${jobId}`);
 }
 
 export function createDiagnosticJob(

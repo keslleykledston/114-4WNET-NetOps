@@ -33,6 +33,7 @@ const router: IRouter = Router();
 router.use(requestContextMiddleware);
 router.use(healthRouter);
 router.use(authRouter);
+router.use(connectorAgentRouter);
 router.use(authorizeRequest);
 router.use(usersRouter);
 router.use(devicesRouter);

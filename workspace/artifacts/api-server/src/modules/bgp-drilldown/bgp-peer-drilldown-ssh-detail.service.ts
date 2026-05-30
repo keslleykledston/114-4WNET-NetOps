@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db, devicesTable } from "@workspace/db";
-import { decrypt } from "../../lib/crypto.js";
 import { env } from "../../lib/env.js";
-import { runSSHCommands } from "../../lib/ssh.js";
+import { runSSHCommandsForDevice } from "../connectors/connector-aware-transport.js";
 import { getBgpPeerDrilldown } from "./bgp-peer-drilldown.service.js";
 import {
   BGP_DRILLDOWN_SSH_DETAIL_DISABLED,
@@ -43,16 +42,7 @@ export async function getBgpPeerSshDetail(
   const { commands, warnings } = buildSshDetailCommands(drilldown, request);
   if (commands.length === 0) return "no_commands";
 
-  const password = decrypt(device.passwordEncrypted);
-  const results = await runSSHCommands(
-    {
-      host: device.ipAddress,
-      port: device.sshPort ?? 22,
-      username: device.username,
-      password,
-    },
-    commands,
-    {
+  const results = await runSSHCommandsForDevice(device, commands, {
       sessionTimeoutMs: 120000,
       commandTimeoutMs: 30000,
       setupTimeoutMs: 10000,

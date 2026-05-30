@@ -76,7 +76,7 @@ export async function discoverL2CircuitsHandler(req: Request, res: Response) {
       started_at: startedAt.toISOString(),
     });
 
-    runL2DiscoveryJob(deviceId, runId, sshConfig).catch((error) => {
+    runL2DiscoveryJob(deviceId, runId, device).catch((error) => {
       console.error(`L2 circuit discovery failed for device ${deviceId} run ${runId}:`, error instanceof Error ? error.message : error);
     });
   } catch (error) {

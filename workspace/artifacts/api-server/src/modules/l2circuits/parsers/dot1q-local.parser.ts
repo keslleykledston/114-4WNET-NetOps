@@ -1,5 +1,6 @@
 import type { L2DeviceRoleFamily, ParsedL2Circuit } from "../l2circuits.types.js";
 import { truncateL2Evidence } from "../redact-l2-output.js";
+import { normalizeServiceVlanId } from "../../netops/service-vlan-policy.js";
 import type { ParserContext } from "./classification.helpers.js";
 import { buildL3RoleContext, hasL3ServiceEvidence, type L3EvidenceSnapshot } from "./l3-evidence.helpers.js";
 
@@ -39,8 +40,8 @@ export function parseVlanLocalCircuits(
   for (const block of blocks) {
     if (block.outerVlan === undefined && !block.isVlanif) continue;
 
-    const vlanId = block.outerVlan ?? extractVlanifId(block.interfaceName);
-    if (vlanId === undefined) continue;
+    const vlanId = normalizeServiceVlanId(block.outerVlan ?? extractVlanifId(block.interfaceName));
+    if (vlanId === null) continue;
 
     const dedupeKey = `${block.interfaceName}\0${vlanId}`;
     if (seen.has(dedupeKey)) continue;
@@ -214,9 +215,9 @@ export function parseConfigInterfaceBlocks(output: string): ConfigInterfaceBlock
       const content = line.trim();
       const dot1qMatch = content.match(/^vlan-type\s+dot1q\s+(\d+)(?:\s+second-dot1q\s+(\d+))?/i);
       if (dot1qMatch) {
-        outerVlan = parseInt(dot1qMatch[1], 10);
+        outerVlan = normalizeServiceVlanId(dot1qMatch[1]) ?? undefined;
         if (dot1qMatch[2]) {
-          innerVlan = parseInt(dot1qMatch[2], 10);
+          innerVlan = normalizeServiceVlanId(dot1qMatch[2]) ?? undefined;
         }
       } else if (content.match(/^description\s+/i)) {
         description = content.replace(/^description\s+/i, "").trim();
@@ -368,18 +369,20 @@ function extractVsiName(description?: string): string | undefined {
 
 function extractVlanifId(interfaceName: string): number | undefined {
   const match = interfaceName.match(/^Vlanif(\d+)$/i);
-  return match ? parseInt(match[1], 10) : undefined;
+  return normalizeServiceVlanId(match?.[1]) ?? undefined;
 }
 
 function countReferencedVlans(blocks: ConfigInterfaceBlock[], context?: Partial<ParserContext>): Map<number, number> {
   const counts = new Map<number, number>();
   for (const block of blocks) {
-    const vlan = block.outerVlan ?? extractVlanifId(block.interfaceName);
-    if (vlan === undefined) continue;
+    const vlan = normalizeServiceVlanId(block.outerVlan ?? extractVlanifId(block.interfaceName));
+    if (vlan === null) continue;
     counts.set(vlan, (counts.get(vlan) ?? 0) + 1);
   }
   for (const vlan of context?.switchingVlans ?? []) {
-    counts.set(vlan, (counts.get(vlan) ?? 0) + 1);
+    const normalized = normalizeServiceVlanId(vlan);
+    if (normalized === null) continue;
+    counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
   }
   return counts;
 }

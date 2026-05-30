@@ -1,5 +1,6 @@
 import type { L2DeviceRoleFamily, L2VsiPeer, ParsedL2Circuit } from "../l2circuits.types.js";
 import { truncateL2Evidence } from "../redact-l2-output.js";
+import { normalizeServiceVlanId } from "../../netops/service-vlan-policy.js";
 import { addPseudowireEvidence, addVsiEvidence } from "./classification.helpers.js";
 import { applyVsiMultipointToParsed } from "./vsi-multipoint.helpers.js";
 
@@ -55,7 +56,7 @@ export function parseS6730MplsL2vc(output: string, role: L2DeviceRoleFamily = "S
     });
 
     const outerVlan =
-      circuitType === "vpws" && vcId && /^\d+$/.test(vcId) ? parseInt(vcId, 10) : undefined;
+      circuitType === "vpws" && vcId && /^\d+$/.test(vcId) ? normalizeServiceVlanId(vcId) ?? undefined : undefined;
 
     circuits.push(addPseudowireEvidence({
       circuitType,

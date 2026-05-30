@@ -3769,6 +3769,16 @@ components:
           type: ["integer", "null"]
         hostname:
           type: ["string", "null"]
+        configCollect:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [queued, failed]
+            jobId:
+              type: integer
+            message:
+              type: string
 
     CountByKey:
       type: object
@@ -4818,6 +4828,7 @@ components:
             type: string
         vlan:
           type: ["integer", "null"]
+          description: Service VLAN only. Default/reserved VLAN 1 is normalized to null.
         vrf:
           type: ["string", "null"]
         source:
@@ -4832,6 +4843,7 @@ components:
           type: string
         vlanId:
           type: integer
+          description: Service VLAN only. Default/reserved VLAN 1 is omitted.
         encapsulation:
           type: string
 

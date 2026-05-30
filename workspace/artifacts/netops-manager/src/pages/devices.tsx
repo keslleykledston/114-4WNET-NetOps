@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useListDevices, useCreateDevice, useUpdateDevice, getListDevicesQueryKey, getGetDeviceQueryKey, useTestDeviceConnection, useDeleteDevice } from "@workspace/api-client-react";
-import type { DeviceInput, DeviceUpdate } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import type { Device, DeviceInput, DeviceUpdate } from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { listConnectors } from "@/features/connectors/connectors-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +14,31 @@ import { Link } from "wouter";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
 import { DeviceImportModal } from "@/features/devices/device-import-modal";
 
+type ConnectionTestResponse = {
+  success: boolean;
+  message: string;
+  latencyMs?: number | null;
+  hostname?: string | null;
+  configCollect?: {
+    correlationId?: string;
+    sshConfigBundle?: { status: "queued" | "failed"; jobId?: number; message?: string };
+    snmpFast?: { status: "queued" | "skipped" | "failed"; message?: string };
+  };
+};
+
 export default function Devices() {
   const [search, setSearch] = useState("");
   const { data: devices, isLoading } = useListDevices();
+  const connectorsQuery = useQuery({ queryKey: ["connectors"], queryFn: listConnectors });
   const queryClient = useQueryClient();
+
+  type DeviceRow = Device & {
+    connectorId?: number | null;
+    connectorName?: string | null;
+    tenantId?: number | null;
+    tenantName?: string | null;
+    accessMode?: "connector" | "direct";
+  };
   const { toast } = useToast();
 
   const createDevice = useCreateDevice();
@@ -30,7 +52,7 @@ export default function Devices() {
   const editingDevice = devices?.find((device) => device.id === editingDeviceId) ?? null;
 
   const handleCreate = (values: DeviceFormValues) => {
-    const payload: DeviceInput = {
+    const payload: DeviceInput & { connectorId?: number | null } = {
       hostname: values.hostname,
       ipAddress: values.ipAddress,
       vendor: values.vendor,
@@ -41,9 +63,10 @@ export default function Devices() {
       sshPort: values.sshPort,
       role: values.role || undefined,
       snmpCommunity: values.snmpCommunity || undefined,
+      connectorId: values.connectorId ? Number(values.connectorId) : null,
     };
 
-    createDevice.mutate({ data: payload }, {
+    createDevice.mutate({ data: payload as DeviceInput }, {
       onSuccess: async (newDevice: any) => {
         toast({ title: "Testando conectividade..." });
 
@@ -59,6 +82,17 @@ export default function Devices() {
 
           if (testResult.status === "active") {
             toast({ title: "Dispositivo adicionado — SSH e SNMP OK" });
+          } else if (testResult.ssh?.success && testResult.configCollect?.sshConfigBundle?.status === "queued") {
+            toast({
+              title: "Dispositivo adicionado — SSH OK — coleta completa enfileirada",
+              description: testResult.ssh.message,
+            });
+          } else if (testResult.ssh?.success && testResult.configCollect?.sshConfigBundle?.status === "failed") {
+            toast({
+              title: "SSH acessível, porém backup/coleta falhou",
+              description: testResult.configCollect.sshConfigBundle.message ?? testResult.ssh.message,
+              variant: "destructive",
+            });
           } else if (testResult.status === "pending") {
             const working = testResult.ssh?.success ? "SSH" : "SNMP";
             const failing = testResult.ssh?.success ? "SNMP" : "SSH";
@@ -88,7 +122,7 @@ export default function Devices() {
   const handleUpdate = (values: DeviceFormValues) => {
     if (!editingDevice) return;
 
-    const payload: DeviceUpdate = {
+    const payload: DeviceUpdate & { connectorId?: number | null } = {
       hostname: values.hostname,
       ipAddress: values.ipAddress,
       vendor: values.vendor,
@@ -98,13 +132,14 @@ export default function Devices() {
       sshPort: values.sshPort,
       role: values.role || "",
       snmpCommunity: values.snmpCommunity,
+      connectorId: values.connectorId ? Number(values.connectorId) : null,
     };
 
     if (values.password.trim().length > 0) {
       payload.password = values.password;
     }
 
-    updateDevice.mutate({ id: editingDevice.id, data: payload }, {
+    updateDevice.mutate({ id: editingDevice.id, data: payload as DeviceUpdate }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDeviceQueryKey(editingDevice.id) });
@@ -131,11 +166,28 @@ export default function Devices() {
   const handleTestConnection = (id: number) => {
     toast({ title: "Validando conexão SSH..." });
     testConnection.mutate({ id }, {
-      onSuccess: (res) => {
-        toast({ 
-          title: res.success ? "Conexão SSH OK" : "Falha na conexão SSH", 
+      onSuccess: (res: ConnectionTestResponse) => {
+        if (res.success && res.configCollect?.sshConfigBundle?.status === "queued") {
+          toast({
+            title: "SSH OK — coleta completa enfileirada",
+            description: res.configCollect.snmpFast?.status === "queued"
+              ? "SNMP_FAST enfileirado"
+              : res.message,
+          });
+          return;
+        }
+        if (res.success && res.configCollect?.sshConfigBundle?.status === "failed") {
+          toast({
+            title: "SSH acessível, porém backup/coleta falhou",
+            description: res.configCollect.sshConfigBundle.message ?? res.message,
+            variant: "destructive",
+          });
+          return;
+        }
+        toast({
+          title: res.success ? "Conexão SSH OK" : "Falha na conexão SSH",
           description: res.message,
-          variant: res.success ? "default" : "destructive"
+          variant: res.success ? "default" : "destructive",
         });
       }
     });
@@ -219,6 +271,7 @@ export default function Devices() {
                 <TableHead>IP Address</TableHead>
                 <TableHead>Vendor / OS</TableHead>
                 <TableHead>Site</TableHead>
+                <TableHead>Tenant / Acesso</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -226,56 +279,83 @@ export default function Devices() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">Loading devices...</TableCell>
+                  <TableCell colSpan={7} className="text-center py-8">Loading devices...</TableCell>
                 </TableRow>
               ) : filteredDevices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     <SearchX className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     No devices found matching your search.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredDevices.map(device => (
-                  <TableRow key={device.id}>
-                    <TableCell className="font-medium">
-                      <Link href={`/devices/${device.id}`} className="hover:underline text-primary">
-                        {device.hostname}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">{device.ipAddress}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="capitalize">{device.vendor}</span>
-                        <Badge variant="outline" className="text-[10px] uppercase">{device.platform}</Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell>{device.site}</TableCell>
-                    <TableCell>
-                      <Badge variant={device.status === 'active' ? 'default' : device.status === 'unreachable' ? 'destructive' : 'secondary'}
-                        className={device.status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : ''}
-                      >
-                        {device.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleTestConnection(device.id)} title="Test Connection">
-                        <Activity className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setEditingDeviceId(device.id)} title="Edit Device">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Link href={`/devices/${device.id}`}>
-                        <Button variant="ghost" size="icon" title="View Details">
-                          <TerminalSquare className="h-4 w-4" />
+                filteredDevices.map((device) => {
+                  const row = device as DeviceRow;
+                  const tenantLabel =
+                    row.tenantName ??
+                    (row.connectorId
+                      ? connectorsQuery.data?.find((c) => c.id === row.connectorId)?.tenant_name
+                      : null);
+                  const accessLabel =
+                    row.accessMode === "connector"
+                      ? row.connectorName
+                        ? `Via ${row.connectorName}`
+                        : "Via connector"
+                      : "Direto";
+
+                  return (
+                    <TableRow key={device.id}>
+                      <TableCell className="font-medium">
+                        <Link href={`/devices/${device.id}`} className="hover:underline text-primary">
+                          {device.hostname}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">{device.ipAddress}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="capitalize">{device.vendor}</span>
+                          <Badge variant="outline" className="text-[10px] uppercase">{device.platform}</Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>{device.site}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          {tenantLabel ? (
+                            <span className="text-sm font-medium">{tenantLabel}</span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                          <Badge variant="outline" className="w-fit text-[10px]">
+                            {accessLabel}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={device.status === 'active' ? 'default' : device.status === 'unreachable' ? 'destructive' : 'secondary'}
+                          className={device.status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' : ''}
+                        >
+                          {device.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleTestConnection(device.id)} title="Test Connection">
+                          <Activity className="h-4 w-4" />
                         </Button>
-                      </Link>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(device.id)} title="Delete">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                        <Button variant="ghost" size="icon" onClick={() => setEditingDeviceId(device.id)} title="Edit Device">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Link href={`/devices/${device.id}`}>
+                          <Button variant="ghost" size="icon" title="View Details">
+                            <TerminalSquare className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(device.id)} title="Delete">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

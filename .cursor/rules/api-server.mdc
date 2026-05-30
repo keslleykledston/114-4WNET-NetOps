@@ -1,0 +1,31 @@
+---
+description: API server Express module conventions
+globs: workspace/artifacts/api-server/**/*.ts
+alwaysApply: false
+---
+
+# API Server Conventions
+
+## Layout
+
+- Routes: `*.routes.ts` → controller → service
+- Feature gates: `*.gate.ts`, `modules/operational/pilot.ts`
+- Register in `src/routes/index.ts`
+
+## Patterns
+
+- ESM imports with `.js` extension in TS source
+- Operational errors: class + `statusCode` (403 pilot, 503 disabled)
+- SSH: `validateReadonlyCommand` before execute
+- DB: `@workspace/db` Drizzle tables
+
+## Env
+
+Check `lib/env.ts` and module gates before enabling runtime collection.
+
+## After changes
+
+```bash
+cd workspace/artifacts/api-server && npx tsc --noEmit
+docker compose build api && docker compose up -d api
+```

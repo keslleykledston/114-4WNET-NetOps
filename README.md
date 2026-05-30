@@ -15,6 +15,8 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 ## Documentação
 
 - Status funcional e pendências: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
+- **Documentação para IA (agentes/skills):** [docs/ai/README.md](docs/ai/README.md)
+- Contexto agente (raiz): [AGENTS.md](AGENTS.md)
 - Plano de fechamento do MVP: [docs/MVP_CLOSURE_PLAN.md](docs/MVP_CLOSURE_PLAN.md)
 - RBAC local e auth: [docs/RBAC_MODEL.md](docs/RBAC_MODEL.md)
 - Setup local de auth: [docs/AUTH_LOCAL_SETUP.md](docs/AUTH_LOCAL_SETUP.md)

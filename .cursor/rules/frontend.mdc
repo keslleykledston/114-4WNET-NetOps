@@ -1,0 +1,31 @@
+---
+description: Frontend netops-manager React/shadcn patterns
+globs: workspace/artifacts/netops-manager/**/*.{tsx,ts}
+alwaysApply: false
+---
+
+# Frontend Conventions
+
+## Layout
+
+- Pages: `src/pages/` — thin, compose features
+- Logic: `src/features/<domain>/`
+- shadcn: `src/components/ui/`
+
+## Data
+
+- Prefer `@workspace/api-client-react` when endpoint is in OpenAPI
+- L2 uses `features/l2-circuits/l2-circuits-api.ts`
+
+## UX
+
+- Follow `docs/frontend/UX_GUARDRAILS.md`
+- Dark theme default; match existing badge/table patterns
+- Wouter routes in `App.tsx`
+
+## After changes
+
+```bash
+cd workspace/artifacts/netops-manager && npx tsc --noEmit
+docker compose build web && docker compose up -d web
+```

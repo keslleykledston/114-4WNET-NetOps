@@ -1,0 +1,29 @@
+---
+description: L2 Circuits module — parsers, refresh, findings
+globs: workspace/artifacts/api-server/src/modules/l2circuits/**/*
+alwaysApply: false
+---
+
+# L2 Circuits Module
+
+## Skill
+
+Use `.cursor/skills/l2-circuits-ops/SKILL.md` for operational work.
+
+## Critical behavior
+
+- Refresh: UPDATE only + `OPERATIONAL_STALE`; no row delete
+- VSI multipoint: `PARTIAL` + `PW_PARTIAL_DOWN` when mixed peers
+- Circuit key for VSI: no `peerIp` in key
+- GET list: respect persisted findings after operational refresh
+
+## Tests
+
+```bash
+node tools/l2-circuit-huawei-vsi-selftest.mjs
+node tools/l2-s6730-parser-selftest.mjs
+```
+
+## Flags
+
+`L2_DISCOVER_SSH_ENABLED`, `L2_OPERATIONAL_REFRESH_ENABLED`, `SNMP_FAST_PILOT_DEVICE_IDS`

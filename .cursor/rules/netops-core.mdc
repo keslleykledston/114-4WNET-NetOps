@@ -1,0 +1,34 @@
+---
+description: Core NetOps project rules — safety, structure, commands
+alwaysApply: true
+---
+
+# NetOps Core Rules
+
+Read `AGENTS.md` and `docs/ai/README.md` at session start for large tasks.
+
+## Safety
+
+- No `docker compose down -v`, DB reset, or force push without explicit user approval
+- No secrets in commits or logs
+- `CONFIG_APPLY_ENABLED` stays false unless user requests production apply
+- No SNMP/SSH/discovery on real devices with feature flags OFF
+
+## Structure
+
+- App code: `workspace/artifacts/`
+- Docs for AI: `docs/ai/`
+- Tests: `tools/*.mjs`
+- Do not use `workspace/client` — use `netops-manager`
+
+## Commands
+
+```bash
+cd workspace && pnpm run typecheck
+docker compose up --build -d
+tools/apply-containers.sh api web
+```
+
+## Commits
+
+Only when user explicitly asks.

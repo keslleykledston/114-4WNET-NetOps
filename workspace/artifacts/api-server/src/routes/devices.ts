@@ -8,7 +8,7 @@ import { testSSHConnection } from "../lib/ssh.js";
 import { collectSnmpSnapshot } from "../lib/snmp.js";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 import { requirePermission } from "../lib/auth.js";
-import { connectorsTable, tenantsTable } from "@workspace/db";
+import { connectorGroupsTable, connectorsTable, tenantsTable } from "@workspace/db";
 import { runDeviceDiagnostics } from "../modules/connectors/device-diagnostics.service.js";
 import {
   deviceUsesConnector,
@@ -18,11 +18,13 @@ import {
   executeTcpCheck,
   ConnectorOfflineError,
   ConnectorJobTimeoutError,
+  resolveDeviceConnectorContext,
 } from "../modules/connectors/connector-execution.service.js";
 import {
   enqueuePostSshSuccessCollections,
   type PostSshCollectResult,
 } from "../modules/connectors/connector-auto-collect.service.js";
+import { resolveLegacyDeviceCredentialContext } from "../modules/credentials/credential-vault.resolver.js";
 import { getDeviceCollectionStatus } from "../modules/config-backup/config-bundle-parser.service.js";
 import { enqueueDeviceDiscovery } from "../modules/netops/device-discovery/discovery.service.js";
 import {
@@ -113,30 +115,80 @@ const upload = multer({
 
 type ConnectorAccessMeta = {
   connectorName: string | null;
+  connectorGroupId: number | null;
+  connectorGroupName: string | null;
+  connectorGroupStrategy: string | null;
   tenantId: number | null;
   tenantName: string | null;
 };
 
-function publicDevice<T extends { lastSeen?: Date | null; createdAt: Date; updatedAt: Date; connectorId?: number | null }>(
+function publicDevice<T extends {
+  lastSeen?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  connectorId?: number | null;
+  connectorGroupId?: number | null;
+  snmpCommunity?: string | null;
+}>(
   device: T,
   access?: ConnectorAccessMeta | null,
 ) {
   return {
-    ...device,
     connectorId: device.connectorId ?? null,
+    connectorGroupId: device.connectorGroupId ?? null,
+    snmpCommunity: null,
+    id: (device as T & { id: number }).id,
+    hostname: (device as T & { hostname: string }).hostname,
+    ipAddress: (device as T & { ipAddress: string }).ipAddress,
+    vendor: (device as T & { vendor: string }).vendor,
+    platform: (device as T & { platform: string }).platform,
+    sshPort: (device as T & { sshPort: number }).sshPort,
+    username: (device as T & { username: string }).username,
+    site: (device as T & { site: string }).site,
+    role: (device as T & { role?: string | null }).role ?? null,
+    groupId: (device as T & { groupId?: number | null }).groupId ?? null,
+    status: (device as T & { status: string }).status ?? "unknown",
     connectorName: access?.connectorName ?? null,
+    connectorGroupName: access?.connectorGroupName ?? null,
+    connectorGroupStrategy: access?.connectorGroupStrategy ?? null,
     tenantId: access?.tenantId ?? null,
     tenantName: access?.tenantName ?? null,
-    accessMode: device.connectorId ? "connector" : "direct",
+    netboxDeviceId: (device as T & { netboxDeviceId?: number | null }).netboxDeviceId ?? null,
+    accessMode: device.connectorGroupId ? "connector_group" : device.connectorId ? "connector" : "direct",
     lastSeen: device.lastSeen?.toISOString() ?? null,
     createdAt: device.createdAt.toISOString(),
     updatedAt: device.updatedAt.toISOString(),
   };
 }
 
-async function resolveConnectorAccess(connectorId: number | null | undefined): Promise<ConnectorAccessMeta> {
+async function resolveConnectorAccess(
+  connectorId: number | null | undefined,
+  connectorGroupId: number | null | undefined,
+): Promise<ConnectorAccessMeta> {
+  if (connectorGroupId) {
+    const [row] = await db
+      .select({
+        connectorGroupId: connectorGroupsTable.id,
+        connectorGroupName: connectorGroupsTable.name,
+        connectorGroupStrategy: connectorGroupsTable.strategy,
+        tenantId: connectorGroupsTable.tenantId,
+        tenantName: tenantsTable.name,
+      })
+      .from(connectorGroupsTable)
+      .innerJoin(tenantsTable, eq(connectorGroupsTable.tenantId, tenantsTable.id))
+      .where(eq(connectorGroupsTable.id, connectorGroupId))
+      .limit(1);
+    return {
+      connectorName: null,
+      connectorGroupId: row?.connectorGroupId ?? connectorGroupId,
+      connectorGroupName: row?.connectorGroupName ?? null,
+      connectorGroupStrategy: row?.connectorGroupStrategy ?? null,
+      tenantId: row?.tenantId ?? null,
+      tenantName: row?.tenantName ?? null,
+    };
+  }
   if (!connectorId) {
-    return { connectorName: null, tenantId: null, tenantName: null };
+    return { connectorName: null, connectorGroupId: null, connectorGroupName: null, connectorGroupStrategy: null, tenantId: null, tenantName: null };
   }
   const [row] = await db
     .select({
@@ -150,21 +202,38 @@ async function resolveConnectorAccess(connectorId: number | null | undefined): P
     .limit(1);
   return {
     connectorName: row?.connectorName ?? null,
+    connectorGroupId: null,
+    connectorGroupName: null,
+    connectorGroupStrategy: null,
     tenantId: row?.tenantId ?? null,
     tenantName: row?.tenantName ?? null,
   };
 }
 
-async function enrichDeviceResponse<T extends { connectorId?: number | null; lastSeen?: Date | null; createdAt: Date; updatedAt: Date }>(
+async function enrichDeviceResponse<T extends {
+  connectorId?: number | null;
+  connectorGroupId?: number | null;
+  lastSeen?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}>(
   device: T,
 ) {
-  const access = await resolveConnectorAccess(device.connectorId);
+  const access = await resolveConnectorAccess(device.connectorId, device.connectorGroupId);
   return publicDevice(device, access);
 }
 
 function parseConnectorId(body: Record<string, unknown>): number | null | undefined {
   if (!("connectorId" in body)) return undefined;
   const value = body.connectorId;
+  if (value === null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseConnectorGroupId(body: Record<string, unknown>): number | null | undefined {
+  if (!("connectorGroupId" in body)) return undefined;
+  const value = body.connectorGroupId;
   if (value === null || value === "") return null;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -184,6 +253,7 @@ router.get("/devices", async (req, res) => {
     role: devicesTable.role,
     groupId: devicesTable.groupId,
     connectorId: devicesTable.connectorId,
+    connectorGroupId: devicesTable.connectorGroupId,
     netboxDeviceId: devicesTable.netboxDeviceId,
     lastSeen: devicesTable.lastSeen,
     status: devicesTable.status,
@@ -212,11 +282,13 @@ router.post("/devices", async (req, res) => {
   }
   const { password, ...rest } = parsed.data;
   const connectorId = parseConnectorId(req.body as Record<string, unknown>);
+  const connectorGroupId = parseConnectorGroupId(req.body as Record<string, unknown>);
   const [device] = await db.insert(devicesTable).values({
     ...rest,
     sshPort: rest.sshPort ?? 22,
     snmpCommunity: rest.snmpCommunity?.trim() || null,
     connectorId: connectorId === undefined ? null : connectorId,
+    connectorGroupId: connectorGroupId === undefined ? null : connectorGroupId,
     passwordEncrypted: encrypt(password),
     status: "unknown",
   }).returning();
@@ -224,7 +296,7 @@ router.post("/devices", async (req, res) => {
     action: "device_create",
     objectType: "device",
     objectId: String(device.id),
-    metadata: { hostname: device.hostname, ipAddress: device.ipAddress, vendor: device.vendor, platform: device.platform, site: device.site, status: device.status, connectorId: device.connectorId },
+    metadata: { hostname: device.hostname, ipAddress: device.ipAddress, vendor: device.vendor, platform: device.platform, site: device.site, status: device.status, connectorId: device.connectorId, connectorGroupId: device.connectorGroupId },
     sourceIp: getRequestSourceIp(req),
   });
   res.status(201).json(await enrichDeviceResponse(device));
@@ -264,6 +336,7 @@ router.get("/devices/:id", async (req, res) => {
     role: devicesTable.role,
     groupId: devicesTable.groupId,
     connectorId: devicesTable.connectorId,
+    connectorGroupId: devicesTable.connectorGroupId,
     netboxDeviceId: devicesTable.netboxDeviceId,
     lastSeen: devicesTable.lastSeen,
     status: devicesTable.status,
@@ -288,6 +361,10 @@ router.patch("/devices/:id", async (req, res) => {
   if (connectorId !== undefined) {
     updateData.connectorId = connectorId;
   }
+  const connectorGroupId = parseConnectorGroupId(req.body as Record<string, unknown>);
+  if (connectorGroupId !== undefined) {
+    updateData.connectorGroupId = connectorGroupId;
+  }
   if ("snmpCommunity" in rest) {
     updateData.snmpCommunity = typeof rest.snmpCommunity === "string" && rest.snmpCommunity.trim().length > 0
       ? rest.snmpCommunity.trim()
@@ -305,7 +382,7 @@ router.patch("/devices/:id", async (req, res) => {
     action: "device_update",
     objectType: "device",
     objectId: String(updated.id),
-    metadata: { hostname: updated.hostname, ipAddress: updated.ipAddress, vendor: updated.vendor, platform: updated.platform, site: updated.site, status: updated.status, connectorId: updated.connectorId },
+    metadata: { hostname: updated.hostname, ipAddress: updated.ipAddress, vendor: updated.vendor, platform: updated.platform, site: updated.site, status: updated.status, connectorId: updated.connectorId, connectorGroupId: updated.connectorGroupId },
     sourceIp: getRequestSourceIp(req),
   });
 });
@@ -340,14 +417,19 @@ router.post("/devices/:id/test-connection", async (req, res) => {
   };
   try {
     if (deviceUsesConnector(device)) {
-      const password = decrypt(device.passwordEncrypted);
+      const connectorContext = await resolveDeviceConnectorContext(device.id);
+      if (!connectorContext.connectorId) {
+        throw new Error("Device has no connector");
+      }
+      const credentials = await resolveLegacyDeviceCredentialContext(device);
       const command = device.vendor.toLowerCase().includes("huawei") ? "display version" : "show version";
       const exec = await executeSshCommand({
         deviceId: device.id,
-        connectorId: device.connectorId,
+        connectorId: connectorContext.connectorId,
         targetIp: device.ipAddress,
-        username: device.username,
-        password,
+        ...(credentials.sshCredentialId
+          ? { credentialId: credentials.sshCredentialId }
+          : { username: credentials.username, password: credentials.password }),
         command,
         vendor: device.vendor,
         port: device.sshPort,
@@ -401,13 +483,13 @@ router.post("/devices/:id/test-connection", async (req, res) => {
     action: "device_test_connection",
     objectType: "device",
     objectId: String(device.id),
-    metadata: {
-      success: result.success,
-      latencyMs: result.latencyMs,
-      message: result.message,
-      hostname: result.hostname,
-      executionMode: deviceUsesConnector(device) ? "connector" : "direct",
-    },
+      metadata: {
+        success: result.success,
+        latencyMs: result.latencyMs,
+        message: result.message,
+        hostname: result.hostname,
+        executionMode: device.connectorGroupId ? "connector_group" : deviceUsesConnector(device) ? "connector" : "direct",
+      },
     sourceIp: getRequestSourceIp(req),
   });
 
@@ -427,16 +509,21 @@ router.post("/devices/:id/test-connectivity", async (req, res) => {
 
   try {
     if (deviceUsesConnector(device)) {
-      const password = decrypt(device.passwordEncrypted);
-      const community = device.snmpCommunity?.trim();
+      const connectorContext = await resolveDeviceConnectorContext(device.id);
+      if (!connectorContext.connectorId) {
+        throw new Error("Device has no connector");
+      }
+      const credentials = await resolveLegacyDeviceCredentialContext(device);
+      const community = credentials.community;
       const command = device.vendor.toLowerCase().includes("huawei") ? "display version" : "show version";
       const [sshExec, snmpExec] = await Promise.all([
         executeSshCommand({
           deviceId: device.id,
-          connectorId: device.connectorId,
+          connectorId: connectorContext.connectorId,
           targetIp: device.ipAddress,
-          username: device.username,
-          password,
+          ...(credentials.sshCredentialId
+            ? { credentialId: credentials.sshCredentialId }
+            : { username: credentials.username, password: credentials.password }),
           command,
           vendor: device.vendor,
           port: device.sshPort,
@@ -444,10 +531,10 @@ router.post("/devices/:id/test-connectivity", async (req, res) => {
         community
           ? executeSnmpGet({
               deviceId: device.id,
-              connectorId: device.connectorId,
+              connectorId: connectorContext.connectorId,
               targetIp: device.ipAddress,
               oid: "1.3.6.1.2.1.1.5.0",
-              community,
+              ...(credentials.snmpCredentialId ? { credentialId: credentials.snmpCredentialId } : { community }),
             })
           : Promise.resolve(null),
       ]);

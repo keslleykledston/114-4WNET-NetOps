@@ -39,6 +39,8 @@ tags:
     description: SNMP polling history
   - name: netops-readonly
     description: Read-only NetOps operational views
+  - name: connectors
+    description: Connector management and execution
 
 paths:
   /healthz:
@@ -646,6 +648,27 @@ paths:
                 $ref: "#/components/schemas/CollectedConfig"
         "404":
           description: Not found
+
+  /devices/{id}/config-history:
+    get:
+      operationId: listDeviceConfigHistory
+      tags: [collected-configs]
+      summary: List device config history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Config history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConfigHistoryItem"
 
   /devices/export:
     post:
@@ -1680,6 +1703,48 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CollectedConfig"
+
+  /configs/{id}:
+    get:
+      operationId: getConfig
+      tags: [collected-configs]
+      summary: Get config history entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigDetail"
+        "404":
+          description: Not found
+
+  /configs/{id}/diff:
+    get:
+      operationId: getConfigDiff
+      tags: [collected-configs]
+      summary: Get config diff against previous version
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Config diff
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigDiff"
+        "404":
+          description: Not found
 
   # -- SNMP SNAPSHOTS ----------------------------------------------------------
   /snmp-snapshots:
@@ -2783,6 +2848,96 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NetBoxSyncResult"
+
+  /connectors/netconf/test:
+    post:
+      operationId: testNetconfConnector
+      tags: [connectors]
+      summary: Test NETCONF connectivity for a device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id]
+              properties:
+                device_id:
+                  type: integer
+                credential_id:
+                  type: string
+                rpc:
+                  type: string
+                  description: Optional NETCONF RPC name; defaults to get
+                port:
+                  type: integer
+                  default: 830
+                timeout_seconds:
+                  type: integer
+      responses:
+        "200":
+          description: NETCONF test result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stdout:
+                    type: string
+                  stderr:
+                    type: string
+                  exit_code:
+                    type: integer
+                  result_json:
+                    type: object
+                    additionalProperties: true
+
+  /connectors/netconf/get-config:
+    post:
+      operationId: getNetconfConfig
+      tags: [connectors]
+      summary: Fetch running-config via NETCONF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id]
+              properties:
+                device_id:
+                  type: integer
+                credential_id:
+                  type: string
+                rpc:
+                  type: string
+                  description: Optional NETCONF RPC name; defaults to get-config
+                port:
+                  type: integer
+                  default: 830
+                timeout_seconds:
+                  type: integer
+      responses:
+        "200":
+          description: NETCONF get-config result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  stdout:
+                    type: string
+                  stderr:
+                    type: string
+                  exit_code:
+                    type: integer
+                  result_json:
+                    type: object
+                    additionalProperties: true
 
 components:
   schemas:
@@ -4254,11 +4409,13 @@ components:
 
     ProvisioningPreviewInput:
       type: object
-      required: [deviceId, serviceType, parameters]
+      required: [deviceId, parameters]
       properties:
         deviceId:
           type: integer
         serviceType:
+          type: string
+        templateId:
           type: string
         parameters:
           type: object
@@ -4285,16 +4442,45 @@ components:
 
     ProvisioningPreviewResult:
       type: object
-      required: [deviceId, serviceType, configPreview, rollbackPreview, validations, risks, missingData, applyBlocked]
+      required:
+        [
+          status,
+          deviceId,
+          templateId,
+          serviceType,
+          configPreview,
+          rollbackPreview,
+          executionPlan,
+          validations,
+          risks,
+          precheckHints,
+          postcheckHints,
+          missingData,
+          blockedReasons,
+          applyBlocked,
+          commandsGenerated,
+          warnings,
+          conflicts,
+          missingResources,
+        ]
       properties:
+        status:
+          type: string
+          enum: [valid, warning, blocked]
         deviceId:
           type: integer
+        templateId:
+          type: string
         serviceType:
           type: string
         configPreview:
           type: string
         rollbackPreview:
           type: string
+        executionPlan:
+          type: array
+          items:
+            type: string
         validations:
           type: array
           items:
@@ -4302,8 +4488,20 @@ components:
         risks:
           type: array
           items:
+            $ref: "#/components/schemas/ProvisioningRisk"
+        precheckHints:
+          type: array
+          items:
+            type: string
+        postcheckHints:
+          type: array
+          items:
             type: string
         missingData:
+          type: array
+          items:
+            type: string
+        blockedReasons:
           type: array
           items:
             type: string
@@ -4320,6 +4518,22 @@ components:
           type: boolean
         applyBlockedReason:
           type: ["string", "null"]
+        commandsGenerated:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        conflicts:
+          type: array
+          items:
+            type: string
+        missingResources:
+          type: array
+          items:
+            type: string
 
     ProvisioningParameterField:
       type: object
@@ -4700,6 +4914,67 @@ components:
           type: ["string", "null"]
           description: "JSON VRF/L3VPN instances"
         collectedAt:
+          type: string
+
+    ConfigHistoryItem:
+      type: object
+      required: [id, device_id, size_bytes, hash, collected_at]
+      properties:
+        id:
+          type: integer
+        device_id:
+          type: integer
+        device_hostname:
+          type: ["string", "null"]
+        source:
+          type: ["string", "null"]
+        size_bytes:
+          type: integer
+        hash:
+          type: string
+        parser_status:
+          type: ["string", "null"]
+        parser_error:
+          type: ["string", "null"]
+        collected_at:
+          type: string
+        diff_id:
+          type: ["integer", "null"]
+        previous_config_id:
+          type: ["integer", "null"]
+
+    ConfigDetail:
+      allOf:
+        - $ref: "#/components/schemas/ConfigHistoryItem"
+        - type: object
+          properties:
+            raw_config:
+              type: ["string", "null"]
+            connector_id:
+              type: ["integer", "null"]
+            connector_job_id:
+              type: ["integer", "null"]
+            parsed_summary_json:
+              type: ["object", "null"]
+              additionalProperties: true
+
+    ConfigDiff:
+      type: object
+      required: [id, device_id, current_config_id, created_at]
+      properties:
+        id:
+          type: integer
+        device_id:
+          type: integer
+        previous_config_id:
+          type: ["integer", "null"]
+        current_config_id:
+          type: integer
+        diff_summary:
+          type: ["string", "null"]
+        diff_text:
+          type: ["string", "null"]
+        created_at:
           type: string
 
     CollectConfigInput:

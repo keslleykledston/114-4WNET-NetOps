@@ -44,6 +44,12 @@ class NetOpsApiClient:
         resp.raise_for_status()
         return resp.json()
 
+    def post_provisioning_preview(self, payload: dict[str, Any]) -> dict[str, Any]:
+        url = f"{self.base}/connectors/provisioning/preview"
+        resp = self.session.post(url, json=payload, timeout=120)
+        resp.raise_for_status()
+        return resp.json()
+
     def health_ping(self) -> bool:
         try:
             root = self.config.netops_server_url.replace("/api", "")

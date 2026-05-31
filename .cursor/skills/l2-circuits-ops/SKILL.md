@@ -8,12 +8,14 @@ description: >-
 
 # L2 Circuits Operations
 
+**Route:** `.cursor/README.md` → agent `agents/l2-circuits.md` → workflow `workflows/l2-change.md`
+
 ## Scope
 
 - Backend: `workspace/artifacts/api-server/src/modules/l2circuits/`
 - Frontend: `workspace/artifacts/netops-manager/src/features/l2-circuits/`
 - Docs: `docs/l2-circuits/`, `docs/ai/FLOWS.md` (§2–3)
-- Agent persona: `docs/ai/agents/l2-specialist.md`
+- Agent: `.cursor/agents/l2-circuits.md` (bounded file list)
 
 ## Flags (must check before runtime)
 

@@ -16,11 +16,13 @@ Pacote de contexto para agentes. **Somente documentação** — não substitui `
 
 ## Entrada rápida para agentes
 
-1. Ler [`../../AGENTS.md`](../../AGENTS.md) (regras e comandos).
-2. Identificar domínio → abrir módulo em [MODULES.md](./MODULES.md).
-3. Entender fluxo → [FLOWS.md](./FLOWS.md).
-4. Validar → [TESTING.md](./TESTING.md).
-5. Invocar skill em `.cursor/skills/` ou agente em `agents/` conforme tarefa.
+**Cursor (preferir):** [`.cursor/README.md`](../../.cursor/README.md) — roteamento agent → skill → workflow (menos tokens).
+
+1. Ler [`../../AGENTS.md`](../../AGENTS.md) (safety + comandos).
+2. Escolher agente em `.cursor/agents/` (lista fechada de arquivos).
+3. Seguir workflow em `.cursor/workflows/`.
+4. Detalhe arquitetural só se necessário: [MODULES.md](./MODULES.md), [FLOWS.md](./FLOWS.md).
+5. Validar: [TESTING.md](./TESTING.md) + skill `netops-smoke-validation`.
 
 ## O que NÃO fazer (global)
 

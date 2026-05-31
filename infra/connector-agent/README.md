@@ -65,6 +65,6 @@ python3 tools/connector-agent-selftest.py
 ## Limitações (fase 2)
 
 - Sem escrita em equipamentos
-- Sem NETCONF ainda (compatível futuro)
+- NETCONF suportado apenas em modo read-only
 - WireGuard opcional (`WG_ENABLED=false` por default)
 - Credenciais SSH/SNMP vêm no **payload do job** (servidor não envia secrets em logs)

@@ -8,6 +8,8 @@ description: >-
 
 # Huawei VRP Parsers
 
+**Route:** `.cursor/agents/huawei-parser.md` → workflow `workflows/l2-change.md`
+
 ## Parser locations
 
 | Area | Path |

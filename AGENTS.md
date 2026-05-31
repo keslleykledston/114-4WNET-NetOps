@@ -2,7 +2,9 @@
 
 Contexto persistente para agentes de IA (Cursor, Codex, PI). **Não altere código de produção** salvo pedido explícito.
 
-Documentação completa: [`docs/ai/README.md`](docs/ai/README.md)
+**Cursor (roteamento):** [`.cursor/README.md`](.cursor/README.md) — agents, skills, workflows (preferir sobre busca global)
+
+Documentação de referência: [`docs/ai/README.md`](docs/ai/README.md)
 
 ## Objetivo
 
@@ -79,14 +81,16 @@ Portas típicas lab: API `8080` ou `8085`, Web `3000` ou `3005`, Postgres `5432`
 - Após mudanças de runtime: rebuild container afetado antes de declarar concluído.
 - Commits/PRs: só quando o usuário pedir.
 
-## Skills e agentes do projeto
+## Skills, agents e workflows (Cursor)
 
 | Recurso | Caminho |
 |---------|---------|
-| Índice IA | `docs/ai/README.md` |
-| Skills Cursor | `.cursor/skills/*/SKILL.md` |
-| Rules Cursor | `.cursor/rules/*.mdc` |
-| Agentes especializados | `docs/ai/agents/*.md` |
+| **Índice roteamento** | `.cursor/README.md` |
+| Agents (contexto limitado) | `.cursor/agents/*.md` |
+| Skills (como implementar) | `.cursor/skills/*/SKILL.md` |
+| Workflows (passos) | `.cursor/workflows/*.md` |
+| Rules (globs + safety) | `.cursor/rules/*.mdc` |
+| Docs referência | `docs/ai/*.md` |
 | Skill migração Codex | `.codex/skills/netops-migration/SKILL.md` |
 
 ## Feature flags (resumo)

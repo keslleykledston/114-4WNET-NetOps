@@ -1,5 +1,19 @@
 # TODO
 
+## Connector Release Matrix
+
+- [x] Fase 1 done
+- [x] Fase 2 done
+- [x] Fase 4 done
+- [x] Fase C-G done
+- [x] Fase 5 done
+- [x] Fase 5.2 done
+- [x] Fase 6.0 done
+- [x] Fase 6.1 done
+- [x] Fase 7.0 done
+- [x] Fase 7.1 done
+- [x] Fase 8 release candidate
+
 ## Checkpoint 2026-05-30 — NetOps CLI + Connector
 
 - [x] NetOps CLI operacional (UI, L2TP, rotas, job poll, heartbeat, produção em netopscli.devops.k3gsolutions.com.br)
@@ -7,7 +21,8 @@
 - [x] SNMP probe via connector — OK quando community configurada
 - [x] **Gap resolvido:** teste SSH enfileira bundle + SNMP_FAST, parse BGP/L2 após bundle
 - [x] Fase C/D/E/F/G: parser dispatcher, L2/BGP persist, auto SNMP, UI collection status
-- [ ] **Próximo:** diff histórico de config + alertas operacionais — ver `docs/connectors/SSH_CONFIG_BACKUP_PLAN.md`
+- [x] **Fase 5:** Health score, alert engine, dashboard connectors, device collection-status — `docs/connectors/PHASE_5_ALERTS_HEALTH_DASHBOARD.md`
+- [ ] **Próximo:** diff histórico de config — ver `docs/connectors/SSH_CONFIG_BACKUP_PLAN.md`
 - [x] FASE 5.4 A+B: job `SSH_CONFIG_BUNDLE` + enqueue após SSH OK + persist raw + parse async
 
 ## v0.3.4 — Operational Pilot NOC (In Development)

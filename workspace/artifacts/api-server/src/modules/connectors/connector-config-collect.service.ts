@@ -13,6 +13,8 @@ import { assertReadOnlySshCommand } from "./ssh-readonly-policy.js";
 import { assertConnectorAcceptsJobs } from "./connector-execution.service.js";
 import { createConnectorJob } from "./connectors.service.js";
 import { parseAndPersistConfigBundle } from "../config-backup/config-bundle-parser.service.js";
+import { createConfigDiffForCollectedConfig } from "../config-history/config-history.service.js";
+import { resolveDeviceConnectorContext } from "./connector-execution.service.js";
 
 export const HUAWEI_SSH_CONFIG_BUNDLE_COMMANDS = [
   "display current-configuration",
@@ -41,12 +43,16 @@ export async function enqueueSshConfigBundleForDevice(
   device: Device,
   options?: { correlationId?: string; createdBy?: number | null },
 ): Promise<ConfigCollectEnqueueResult> {
-  if (!device.connectorId) {
+  if (!device.connectorId && !device.connectorGroupId) {
     return { status: "failed", message: "Device has no connector" };
   }
 
   try {
-    await assertConnectorAcceptsJobs(device.connectorId);
+    const { connectorId } = await resolveDeviceConnectorContext(device.id);
+    if (!connectorId) {
+      throw new Error("Device has no connector");
+    }
+    await assertConnectorAcceptsJobs(connectorId);
     const password = decrypt(device.passwordEncrypted);
     const commands = getConfigBundleCommands(device.vendor);
     for (const command of commands) {
@@ -62,7 +68,7 @@ export async function enqueueSshConfigBundleForDevice(
     };
 
     const job = await createConnectorJob({
-      connector_id: device.connectorId,
+      connector_id: connectorId,
       job_type: "SSH_CONFIG_BUNDLE",
       target_ip: device.ipAddress,
       target_port: device.sshPort,
@@ -81,7 +87,7 @@ export async function enqueueSshConfigBundleForDevice(
       objectId: String(job.id),
       metadata: {
         device_id: device.id,
-        connector_id: device.connectorId,
+        connector_id: connectorId,
         command_count: commands.length,
       },
     });
@@ -144,6 +150,8 @@ export async function processConfigBundleAfterSubmit(connectorId: number, jobId:
     objectId: String(job.deviceId),
     metadata: { job_id: jobId, collected_config_id: cfg.id, raw_bytes: rawConfig.length },
   });
+
+  await createConfigDiffForCollectedConfig(cfg.id);
 
   setImmediate(() => {
     void parseAndPersistConfigBundle({

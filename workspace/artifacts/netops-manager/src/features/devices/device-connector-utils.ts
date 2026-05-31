@@ -1,4 +1,4 @@
-import type { ConnectorListItem } from "@/features/connectors/connectors-api";
+import type { ConnectorGroupListItem, ConnectorListItem } from "@/features/connectors/connectors-api";
 
 const INACTIVE_CONNECTOR_STATUSES = new Set(["REVOKED", "DISABLED"]);
 
@@ -28,4 +28,27 @@ export function connectorsForTenant(tenantId: number, connectors: ConnectorListI
   return connectors.filter(
     (c) => c.tenant_id === tenantId && !INACTIVE_CONNECTOR_STATUSES.has(c.status),
   );
+}
+
+export function pickConnectorGroupForTenant(
+  tenantId: number,
+  groups: ConnectorGroupListItem[],
+): ConnectorGroupListItem | null {
+  const candidates = groups.filter((group) => group.tenant_id === tenantId);
+  if (candidates.length === 0) return null;
+  const active = candidates.filter((group) => group.active_member_count > 0);
+  const pool = active.length > 0 ? active : candidates;
+  return [...pool].sort((a, b) => a.name.localeCompare(b.name))[0] ?? null;
+}
+
+export function groupsForTenant(tenantId: number, groups: ConnectorGroupListItem[]): ConnectorGroupListItem[] {
+  return groups.filter((group) => group.tenant_id === tenantId);
+}
+
+export function getTenantIdForConnectorGroup(
+  connectorGroupId: number | null | undefined,
+  groups: ConnectorGroupListItem[],
+): number | null {
+  if (!connectorGroupId) return null;
+  return groups.find((group) => group.id === connectorGroupId)?.tenant_id ?? null;
 }

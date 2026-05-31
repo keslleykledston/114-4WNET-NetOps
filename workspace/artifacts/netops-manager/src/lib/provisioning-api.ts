@@ -84,7 +84,7 @@ export interface ProvisioningJob {
   name: string;
   type: string;
   status: string;
-  deviceIds: string;
+  deviceIds: number[];
   parameters?: string | null;
   approvedByUserId?: number | null;
   approvedAt?: string | null;
@@ -96,6 +96,11 @@ export interface ProvisioningJob {
   maintenanceWindowStart?: string | null;
   maintenanceWindowEnd?: string | null;
   createdAt: string;
+  templateId?: number | null;
+  validatedAt?: string | null;
+  executedAt?: string | null;
+  completedAt?: string | null;
+  errorMessage?: string | null;
 }
 
 export interface PostCheckResult {

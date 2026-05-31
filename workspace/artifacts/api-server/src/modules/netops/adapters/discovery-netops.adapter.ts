@@ -1,4 +1,5 @@
 import { collectedConfigsTable, db, devicesTable, snmpSnapshotsTable } from "@workspace/db";
+import { createConfigDiffForCollectedConfig } from "../../config-history/config-history.service.js";
 import type { SnmpSnapshot } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import type { DeviceDiscoverySnapshot } from "../device-discovery/discovery.types.js";
@@ -215,7 +216,7 @@ export async function persistSshDiscoveryToNetopsStores(
 
   if (rawConfig) {
     const summary = parsedSummary(snapshot);
-    await db.insert(collectedConfigsTable).values({
+    const [cfg] = await db.insert(collectedConfigsTable).values({
       deviceId,
       source: "ssh_live",
       rawConfig,
@@ -226,7 +227,8 @@ export async function persistSshDiscoveryToNetopsStores(
       parserStatus: summary.errors.length > 0 ? "PARTIAL" : "SUCCESS",
       parserError: summary.errors.length > 0 ? summary.errors.join("; ") : null,
       parsedSummaryJson: summary,
-    });
+    }).returning();
+    await createConfigDiffForCollectedConfig(cfg.id);
   }
 
   await db.update(devicesTable)

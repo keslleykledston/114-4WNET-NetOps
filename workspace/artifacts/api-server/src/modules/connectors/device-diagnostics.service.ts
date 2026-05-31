@@ -28,27 +28,27 @@ function sshVersionCommand(vendor: string): string {
 }
 
 export async function runDeviceDiagnostics(deviceId: number): Promise<DeviceDiagnosticResult> {
-  const { device, connectorId, password, community } = await resolveDeviceConnectorContext(deviceId);
+  const { device, connectorId, sshCredentialId, snmpCredentialId, username, password, community } =
+    await resolveDeviceConnectorContext(deviceId);
 
   if (deviceUsesConnector(device)) {
     const [ping, tcp22, snmp, ssh] = await Promise.all([
-      executePing({ deviceId, connectorId: device.connectorId, targetIp: device.ipAddress }),
-      executeTcpCheck({ deviceId, connectorId: device.connectorId, targetIp: device.ipAddress, port: device.sshPort ?? 22 }),
+      executePing({ deviceId, connectorId, targetIp: device.ipAddress }),
+      executeTcpCheck({ deviceId, connectorId, targetIp: device.ipAddress, port: device.sshPort ?? 22 }),
       community
         ? executeSnmpGet({
             deviceId,
-            connectorId: device.connectorId,
+            connectorId,
             targetIp: device.ipAddress,
             oid: "1.3.6.1.2.1.1.5.0",
-            community,
+            ...(snmpCredentialId ? { credentialId: snmpCredentialId } : { community }),
           })
         : Promise.resolve({ success: false, stdout: "", stderr: "No SNMP community configured", exitCode: 1, resultJson: null, jobId: 0, executionMode: "connector" as const, durationMs: 0, status: "FAILED" }),
       executeSshCommand({
         deviceId,
-        connectorId: device.connectorId,
+        connectorId,
         targetIp: device.ipAddress,
-        username: device.username,
-        password,
+        ...(sshCredentialId ? { credentialId: sshCredentialId } : { username, password }),
         command: sshVersionCommand(device.vendor),
         vendor: device.vendor,
         port: device.sshPort,
@@ -57,7 +57,7 @@ export async function runDeviceDiagnostics(deviceId: number): Promise<DeviceDiag
 
     return {
       mode: "connector",
-      connectorId: device.connectorId,
+      connectorId,
       ping,
       tcp22,
       snmp: {
@@ -107,14 +107,14 @@ export async function runDeviceDiagnostics(deviceId: number): Promise<DeviceDiag
 }
 
 export async function runDevicePingDiagnostic(deviceId: number) {
-  const { device, password } = await resolveDeviceConnectorContext(deviceId);
+  const { device, connectorId, password, username } = await resolveDeviceConnectorContext(deviceId);
   if (deviceUsesConnector(device)) {
-    return executePing({ deviceId, connectorId: device.connectorId, targetIp: device.ipAddress });
+    return executePing({ deviceId, connectorId, targetIp: device.ipAddress });
   }
   const ssh = await testSSHConnection({
     host: device.ipAddress,
     port: device.sshPort,
-    username: device.username,
+    username,
     password,
   });
   return { success: ssh.success, message: ssh.message, mode: "direct" as const };

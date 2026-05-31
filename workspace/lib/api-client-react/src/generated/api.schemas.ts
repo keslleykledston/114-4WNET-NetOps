@@ -772,6 +772,22 @@ export interface Device {
   /** @nullable */
   groupId?: number | null;
   /** @nullable */
+  connectorId?: number | null;
+  /** @nullable */
+  connectorGroupId?: number | null;
+  /** @nullable */
+  connectorName?: string | null;
+  /** @nullable */
+  connectorGroupName?: string | null;
+  /** @nullable */
+  connectorGroupStrategy?: string | null;
+  /** @nullable */
+  tenantId?: number | null;
+  /** @nullable */
+  tenantName?: string | null;
+  /** @nullable */
+  accessMode?: string | null;
+  /** @nullable */
   snmpCommunity?: string | null;
   /**
      * Future Netbox integration ID
@@ -797,6 +813,8 @@ export interface DeviceInput {
   site: string;
   role?: string;
   groupId?: number;
+  connectorId?: number | null;
+  connectorGroupId?: number | null;
   snmpCommunity?: string;
   netboxDeviceId?: number;
 }
@@ -812,6 +830,8 @@ export interface DeviceUpdate {
   site?: string;
   role?: string;
   groupId?: number;
+  connectorId?: number | null;
+  connectorGroupId?: number | null;
   snmpCommunity?: string;
   status?: string;
 }
@@ -2716,4 +2736,3 @@ export type UpdateIntegrationBody = {
   enabled?: boolean;
   configJson?: UpdateIntegrationBodyConfigJson;
 };
-

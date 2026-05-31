@@ -27,7 +27,7 @@ function deviceToExportFormat(device: Device): ExportDevice {
     username: device.username,
     site: device.site,
     role: device.role,
-    snmpCommunity: device.snmpCommunity,
+    snmpCommunity: device.snmpCommunity ? "[redacted]" : null,
     lastSeen: device.lastSeen?.toISOString() ?? null,
     status: device.status,
     createdAt: device.createdAt.toISOString(),

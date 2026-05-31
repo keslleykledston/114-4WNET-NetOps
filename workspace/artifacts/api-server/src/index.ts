@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { startSnmpPoller } from "./lib/snmp-poller.js";
 import { ensureLocalAdminUser } from "./lib/auth.js";
 import { startScheduler } from "./modules/scheduler/scheduler.runner.js";
+import { startConnectorHealthEvaluation } from "./modules/connectors/connector-health.runner.js";
 import { ensureServiceTemplatesInDb } from "./modules/netops/provisioning-template-seed.js";
 
 const rawPort = process.env["PORT"];
@@ -36,5 +37,6 @@ void (async () => {
     logger.info({ port }, "Server listening");
     startSnmpPoller();
     startScheduler();
+    startConnectorHealthEvaluation();
   });
 })();

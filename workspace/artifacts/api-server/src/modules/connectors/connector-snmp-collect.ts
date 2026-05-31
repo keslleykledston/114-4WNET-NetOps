@@ -2,7 +2,7 @@ import type { Device } from "@workspace/db";
 import type { SnmpCollectedBgpPeer, SnmpCollectedInterface, SnmpReadonlyCollectPayload } from "../netops/snmp/types.js";
 import { BGP_STATE_BY_CODE, IF_ADMIN_STATUS, IF_OPER_STATUS, SNMP_OIDS } from "../netops/snmp/oids.js";
 import { decodeSnmpAddress, peerIpFromIndex, toSnmpNumber } from "../netops/snmp/snmp-session.js";
-import { executeSnmpGet, executeSnmpWalk } from "./connector-execution.service.js";
+import { executeSnmpGet, executeSnmpWalk, resolveDeviceConnectorContext } from "./connector-execution.service.js";
 
 const IF_DESCR_OID = "1.3.6.1.2.1.2.2.1.2";
 const IF_ADMIN_OID = "1.3.6.1.2.1.2.2.1.7";
@@ -35,6 +35,12 @@ function mapStatus(code: string | undefined, table: Record<number, string>): str
   return table[numeric] ?? (code ? `unknown(${code})` : "unknown");
 }
 
+async function getConnectorIdForDevice(device: Device): Promise<number | null> {
+  if (!device.connectorId && !device.connectorGroupId) return null;
+  const { connectorId } = await resolveDeviceConnectorContext(device.id);
+  return connectorId;
+}
+
 export async function collectSnmpInterfacesViaConnector(
   device: Device,
   community: string,
@@ -54,7 +60,8 @@ export async function collectSnmpInterfacesViaConnector(
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (!device.connectorId) {
+  const connectorId = await getConnectorIdForDevice(device);
+  if (!connectorId) {
     return {
       success: false,
       errorMessage: "Device has no connector_id",
@@ -72,7 +79,7 @@ export async function collectSnmpInterfacesViaConnector(
   const preflightStarted = Date.now();
   const sysName = await executeSnmpGet({
     deviceId: device.id,
-    connectorId: device.connectorId,
+    connectorId,
     targetIp: device.ipAddress,
     oid: "1.3.6.1.2.1.1.5.0",
     community,
@@ -97,7 +104,7 @@ export async function collectSnmpInterfacesViaConnector(
 
   const descrWalk = await executeSnmpWalk({
     deviceId: device.id,
-    connectorId: device.connectorId,
+    connectorId,
     targetIp: device.ipAddress,
     oid: IF_DESCR_OID,
     community,
@@ -123,7 +130,7 @@ export async function collectSnmpInterfacesViaConnector(
   const [adminWalk, operWalk, nameWalk] = await Promise.all([
     executeSnmpWalk({
       deviceId: device.id,
-      connectorId: device.connectorId,
+      connectorId,
       targetIp: device.ipAddress,
       oid: IF_ADMIN_OID,
       community,
@@ -131,7 +138,7 @@ export async function collectSnmpInterfacesViaConnector(
     }),
     executeSnmpWalk({
       deviceId: device.id,
-      connectorId: device.connectorId,
+      connectorId,
       targetIp: device.ipAddress,
       oid: IF_OPER_OID,
       community,
@@ -139,7 +146,7 @@ export async function collectSnmpInterfacesViaConnector(
     }),
     executeSnmpWalk({
       deviceId: device.id,
-      connectorId: device.connectorId,
+      connectorId,
       targetIp: device.ipAddress,
       oid: IF_NAME_OID,
       community,
@@ -208,10 +215,11 @@ async function walkConnectorOid(
   community: string,
   oid: string,
 ): Promise<Map<string, string>> {
-  if (!device.connectorId) return new Map();
+  const connectorId = await getConnectorIdForDevice(device);
+  if (!connectorId) return new Map();
   const walk = await executeSnmpWalk({
     deviceId: device.id,
-    connectorId: device.connectorId,
+    connectorId,
     targetIp: device.ipAddress,
     oid,
     community,
@@ -278,7 +286,8 @@ export async function collectSnmpReadonlyViaConnector(
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (!device.connectorId) {
+  const connectorId = await getConnectorIdForDevice(device);
+  if (!connectorId) {
     return {
       success: false,
       errorMessage: "Device has no connector_id",

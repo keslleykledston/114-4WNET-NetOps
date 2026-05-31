@@ -10,6 +10,7 @@ import {
 import { decrypt } from "../lib/crypto.js";
 import { runSSHCommands, getCollectionCommands, parseConfig } from "../lib/ssh.js";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
+import { createConfigDiffForCollectedConfig } from "../modules/config-history/config-history.service.js";
 
 const router = Router();
 
@@ -96,6 +97,8 @@ router.post("/collected-configs", async (req, res) => {
     parsedL2vpn,
     parsedL3vpn,
   }).returning();
+
+  await createConfigDiffForCollectedConfig(cfg.id);
 
   await logAuditEvent({
     action: "collect_config",

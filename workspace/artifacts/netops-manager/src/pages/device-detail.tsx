@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useRoute } from "wouter";
 import {
   useGetDevice, getGetDeviceQueryKey, getListDevicesQueryKey,
-  useGetDeviceCollectedConfig, getGetDeviceCollectedConfigQueryKey,
   useListComplianceJobs,
   useListProvisioningJobs,
   useUpdateDevice,
@@ -14,13 +13,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Server, Activity, ShieldCheck, Rocket, Terminal, History, ChevronRight, Pencil, Network } from "lucide-react";
+import { Server, Activity, ShieldCheck, Rocket, History, ChevronRight, Pencil, Network } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
 import { DiscoveryPanel } from "@/features/device-discovery/discovery-panel";
 import { CommunityLibraryTab } from "@/features/bgp/community-library-tab";
 import { CommunitySetsTab } from "@/features/bgp/community-sets-tab";
+import { ConfigHistoryPanel } from "@/features/config-history/config-history-panel";
 
 export default function DeviceDetail() {
   const [, params] = useRoute("/devices/:id");
@@ -34,10 +34,6 @@ export default function DeviceDetail() {
     query: { enabled: !!deviceId, queryKey: getGetDeviceQueryKey(deviceId) } 
   });
   
-  const { data: config, isLoading: configLoading } = useGetDeviceCollectedConfig(deviceId, {
-    query: { enabled: !!deviceId, queryKey: getGetDeviceCollectedConfigQueryKey(deviceId) }
-  });
-
   const { data: complianceJobs } = useListComplianceJobs({ deviceId });
   const { data: provisioningJobs } = useListProvisioningJobs({ deviceId });
   const collectionStatusQuery = useQuery({
@@ -70,19 +66,24 @@ export default function DeviceDetail() {
 
   const extendedDevice = device as typeof device & {
     connectorId?: number | null;
+    connectorGroupId?: number | null;
     connectorName?: string | null;
+    connectorGroupName?: string | null;
+    connectorGroupStrategy?: string | null;
     tenantId?: number | null;
     tenantName?: string | null;
-    accessMode?: "connector" | "direct";
+    accessMode?: "connector_group" | "connector" | "direct";
   };
   const accessLabel =
-    extendedDevice.accessMode === "connector" && extendedDevice.connectorName
+    extendedDevice.accessMode === "connector_group" && extendedDevice.connectorGroupName
+      ? `Via ${extendedDevice.connectorGroupName}`
+      : extendedDevice.accessMode === "connector" && extendedDevice.connectorName
       ? `Via ${extendedDevice.connectorName}`
       : "Direto";
   const tenantLabel = extendedDevice.tenantName ?? (extendedDevice.tenantId ? `Tenant #${extendedDevice.tenantId}` : null);
 
   const handleUpdate = (values: DeviceFormValues) => {
-    const payload: DeviceUpdate & { connectorId?: number | null } = {
+    const payload: DeviceUpdate = {
       hostname: values.hostname,
       ipAddress: values.ipAddress,
       vendor: values.vendor,
@@ -91,7 +92,7 @@ export default function DeviceDetail() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || "",
-      connectorId: values.connectorId ? Number(values.connectorId) : null,
+      connectorGroupId: values.connectorGroupId ? Number(values.connectorGroupId) : null,
     };
 
     if (values.snmpCommunity.trim().length > 0) {
@@ -299,31 +300,7 @@ export default function DeviceDetail() {
         </TabsContent>
 
         <TabsContent value="config" className="mt-6">
-          <Card className="border-border">
-            <CardHeader className="border-b bg-muted/30">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Terminal className="h-5 w-5" />
-                  Running Configuration
-                </CardTitle>
-                {config && <span className="text-xs text-muted-foreground">Collected: {new Date(config.collectedAt).toLocaleString()}</span>}
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {configLoading ? (
-                <div className="p-6"><Skeleton className="h-64 w-full" /></div>
-              ) : config?.rawConfig ? (
-                <pre className="p-4 overflow-x-auto text-xs font-mono text-muted-foreground max-h-[600px]">
-                  {config.rawConfig}
-                </pre>
-              ) : (
-                <div className="p-12 text-center text-muted-foreground">
-                  <Terminal className="h-8 w-8 mx-auto mb-3 opacity-50" />
-                  <p>No configuration collected yet.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ConfigHistoryPanel deviceId={device.id} hostname={device.hostname} />
         </TabsContent>
 
         <TabsContent value="communities" className="mt-6">

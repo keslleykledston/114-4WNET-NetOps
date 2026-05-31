@@ -571,7 +571,15 @@ export const ListDevicesResponseItem = zod.object({
   "site": zod.string(),
   "role": zod.string().nullish().describe('pe, p, ce, sw'),
   "groupId": zod.number().nullish(),
+  "connectorId": zod.number().nullish(),
+  "connectorGroupId": zod.number().nullish(),
   "snmpCommunity": zod.string().nullish(),
+  "connectorName": zod.string().nullish(),
+  "connectorGroupName": zod.string().nullish(),
+  "connectorGroupStrategy": zod.string().nullish(),
+  "tenantId": zod.number().nullish(),
+  "tenantName": zod.string().nullish(),
+  "accessMode": zod.string().nullish(),
   "netboxDeviceId": zod.number().nullish().describe('Future Netbox integration ID'),
   "lastSeen": zod.string().nullish(),
   "status": zod.string().describe('active, unreachable, unknown'),
@@ -595,6 +603,8 @@ export const CreateDeviceBody = zod.object({
   "site": zod.string(),
   "role": zod.string().optional(),
   "groupId": zod.number().optional(),
+  "connectorId": zod.number().optional(),
+  "connectorGroupId": zod.number().optional(),
   "snmpCommunity": zod.string().optional(),
   "netboxDeviceId": zod.number().optional()
 })
@@ -637,7 +647,15 @@ export const GetDeviceResponse = zod.object({
   "site": zod.string(),
   "role": zod.string().nullish().describe('pe, p, ce, sw'),
   "groupId": zod.number().nullish(),
+  "connectorId": zod.number().nullish(),
+  "connectorGroupId": zod.number().nullish(),
   "snmpCommunity": zod.string().nullish(),
+  "connectorName": zod.string().nullish(),
+  "connectorGroupName": zod.string().nullish(),
+  "connectorGroupStrategy": zod.string().nullish(),
+  "tenantId": zod.number().nullish(),
+  "tenantName": zod.string().nullish(),
+  "accessMode": zod.string().nullish(),
   "netboxDeviceId": zod.number().nullish().describe('Future Netbox integration ID'),
   "lastSeen": zod.string().nullish(),
   "status": zod.string().describe('active, unreachable, unknown'),
@@ -664,6 +682,8 @@ export const UpdateDeviceBody = zod.object({
   "site": zod.string().optional(),
   "role": zod.string().optional(),
   "groupId": zod.number().optional(),
+  "connectorId": zod.number().optional(),
+  "connectorGroupId": zod.number().optional(),
   "snmpCommunity": zod.string().optional(),
   "status": zod.string().optional()
 })
@@ -679,7 +699,15 @@ export const UpdateDeviceResponse = zod.object({
   "site": zod.string(),
   "role": zod.string().nullish().describe('pe, p, ce, sw'),
   "groupId": zod.number().nullish(),
+  "connectorId": zod.number().nullish(),
+  "connectorGroupId": zod.number().nullish(),
   "snmpCommunity": zod.string().nullish(),
+  "connectorName": zod.string().nullish(),
+  "connectorGroupName": zod.string().nullish(),
+  "connectorGroupStrategy": zod.string().nullish(),
+  "tenantId": zod.number().nullish(),
+  "tenantName": zod.string().nullish(),
+  "accessMode": zod.string().nullish(),
   "netboxDeviceId": zod.number().nullish().describe('Future Netbox integration ID'),
   "lastSeen": zod.string().nullish(),
   "status": zod.string().describe('active, unreachable, unknown'),
@@ -3269,5 +3297,4 @@ export const SyncNetBoxDevicesLocalResponse = zod.object({
   "skipped": zod.number(),
   "warningsList": zod.array(zod.string())
 }))
-
 

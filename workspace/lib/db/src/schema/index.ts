@@ -18,3 +18,5 @@ export * from "./l2_operational";
 export * from "./operational";
 export * from "./operational_bgp";
 export * from "./connectors";
+export * from "./credentials";
+export * from "./notifications";

@@ -1,0 +1,24 @@
+---
+description: Route tasks to .cursor agents/skills before global repo search
+alwaysApply: true
+---
+
+# Routing (read first)
+
+Before `grep`, `SemanticSearch`, or broad `Glob` on the repo:
+
+1. Open `.cursor/README.md` and pick **one agent** for the domain.
+2. Read only paths listed in that agent's **Read first** section.
+3. Load the linked **skill** and follow the **workflow** if the task matches.
+4. Use **rules** with matching `globs` for file edits.
+
+## Forbidden by default
+
+- Searching entire `workspace/` without a domain
+- Reading `reports/` (phase history) unless user asks
+- Loading all of `docs/` — use `docs/ai/*.md` pointers from agent only
+- Running SNMP/SSH/discovery with flags OFF (except 503 tests)
+
+## If unsure
+
+Use agent `api-platform.md` + workflow `phase-validation.md` for scope check.

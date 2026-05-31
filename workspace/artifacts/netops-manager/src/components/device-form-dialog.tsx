@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Device } from "@workspace/api-client-react";
-import { listConnectors, listTenants } from "@/features/connectors/connectors-api";
+import { listConnectorGroups, listTenants } from "@/features/connectors/connectors-api";
 import {
-  connectorsForTenant,
-  getTenantIdForConnector,
-  pickConnectorForTenant,
+  getTenantIdForConnectorGroup,
+  groupsForTenant,
+  pickConnectorGroupForTenant,
 } from "@/features/devices/device-connector-utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -26,7 +26,7 @@ export interface DeviceFormValues {
   snmpCommunity: string;
   sshPort: number;
   tenantId: string;
-  connectorId: string;
+  connectorGroupId: string;
 }
 
 interface DeviceFormDialogProps {
@@ -51,7 +51,7 @@ const DEFAULT_VALUES: DeviceFormValues = {
   snmpCommunity: "",
   sshPort: 22,
   tenantId: "",
-  connectorId: "",
+  connectorGroupId: "",
 };
 
 export function DeviceFormDialog({
@@ -64,20 +64,20 @@ export function DeviceFormDialog({
   trigger,
 }: DeviceFormDialogProps) {
   const [form, setForm] = useState<DeviceFormValues>(DEFAULT_VALUES);
-  const connectorsQuery = useQuery({ queryKey: ["connectors"], queryFn: listConnectors });
+  const groupsQuery = useQuery({ queryKey: ["connector-groups"], queryFn: listConnectorGroups });
   const tenantsQuery = useQuery({ queryKey: ["connectors", "tenants"], queryFn: listTenants });
 
-  const connectors = connectorsQuery.data ?? [];
+  const groups = groupsQuery.data ?? [];
   const tenants = tenantsQuery.data ?? [];
 
-  const tenantConnectors = useMemo(() => {
+  const tenantGroups = useMemo(() => {
     if (!form.tenantId) return [];
-    return connectorsForTenant(Number(form.tenantId), connectors);
-  }, [connectors, form.tenantId]);
+    return groupsForTenant(Number(form.tenantId), groups);
+  }, [groups, form.tenantId]);
 
-  const selectedConnector = useMemo(
-    () => connectors.find((c) => String(c.id) === form.connectorId) ?? null,
-    [connectors, form.connectorId],
+  const selectedGroup = useMemo(
+    () => groups.find((group) => String(group.id) === form.connectorGroupId) ?? null,
+    [groups, form.connectorGroupId],
   );
 
   useEffect(() => {
@@ -86,11 +86,12 @@ export function DeviceFormDialog({
     if (mode === "edit" && device) {
       const extended = device as Device & {
         connectorId?: number | null;
+        connectorGroupId?: number | null;
         tenantId?: number | null;
       };
       const tenantId =
         extended.tenantId ??
-        getTenantIdForConnector(extended.connectorId, connectors) ??
+        getTenantIdForConnectorGroup(extended.connectorGroupId, groups) ??
         null;
       setForm({
         hostname: device.hostname,
@@ -104,24 +105,24 @@ export function DeviceFormDialog({
         snmpCommunity: "",
         sshPort: device.sshPort,
         tenantId: tenantId ? String(tenantId) : "",
-        connectorId: extended.connectorId ? String(extended.connectorId) : "",
+        connectorGroupId: extended.connectorGroupId ? String(extended.connectorGroupId) : "",
       });
       return;
     }
 
     setForm(DEFAULT_VALUES);
-  }, [device, mode, open, connectors]);
+  }, [device, mode, open, groups]);
 
   const applyTenantSelection = (tenantId: string) => {
     if (!tenantId) {
-      setForm((prev) => ({ ...prev, tenantId: "", connectorId: "" }));
+      setForm((prev) => ({ ...prev, tenantId: "", connectorGroupId: "" }));
       return;
     }
-    const picked = pickConnectorForTenant(Number(tenantId), connectors);
+    const picked = pickConnectorGroupForTenant(Number(tenantId), groups);
     setForm((prev) => ({
       ...prev,
       tenantId,
-      connectorId: picked ? String(picked.id) : "",
+      connectorGroupId: picked ? String(picked.id) : "",
     }));
   };
 
@@ -131,7 +132,7 @@ export function DeviceFormDialog({
     : "Atualize dados de acesso. Senha e comunidade SNMP em branco mantêm os valores atuais.";
   const submitLabel = mode === "create" ? "Adicionar Dispositivo" : "Salvar Alterações";
 
-  const tenantMissingConnector = Boolean(form.tenantId && !form.connectorId);
+  const tenantMissingGroup = Boolean(form.tenantId && !form.connectorGroupId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -264,46 +265,53 @@ export function DeviceFormDialog({
               </Select>
             </FormField>
 
-            {form.tenantId && tenantConnectors.length > 1 ? (
-              <FormField label="Connector">
-                <Select
-                  value={form.connectorId || "none"}
-                  onValueChange={(value) =>
-                    setForm({ ...form, connectorId: value === "none" ? "" : value })
-                  }
-                >
-                  <SelectTrigger><SelectValue placeholder="Escolha o connector" /></SelectTrigger>
-                  <SelectContent>
-                    {tenantConnectors.map((connector) => (
-                      <SelectItem key={connector.id} value={String(connector.id)}>
-                        {connector.name} ({connector.status})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
-            ) : null}
+            <FormField label="Connector Group">
+              <Select
+                disabled={!form.tenantId || tenantGroups.length === 0}
+                value={form.connectorGroupId || "none"}
+                onValueChange={(value) =>
+                  setForm({ ...form, connectorGroupId: value === "none" ? "" : value })
+                }
+              >
+                <SelectTrigger><SelectValue placeholder="Selecionar grupo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    {form.tenantId ? (tenantGroups.length > 0 ? "Escolha um grupo" : "Nenhum grupo ativo") : "Selecione um tenant"}
+                  </SelectItem>
+                  {tenantGroups.map((group) => (
+                    <SelectItem key={group.id} value={String(group.id)}>
+                      {group.name} · {group.strategy} · {group.active_member_count}/{group.member_count}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedGroup ? (
+                <div className="text-xs text-muted-foreground">
+                  Tenant: {selectedGroup.tenant_name} · Estratégia: {selectedGroup.strategy}
+                </div>
+              ) : null}
+            </FormField>
           </div>
 
-          {form.tenantId && selectedConnector ? (
+          {form.tenantId && selectedGroup ? (
             <p className="text-sm text-muted-foreground">
-              Acesso via bastião: <span className="font-medium text-foreground">{selectedConnector.name}</span>
+              Acesso via bastião: <span className="font-medium text-foreground">{selectedGroup.name}</span>
               {" "}
-              <span className="text-xs">({selectedConnector.status})</span>
-              — coletas SSH/SNMP enfileiradas no connector.
+              <span className="text-xs">({selectedGroup.strategy})</span>
+              — coletas SSH/SNMP enfileiradas no grupo.
             </p>
-          ) : form.tenantId && tenantMissingConnector ? (
+          ) : form.tenantId && tenantMissingGroup ? (
             <p className="text-sm text-destructive">
-              Este tenant não tem connector ativo. Crie um em Infraestrutura → Conectores ou escolha acesso direto.
+              Este tenant não tem grupo disponível. Crie um em Infraestrutura → Connector Groups ou escolha acesso direto.
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Sem tenant, o dispositivo usa acesso direto do servidor NetOps. Com tenant, o connector é escolhido automaticamente.
+              Sem tenant, o dispositivo usa acesso direto do servidor NetOps. Com tenant, o grupo é escolhido automaticamente.
             </p>
           )}
 
           <DialogFooter>
-            <Button type="submit" disabled={isPending || tenantMissingConnector}>
+            <Button type="submit" disabled={isPending || tenantMissingGroup}>
               {isPending ? "Salvando..." : submitLabel}
             </Button>
           </DialogFooter>

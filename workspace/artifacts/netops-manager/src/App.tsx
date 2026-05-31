@@ -27,6 +27,10 @@ import OperationalBgpPage from "@/pages/operational-bgp";
 import Users from "@/pages/users";
 import ConnectorsPage from "@/pages/connectors";
 import ConnectorDetailPage from "@/pages/connector-detail";
+import ConnectorDashboardPage from "@/pages/connector-dashboard";
+import ConnectorGroupsPage from "@/pages/connector-groups";
+import CredentialVaultPage from "@/pages/credential-vault";
+import NotificationsPage from "@/pages/notifications";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -75,8 +79,12 @@ function Router() {
         <Route path="/audit" component={Audit} />
         <Route path="/reports" component={Reports} />
         <Route path="/integrations" component={Integrations} />
-        <Route path="/infrastructure/connectors" component={ConnectorsPage} />
+        <Route path="/infrastructure/connectors/dashboard" component={ConnectorDashboardPage} />
+        <Route path="/infrastructure/connector-groups" component={ConnectorGroupsPage} />
         <Route path="/infrastructure/connectors/:id" component={ConnectorDetailPage} />
+        <Route path="/infrastructure/connectors" component={ConnectorsPage} />
+        <Route path="/security/credentials" component={CredentialVaultPage} />
+        <Route path="/tenants/notifications" component={NotificationsPage} />
         <Route path="/scheduler" component={Scheduler} />
         <Route path="/policies" component={Policies} />
         <Route path="/config-collection" component={ConfigCollection} />

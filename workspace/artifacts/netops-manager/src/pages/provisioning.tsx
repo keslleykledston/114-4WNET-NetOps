@@ -24,9 +24,21 @@ import {
   previewProvisioningJobMarkdown,
   requestProvisioningApproval,
   cancelProvisioningJob,
+  approveProvisioningJob,
+  executeProvisioningJob,
+  postcheckProvisioningJob,
+  getRollbackPreview,
+  rollbackProvisioningJob,
   type ProvisioningPreviewResult,
   type ProvisioningServiceTemplate,
+  type ProvisioningJob,
 } from "@/lib/provisioning-api";
+import { ApprovalStatusCard } from "@/features/provisioning/approval-status-card";
+import { ExecutionPlanCard } from "@/features/provisioning/execution-plan-card";
+import { ExecutionResultTimeline } from "@/features/provisioning/execution-result-timeline";
+import { PostcheckResultCard } from "@/features/provisioning/postcheck-result-card";
+import { RollbackPreviewCard } from "@/features/provisioning/rollback-preview-card";
+import { useAuth } from "@/components/auth-provider";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -61,6 +73,7 @@ export default function Provisioning() {
   const createReport = useCreateProvisioningReport();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [templates, setTemplates] = useState<ProvisioningServiceTemplate[]>([]);
   const [deviceId, setDeviceId] = useState<string>("");
@@ -74,6 +87,15 @@ export default function Provisioning() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [activeJobId, setActiveJobId] = useState<number | null>(null);
   const [exportMarkdown, setExportMarkdown] = useState("");
+
+  const [jobDetail, setJobDetail] = useState<ProvisioningJob | null>(null);
+  const [rollbackPreview, setRollbackPreview] = useState<string | null>(null);
+  const [approveLoading, setApproveLoading] = useState(false);
+  const [executeLoading, setExecuteLoading] = useState(false);
+  const [postcheckLoading, setPostcheckLoading] = useState(false);
+  const [rollbackLoading, setRollbackLoading] = useState(false);
+  const [previewRollbackLoading, setPreviewRollbackLoading] = useState(false);
+  const [executeEnabled, setExecuteEnabled] = useState(true);
 
   const selectedTemplate = useMemo(
     () => templates.find((item) => item.serviceType === serviceType),
@@ -95,16 +117,26 @@ export default function Provisioning() {
     setParamValues(next);
   }, [selectedTemplate?.serviceType]);
 
+  useEffect(() => {
+    if (!activeJobId || !jobs) return;
+    const job = jobs.find((j) => j.id === activeJobId);
+    setJobDetail(job || null);
+  }, [activeJobId, jobs]);
+
   async function runPreview() {
     if (!deviceId) {
       toast({ title: "Selecione um device", variant: "destructive" });
+      return;
+    }
+    if (!selectedTemplate) {
+      toast({ title: "Selecione um template", variant: "destructive" });
       return;
     }
     setPreviewLoading(true);
     try {
       const result = await previewProvisioningConfig({
         deviceId: Number(deviceId),
-        serviceType,
+        templateId: selectedTemplate.id,
         parameters: paramValues,
         maintenanceWindowStart: maintenanceStart || undefined,
         maintenanceWindowEnd: maintenanceEnd || undefined,
@@ -252,6 +284,82 @@ export default function Provisioning() {
     }
   }
 
+  async function handleApproveJob() {
+    if (!activeJobId) return;
+    setApproveLoading(true);
+    try {
+      await approveProvisioningJob(activeJobId);
+      toast({ title: "Job aprovado" });
+      await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
+    } catch (err) {
+      toast({ title: "Erro ao aprovar", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setApproveLoading(false);
+    }
+  }
+
+  async function handleExecuteJob() {
+    if (!activeJobId) return;
+    setExecuteLoading(true);
+    try {
+      await executeProvisioningJob(activeJobId);
+      toast({ title: "Execução iniciada" });
+      await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("PROVISIONING_EXECUTE_ENABLED=false")) {
+        setExecuteEnabled(false);
+      }
+      toast({ title: "Erro na execução", description: message, variant: "destructive" });
+    } finally {
+      setExecuteLoading(false);
+    }
+  }
+
+  async function handleRunPostcheck() {
+    if (!activeJobId) return;
+    setPostcheckLoading(true);
+    try {
+      await postcheckProvisioningJob(activeJobId);
+      toast({ title: "Post-check executado" });
+      await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
+    } catch (err) {
+      toast({ title: "Erro no post-check", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setPostcheckLoading(false);
+    }
+  }
+
+  async function handleLoadRollbackPreview() {
+    if (!activeJobId) return;
+    setPreviewRollbackLoading(true);
+    try {
+      const result = await getRollbackPreview(activeJobId);
+      setRollbackPreview(result.rollbackPlan);
+      toast({ title: "Rollback preview carregado" });
+    } catch (err) {
+      toast({ title: "Erro ao carregar preview", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setPreviewRollbackLoading(false);
+    }
+  }
+
+  async function handleRollback() {
+    if (!activeJobId) return;
+    setRollbackLoading(true);
+    try {
+      await rollbackProvisioningJob(activeJobId);
+      toast({ title: "Rollback iniciado" });
+      await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
+    } catch (err) {
+      toast({ title: "Erro no rollback", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setRollbackLoading(false);
+    }
+  }
+
+  const canApprove = user?.role === "admin" || user?.role === "operator";
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -261,7 +369,7 @@ export default function Provisioning() {
             Provisioning
           </h1>
           <p className="text-muted-foreground mt-1">
-            v0.4.0 — preview, validação e aprovação sem apply real (CONFIG_APPLY_ENABLED=false)
+            v0.6.1 — preview via connector, sem apply real
           </p>
         </div>
         {preview?.applyBlocked && (
@@ -274,16 +382,19 @@ export default function Provisioning() {
 
       <Tabs defaultValue="wizard">
         <TabsList>
-          <TabsTrigger value="wizard">Novo serviço</TabsTrigger>
+          <TabsTrigger value="wizard">Preview</TabsTrigger>
           <TabsTrigger value="jobs">Jobs</TabsTrigger>
+          <TabsTrigger value="execution" disabled={!activeJobId}>
+            Execução {activeJobId ? `#${activeJobId}` : ""}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="wizard" className="space-y-4 mt-4">
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>1. Device e serviço</CardTitle>
-                <CardDescription>Escolha alvo e tipo de serviço</CardDescription>
+                <CardTitle>1. Device e template</CardTitle>
+                <CardDescription>Escolha alvo e template de provisionamento</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Input placeholder="Nome do job" value={jobName} onChange={(e) => setJobName(e.target.value)} />
@@ -353,60 +464,81 @@ export default function Provisioning() {
 
             <Card>
               <CardHeader>
-                <CardTitle>4. Ações</CardTitle>
+                <CardTitle>Ações</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 <Button onClick={runPreview} disabled={previewLoading}>
                   {previewLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   Preview
                 </Button>
-                <Button variant="secondary" onClick={saveDraft} disabled={createJob.isPending}>Salvar rascunho</Button>
-                <Button variant="secondary" onClick={validateActiveJob} disabled={!activeJobId || validateJob.isPending}>Validar</Button>
-                <Button variant="outline" onClick={requestApproval} disabled={!activeJobId}>Solicitar aprovação</Button>
-                <Button variant="outline" onClick={approveJob} disabled={!activeJobId}>Aprovar</Button>
                 <Button variant="outline" onClick={exportPlan}>
                   <Download className="h-4 w-4 mr-1" />
                   Exportar plano
                 </Button>
-                <Button variant="ghost" onClick={tryExecuteBlocked} disabled={!activeJobId}>Testar execute (blocked)</Button>
-                <Button variant="destructive" onClick={cancelActiveJob} disabled={!activeJobId}>Cancelar job</Button>
               </CardContent>
-              {activeJobId && (
-                <p className="px-6 pb-4 text-xs text-muted-foreground">Job ativo: #{activeJobId}</p>
-              )}
             </Card>
           </div>
 
           {preview && (
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>
-                <CardHeader><CardTitle>Config preview</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Comandos gerados</CardTitle></CardHeader>
                 <CardContent>
-                  <pre className="text-xs bg-muted/30 p-3 rounded-md overflow-auto max-h-64">{preview.configPreview}</pre>
+                  <pre className="text-xs bg-muted/30 p-3 rounded-md overflow-auto max-h-64">{preview.commandsGenerated.join("\n")}</pre>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader><CardTitle>Rollback preview</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Warnings</CardTitle></CardHeader>
                 <CardContent>
-                  <pre className="text-xs bg-muted/30 p-3 rounded-md overflow-auto max-h-64">{preview.rollbackPlan ?? preview.rollbackPreview}</pre>
+                  {preview.warnings.length > 0 ? (
+                    <ul className="space-y-2 text-sm">
+                      {preview.warnings.map((warning) => (
+                        <li key={warning} className="flex items-start gap-2">
+                          <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-500" />
+                          <span>{warning}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Sem warnings.</p>
+                  )}
                 </CardContent>
               </Card>
               <Card className="lg:col-span-2">
-                <CardHeader><CardTitle>Validações e riscos</CardTitle></CardHeader>
-                <CardContent className="space-y-2">
-                  {preview.validations.map((v) => (
-                    <div key={v.name} className="flex items-center gap-2 text-sm">
-                      {v.passed ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-amber-500" />}
-                      <span className="font-medium">{v.name}:</span>
-                      <span className="text-muted-foreground">{v.message}</span>
+                <CardHeader><CardTitle>Conflicts e missing resources</CardTitle></CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Conflicts</p>
+                    {preview.conflicts.length > 0 ? (
+                      <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                        {preview.conflicts.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum conflito.</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Missing resources</p>
+                    {preview.missingResources.length > 0 ? (
+                      <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                        {preview.missingResources.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum recurso faltante.</p>
+                    )}
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm font-medium mb-2">Validações</p>
+                    <div className="space-y-2">
+                      {preview.validations.map((v) => (
+                        <div key={v.name} className="flex items-center gap-2 text-sm">
+                          {v.passed ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-amber-500" />}
+                          <span className="font-medium">{v.name}:</span>
+                          <span className="text-muted-foreground">{v.message}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                  {preview.missingData.length > 0 && (
-                    <p className="text-sm text-destructive">Faltando: {preview.missingData.join(", ")}</p>
-                  )}
-                  <ul className="text-sm text-muted-foreground list-disc pl-5">
-                    {preview.risks.map((r) => <li key={r}>{r}</li>)}
-                  </ul>
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -463,6 +595,78 @@ export default function Provisioning() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="execution" className="mt-4 space-y-4">
+          {!executeEnabled && (
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="pt-6">
+                <p className="text-sm text-amber-700">
+                  <strong>Execução desabilitada:</strong> PROVISIONING_EXECUTE_ENABLED=false (padrão).
+                  Configure no servidor para habilitar.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {jobDetail && (
+            <>
+              <ApprovalStatusCard
+                job={jobDetail}
+                onApprove={handleApproveJob}
+                onRequestApproval={requestApproval}
+                canApprove={canApprove}
+                canRequestApproval={canApprove}
+                isApproving={approveLoading}
+                executeEnabled={executeEnabled}
+              />
+
+              <ExecutionPlanCard executionPlanJson={jobDetail.executionPlanJson} />
+
+              {jobDetail.status === "approved" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ações de Execução</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex gap-2">
+                    <Button
+                      onClick={handleExecuteJob}
+                      disabled={!executeEnabled || executeLoading}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {executeLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Executando...
+                        </>
+                      ) : (
+                        "Executar"
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              <ExecutionResultTimeline steps={[]} />
+
+              <PostcheckResultCard
+                job={jobDetail}
+                onRunPostcheck={handleRunPostcheck}
+                isRunning={postcheckLoading}
+                canRun={canApprove}
+              />
+
+              <RollbackPreviewCard
+                jobId={jobDetail.id}
+                onLoadPreview={handleLoadRollbackPreview}
+                rollbackPreview={rollbackPreview}
+                onRollback={handleRollback}
+                canRollback={canApprove}
+                isLoadingPreview={previewRollbackLoading}
+                isRollingBack={rollbackLoading}
+              />
+            </>
+          )}
         </TabsContent>
       </Tabs>
     </div>

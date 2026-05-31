@@ -1,7 +1,7 @@
 import { index, pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-import { connectorsTable } from "./connectors.js";
+import { connectorGroupsTable, connectorsTable } from "./connectors.js";
 
 export const deviceGroupsTable = pgTable("device_groups", {
   id: serial("id").primaryKey(),
@@ -22,6 +22,7 @@ export const devicesTable = pgTable("devices", {
   site: text("site").notNull(),
   role: text("role"),
   groupId: integer("group_id").references(() => deviceGroupsTable.id),
+  connectorGroupId: integer("connector_group_id").references(() => connectorGroupsTable.id, { onDelete: "set null" }),
   connectorId: integer("connector_id").references(() => connectorsTable.id, { onDelete: "set null" }),
   snmpCommunity: text("snmp_community"),
   netboxDeviceId: integer("netbox_device_id"),

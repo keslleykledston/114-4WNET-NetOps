@@ -152,7 +152,7 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
   const refreshAt = new Date();
   const warnings: string[] = [];
 
-  const snmpResult = device.connectorId
+  const snmpResult = device.connectorId || device.connectorGroupId
     ? await collectSnmpInterfacesViaConnector(device, credential.value)
     : await collectSnmpInterfacesOnly(device, credential.value);
   if (!snmpResult.success && snmpResult.interfaces.length === 0) {

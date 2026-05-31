@@ -1,4 +1,6 @@
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { getConnectorHealthSummary } from "@/features/connectors/connectors-api";
 import {
   Server,
   ShieldCheck,
@@ -19,6 +21,8 @@ import {
   Network,
   Users,
   GitBranch,
+  KeyRound,
+  BellRing,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
@@ -39,9 +43,12 @@ const navItems = [
   { href: "/operational/bgp", icon: GitBranch, label: "BGP Operations" },
   { href: "/bgp/peer-drilldown", icon: GitBranch, label: "BGP Drilldown" },
   { href: "/audit", icon: ShieldAlert, label: "Audit" },
+  { href: "/security/credentials", icon: KeyRound, label: "Credential Vault" },
+  { href: "/tenants/notifications", icon: BellRing, label: "Notifications" },
   { href: "/reports", icon: FileBarChart, label: "Reports" },
   { href: "/integrations", icon: PlugZap, label: "Integrations" },
   { href: "/infrastructure/connectors", icon: Waypoints, label: "Conectores" },
+  { href: "/infrastructure/connector-groups", icon: Waypoints, label: "Connector Groups" },
   { href: "/scheduler", icon: CalendarClock, label: "Scheduler" },
 ];
 
@@ -49,6 +56,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const connectorSummaryQuery = useQuery({
+    queryKey: ["connector-health-summary"],
+    queryFn: getConnectorHealthSummary,
+    refetchInterval: 60_000,
+    enabled: Boolean(user),
+  });
+  const openConnectorAlerts = connectorSummaryQuery.data?.openAlerts ?? 0;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -63,6 +77,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {navItems.map((item) => {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             const Icon = item.icon;
+            const label =
+              item.href === "/infrastructure/connectors" && openConnectorAlerts > 0
+                ? `${item.label} (${openConnectorAlerts})`
+                : item.label;
 
             return (
               <Link key={item.href} href={item.href}>
@@ -76,7 +94,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   data-testid={`link-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{item.label}</span>
+                  <span className="truncate">{label}</span>
                 </div>
               </Link>
             );

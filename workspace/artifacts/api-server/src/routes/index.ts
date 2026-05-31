@@ -21,6 +21,9 @@ import l2CircuitsRouter from "../modules/l2circuits/l2circuits.routes.js";
 import operationalRouter from "../modules/operational/operational.routes.js";
 import operationalBgpRouter from "../modules/operational-bgp/operational-bgp.routes.js";
 import bgpDrilldownRouter from "../modules/bgp-drilldown/bgp-peer-drilldown.routes.js";
+import credentialVaultRouter from "../modules/credentials/credential-vault.routes.js";
+import notificationsRouter from "../modules/notifications/notifications.routes.js";
+import configHistoryRouter from "../modules/config-history/config-history.routes.js";
 import {
   connectorAgentRouter,
   connectorsManagementRouter,
@@ -55,6 +58,9 @@ router.use(l2CircuitsRouter);
 router.use(operationalRouter);
 router.use(operationalBgpRouter);
 router.use(bgpDrilldownRouter);
+router.use(credentialVaultRouter);
+router.use(notificationsRouter);
+router.use(configHistoryRouter);
 router.use(connectorsManagementRouter);
 
 export default router;

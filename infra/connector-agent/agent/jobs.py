@@ -19,7 +19,7 @@ def poll_and_execute_jobs(api: NetOpsApiClient, config: Config) -> int:
     for job in jobs:
         job_id = job.get("id")
         logger.info("received job %s", sanitize_for_log({"id": job_id, "type": job.get("job_type"), "target": job.get("target_ip")}))
-        result = execute_job(job, config)
+        result = execute_job(job, config, api)
         api.post_job_result(job_id, result)
         logger.info(
             "job id=%s completed success=%s exit=%s duration_ms=%s",

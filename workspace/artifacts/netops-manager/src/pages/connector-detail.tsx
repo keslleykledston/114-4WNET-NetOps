@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ShieldOff, Terminal, Trash2 } from "lucide-react";
@@ -26,13 +26,18 @@ import {
   getConnectorJob,
   getWireGuardConfig,
   listConnectorJobs,
+  listConnectorAlertsForConnector,
+  acknowledgeConnectorAlert,
+  resolveConnectorAlert,
+  getConnectorHealth,
   revokeConnector,
+  type ConnectorAlert,
 } from "@/features/connectors/connectors-api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function ConnectorDetailPage() {
   const [, params] = useRoute("/infrastructure/connectors/:id");
-  const [, navigate] = useLocation();
+  const [path, navigate] = useLocation();
   const id = Number(params?.id);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -46,6 +51,13 @@ export default function ConnectorDetailPage() {
   const [wgConfig, setWgConfig] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Record<string, unknown> | null>(null);
+  const [activeTab, setActiveTab] = useState("summary");
+
+  useEffect(() => {
+    const q = path.includes("?") ? path.slice(path.indexOf("?")) : "";
+    const tab = new URLSearchParams(q).get("tab");
+    if (tab) setActiveTab(tab);
+  }, [path]);
 
   const connectorQuery = useQuery({
     queryKey: ["connector", id],
@@ -58,6 +70,33 @@ export default function ConnectorDetailPage() {
     queryFn: () => listConnectorJobs(id),
     enabled: Number.isInteger(id) && id > 0,
     refetchInterval: 10_000,
+  });
+
+  const healthQuery = useQuery({
+    queryKey: ["connector-health", id],
+    queryFn: () => getConnectorHealth(id),
+    enabled: Number.isInteger(id) && id > 0,
+    refetchInterval: 30_000,
+  });
+
+  const alertsQuery = useQuery({
+    queryKey: ["connector-alerts", id],
+    queryFn: () => listConnectorAlertsForConnector(id),
+    enabled: Number.isInteger(id) && id > 0,
+    refetchInterval: 30_000,
+  });
+
+  const alertActionMutation = useMutation({
+    mutationFn: (input: { alertId: number; action: "ack" | "resolve" }) =>
+      input.action === "ack"
+        ? acknowledgeConnectorAlert(input.alertId)
+        : resolveConnectorAlert(input.alertId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["connector-alerts", id] });
+      void queryClient.invalidateQueries({ queryKey: ["connector-health-summary"] });
+      toast({ title: "Alerta atualizado" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
   const revokeMutation = useMutation({
@@ -169,6 +208,73 @@ export default function ConnectorDetailPage() {
               </Button>
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="alerts" className="mt-4">
+          <Card>
+            <CardContent className="pt-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Severidade</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Título</TableHead>
+                    <TableHead>Mensagem</TableHead>
+                    <TableHead>Primeira ocorrência</TableHead>
+                    <TableHead>Última ocorrência</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(alertsQuery.data ?? []).map((alert: ConnectorAlert) => (
+                    <TableRow key={alert.id}>
+                      <TableCell>
+                        <Badge variant={alert.severity === "CRITICAL" ? "destructive" : "secondary"}>
+                          {alert.severity}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{alert.alert_type}</TableCell>
+                      <TableCell>{alert.status}</TableCell>
+                      <TableCell>{alert.title}</TableCell>
+                      <TableCell className="max-w-xs truncate">{alert.message}</TableCell>
+                      <TableCell className="text-xs">{new Date(alert.first_seen_at).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs">{new Date(alert.last_seen_at).toLocaleString()}</TableCell>
+                      <TableCell className="space-x-1">
+                        {canWrite && alert.status === "OPEN" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={alertActionMutation.isPending}
+                            onClick={() => alertActionMutation.mutate({ alertId: alert.id, action: "ack" })}
+                          >
+                            ACK
+                          </Button>
+                        )}
+                        {canWrite && (alert.status === "OPEN" || alert.status === "ACKNOWLEDGED") && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={alertActionMutation.isPending}
+                            onClick={() => alertActionMutation.mutate({ alertId: alert.id, action: "resolve" })}
+                          >
+                            Resolver
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {(alertsQuery.data ?? []).length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
+                        Nenhum alerta registrado.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="wireguard" className="mt-4 space-y-4">

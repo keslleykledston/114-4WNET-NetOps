@@ -1,15 +1,20 @@
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, inArray, max, or } from "drizzle-orm";
 import {
   collectedConfigsTable,
   connectorsTable,
   db,
   devicesTable,
   l2CircuitsTable,
+  operationalCollectionJobsTable,
+  operationalInterfacesTable,
   snmpSnapshotsTable,
   type Device,
 } from "@workspace/db";
+import { calculateConnectorHealth } from "../connectors/connector-health.service.js";
+import { listConnectorAlerts } from "../connectors/connector-alert-engine.service.js";
 import { logAuditEvent } from "../../lib/audit.js";
 import { parseConfig } from "../../lib/ssh.js";
+import { resolveDeviceConnectorContext } from "../connectors/connector-execution.service.js";
 import { parseHuaweiBgpPeers } from "../netops/huawei-vrp/parsers/bgp-peer-parser.js";
 import { parseHuaweiInterfaces } from "../netops/huawei-vrp/parsers/interface-parser.js";
 import { parseHuaweiL2Circuits } from "../l2circuits/parsers/huawei-vrp-l2.js";
@@ -328,29 +333,83 @@ export async function getDeviceCollectionStatus(deviceId: number) {
     .limit(1);
 
   let connectorName: string | null = null;
-  if (device.connectorId) {
+  const connectorTarget = device.connectorId || device.connectorGroupId
+    ? await resolveDeviceConnectorContext(deviceId)
+    : null;
+  if (connectorTarget?.connectorId) {
     const [connector] = await db
       .select({ name: connectorsTable.name })
       .from(connectorsTable)
-      .where(eq(connectorsTable.id, device.connectorId))
+      .where(eq(connectorsTable.id, connectorTarget.connectorId))
       .limit(1);
     connectorName = connector?.name ?? null;
   }
 
   const summary = (latestConfig?.parsedSummaryJson ?? null) as ParsedSummary | null;
 
+  const nowMs = Date.now();
+  const sshBundleAt = latestConfig?.collectedAt ?? null;
+  const lastSshBundleAgeSeconds = sshBundleAt
+    ? Math.max(0, Math.floor((nowMs - sshBundleAt.getTime()) / 1000))
+    : null;
+
+  const [snmpJob] = await db
+    .select({ completedAt: operationalCollectionJobsTable.completedAt })
+    .from(operationalCollectionJobsTable)
+    .where(
+      and(
+        eq(operationalCollectionJobsTable.deviceId, deviceId),
+        eq(operationalCollectionJobsTable.layer, "snmp_fast"),
+        inArray(operationalCollectionJobsTable.status, ["succeeded", "partial"]),
+      ),
+    )
+    .orderBy(desc(operationalCollectionJobsTable.completedAt))
+    .limit(1);
+
+  const [snmpIface] = await db
+    .select({ collectedAt: max(operationalInterfacesTable.collectedAt) })
+    .from(operationalInterfacesTable)
+    .where(eq(operationalInterfacesTable.deviceId, deviceId));
+
+  const snmpAt = snmpJob?.completedAt ?? snmpIface?.collectedAt ?? null;
+  const lastSnmpFastAgeSeconds = snmpAt
+    ? Math.max(0, Math.floor((nowMs - snmpAt.getTime()) / 1000))
+    : null;
+
+  let connectorHealth: string | null = null;
+  let openAlerts: Array<Record<string, unknown>> = [];
+  if (connectorTarget?.connectorId) {
+    try {
+      const health = await calculateConnectorHealth(connectorTarget.connectorId);
+      connectorHealth = health.status;
+      const alerts = await listConnectorAlerts({
+        connectorId: connectorTarget.connectorId,
+        status: ["OPEN", "ACKNOWLEDGED"],
+        limit: 50,
+      });
+      openAlerts = alerts.filter((a) => a.device_id == null || a.device_id === deviceId);
+    } catch {
+      connectorHealth = null;
+    }
+  }
+
   return {
     deviceId,
-    accessMode: device.connectorId ? "connector" : "direct",
-    connectorId: device.connectorId,
+    accessMode: device.connectorGroupId ? "connector_group" : device.connectorId ? "connector" : "direct",
+    connectorId: connectorTarget?.connectorId ?? device.connectorId,
     connectorName,
-    lastSshBundleAt: latestConfig?.collectedAt?.toISOString() ?? null,
+    lastSshBundleAt: sshBundleAt?.toISOString() ?? null,
+    lastSshBundleAgeSeconds,
+    lastSnmpFastAgeSeconds,
     collectedConfigId: latestConfig?.id ?? null,
     parserStatus: latestConfig?.parserStatus ?? null,
+    lastParseStatus: latestConfig?.parserStatus ?? null,
     parserError: latestConfig?.parserError ?? null,
     parsedSummary: summary,
     bgpPeerCount: summary?.bgpPeerCount ?? 0,
     l2CircuitCount: summary?.l2CircuitCount ?? 0,
     snmpConfigured: Boolean(device.snmpCommunity?.trim()),
+    connectorHealth,
+    openAlerts,
   };
 }

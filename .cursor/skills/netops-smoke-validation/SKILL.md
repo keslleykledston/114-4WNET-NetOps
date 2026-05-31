@@ -8,6 +8,8 @@ description: >-
 
 # NetOps Smoke & Validation
 
+**Route:** `.cursor/agents/qa-smoke.md` → workflow `workflows/phase-validation.md`
+
 ## Quick CI parity
 
 ```bash
@@ -40,9 +42,9 @@ node tools/<smoke>.mjs
 
 Full list: `docs/ai/TESTING.md`
 
-## Agent persona
+## Agent
 
-`docs/ai/agents/qa-smoke-specialist.md`
+`.cursor/agents/qa-smoke.md`
 
 ## Rules
 

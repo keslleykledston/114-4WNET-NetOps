@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useListDevices, useCreateDevice, useUpdateDevice, getListDevicesQueryKey, getGetDeviceQueryKey, useTestDeviceConnection, useDeleteDevice } from "@workspace/api-client-react";
 import type { Device, DeviceInput, DeviceUpdate } from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { listConnectors } from "@/features/connectors/connectors-api";
+import { listConnectorGroups } from "@/features/connectors/connectors-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,15 +29,18 @@ type ConnectionTestResponse = {
 export default function Devices() {
   const [search, setSearch] = useState("");
   const { data: devices, isLoading } = useListDevices();
-  const connectorsQuery = useQuery({ queryKey: ["connectors"], queryFn: listConnectors });
+  const groupsQuery = useQuery({ queryKey: ["connector-groups"], queryFn: listConnectorGroups });
   const queryClient = useQueryClient();
 
   type DeviceRow = Device & {
     connectorId?: number | null;
+    connectorGroupId?: number | null;
+    connectorGroupName?: string | null;
+    connectorGroupStrategy?: string | null;
     connectorName?: string | null;
     tenantId?: number | null;
     tenantName?: string | null;
-    accessMode?: "connector" | "direct";
+    accessMode?: "connector_group" | "connector" | "direct";
   };
   const { toast } = useToast();
 
@@ -52,7 +55,7 @@ export default function Devices() {
   const editingDevice = devices?.find((device) => device.id === editingDeviceId) ?? null;
 
   const handleCreate = (values: DeviceFormValues) => {
-    const payload: DeviceInput & { connectorId?: number | null } = {
+    const payload: DeviceInput = {
       hostname: values.hostname,
       ipAddress: values.ipAddress,
       vendor: values.vendor,
@@ -63,7 +66,7 @@ export default function Devices() {
       sshPort: values.sshPort,
       role: values.role || undefined,
       snmpCommunity: values.snmpCommunity || undefined,
-      connectorId: values.connectorId ? Number(values.connectorId) : null,
+      connectorGroupId: values.connectorGroupId ? Number(values.connectorGroupId) : null,
     };
 
     createDevice.mutate({ data: payload as DeviceInput }, {
@@ -122,7 +125,7 @@ export default function Devices() {
   const handleUpdate = (values: DeviceFormValues) => {
     if (!editingDevice) return;
 
-    const payload: DeviceUpdate & { connectorId?: number | null } = {
+    const payload: DeviceUpdate = {
       hostname: values.hostname,
       ipAddress: values.ipAddress,
       vendor: values.vendor,
@@ -132,7 +135,7 @@ export default function Devices() {
       sshPort: values.sshPort,
       role: values.role || "",
       snmpCommunity: values.snmpCommunity,
-      connectorId: values.connectorId ? Number(values.connectorId) : null,
+      connectorGroupId: values.connectorGroupId ? Number(values.connectorGroupId) : null,
     };
 
     if (values.password.trim().length > 0) {
@@ -293,14 +296,18 @@ export default function Devices() {
                   const row = device as DeviceRow;
                   const tenantLabel =
                     row.tenantName ??
-                    (row.connectorId
-                      ? connectorsQuery.data?.find((c) => c.id === row.connectorId)?.tenant_name
+                    (row.connectorGroupId
+                      ? groupsQuery.data?.find((g) => g.id === row.connectorGroupId)?.tenant_name
                       : null);
                   const accessLabel =
-                    row.accessMode === "connector"
-                      ? row.connectorName
-                        ? `Via ${row.connectorName}`
-                        : "Via connector"
+                    row.accessMode === "connector_group"
+                      ? row.connectorGroupName
+                        ? `Via ${row.connectorGroupName}`
+                        : "Via connector group"
+                      : row.accessMode === "connector"
+                        ? row.connectorName
+                          ? `Via ${row.connectorName}`
+                          : "Via connector"
                       : "Direto";
 
                   return (

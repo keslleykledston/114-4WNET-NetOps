@@ -68,9 +68,9 @@ export function formatVlan(circuit: L2Circuit): string {
 
 export function circuitKeyField(circuit: L2Circuit) {
   const group = circuitTypeGroup(circuit.circuitType);
-  if (group === "local") return formatVlan(circuit) || "—";
+  if (group === "local") return circuit.outerVlan ?? circuit.innerVlan ?? "—";
   if (group === "mpls") return circuit.vcId ?? "—";
-  return circuit.vsiName ?? circuit.vsiId ?? "—";
+  return circuit.vsiId ?? "—";
 }
 
 export function matchesFilters(circuit: L2Circuit, filters: Omit<L2CircuitFilters, "device">) {

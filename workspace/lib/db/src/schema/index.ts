@@ -4,6 +4,7 @@ export * from "./compliance";
 export * from "./templates";
 export * from "./provisioning";
 export * from "./provisioning_templates";
+export * from "./template_studio";
 export * from "./audit";
 export * from "./reports";
 export * from "./integration_settings";

@@ -36,6 +36,7 @@ const navItems = [
   { href: "/compliance", icon: ShieldCheck, label: "Compliance" },
   { href: "/provisioning", icon: Rocket, label: "Provisioning" },
   { href: "/provisioning/templates", icon: FileCode, label: "Template Registry" },
+  { href: "/provisioning/template-studio", icon: FileCode, label: "Template Studio" },
   { href: "/templates", icon: FileCode, label: "Templates" },
   { href: "/policies", icon: ScrollText, label: "Policies" },
   { href: "/config-collection", icon: DownloadCloud, label: "Config Collection" },

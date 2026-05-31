@@ -15,6 +15,7 @@ import Provisioning from "@/pages/provisioning";
 import ProvisioningTemplatesPage from "@/pages/provisioning-templates";
 import ProvisioningTemplateDetailPage from "@/pages/provisioning-template-detail";
 import TemplateStudioPage from "@/pages/template-studio";
+import ServiceCatalogPage from "@/pages/service-catalog";
 import Templates from "@/pages/templates";
 import Audit from "@/pages/audit";
 import Reports from "@/pages/reports";
@@ -81,6 +82,7 @@ function Router() {
         <Route path="/provisioning/templates" component={ProvisioningTemplatesPage} />
         <Route path="/provisioning/templates/:id" component={ProvisioningTemplateDetailPage} />
         <Route path="/provisioning/template-studio" component={TemplateStudioPage} />
+        <Route path="/provisioning/service-catalog" component={ServiceCatalogPage} />
         <Route path="/templates" component={Templates} />
         <Route path="/audit" component={Audit} />
         <Route path="/reports" component={Reports} />

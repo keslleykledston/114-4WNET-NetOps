@@ -8,14 +8,15 @@ import {
   devicesTable,
   type Device,
 } from "@workspace/db";
-import { decrypt } from "../../lib/crypto.js";
 import { getRequestContext } from "../../lib/request-context.js";
 import { logAuditEvent } from "../../lib/audit.js";
 import { ConflictError } from "../../lib/db-errors.js";
 import { maskSensitivePayload } from "./connector-payload-mask.js";
 import { assertReadOnlySshCommand } from "./ssh-readonly-policy.js";
+import { ConnectorGroupOfflineError, resolveAvailableConnectorForGroup } from "./connector-groups.service.js";
 import type { ConnectorJobType } from "./connectors.types.js";
 import { createConnectorJob, expireTimedOutJobs } from "./connectors.service.js";
+import { resolveLegacyDeviceCredentialContext } from "../credentials/credential-vault.resolver.js";
 
 const HEARTBEAT_ONLINE_MS = 2 * 60 * 1000;
 const POLL_INTERVAL_MS = 500;
@@ -25,6 +26,15 @@ export const CONNECTOR_JOB_TIMEOUT_DEFAULTS: Record<string, number> = {
   TCP_CHECK: 10,
   SNMP_GET: 30,
   SNMP_WALK: 120,
+  NETCONF_GET: 90,
+  NETCONF_GET_CONFIG: 180,
+  NETCONF_RPC: 120,
+  PROVISION_PREVIEW: 240,
+  PROVISION_VALIDATE: 120,
+  PROVISION_EXECUTE: 300,
+  PROVISION_POSTCHECK: 120,
+  PROVISION_ROLLBACK: 300,
+  PROVISION_ROLLBACK_PREVIEW: 120,
   SSH_COMMAND: 120,
   SSH_CONFIG_BUNDLE: 300,
   BGP: 300,
@@ -59,7 +69,8 @@ export class ConnectorJobTimeoutError extends Error {
 
 type BaseExecutionInput = {
   deviceId?: number;
-  connectorId: number;
+  connectorId?: number | null;
+  connectorGroupId?: number | null;
   targetIp: string;
   timeoutSeconds?: number;
   correlationId?: string;
@@ -137,6 +148,7 @@ export async function waitForJobResult(jobId: number, timeoutSeconds: number): P
 
 async function enqueueJob(input: {
   connectorId: number;
+  connectorGroupId?: number | null;
   deviceId?: number;
   jobType: ConnectorJobType;
   targetIp: string;
@@ -157,6 +169,7 @@ async function enqueueJob(input: {
 
   const job = await createConnectorJob({
     connector_id: input.connectorId,
+    connector_group_id: input.connectorGroupId ?? null,
     job_type: input.jobType,
     target_ip: input.targetIp,
     target_port: input.targetPort ?? null,
@@ -175,6 +188,7 @@ async function enqueueJob(input: {
     objectId: String(job.id),
     metadata: {
       connector_id: input.connectorId,
+      connector_group_id: input.connectorGroupId ?? null,
       device_id: input.deviceId ?? null,
       job_type: input.jobType,
       target_ip: input.targetIp,
@@ -189,6 +203,7 @@ async function enqueueJob(input: {
 
 async function executeJob(input: {
   connectorId: number;
+  connectorGroupId?: number | null;
   deviceId?: number;
   jobType: ConnectorJobType;
   targetIp: string;
@@ -204,6 +219,36 @@ async function executeJob(input: {
   return waitForJobResult(jobId, input.timeoutSeconds);
 }
 
+async function resolveExecutionTarget(
+  input: BaseExecutionInput,
+  excludedConnectorIds: number[] = [],
+): Promise<{ connectorId: number; connectorGroupId: number | null }> {
+  if (input.connectorId) {
+    return { connectorId: input.connectorId, connectorGroupId: null };
+  }
+
+  if (input.connectorGroupId) {
+    const resolved = await resolveAvailableConnectorForGroup(input.connectorGroupId, excludedConnectorIds);
+    return { connectorId: resolved.connectorId, connectorGroupId: input.connectorGroupId };
+  }
+
+  if (input.deviceId) {
+    const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, input.deviceId)).limit(1);
+    if (!device) {
+      throw new Error("Device not found");
+    }
+    if (device.connectorGroupId) {
+      const resolved = await resolveAvailableConnectorForGroup(device.connectorGroupId, excludedConnectorIds);
+      return { connectorId: resolved.connectorId, connectorGroupId: device.connectorGroupId };
+    }
+    if (device.connectorId) {
+      return { connectorId: device.connectorId, connectorGroupId: null };
+    }
+  }
+
+  throw new Error("Device has no connector");
+}
+
 export async function executeViaConnector(input: BaseExecutionInput & {
   jobType: ConnectorJobType;
   targetPort?: number | null;
@@ -212,18 +257,49 @@ export async function executeViaConnector(input: BaseExecutionInput & {
   auditMetadata?: Record<string, unknown>;
 }): Promise<ConnectorExecutionResult> {
   const timeoutSeconds = input.timeoutSeconds ?? CONNECTOR_JOB_TIMEOUT_DEFAULTS[input.jobType] ?? 120;
-  return executeJob({
-    connectorId: input.connectorId,
-    deviceId: input.deviceId,
-    jobType: input.jobType,
-    targetIp: input.targetIp,
-    targetPort: input.targetPort,
-    payload: input.payload,
-    timeoutSeconds,
-    correlationId: input.correlationId,
-    createdBy: input.createdBy,
-    auditAction: input.auditAction ?? "connector_job_execute",
-  });
+  const failoverEnabled = Boolean(input.connectorGroupId || input.deviceId);
+  const excludedConnectorIds: number[] = [];
+  let lastError: unknown = null;
+
+  while (true) {
+    let target;
+    try {
+      target = await resolveExecutionTarget(input, excludedConnectorIds);
+    } catch (error) {
+      if (error instanceof ConnectorGroupOfflineError && failoverEnabled && excludedConnectorIds.length > 0) {
+        throw lastError ?? error;
+      }
+      throw error;
+    }
+
+    try {
+      return await executeJob({
+        connectorId: target.connectorId,
+        connectorGroupId: target.connectorGroupId,
+        deviceId: input.deviceId,
+        jobType: input.jobType,
+        targetIp: input.targetIp,
+        targetPort: input.targetPort,
+        payload: input.payload,
+        timeoutSeconds,
+        correlationId: input.correlationId,
+        createdBy: input.createdBy,
+        auditAction: input.auditAction ?? "connector_job_execute",
+      });
+    } catch (error) {
+      const canFailover =
+        failoverEnabled &&
+        (error instanceof ConnectorOfflineError || error instanceof ConnectorJobTimeoutError);
+      if (!canFailover) {
+        throw error;
+      }
+      excludedConnectorIds.push(target.connectorId);
+      lastError = error;
+      if (input.connectorId) {
+        throw error;
+      }
+    }
+  }
 }
 
 export async function executePing(input: BaseExecutionInput & { count?: number }): Promise<ConnectorExecutionResult> {
@@ -251,7 +327,7 @@ export async function executeTcpCheck(
 }
 
 export async function executeSnmpGet(
-  input: BaseExecutionInput & { oid: string; community: string; version?: string },
+  input: BaseExecutionInput & { oid: string; community?: string; credentialId?: string; version?: string },
 ): Promise<ConnectorExecutionResult> {
   return executeViaConnector({
     ...input,
@@ -260,7 +336,7 @@ export async function executeSnmpGet(
     timeoutSeconds: input.timeoutSeconds ?? CONNECTOR_JOB_TIMEOUT_DEFAULTS.SNMP_GET,
     payload: {
       oid: input.oid,
-      community: input.community,
+      ...(input.credentialId ? { credential_id: input.credentialId } : { community: input.community }),
       version: input.version ?? "2c",
     },
     auditAction: "connector_device_snmp_get",
@@ -269,7 +345,7 @@ export async function executeSnmpGet(
 }
 
 export async function executeSnmpWalk(
-  input: BaseExecutionInput & { oid: string; community: string; version?: string },
+  input: BaseExecutionInput & { oid: string; community?: string; credentialId?: string; version?: string },
 ): Promise<ConnectorExecutionResult> {
   return executeViaConnector({
     ...input,
@@ -278,7 +354,7 @@ export async function executeSnmpWalk(
     timeoutSeconds: input.timeoutSeconds ?? CONNECTOR_JOB_TIMEOUT_DEFAULTS.SNMP_WALK,
     payload: {
       oid: input.oid,
-      community: input.community,
+      ...(input.credentialId ? { credential_id: input.credentialId } : { community: input.community }),
       version: input.version ?? "2c",
     },
     auditAction: "connector_device_snmp_walk",
@@ -288,8 +364,9 @@ export async function executeSnmpWalk(
 
 export async function executeSshCommand(
   input: BaseExecutionInput & {
-    username: string;
-    password: string;
+    username?: string;
+    password?: string;
+    credentialId?: string;
     command: string;
     vendor?: string;
     port?: number;
@@ -302,8 +379,7 @@ export async function executeSshCommand(
     targetPort: input.port ?? 22,
     timeoutSeconds: input.timeoutSeconds ?? CONNECTOR_JOB_TIMEOUT_DEFAULTS.SSH_COMMAND,
     payload: {
-      username: input.username,
-      password: input.password,
+      ...(input.credentialId ? { credential_id: input.credentialId } : { username: input.username, password: input.password }),
       command: input.command,
       vendor: input.vendor ?? "generic",
       port: input.port ?? 22,
@@ -316,6 +392,10 @@ export async function executeSshCommand(
 export async function resolveDeviceConnectorContext(deviceId: number): Promise<{
   device: Device;
   connectorId: number | null;
+  connectorGroupId: number | null;
+  sshCredentialId: string | null;
+  snmpCredentialId: string | null;
+  username: string;
   password: string;
   community: string | null;
 }> {
@@ -323,17 +403,26 @@ export async function resolveDeviceConnectorContext(deviceId: number): Promise<{
   if (!device) {
     throw new Error("Device not found");
   }
-  const password = decrypt(device.passwordEncrypted);
+  const credentials = await resolveLegacyDeviceCredentialContext(device);
+  const connectorTarget = device.connectorGroupId
+    ? await resolveAvailableConnectorForGroup(device.connectorGroupId)
+    : device.connectorId
+      ? { connectorId: device.connectorId, groupId: null }
+      : null;
   return {
     device,
-    connectorId: device.connectorId,
-    password,
-    community: device.snmpCommunity?.trim() || null,
+    connectorId: connectorTarget?.connectorId ?? device.connectorId ?? null,
+    connectorGroupId: device.connectorGroupId ?? null,
+    sshCredentialId: credentials.sshCredentialId,
+    snmpCredentialId: credentials.snmpCredentialId,
+    username: credentials.username,
+    password: credentials.password,
+    community: credentials.community,
   };
 }
 
-export function deviceUsesConnector(device: Pick<Device, "connectorId">): device is Device & { connectorId: number } {
-  return typeof device.connectorId === "number" && device.connectorId > 0;
+export function deviceUsesConnector(device: Pick<Device, "connectorId" | "connectorGroupId">): boolean {
+  return Boolean(device.connectorGroupId || device.connectorId);
 }
 
 export async function executeSshCommandForDevice(
@@ -344,13 +433,18 @@ export async function executeSshCommandForDevice(
   if (!deviceUsesConnector(device)) {
     throw new Error("Device is not associated with a connector");
   }
-  const password = decrypt(device.passwordEncrypted);
+  const credentials = await resolveLegacyDeviceCredentialContext(device);
+  const connectorTarget = device.connectorGroupId
+    ? await resolveAvailableConnectorForGroup(device.connectorGroupId)
+    : { connectorId: device.connectorId, connectorGroupId: null };
   return executeSshCommand({
     deviceId: device.id,
-    connectorId: device.connectorId,
+    connectorId: connectorTarget.connectorId,
+    connectorGroupId: device.connectorGroupId ?? null,
     targetIp: device.ipAddress,
-    username: device.username,
-    password,
+    ...(credentials.sshCredentialId
+      ? { credentialId: credentials.sshCredentialId }
+      : { username: credentials.username, password: credentials.password }),
     command,
     vendor: device.vendor,
     port: device.sshPort,

@@ -13,7 +13,9 @@ export type ProvisioningJobStatus =
   | "executing"
   | "completed"
   | "failed"
-  | "rolled_back";
+  | "rolled_back"
+  | "postcheck_running"
+  | "postcheck_completed";
 
 export interface ProvisioningPreviewInput {
   deviceId: number;
@@ -177,9 +179,11 @@ export function isAllowedJobTransition(from: string, to: ProvisioningJobStatus):
     blocked: ["draft", "cancelled"],
     cancelled: [],
     executing: ["completed", "failed", "blocked"],
-    completed: [],
+    completed: ["postcheck_running", "rolled_back"],
     failed: ["draft"],
     rolled_back: ["draft"],
+    postcheck_running: ["postcheck_completed", "failed"],
+    postcheck_completed: ["rolled_back"],
   };
   return (transitions[from] ?? []).includes(to);
 }

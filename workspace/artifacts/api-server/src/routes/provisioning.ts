@@ -13,17 +13,19 @@ import { decrypt } from "../lib/crypto.js";
 import { runSSHCommands } from "../lib/ssh.js";
 import { env } from "../lib/env.js";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
+import { getRequestContext } from "../lib/request-context.js";
+import { requireRole } from "../lib/auth.js";
 import { buildProvisioningJobReportMarkdown, createProvisioningReport, getProvisioningJobDetail } from "../modules/netops/provisioning.service.js";
 import {
   buildProvisioningPreview,
   getProvisioningServiceCatalog,
   isAllowedJobTransition,
 } from "../modules/netops/provisioning-preview.service.js";
-import {
-  buildProvisioningPreview as buildTemplateProvisioningPreview,
-  maskParametersForAudit,
-} from "../modules/provisioning/provisioning-preview.service.js";
+import { maskParametersForAudit } from "../modules/provisioning/provisioning-preview.service.js";
+import { buildProvisioningPreviewViaConnector } from "../modules/provisioning/provisioning-connector.service.js";
 import { ensureServiceTemplatesInDb } from "../modules/netops/provisioning-template-seed.js";
+import { executeProvisioningJobControlled, validateExecutionEnabledOrThrow } from "../modules/provisioning/provisioning-execute.service.js";
+import { runProvisioningPostCheck } from "../modules/provisioning/provisioning-postcheck.service.js";
 
 const router = Router();
 
@@ -101,7 +103,7 @@ router.post("/provisioning/preview", async (req, res) => {
   }
 
   if (templateId) {
-    const preview = await buildTemplateProvisioningPreview({
+    const preview = await buildProvisioningPreviewViaConnector({
       deviceId,
       templateId,
       parameters,
@@ -339,7 +341,7 @@ router.post("/provisioning-jobs/:id/request-approval", async (req, res) => {
   res.json(updated);
 });
 
-router.post("/provisioning-jobs/:id/approve", async (req, res) => {
+router.post("/provisioning-jobs/:id/approve", requireRole(["admin", "operator"]), async (req, res) => {
   const params = ValidateProvisioningJobParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) {
     res.status(400).json({ error: "Invalid ID" });
@@ -357,13 +359,26 @@ router.post("/provisioning-jobs/:id/approve", async (req, res) => {
     return;
   }
 
-  await db.update(provisioningJobsTable).set({ status: "approved" }).where(eq(provisioningJobsTable.id, params.data.id));
+  const context = getRequestContext();
+  const approvedByUserId = context?.user?.id ?? null;
+  const approvedAt = new Date();
+
+  await db.update(provisioningJobsTable).set({
+    status: "approved",
+    approvedByUserId,
+    approvedAt,
+  }).where(eq(provisioningJobsTable.id, params.data.id));
 
   await logAuditEvent({
     action: "provisioning_approve",
     objectType: "provisioning_job",
     objectId: String(params.data.id),
-    metadata: { jobName: detail.name, jobType: detail.type, applyBlocked: env.configApplyEnabled !== true },
+    metadata: {
+      jobName: detail.name,
+      jobType: detail.type,
+      approvedBy: context?.user?.email ?? "unknown",
+      executeEnabled: env.provisioningExecuteEnabled,
+    },
     sourceIp: getRequestSourceIp(req),
   });
 
@@ -434,76 +449,54 @@ router.post("/provisioning-jobs/:id/report", async (req, res) => {
   });
 });
 
-router.post("/provisioning-jobs/:id/execute", async (req, res) => {
+router.post("/provisioning-jobs/:id/execute", requireRole(["admin", "operator"]), async (req, res) => {
   const params = ExecuteProvisioningJobParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) {
     res.status(400).json({ error: "Invalid ID" });
     return;
   }
 
-  const [job] = await db.select().from(provisioningJobsTable).where(eq(provisioningJobsTable.id, params.data.id));
-  if (!job) {
-    res.status(404).json({ error: "Not found" });
-    return;
-  }
-
-  const deviceIds = parseDeviceIds(job.deviceIds);
-  const blocked = env.configApplyEnabled !== true;
-  const dryRun = env.dryRunDefault || blocked;
-  const blockedMessage = "Execução real bloqueada. CONFIG_APPLY_ENABLED=false.";
-
-  if (job.status !== "approved" && !blocked) {
-    res.status(409).json({ error: "Job must be approved before execute. Current status: " + job.status });
-    return;
-  }
-
-  if (blocked || dryRun) {
-    await db.update(provisioningJobsTable).set({
-      status: blocked ? "blocked" : "validated",
-      executedAt: new Date(),
-      errorMessage: blocked ? blockedMessage : null,
-    }).where(eq(provisioningJobsTable.id, params.data.id));
-
-    await upsertStepRows(
-      params.data.id,
-      deviceIds,
-      "skipped",
-      blocked ? blockedMessage : "Dry-run mode. No SSH commands sent.",
-      blocked ? blockedMessage : null,
-    );
-
+  // 1. Validar feature flag
+  const flagError = validateExecutionEnabledOrThrow();
+  if (flagError) {
     await logAuditEvent({
-      action: blocked ? "provisioning_execute_blocked" : "provisioning_execute_dry_run",
+      action: "provisioning_execute_blocked",
       objectType: "provisioning_job",
       objectId: String(params.data.id),
-      metadata: { jobName: job.name, jobType: job.type, dryRun, blocked, deviceCount: deviceIds.length },
+      metadata: { reason: "PROVISIONING_EXECUTE_ENABLED=false" },
       sourceIp: getRequestSourceIp(req),
     });
-
-    const detail = await buildJobDetail(params.data.id);
-    if (!detail) {
-      res.status(404).json({ error: "Not found" });
-      return;
-    }
-    res.json(detail);
+    res.status(flagError.status).json({ error: flagError.message });
     return;
   }
 
-  await db.update(provisioningJobsTable).set({ status: "executing", executedAt: new Date(), errorMessage: null }).where(eq(provisioningJobsTable.id, params.data.id));
-  await db.delete(provisioningStepsTable).where(eq(provisioningStepsTable.jobId, params.data.id));
+  // 2. Executar via serviço controlado
+  const context = getRequestContext();
+  const result = await executeProvisioningJobControlled(params.data.id, context?.user?.id ?? null);
 
-  const stepRows = deviceIds.flatMap((deviceId) => [
-    { jobId: params.data.id, deviceId, stepName: "Pre-flight check", status: "pending" as const },
-    { jobId: params.data.id, deviceId, stepName: "Apply configuration", status: "pending" as const },
-    { jobId: params.data.id, deviceId, stepName: "Validate configuration", status: "pending" as const },
-  ]);
-  const insertedSteps = stepRows.length > 0 ? await db.insert(provisioningStepsTable).values(stepRows).returning() : [];
+  if ("error" in result) {
+    await logAuditEvent({
+      action: "provisioning_execute_failed",
+      objectType: "provisioning_job",
+      objectId: String(params.data.id),
+      metadata: { reason: result.error.message },
+      sourceIp: getRequestSourceIp(req),
+    });
+    res.status(result.error.status).json({ error: result.error.message });
+    return;
+  }
 
+  // 3. Log sucesso
+  const [job] = await db.select().from(provisioningJobsTable).where(eq(provisioningJobsTable.id, params.data.id));
   await logAuditEvent({
     action: "provisioning_execute",
     objectType: "provisioning_job",
     objectId: String(params.data.id),
-    metadata: { jobName: job.name, jobType: job.type, deviceCount: deviceIds.length, stepCount: insertedSteps.length },
+    metadata: {
+      jobName: job?.name,
+      jobType: job?.type,
+      executedBy: context?.user?.email,
+    },
     sourceIp: getRequestSourceIp(req),
   });
 
@@ -517,7 +510,7 @@ router.post("/provisioning-jobs/:id/execute", async (req, res) => {
   executeProvisioningJob(params.data.id, deviceIds, insertedSteps.map((step) => step.id)).catch(() => {});
 });
 
-router.post("/provisioning-jobs/:id/rollback", async (req, res) => {
+router.post("/provisioning-jobs/:id/rollback", requireRole(["admin", "operator"]), async (req, res) => {
   const params = RollbackProvisioningJobParams.safeParse({ id: Number(req.params.id) });
   if (!params.success) {
     res.status(400).json({ error: "Invalid ID" });
@@ -527,6 +520,11 @@ router.post("/provisioning-jobs/:id/rollback", async (req, res) => {
   const [job] = await db.select().from(provisioningJobsTable).where(eq(provisioningJobsTable.id, params.data.id));
   if (!job) {
     res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  if (!job.rollbackPlanGenerated) {
+    res.status(409).json({ error: "Rollback plan nunca foi gerado. Execute o job primeiro." });
     return;
   }
 
@@ -601,5 +599,72 @@ async function executeProvisioningJob(jobId: number, deviceIds: number[], stepId
   const finalStatus = anyFailed ? "failed" : "completed";
   await db.update(provisioningJobsTable).set({ status: finalStatus, completedAt: new Date() }).where(eq(provisioningJobsTable.id, jobId));
 }
+
+// FASE v0.7.0: Novos endpoints para execução controlada
+
+router.post("/provisioning-jobs/:id/postcheck", requireRole(["admin", "operator"]), async (req, res) => {
+  const params = GetProvisioningJobParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const result = await runProvisioningPostCheck(params.data.id);
+
+  if ("error" in result) {
+    await logAuditEvent({
+      action: "provisioning_postcheck_failed",
+      objectType: "provisioning_job",
+      objectId: String(params.data.id),
+      metadata: { reason: result.error },
+      sourceIp: getRequestSourceIp(req),
+    });
+    res.status(result.status).json({ error: result.error });
+    return;
+  }
+
+  await logAuditEvent({
+    action: "provisioning_postcheck",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: {
+      passed: result.passed,
+      status: result.status,
+      outputLength: result.output.length,
+    },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  const detail = await buildJobDetail(params.data.id);
+  res.json(detail);
+});
+
+router.get("/provisioning-jobs/:id/rollback-preview", requireRole(["admin", "operator"]), async (req, res) => {
+  const params = GetProvisioningJobParams.safeParse({ id: Number(req.params.id) });
+  if (!params.success) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const [job] = await db.select().from(provisioningJobsTable).where(eq(provisioningJobsTable.id, params.data.id));
+  if (!job) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  await logAuditEvent({
+    action: "provisioning_rollback_preview",
+    objectType: "provisioning_job",
+    objectId: String(params.data.id),
+    metadata: { jobName: job.name, hasPlan: Boolean(job.rollbackPlanGenerated) },
+    sourceIp: getRequestSourceIp(req),
+  });
+
+  res.json({
+    jobId: job.id,
+    rollbackPlan: job.rollbackPlanGenerated ?? null,
+    generated: job.rollbackPlanGenerated ? true : false,
+  });
+});
 
 export default router;

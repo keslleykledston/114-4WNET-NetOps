@@ -1,8 +1,9 @@
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { devicesTable } from "./devices";
 import { configTemplatesTable } from "./templates";
+import { usersTable } from "./auth";
 
 export const provisioningJobsTable = pgTable("provisioning_jobs", {
   id: serial("id").primaryKey(),
@@ -16,6 +17,15 @@ export const provisioningJobsTable = pgTable("provisioning_jobs", {
   executedAt: timestamp("executed_at"),
   completedAt: timestamp("completed_at"),
   errorMessage: text("error_message"),
+  approvedByUserId: integer("approved_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  approvedAt: timestamp("approved_at"),
+  executionPlanJson: text("execution_plan_json"),
+  rollbackPlanGenerated: text("rollback_plan_generated"),
+  postcheckAt: timestamp("postcheck_at"),
+  postcheckResult: text("postcheck_result"),
+  postcheckOutput: text("postcheck_output"),
+  maintenanceWindowStart: timestamp("maintenance_window_start"),
+  maintenanceWindowEnd: timestamp("maintenance_window_end"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -27,6 +37,10 @@ export const provisioningStepsTable = pgTable("provisioning_steps", {
   status: text("status").notNull().default("pending"),
   configApplied: text("config_applied"),
   output: text("output"),
+  stdout: text("stdout"),
+  stderr: text("stderr"),
+  commandSent: text("command_sent"),
+  commandLocked: boolean("command_locked").default(false),
   errorMessage: text("error_message"),
   executedAt: timestamp("executed_at"),
 });

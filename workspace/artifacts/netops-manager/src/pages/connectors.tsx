@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
+import { LayoutDashboard } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Waypoints, Plus, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import { useAuth } from "@/components/auth-provider";
 import {
   createConnector,
   createTenant,
+  downloadBootstrapPackage,
   listConnectors,
   listTenants,
   type ConnectorCreateResult,
@@ -33,7 +35,8 @@ export default function ConnectorsPage() {
   const [tenantName, setTenantName] = useState("");
   const [connectorName, setConnectorName] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
-  const [createdToken, setCreatedToken] = useState<ConnectorCreateResult | null>(null);
+  const [createdConnector, setCreatedConnector] = useState<ConnectorCreateResult | null>(null);
+  const [bootstrapDownloaded, setBootstrapDownloaded] = useState(false);
 
   const connectorsQuery = useQuery({
     queryKey: ["connectors"],
@@ -56,6 +59,19 @@ export default function ConnectorsPage() {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const bootstrapDownloadMutation = useMutation({
+    mutationFn: (connectorId: number) =>
+      downloadBootstrapPackage(connectorId, createdConnector?.name ?? "connector"),
+    onSuccess: () => {
+      setBootstrapDownloaded(true);
+      toast({
+        title: "Pacote de bootstrap baixado",
+        description: "Arquivo .env pronto para ser usado no agente connector.",
+      });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   const createConnectorMutation = useMutation({
     mutationFn: () =>
       createConnector({
@@ -63,14 +79,13 @@ export default function ConnectorsPage() {
         name: connectorName.trim(),
       }),
     onSuccess: (data) => {
-      setCreatedToken(data);
+      setCreatedConnector(data);
+      setBootstrapDownloaded(false);
       setConnectorName("");
       void queryClient.invalidateQueries({ queryKey: ["connectors"] });
       toast({
         title: data.reprovisioned ? "Connector reemitido" : "Connector criado",
-        description: data.reprovisioned
-          ? "Connector revogado reativado com novo token. Copie o token agora — não será exibido novamente."
-          : "Copie o token agora — não será exibido novamente.",
+        description: "Baixe o pacote de bootstrap para ativar o connector.",
       });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
@@ -88,10 +103,18 @@ export default function ConnectorsPage() {
             WireGuard transporta; o Connector Agent executa SSH/SNMP no ambiente do cliente.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void connectorsQuery.refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/infrastructure/connectors/dashboard">
+            <Button variant="secondary" size="sm">
+              <LayoutDashboard className="h-4 w-4 mr-2" />
+              Dashboard
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" onClick={() => void connectorsQuery.refetch()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {canWrite && (
@@ -153,16 +176,37 @@ export default function ConnectorsPage() {
         </div>
       )}
 
-      {createdToken && (
+      {createdConnector && !bootstrapDownloaded && (
         <Card className="border-amber-500/50 bg-amber-500/5">
           <CardHeader>
-            <CardTitle className="text-base text-amber-600 dark:text-amber-400">Token gerado (copie agora)</CardTitle>
+            <CardTitle className="text-base text-amber-600 dark:text-amber-400">PENDING BOOTSTRAP</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm font-mono break-all">
-            <p>{createdToken.connector_token}</p>
-            <Button variant="outline" size="sm" onClick={() => void navigator.clipboard.writeText(createdToken.connector_token)}>
-              Copiar token
+          <CardContent className="space-y-3">
+            <div className="text-sm text-amber-700 dark:text-amber-300">
+              <p className="font-semibold">⚠️ Este segredo será baixado apenas uma vez</p>
+              <p className="text-xs mt-1">
+                Clique abaixo para baixar o arquivo <code>.env</code> com as credenciais de bootstrap do connector.
+                Após o download, use-o para inicializar o agente.
+              </p>
+            </div>
+            <Button
+              onClick={() => void bootstrapDownloadMutation.mutate(createdConnector.id)}
+              disabled={bootstrapDownloadMutation.isPending}
+              className="w-full"
+            >
+              {bootstrapDownloadMutation.isPending ? "Gerando pacote..." : "📥 Baixar pacote de bootstrap"}
             </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {createdConnector && bootstrapDownloaded && (
+        <Card className="border-green-500/50 bg-green-500/5">
+          <CardHeader>
+            <CardTitle className="text-base text-green-600 dark:text-green-400">✓ Pacote baixado</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-green-700 dark:text-green-300">
+            Use o arquivo baixado (<code>{createdConnector.name}.env</code>) para inicializar o agente connector.
           </CardContent>
         </Card>
       )}

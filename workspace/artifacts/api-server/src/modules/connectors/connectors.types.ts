@@ -9,10 +9,24 @@ export const CONNECTOR_JOB_TYPES = [
   "SSH_CONFIG_BUNDLE",
   "SNMP_GET",
   "SNMP_WALK",
+  "NETCONF_GET",
+  "NETCONF_GET_CONFIG",
+  "NETCONF_RPC",
+  "PROVISION_PREVIEW",
+  "PROVISION_VALIDATE",
+  "PROVISION_EXECUTE",
+  "PROVISION_ROLLBACK",
   "ROUTE_CHECK",
   "WG_STATUS",
 ] as const;
 export type ConnectorJobType = (typeof CONNECTOR_JOB_TYPES)[number];
+
+export const CONNECTOR_GROUP_STRATEGIES = [
+  "ACTIVE_PASSIVE",
+  "ROUND_ROBIN",
+  "PRIORITY",
+] as const;
+export type ConnectorGroupStrategy = (typeof CONNECTOR_GROUP_STRATEGIES)[number];
 
 export const CONNECTOR_JOB_STATUSES = [
   "PENDING",
@@ -56,7 +70,8 @@ export type CreateConnectorInput = {
 };
 
 export type CreateConnectorJobInput = {
-  connector_id: number;
+  connector_id?: number | null;
+  connector_group_id?: number | null;
   job_type: ConnectorJobType;
   target_ip?: string | null;
   target_port?: number | null;
@@ -66,6 +81,43 @@ export type CreateConnectorJobInput = {
   created_by?: number | null;
   device_id?: number | null;
   correlation_id?: string | null;
+};
+
+export type ConnectorGroupMemberView = {
+  connector_id: number;
+  connector_name: string;
+  connector_status: string;
+  connector_tenant_id: number;
+  priority: number;
+  weight: number;
+};
+
+export type ConnectorGroupView = {
+  id: number;
+  tenant_id: number;
+  tenant_name: string;
+  name: string;
+  strategy: ConnectorGroupStrategy;
+  member_count: number;
+  active_member_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ConnectorGroupDetailView = ConnectorGroupView & {
+  members: ConnectorGroupMemberView[];
+};
+
+export type ConnectorGroupInput = {
+  tenant_id: number;
+  name: string;
+  strategy: ConnectorGroupStrategy;
+};
+
+export type ConnectorGroupMemberInput = {
+  connector_id: number;
+  priority?: number;
+  weight?: number;
 };
 
 export type ConnectorPublicView = {
@@ -93,7 +145,7 @@ export type ConnectorDetailView = ConnectorPublicView & {
 };
 
 export type ConnectorCreateResponse = ConnectorDetailView & {
-  connector_token: string;
   wireguard_config_preview: string;
+  bootstrap_pending: boolean;
   reprovisioned?: boolean;
 };

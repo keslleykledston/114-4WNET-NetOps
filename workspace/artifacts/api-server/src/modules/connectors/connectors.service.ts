@@ -1,6 +1,7 @@
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { ConflictError, isUniqueViolation } from "../../lib/db-errors.js";
 import {
+  connectorBootstrapTokensTable,
   connectorHeartbeatsTable,
   connectorJobResultsTable,
   connectorJobsTable,
@@ -10,6 +11,7 @@ import {
   devicesTable,
   tenantsTable,
   usersTable,
+  type ConnectorBootstrapToken,
 } from "@workspace/db";
 import { env } from "../../lib/env.js";
 import { generateConnectorToken, hashConnectorToken } from "./connector-token.js";
@@ -25,11 +27,13 @@ import type {
 import { maskSensitivePayload } from "./connector-payload-mask.js";
 import { buildWireGuardClientConfig } from "./wireguard-config.js";
 import { assertReadOnlySshCommand } from "./ssh-readonly-policy.js";
+import { resolveAvailableConnectorForGroup } from "./connector-groups.service.js";
 import {
-  decryptWireGuardPrivateKey,
   encryptWireGuardPrivateKey,
+  decryptWireGuardPrivateKey,
   generateWireGuardKeyPair,
 } from "./wireguard-keys.js";
+import { buildConnectorPayloadWithCredential } from "../credentials/credential-vault.resolver.js";
 
 const HEARTBEAT_OFFLINE_MS = 2 * 60 * 1000;
 
@@ -231,22 +235,17 @@ function isInactiveConnectorStatus(status: string): boolean {
   return status === "REVOKED" || status === "DISABLED";
 }
 
-type ConnectorCredentials = {
-  token: string;
-  tokenHash: string;
+type WireGuardCredentials = {
   wgKeys: ReturnType<typeof generateWireGuardKeyPair>;
   privateEnc: string;
   wireguardIp: string;
   wgServer: ReturnType<typeof getWireGuardServerConfig>;
 };
 
-function buildConnectorCredentials(wireguardIp: string): ConnectorCredentials {
-  const token = generateConnectorToken();
+function buildWireGuardKeys(wireguardIp: string): WireGuardCredentials {
   const wgKeys = generateWireGuardKeyPair();
   const wgServer = getWireGuardServerConfig();
   return {
-    token,
-    tokenHash: hashConnectorToken(token),
     wgKeys,
     privateEnc: encryptWireGuardPrivateKey(wgKeys.privateKey, env.sessionSecret),
     wireguardIp,
@@ -256,13 +255,13 @@ function buildConnectorCredentials(wireguardIp: string): ConnectorCredentials {
 
 function buildConnectorCreateResponse(
   connectorId: number,
-  credentials: ConnectorCredentials,
+  credentials: WireGuardCredentials,
   reprovisioned = false,
 ): Promise<ConnectorCreateResponse> {
   return getConnectorById(connectorId).then((detail) => {
     if (!detail) throw new Error("Connector creation failed");
     const configPreview = buildWireGuardClientConfig({
-      connectorPrivateKey: credentials.wgKeys.privateKey,
+      connectorPrivateKey: "<PRIVATE_KEY>",
       connectorAddress: credentials.wireguardIp,
       serverPublicKey: credentials.wgServer.publicKey || "<NETOPS_WG_SERVER_PUBLIC_KEY>",
       serverEndpoint: detail.wireguard_endpoint || credentials.wgServer.endpoint,
@@ -270,8 +269,8 @@ function buildConnectorCreateResponse(
     });
     return {
       ...detail,
-      connector_token: credentials.token,
       wireguard_config_preview: configPreview,
+      bootstrap_pending: true,
       reprovisioned,
     };
   });
@@ -304,7 +303,7 @@ async function reprovisionConnector(
   await cancelOpenConnectorJobs(existing.id);
 
   const wireguardIp = input.wireguard_ip?.trim() || existing.wireguardIp || allocateWireGuardIp();
-  const credentials = buildConnectorCredentials(wireguardIp);
+  const credentials = buildWireGuardKeys(wireguardIp);
   const description =
     input.description !== undefined ? input.description?.trim() || null : existing.description;
 
@@ -314,7 +313,7 @@ async function reprovisionConnector(
       description,
       status: "PENDING",
       version: null,
-      connectorTokenHash: credentials.tokenHash,
+      connectorTokenHash: null,
       wireguardIp,
       wireguardPublicKey: credentials.wgKeys.publicKey,
       wireguardPrivateKeyEnc: credentials.privateEnc,
@@ -326,6 +325,11 @@ async function reprovisionConnector(
       updatedAt: new Date(),
     })
     .where(eq(connectorsTable.id, existing.id));
+
+  await db
+    .update(connectorBootstrapTokensTable)
+    .set({ revokedAt: new Date() })
+    .where(eq(connectorBootstrapTokensTable.connectorId, existing.id));
 
   if (input.networks?.length) {
     await db.insert(connectorNetworksTable).values(
@@ -363,7 +367,7 @@ export async function createConnector(input: CreateConnectorInput): Promise<Conn
   }
 
   const wireguardIp = input.wireguard_ip?.trim() || allocateWireGuardIp();
-  const credentials = buildConnectorCredentials(wireguardIp);
+  const credentials = buildWireGuardKeys(wireguardIp);
 
   let connector: typeof connectorsTable.$inferSelect;
   try {
@@ -374,7 +378,7 @@ export async function createConnector(input: CreateConnectorInput): Promise<Conn
         name: connectorName,
         description: input.description?.trim() || null,
         status: "PENDING",
-        connectorTokenHash: credentials.tokenHash,
+        connectorTokenHash: null,
         wireguardIp,
         wireguardPublicKey: credentials.wgKeys.publicKey,
         wireguardPrivateKeyEnc: credentials.privateEnc,
@@ -473,6 +477,102 @@ export async function findConnectorByToken(token: string) {
   return row;
 }
 
+export async function generateBootstrapPackage(
+  connectorId: number,
+  userId: number | null,
+): Promise<{ token: string; envContent: string; connectorName: string }> {
+  const [connector] = await db
+    .select()
+    .from(connectorsTable)
+    .where(eq(connectorsTable.id, connectorId))
+    .limit(1);
+
+  if (!connector) {
+    throw new Error("Connector not found");
+  }
+
+  const now = new Date();
+  const ttl15min = new Date(now.getTime() + 15 * 60 * 1000);
+
+  const [activeBootstrap] = await db
+    .select()
+    .from(connectorBootstrapTokensTable)
+    .where(
+      and(
+        eq(connectorBootstrapTokensTable.connectorId, connectorId),
+      ),
+    )
+    .limit(1);
+
+  if (activeBootstrap && activeBootstrap.expiresAt > now && !activeBootstrap.usedAt && !activeBootstrap.revokedAt) {
+    throw new Error(
+      "Active bootstrap token already exists. Use ?rotate=true to reissue.",
+    );
+  }
+
+  const token = generateConnectorToken();
+  const tokenHash = hashConnectorToken(token);
+
+  await db
+    .update(connectorsTable)
+    .set({ connectorTokenHash: tokenHash })
+    .where(eq(connectorsTable.id, connectorId));
+
+  await db.insert(connectorBootstrapTokensTable).values({
+    connectorId,
+    tokenHash,
+    expiresAt: ttl15min,
+    deliveredAt: now,
+    createdBy: userId ?? null,
+    createdAt: now,
+  });
+
+  if (!connector.wireguardPrivateKeyEnc) {
+    throw new Error("Connector WireGuard private key not found");
+  }
+
+  const wgServer = getWireGuardServerConfig();
+  const resolvedEndpoint = resolveWireGuardEndpoint(connector.wireguardEndpoint);
+  const serverPublicKey = resolveWireGuardServerPublicKey(connector);
+  const connectorPrivateKey = decryptWireGuardPrivateKey(
+    connector.wireguardPrivateKeyEnc,
+    env.sessionSecret,
+  );
+
+  const wgConfig = buildWireGuardClientConfig({
+    connectorPrivateKey,
+    connectorAddress: connector.wireguardIp || "10.255.0.2",
+    serverPublicKey: serverPublicKey || wgServer.publicKey,
+    serverEndpoint: resolvedEndpoint,
+    allowedIps: connector.wireguardAllowedIps || wgServer.allowedIps,
+  });
+
+  const envContent = `# NetOps Connector Bootstrap Package
+# Generated at: ${now.toISOString()}
+# TTL: 15 minutes from generation
+# WARNING: Keep this token secure. This file should be sourced into the connector agent environment.
+
+export CONNECTOR_TOKEN="${token}"
+export CONNECTOR_ID="${connector.id}"
+export CONNECTOR_NAME="${connector.name}"
+
+# WireGuard Configuration
+cat > /tmp/wg-connector.conf <<'WGEOF'
+${wgConfig}
+WGEOF
+
+# Source this file before starting the connector agent:
+# source connector-bootstrap.env
+# docker run -e CONNECTOR_TOKEN -e CONNECTOR_ID -e CONNECTOR_NAME -v /tmp/wg-connector.conf:/etc/wireguard/wg-connector.conf netops/connector-agent
+`;
+
+  return {
+    token,
+    envContent,
+    connectorName: connector.name,
+  };
+}
+
 export async function processHeartbeat(connectorId: number, payload: ConnectorHeartbeatPayload) {
   const [connector] = await db
     .select()
@@ -515,6 +615,20 @@ export async function processHeartbeat(connectorId: number, payload: ConnectorHe
     })
     .where(eq(connectorsTable.id, connector.id));
 
+  if (connector.connectorTokenHash) {
+    db.update(connectorBootstrapTokensTable)
+      .set({ usedAt: now })
+      .where(
+        and(
+          eq(connectorBootstrapTokensTable.connectorId, connector.id),
+          eq(connectorBootstrapTokensTable.tokenHash, connector.connectorTokenHash),
+        ),
+      )
+      .catch((error) => {
+        console.error("failed to mark bootstrap token as used:", error);
+      });
+  }
+
   return { connector_id: connector.id, status, received_at: now.toISOString() };
 }
 
@@ -542,10 +656,6 @@ export async function getWireGuardConfigForConnector(id: number, revealPrivateKe
 
   const wgServer = getWireGuardServerConfig();
   const serverPublicKey = await requireWireGuardServerPublicKey(row);
-  let privateKey = "[encrypted — regenerate or use install bundle]";
-  if (revealPrivateKey) {
-    privateKey = decryptWireGuardPrivateKey(row.wireguardPrivateKeyEnc, env.sessionSecret);
-  }
 
   return {
     connector_id: id,
@@ -555,7 +665,7 @@ export async function getWireGuardConfigForConnector(id: number, revealPrivateKe
     endpoint: row.wireguardEndpoint || wgServer.endpoint,
     allowed_ips: row.wireguardAllowedIps || wgServer.allowedIps,
     config: buildWireGuardClientConfig({
-      connectorPrivateKey: privateKey.startsWith("[") ? "<PRIVATE_KEY>" : privateKey,
+      connectorPrivateKey: "<PRIVATE_KEY>",
       connectorAddress: row.wireguardIp || "10.255.0.2",
       serverPublicKey,
       serverEndpoint: row.wireguardEndpoint || wgServer.endpoint,
@@ -643,13 +753,41 @@ export function validateJobPayload(jobType: string, payload: Record<string, unkn
     const oid = typeof payload.oid === "string" ? payload.oid : "";
     if (!oid) throw new Error("SNMP jobs require payload.oid");
   }
+  if (jobType === "NETCONF_GET" || jobType === "NETCONF_GET_CONFIG" || jobType === "NETCONF_RPC") {
+    const rpc = typeof payload.rpc === "string" ? payload.rpc.trim() : "";
+    if (!rpc) throw new Error("NETCONF jobs require payload.rpc");
+  }
+  if (
+    jobType === "PROVISION_PREVIEW" ||
+    jobType === "PROVISION_VALIDATE" ||
+    jobType === "PROVISION_EXECUTE" ||
+    jobType === "PROVISION_ROLLBACK"
+  ) {
+    const templateId = typeof payload.template_id === "string" ? payload.template_id.trim() : "";
+    const parameters = payload.parameters && typeof payload.parameters === "object" && !Array.isArray(payload.parameters)
+      ? payload.parameters
+      : null;
+    const deviceId = Number(payload.device_id);
+    if (!Number.isInteger(deviceId) || deviceId < 1) throw new Error("Provisioning jobs require payload.device_id");
+    if (!templateId) throw new Error("Provisioning jobs require payload.template_id");
+    if (!parameters) throw new Error("Provisioning jobs require payload.parameters");
+  }
 }
 
 export async function createConnectorJob(input: CreateConnectorJobInput) {
+  let connectorId = input.connector_id ?? null;
+  if (!connectorId) {
+    if (!input.connector_group_id) {
+      throw new Error("Connector or connector group not specified");
+    }
+    const resolved = await resolveAvailableConnectorForGroup(input.connector_group_id);
+    connectorId = resolved.connectorId;
+  }
+
   const [connector] = await db
     .select({ status: connectorsTable.status })
     .from(connectorsTable)
-    .where(eq(connectorsTable.id, input.connector_id))
+    .where(eq(connectorsTable.id, connectorId))
     .limit(1);
   if (!connector) {
     throw new Error("Connector not found");
@@ -664,7 +802,7 @@ export async function createConnectorJob(input: CreateConnectorJobInput) {
   const [job] = await db
     .insert(connectorJobsTable)
     .values({
-      connectorId: input.connector_id,
+      connectorId,
       jobType: input.job_type,
       targetIp: input.target_ip ?? null,
       targetPort: input.target_port ?? null,
@@ -799,15 +937,23 @@ export async function listPendingJobsForConnector(connectorId: number, limit = 1
     .set({ status: "RUNNING", startedAt })
     .where(inArray(connectorJobsTable.id, jobs.map((j) => j.id)));
 
-  return jobs.map((j) => ({
-    id: j.id,
-    job_type: j.jobType,
-    target_ip: j.targetIp,
-    target_port: j.targetPort,
-    payload_json: j.payloadJson,
-    timeout_seconds: j.timeoutSeconds,
-    status: "RUNNING" as const,
-  }));
+  const hydrated = [];
+  for (const j of jobs) {
+    hydrated.push({
+      id: j.id,
+      job_type: j.jobType,
+      target_ip: j.targetIp,
+      target_port: j.targetPort,
+      payload_json: await buildConnectorPayloadWithCredential({
+        payload: j.payloadJson,
+        jobType: j.jobType,
+        deviceId: j.deviceId,
+      }),
+      timeout_seconds: j.timeoutSeconds,
+      status: "RUNNING" as const,
+    });
+  }
+  return hydrated;
 }
 
 export async function submitJobResult(connectorId: number, jobId: number, result: ConnectorJobResultPayload) {

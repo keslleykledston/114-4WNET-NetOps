@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgTable, real, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, real, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./auth.js";
@@ -23,7 +23,7 @@ export const connectorsTable = pgTable(
     description: text("description"),
     status: text("status").notNull().default("PENDING"),
     version: text("version"),
-    connectorTokenHash: text("connector_token_hash").notNull(),
+    connectorTokenHash: text("connector_token_hash"),
     wireguardIp: text("wireguard_ip"),
     wireguardPublicKey: text("wireguard_public_key"),
     wireguardPrivateKeyEnc: text("wireguard_private_key_enc"),
@@ -40,6 +40,43 @@ export const connectorsTable = pgTable(
   }),
 );
 
+export const connectorGroupsTable = pgTable(
+  "connector_groups",
+  {
+    id: serial("id").primaryKey(),
+    tenantId: integer("tenant_id")
+      .notNull()
+      .references(() => tenantsTable.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    strategy: text("strategy").notNull().default("ACTIVE_PASSIVE"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    tenantNameIdx: index("connector_groups_tenant_name_idx").on(table.tenantId, table.name),
+    tenantUniqueIdx: uniqueIndex("connector_groups_tenant_name_unique_idx").on(table.tenantId, table.name),
+  }),
+);
+
+export const connectorGroupMembersTable = pgTable(
+  "connector_group_members",
+  {
+    connectorGroupId: integer("connector_group_id")
+      .notNull()
+      .references(() => connectorGroupsTable.id, { onDelete: "cascade" }),
+    connectorId: integer("connector_id")
+      .notNull()
+      .references(() => connectorsTable.id, { onDelete: "cascade" }),
+    priority: integer("priority").notNull().default(100),
+    weight: integer("weight").notNull().default(1),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.connectorGroupId, table.connectorId] }),
+    groupIdx: index("connector_group_members_group_idx").on(table.connectorGroupId),
+    connectorIdx: index("connector_group_members_connector_idx").on(table.connectorId),
+  }),
+);
+
 export const connectorNetworksTable = pgTable(
   "connector_networks",
   {
@@ -53,6 +90,27 @@ export const connectorNetworksTable = pgTable(
   },
   (table) => ({
     connectorIdx: index("connector_networks_connector_id_idx").on(table.connectorId),
+  }),
+);
+
+export const connectorBootstrapTokensTable = pgTable(
+  "connector_bootstrap_tokens",
+  {
+    id: serial("id").primaryKey(),
+    connectorId: integer("connector_id")
+      .notNull()
+      .references(() => connectorsTable.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    deliveredAt: timestamp("delivered_at"),
+    createdBy: integer("created_by").references(() => usersTable.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    revokedAt: timestamp("revoked_at"),
+  },
+  (table) => ({
+    connectorIdx: index("connector_bootstrap_tokens_connector_id_idx").on(table.connectorId),
+    expiresIdx: index("connector_bootstrap_tokens_expires_at_idx").on(table.expiresAt),
   }),
 );
 
@@ -124,6 +182,36 @@ export const connectorHeartbeatsTable = pgTable(
   }),
 );
 
+export const connectorAlertsTable = pgTable(
+  "connector_alerts",
+  {
+    id: serial("id").primaryKey(),
+    connectorId: integer("connector_id")
+      .notNull()
+      .references(() => connectorsTable.id, { onDelete: "cascade" }),
+    tenantId: integer("tenant_id")
+      .notNull()
+      .references(() => tenantsTable.id, { onDelete: "cascade" }),
+    deviceId: integer("device_id"),
+    severity: text("severity").notNull(),
+    alertType: text("alert_type").notNull(),
+    status: text("status").notNull().default("OPEN"),
+    title: text("title").notNull(),
+    message: text("message").notNull(),
+    detailsJson: jsonb("details_json").$type<Record<string, unknown>>().notNull().default({}),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).defaultNow().notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    connectorStatusIdx: index("connector_alerts_connector_status_idx").on(table.connectorId, table.status),
+    tenantStatusIdx: index("connector_alerts_tenant_status_idx").on(table.tenantId, table.status),
+    deviceIdx: index("connector_alerts_device_idx").on(table.deviceId),
+  }),
+);
+
 export const insertTenantSchema = createInsertSchema(tenantsTable).omit({
   id: true,
   createdAt: true,
@@ -141,7 +229,11 @@ export const insertConnectorSchema = createInsertSchema(connectorsTable).omit({
 export type Tenant = typeof tenantsTable.$inferSelect;
 export type InsertTenant = z.infer<typeof insertTenantSchema>;
 export type Connector = typeof connectorsTable.$inferSelect;
+export type ConnectorGroup = typeof connectorGroupsTable.$inferSelect;
+export type ConnectorGroupMember = typeof connectorGroupMembersTable.$inferSelect;
 export type ConnectorJob = typeof connectorJobsTable.$inferSelect;
 export type ConnectorJobResult = typeof connectorJobResultsTable.$inferSelect;
 export type ConnectorHeartbeat = typeof connectorHeartbeatsTable.$inferSelect;
 export type ConnectorNetwork = typeof connectorNetworksTable.$inferSelect;
+export type ConnectorBootstrapToken = typeof connectorBootstrapTokensTable.$inferSelect;
+export type ConnectorAlert = typeof connectorAlertsTable.$inferSelect;

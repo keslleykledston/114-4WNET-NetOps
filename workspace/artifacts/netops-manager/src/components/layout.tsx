@@ -35,6 +35,7 @@ const navItems = [
   { href: "/l2-circuits", icon: Network, label: "L2 Circuits" },
   { href: "/compliance", icon: ShieldCheck, label: "Compliance" },
   { href: "/provisioning", icon: Rocket, label: "Provisioning" },
+  { href: "/provisioning/templates", icon: FileCode, label: "Template Registry" },
   { href: "/templates", icon: FileCode, label: "Templates" },
   { href: "/policies", icon: ScrollText, label: "Policies" },
   { href: "/config-collection", icon: DownloadCloud, label: "Config Collection" },

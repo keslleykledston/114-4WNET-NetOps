@@ -12,6 +12,8 @@ import Devices from "@/pages/devices";
 import DeviceDetail from "@/pages/device-detail";
 import Compliance from "@/pages/compliance";
 import Provisioning from "@/pages/provisioning";
+import ProvisioningTemplatesPage from "@/pages/provisioning-templates";
+import ProvisioningTemplateDetailPage from "@/pages/provisioning-template-detail";
 import Templates from "@/pages/templates";
 import Audit from "@/pages/audit";
 import Reports from "@/pages/reports";
@@ -75,6 +77,8 @@ function Router() {
         <Route path="/devices/:id" component={DeviceDetail} />
         <Route path="/compliance" component={Compliance} />
         <Route path="/provisioning" component={Provisioning} />
+        <Route path="/provisioning/templates" component={ProvisioningTemplatesPage} />
+        <Route path="/provisioning/templates/:id" component={ProvisioningTemplateDetailPage} />
         <Route path="/templates" component={Templates} />
         <Route path="/audit" component={Audit} />
         <Route path="/reports" component={Reports} />

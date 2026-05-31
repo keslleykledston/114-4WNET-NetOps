@@ -8,6 +8,7 @@ import {
 } from "@workspace/db";
 import { decrypt } from "../../lib/crypto.js";
 import { logAuditEvent } from "../../lib/audit.js";
+import { logger } from "../../lib/logger.js";
 import { maskSensitivePayload } from "./connector-payload-mask.js";
 import { assertReadOnlySshCommand } from "./ssh-readonly-policy.js";
 import { assertConnectorAcceptsJobs } from "./connector-execution.service.js";
@@ -171,4 +172,46 @@ export async function processConfigBundleAfterSubmit(connectorId: number, jobId:
         .where(eq(collectedConfigsTable.id, cfg.id));
     });
   });
+
+  // Trigger compliance + drift detection after bundle parsed
+  setImmediate(() => {
+    void triggerComplianceAfterBundle(job.deviceId!).catch((err) => {
+      logger.warn({ err, deviceId: job.deviceId }, "compliance auto-trigger failed");
+    });
+  });
+}
+
+async function triggerComplianceAfterBundle(deviceId: number): Promise<void> {
+  try {
+    // Dynamic import to avoid circular dependency
+    const { executeComplianceJob } = await import("../compliance/compliance-engine.js");
+    const { detectDriftForDevice } = await import("../compliance/drift-detector.service.js");
+    const { complianceJobsTable } = await import("@workspace/db");
+
+    // Create compliance job with all contexts
+    const [job] = await db
+      .insert(complianceJobsTable)
+      .values({
+        deviceId,
+        contexts: JSON.stringify(["security", "ntp", "snmp", "interface", "bgp", "l3vpn", "l2vpn"]),
+        policyProfileName: "huawei-vrp-edge-balanced",
+        status: "pending",
+      })
+      .returning();
+
+    // Execute compliance job
+    await executeComplianceJob(job.id);
+
+    // Detect drift
+    await detectDriftForDevice(deviceId);
+
+    await logAuditEvent({
+      action: "compliance_auto_triggered_after_bundle",
+      objectType: "device",
+      objectId: String(deviceId),
+      metadata: { jobId: job.id },
+    });
+  } catch (error) {
+    logger.warn({ error, deviceId }, "Failed to auto-trigger compliance");
+  }
 }

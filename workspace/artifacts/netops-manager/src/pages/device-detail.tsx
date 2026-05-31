@@ -21,6 +21,11 @@ import { DiscoveryPanel } from "@/features/device-discovery/discovery-panel";
 import { CommunityLibraryTab } from "@/features/bgp/community-library-tab";
 import { CommunitySetsTab } from "@/features/bgp/community-sets-tab";
 import { ConfigHistoryPanel } from "@/features/config-history/config-history-panel";
+import {
+  fetchDeviceCompliance,
+  fetchDeviceDrifts,
+  triggerComplianceRun,
+} from "@/features/compliance/compliance-api";
 
 export default function DeviceDetail() {
   const [, params] = useRoute("/devices/:id");
@@ -35,6 +40,18 @@ export default function DeviceDetail() {
   });
   
   const { data: complianceJobs } = useListComplianceJobs({ deviceId });
+
+  const { data: deviceCompliance } = useQuery({
+    queryKey: ["device-compliance", deviceId],
+    queryFn: () => fetchDeviceCompliance(deviceId),
+    enabled: !!deviceId,
+  });
+
+  const { data: deviceDrifts } = useQuery({
+    queryKey: ["device-drifts", deviceId],
+    queryFn: () => fetchDeviceDrifts(deviceId),
+    enabled: !!deviceId,
+  });
   const { data: provisioningJobs } = useListProvisioningJobs({ deviceId });
   const collectionStatusQuery = useQuery({
     queryKey: ["device-collection-status", deviceId],
@@ -331,39 +348,86 @@ export default function DeviceDetail() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="compliance" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5" />
-                Recent Compliance Checks
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {complianceJobs?.length ? complianceJobs.map(job => (
-                  <div key={job.id} className="flex items-center justify-between p-4 border rounded-lg">
+        <TabsContent value="compliance" className="mt-6 space-y-4">
+          {deviceCompliance && (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="h-5 w-5" />
                     <div>
-                      <div className="font-medium flex items-center gap-2">
-                        Job #{job.id}
-                        <Badge variant="outline" className={
-                          job.status === 'passed' ? 'text-green-500 border-green-500/50' : 
-                          job.status === 'failed' ? 'text-red-500 border-red-500/50' : ''
-                        }>{job.status}</Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">Contexts: {job.contexts.join(', ')}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm">
-                        <span className="text-green-500">{job.passCount} passed</span>, 
-                        <span className="text-red-500 ml-1">{job.failCount} failed</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {job.completedAt ? new Date(job.completedAt).toLocaleString() : 'Running...'}
+                      <CardTitle className="text-lg">Compliance Score</CardTitle>
+                      <div className="text-2xl font-bold mt-1">
+                        {deviceCompliance.score}
+                        <Badge className="ml-2" variant={
+                          deviceCompliance.scoreCategory === 'PASS' ? 'default' :
+                          deviceCompliance.scoreCategory === 'WARNING' ? 'secondary' : 'destructive'
+                        }>
+                          {deviceCompliance.scoreCategory}
+                        </Badge>
                       </div>
                     </div>
                   </div>
-                )) : <p className="text-muted-foreground text-sm">No compliance jobs found for this device.</p>}
+                  <Button onClick={() => triggerComplianceRun(deviceId)}>Run Now</Button>
+                </div>
+              </CardHeader>
+              <CardContent className="text-xs text-muted-foreground">
+                Last run: {deviceCompliance.completedAt ? new Date(deviceCompliance.completedAt).toLocaleString() : 'Never'}
+              </CardContent>
+            </Card>
+          )}
+
+          {deviceCompliance?.remediations && deviceCompliance.remediations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Failing Checks</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
+                  {deviceCompliance.remediations.slice(0, 10).map((item, idx) => (
+                    <div key={idx} className="p-2 border rounded bg-muted/50">
+                      <div className="font-mono text-xs">{item.remediation?.ruleId || 'unknown'}</div>
+                      <div className="mt-1">{item.remediation?.cliSuggestion || 'No suggestion available'}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {deviceDrifts && deviceDrifts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Latest Drift</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm">
+                <pre className="text-xs bg-muted p-2 rounded max-h-40 overflow-auto">
+                  {deviceDrifts[0].driftSummary || 'No drift detected'}
+                </pre>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Recent Jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {complianceJobs?.length ? (
+                <div className="space-y-2">
+                  {complianceJobs.slice(0, 5).map(job => (
+                    <div key={job.id} className="text-xs p-2 border rounded flex justify-between">
+                      <div>Job #{job.id} <Badge variant="outline" className="ml-1">{job.status}</Badge></div>
+                      <div className="text-muted-foreground">{job.passCount}P / {job.failCount}F</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-xs">No jobs</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
               </div>
             </CardContent>
           </Card>

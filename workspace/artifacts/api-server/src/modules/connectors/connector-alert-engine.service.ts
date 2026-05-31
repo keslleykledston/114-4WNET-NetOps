@@ -346,6 +346,58 @@ async function buildDeviceLevelCandidates(connectorId: number): Promise<AlertCan
         });
       }
     }
+
+    // Check for config drifts (FASE v0.9.0)
+    const { complianceDriftsTable, complianceFindingsTable, complianceJobsTable } = await import("@workspace/db");
+    const [recentDrift] = await db
+      .select()
+      .from(complianceDriftsTable)
+      .where(eq(complianceDriftsTable.deviceId, device.id))
+      .orderBy(desc(complianceDriftsTable.createdAt))
+      .limit(1);
+
+    if (recentDrift && recentDrift.driftSummary && recentDrift.createdAt >= oneHourAgo) {
+      candidates.push({
+        alertType: "CONFIG_DRIFT_DETECTED",
+        severity: "WARNING",
+        deviceId: device.id,
+        title: `Config drift detected (${device.hostname})`,
+        message: recentDrift.driftSummary.substring(0, 100),
+        details: { drift_id: recentDrift.id },
+      });
+    }
+
+    // Check for critical compliance failures (FASE v0.9.0)
+    const [latestComplianceJob] = await db
+      .select()
+      .from(complianceJobsTable)
+      .where(eq(complianceJobsTable.deviceId, device.id))
+      .orderBy(desc(complianceJobsTable.createdAt))
+      .limit(1);
+
+    if (latestComplianceJob && latestComplianceJob.status === "failed") {
+      const criticalFindings = await db
+        .select()
+        .from(complianceFindingsTable)
+        .where(
+          and(
+            eq(complianceFindingsTable.jobId, latestComplianceJob.id),
+            eq(complianceFindingsTable.severity, "critical"),
+            eq(complianceFindingsTable.status, "fail"),
+          ),
+        );
+
+      if (criticalFindings.length > 0) {
+        candidates.push({
+          alertType: "CRITICAL_COMPLIANCE_FAILURE",
+          severity: "CRITICAL",
+          deviceId: device.id,
+          title: `Critical compliance failure (${device.hostname})`,
+          message: `${criticalFindings.length} critical finding(s)`,
+          details: { job_id: latestComplianceJob.id, finding_count: criticalFindings.length },
+        });
+      }
+    }
   }
 
   return candidates;
@@ -366,6 +418,8 @@ const DEVICE_LEVEL_TYPES: ConnectorAlertType[] = [
   "CONFIG_PARSE_FAILED",
   "BGP_PARSE_FAILED",
   "L2_PARSE_FAILED",
+  "CONFIG_DRIFT_DETECTED",
+  "CRITICAL_COMPLIANCE_FAILURE",
 ];
 
 export async function evaluateConnectorAlert(connectorId: number) {

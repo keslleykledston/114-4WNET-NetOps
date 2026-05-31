@@ -23,3 +23,6 @@ export * from "./operational_bgp";
 export * from "./connectors";
 export * from "./credentials";
 export * from "./notifications";
+export * from "./resource-manager";
+export * from "./topology";
+export * from "./impact";

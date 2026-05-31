@@ -1,555 +1,523 @@
 import { useMemo, useState } from "react";
-import {
-  getListComplianceFindingsQueryKey,
-  getListComplianceJobsQueryKey,
-  useCreateComplianceJob,
-  useGetComplianceFindingsFreshnessSummary,
-  useGetComplianceSummary,
-  useListComplianceFindings,
-  useListComplianceFindingsGroups,
-  useListComplianceJobs,
-  useListDevices,
-  type ComplianceFinding,
-  type ComplianceFindingGroup,
-} from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, CheckCircle2, Clock, Eye, Plus, ShieldAlert, ShieldCheck, Filter, Download } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, Plus, ShieldCheck, Download, TrendingUp, Trash2 } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
+import {
+  fetchComplianceDashboard,
+  fetchComplianceDrifts,
+  fetchDeviceCompliance,
+  fetchDeviceDrifts,
+  triggerComplianceRun,
+  fetchBaselines,
+  createBaseline,
+  updateBaseline,
+  deleteBaseline,
+  fetchRules,
+  updateRule,
+  fetchTrends,
+  type CreateBaselineInput,
+} from "@/features/compliance/compliance-api";
+import {
+  useListComplianceFindingsGroups,
+  useListComplianceJobs,
+  useListDevices,
+  useCreateComplianceJob,
+  type ComplianceFinding,
+  type ComplianceFindingGroup,
+} from "@workspace/api-client-react";
 import { ComplianceFindingGroupDrawer } from "@/features/compliance/compliance-finding-group-drawer";
 import { ComplianceFindingGroupTable } from "@/features/compliance/compliance-finding-group-table";
-import { OperationalCategoryBadge, operationalCategoryLabel } from "@/features/compliance/operational-category-badge";
-
-const ALL_CONTEXTS = ["security", "ntp", "snmp", "interface", "bgp", "l2vpn", "l3vpn"];
-const FILTER_ALL = "all";
-const OPERATIONAL_CATEGORIES = ["BLOCKER_REAL", "RISCO_OPERACIONAL", "PADRONIZACAO", "CUSTOMIZACAO", "INFORMATIVO", "FALSO_POSITIVO"];
-const ACTIONABLE_CATEGORIES = ["BLOCKER_REAL", "RISCO_OPERACIONAL", "PADRONIZACAO", "CUSTOMIZACAO"];
-const POLICY_PROFILES = ["huawei-vrp-edge-balanced", "huawei-vrp-edge-strict", "huawei-vrp-observe-only"];
-type ViewMode = "findings" | "groups";
-
-function badgeClass(value: string | null | undefined) {
-  if (value === "pass" || value === "passed" || value === "high") return "bg-green-500/10 text-green-400 border-green-500/20";
-  if (value === "fail" || value === "failed" || value === "critical") return "bg-red-500/10 text-red-400 border-red-500/20";
-  if (value === "warning" || value === "medium") return "bg-amber-500/10 text-amber-300 border-amber-500/20";
-  if (value === "unknown" || value === "low") return "bg-slate-500/10 text-slate-300 border-slate-500/20";
-  return "bg-blue-500/10 text-blue-300 border-blue-500/20";
-}
-
-function param(value: string) {
-  return value === FILTER_ALL ? undefined : value;
-}
-
-function freshnessLabel(value: string | null | undefined) {
-  if (value === "current") return "Atual";
-  if (value === "stale") return "Stale";
-  if (value === "legacy") return "Legado";
-  if (value === "superseded") return "Substituído";
-  return "Sem versão";
-}
-
-function freshnessClass(value: string | null | undefined) {
-  if (value === "current") return "bg-green-500/10 text-green-400 border-green-500/20";
-  if (value === "stale") return "bg-amber-500/10 text-amber-300 border-amber-500/20";
-  if (value === "legacy") return "bg-red-500/10 text-red-300 border-red-500/20";
-  if (value === "superseded") return "bg-slate-500/10 text-slate-300 border-slate-500/20";
-  return "bg-slate-500/10 text-slate-300 border-slate-500/20";
-}
-
-interface GroupSummaryCardProps {
-  title: string;
-  description: string;
-  groups: ComplianceFindingGroup[];
-  emptyLabel: string;
-  onSelectGroup: (group: ComplianceFindingGroup) => void;
-}
-
-function GroupSummaryCard({ title, description, groups, emptyLabel, onSelectGroup }: GroupSummaryCardProps) {
-  const total = groups.reduce((sum, group) => sum + group.count, 0);
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="text-2xl font-bold">{total}</div>
-        {groups.length === 0 ? (
-          <div className="text-xs text-muted-foreground">{emptyLabel}</div>
-        ) : groups.map((group) => (
-          <button
-            key={`${title}-${group.ruleId}-${group.context}-${group.severity}-${group.operationalCategory}-${group.message}`}
-            type="button"
-            onClick={() => onSelectGroup(group)}
-            className="block w-full rounded-md border bg-background p-2 text-left transition-colors hover:bg-muted"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate font-mono text-xs">{group.ruleId}</span>
-              <Badge variant="secondary" className="shrink-0">{group.count}</Badge>
-            </div>
-            <div className="mt-1 truncate text-xs text-muted-foreground">{group.message}</div>
-          </button>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
+import { OperationalCategoryBadge } from "@/features/compliance/operational-category-badge";
 
 export default function Compliance() {
   const { user } = useAuth();
-  const isOperator = user?.role === "operator" || user?.role === "admin";
-  const { data: summary } = useGetComplianceSummary();
-  const { data: freshnessSummary } = useGetComplianceFindingsFreshnessSummary();
-  const { data: jobs, isLoading } = useListComplianceJobs();
-  const { data: devices } = useListDevices();
-  const createJob = useCreateComplianceJob();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const isAdmin = user?.role === "admin";
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<string>("");
-  const [selectedContexts, setSelectedContexts] = useState<string[]>(["security", "bgp"]);
-  const [selectedProfile, setSelectedProfile] = useState<string>("huawei-vrp-edge-balanced");
-  const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
-  const [severityFilter, setSeverityFilter] = useState(FILTER_ALL);
-  const [contextFilter, setContextFilter] = useState(FILTER_ALL);
-  const [confidenceFilter, setConfidenceFilter] = useState(FILTER_ALL);
-  const [sourceFilter, setSourceFilter] = useState(FILTER_ALL);
-  const [deviceFilter, setDeviceFilter] = useState(FILTER_ALL);
-  const [operationalCategoryFilter, setOperationalCategoryFilter] = useState(FILTER_ALL);
-  const [onlyActionable, setOnlyActionable] = useState(false);
-  const [includeHistory, setIncludeHistory] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("findings");
-  const [selectedFinding, setSelectedFinding] = useState<ComplianceFinding | null>(null);
+  // Queries
+  const { data: dashboard } = useQuery({
+    queryKey: ["compliance-dashboard"],
+    queryFn: fetchComplianceDashboard,
+  });
+
+  const { data: drifts } = useQuery({
+    queryKey: ["compliance-drifts"],
+    queryFn: () => fetchComplianceDrifts(),
+  });
+
+  const { data: jobs } = useQuery({
+    queryKey: ["compliance-jobs"],
+    queryFn: useListComplianceJobs,
+  });
+
+  const { data: findings } = useQuery({
+    queryKey: ["compliance-findings-groups"],
+    queryFn: useListComplianceFindingsGroups,
+  });
+
+  const { data: rules } = useQuery({
+    queryKey: ["compliance-rules"],
+    queryFn: fetchRules,
+  });
+
+  const { data: baselines } = useQuery({
+    queryKey: ["compliance-baselines"],
+    queryFn: () => fetchBaselines(),
+  });
+
+  const { data: trends } = useQuery({
+    queryKey: ["compliance-trends"],
+    queryFn: () => fetchTrends("global", undefined, 30),
+  });
+
+  // Mutations
+  const updateRuleMutation = useMutation({
+    mutationFn: ({ id, enabled, severity }: { id: number; enabled?: boolean; severity?: string }) =>
+      updateRule(id, { enabled, severity }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compliance-rules"] });
+      toast({ title: "Rule updated" });
+    },
+  });
+
+  const createBaselineMutation = useMutation({
+    mutationFn: createBaseline,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compliance-baselines"] });
+      toast({ title: "Baseline created" });
+      setCreateBaselineOpen(false);
+    },
+  });
+
+  const deleteBaselineMutation = useMutation({
+    mutationFn: deleteBaseline,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compliance-baselines"] });
+      toast({ title: "Baseline deleted" });
+    },
+  });
+
+  // Local state
   const [selectedGroup, setSelectedGroup] = useState<ComplianceFindingGroup | null>(null);
-
-  const findingParams = {
-    status: param(statusFilter),
-    severity: param(severityFilter),
-    context: param(contextFilter),
-    confidence: param(confidenceFilter),
-    source: param(sourceFilter),
-    operationalCategory: param(operationalCategoryFilter),
-    latestJobOnly: !includeHistory,
-    freshness: "all" as const,
-    deviceId: deviceFilter === FILTER_ALL ? undefined : Number(deviceFilter),
-  };
-  const { data: allFindings, isLoading: findingsLoading } = useListComplianceFindings(findingParams);
-  const { data: allGroups, isLoading: groupsLoading } = useListComplianceFindingsGroups(findingParams);
-
-  const findings = allFindings?.filter((finding: ComplianceFinding) => {
-    if (onlyActionable && !ACTIONABLE_CATEGORIES.includes(finding.operationalCategory || "")) return false;
-    return true;
-  });
-  const groups = allGroups?.filter((group: ComplianceFindingGroup) => {
-    if (onlyActionable && !ACTIONABLE_CATEGORIES.includes(group.operationalCategory || "")) return false;
-    return true;
+  const [createBaselineOpen, setCreateBaselineOpen] = useState(false);
+  const [baselineForm, setBaselineForm] = useState<CreateBaselineInput>({
+    scopeType: "GLOBAL",
+    name: "",
   });
 
-  const topCriticalGroups = useMemo(() => (
-    [...(groups ?? [])]
-      .filter((group) => group.severity === "critical")
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3)
-  ), [groups]);
-  const topCountGroups = useMemo(() => [...(groups ?? [])].sort((a, b) => b.count - a.count).slice(0, 3), [groups]);
-  const blockerGroups = useMemo(() => (
-    [...(groups ?? [])]
-      .filter((group) => group.operationalCategory === "BLOCKER_REAL")
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3)
-  ), [groups]);
-  const riskGroups = useMemo(() => (
-    [...(groups ?? [])]
-      .filter((group) => group.operationalCategory === "RISCO_OPERACIONAL")
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3)
-  ), [groups]);
-
-  const passFindings = findings?.filter((finding: ComplianceFinding) => (finding.status ?? finding.result) === "pass").length ?? 0;
-  const failFindings = findings?.filter((finding: ComplianceFinding) => (finding.status ?? finding.result) === "fail").length ?? 0;
-  const warningFindings = findings?.filter((finding: ComplianceFinding) => (finding.status ?? finding.result) === "warning").length ?? summary?.warningFindings ?? 0;
-  const unknownFindings = findings?.filter((finding: ComplianceFinding) => (finding.status ?? finding.result) === "unknown").length ?? summary?.unknownFindings ?? 0;
-  const criticalFindings = findings?.filter((finding: ComplianceFinding) => finding.severity === "critical").length ?? summary?.criticalFindings ?? 0;
-
-  const handleCreate = () => {
-    if (!isOperator) {
-      toast({ title: "Forbidden", description: "Viewer não executa compliance.", variant: "destructive" });
-      return;
-    }
-    if (!selectedDevice || selectedContexts.length === 0) {
-      toast({ title: "Validation Error", description: "Select a device and at least one context.", variant: "destructive" });
-      return;
-    }
-
-    createJob.mutate({
-      data: {
-        deviceId: Number(selectedDevice),
-        contexts: selectedContexts,
-        policyProfileName: selectedProfile,
-      },
-    }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListComplianceJobsQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getListComplianceFindingsQueryKey(findingParams) });
-        setIsCreateOpen(false);
-        setSelectedDevice("");
-        setSelectedContexts(["security", "bgp"]);
-        setSelectedProfile("huawei-vrp-edge-balanced");
-        toast({ title: "Compliance job started" });
-      },
-    });
-  };
-
-  const toggleContext = (ctx: string) => {
-    setSelectedContexts((prev) => prev.includes(ctx) ? prev.filter((item) => item !== ctx) : [...prev, ctx]);
+  const badgeClass = (value: string | null) => {
+    if (value === "pass" || value === "passed") return "bg-green-500/10 text-green-400 border-green-500/20";
+    if (value === "fail" || value === "failed") return "bg-red-500/10 text-red-400 border-red-500/20";
+    if (value === "warning") return "bg-amber-500/10 text-amber-300 border-amber-500/20";
+    return "bg-slate-500/10 text-slate-300 border-slate-500/20";
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Compliance</h1>
-          <p className="text-muted-foreground mt-1">Checks estruturados com source, confidence e evidence sanitizada</p>
-        </div>
+      <Tabs defaultValue="dashboard" className="w-full">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="findings">Findings</TabsTrigger>
+          <TabsTrigger value="drifts">Drifts</TabsTrigger>
+          <TabsTrigger value="runs">Runs</TabsTrigger>
+          <TabsTrigger value="rules">Rules</TabsTrigger>
+          <TabsTrigger value="baselines">Baselines</TabsTrigger>
+          <TabsTrigger value="schedules">Schedules</TabsTrigger>
+        </TabsList>
 
-        {isOperator && (
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Run Check
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Run Compliance Check</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Target Device</label>
-                  <Select value={selectedDevice} onValueChange={setSelectedDevice}>
-                    <SelectTrigger><SelectValue placeholder="Select a device" /></SelectTrigger>
-                    <SelectContent>
-                      {devices?.map((device: any) => (
-                        <SelectItem key={device.id} value={device.id.toString()}>{device.hostname} ({device.ipAddress})</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Policy Profile</label>
-                  <Select value={selectedProfile} onValueChange={setSelectedProfile}>
-                    <SelectTrigger><SelectValue placeholder="Select profile" /></SelectTrigger>
-                    <SelectContent>
-                      {POLICY_PROFILES.map((profile) => (
-                        <SelectItem key={profile} value={profile}>{profile}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              <div className="space-y-2">
-                  <label className="text-sm font-medium">Policy Contexts</label>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    {ALL_CONTEXTS.map((ctx) => (
-                      <div key={ctx} className="flex items-center space-x-2">
-                        <Checkbox id={`ctx-${ctx}`} checked={selectedContexts.includes(ctx)} onCheckedChange={() => toggleContext(ctx)} />
-                        <label htmlFor={`ctx-${ctx}`} className="text-sm font-mono cursor-pointer">{ctx}</label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={handleCreate} disabled={createJob.isPending}>
-                  {createJob.isPending ? "Starting..." : "Run Job"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
-
-      <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-200">
-        Compliance read-only. Confidence baixo/unknown vira warning/unknown quando evidência forte não existe. Execute discovery para melhorar confiança.
-        {!includeHistory && (
-          <span className="ml-2 text-amber-100">Mostrando somente o último job por device.</span>
-        )}
-      </div>
-
-      {(freshnessSummary?.legacy || freshnessSummary?.stale) ? (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-200">
-          Existem {freshnessSummary.legacy} findings legados e {freshnessSummary.stale} stale gerados antes da versão atual do parser/engine.
-          Eles ficam ocultos por padrão e continuam acessíveis ao incluir histórico.
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Current</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-green-400">{freshnessSummary?.current ?? 0}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Stale</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-amber-300">{freshnessSummary?.stale ?? 0}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Legacy</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-red-300">{freshnessSummary?.legacy ?? 0}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Superseded</CardTitle></CardHeader><CardContent><div className="text-xl font-bold text-slate-300">{freshnessSummary?.superseded ?? 0}</div></CardContent></Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex justify-between">Pass <CheckCircle2 className="h-4 w-4 text-green-500" /></CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-green-400">{passFindings}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex justify-between">Fail <AlertCircle className="h-4 w-4 text-red-500" /></CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{failFindings}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex justify-between">Warning <ShieldAlert className="h-4 w-4 text-amber-400" /></CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-amber-300">{warningFindings}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex justify-between">Unknown <Clock className="h-4 w-4 text-slate-400" /></CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-slate-300">{unknownFindings}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex justify-between">Critical <ShieldCheck className="h-4 w-4 text-red-500" /></CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{criticalFindings}</div></CardContent></Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-        <GroupSummaryCard
-          title="Top grupos críticos"
-          description="Critical agrupado por regra"
-          groups={topCriticalGroups}
-          emptyLabel="Sem grupos críticos"
-          onSelectGroup={setSelectedGroup}
-        />
-        <GroupSummaryCard
-          title="Top grupos por quantidade"
-          description="Maior volume filtrado"
-          groups={topCountGroups}
-          emptyLabel="Sem grupos"
-          onSelectGroup={setSelectedGroup}
-        />
-        <GroupSummaryCard
-          title="Blockers reais"
-          description="Bloqueadores reais acionáveis"
-          groups={blockerGroups}
-          emptyLabel="Sem bloqueadores reais"
-          onSelectGroup={setSelectedGroup}
-        />
-        <GroupSummaryCard
-          title="Riscos operacionais"
-          description="Riscos que afetam operação"
-          groups={riskGroups}
-          emptyLabel="Sem riscos operacionais"
-          onSelectGroup={setSelectedGroup}
-        />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Finding Filters</CardTitle>
-              <CardDescription>Filtra por status, severidade, contexto, confidence, source, device e categoria operacional</CardDescription>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant={includeHistory ? "default" : "outline"}
-                size="sm"
-                onClick={() => setIncludeHistory(!includeHistory)}
-              >
-                Incluir histórico
-              </Button>
-              <Button
-                variant={onlyActionable ? "default" : "outline"}
-                size="sm"
-                onClick={() => setOnlyActionable(!onlyActionable)}
-                className="gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                Actionable Only
-              </Button>
-            </div>
+        {/* DASHBOARD TAB */}
+        <TabsContent value="dashboard" className="space-y-6 mt-6">
+          <div className="grid grid-cols-5 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">PASS</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-500">{dashboard?.passed || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">FAIL</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-500">{dashboard?.failed || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">WARNING</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-amber-500">{dashboard?.warningFindings || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">UNKNOWN</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-slate-500">{dashboard?.unknownFindings || 0}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">DRIFT</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-500">{drifts?.length || 0}</div>
+              </CardContent>
+            </Card>
           </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-7 gap-3">
-          <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger><SelectContent>{[FILTER_ALL, "pass", "fail", "warning", "unknown"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
-          <Select value={severityFilter} onValueChange={setSeverityFilter}><SelectTrigger><SelectValue placeholder="Severity" /></SelectTrigger><SelectContent>{[FILTER_ALL, "critical", "high", "medium", "low", "info"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
-          <Select value={contextFilter} onValueChange={setContextFilter}><SelectTrigger><SelectValue placeholder="Context" /></SelectTrigger><SelectContent>{[FILTER_ALL, ...ALL_CONTEXTS].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
-          <Select value={confidenceFilter} onValueChange={setConfidenceFilter}><SelectTrigger><SelectValue placeholder="Confidence" /></SelectTrigger><SelectContent>{[FILTER_ALL, "high", "medium", "low", "unknown"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
-          <Select value={sourceFilter} onValueChange={setSourceFilter}><SelectTrigger><SelectValue placeholder="Source" /></SelectTrigger><SelectContent>{[FILTER_ALL, "ssh_live", "ssh_running_config", "snmp_snapshot", "cached_config", "discovery_snapshot", "local_db"].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
-          <Select value={operationalCategoryFilter} onValueChange={setOperationalCategoryFilter}><SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger><SelectContent><SelectItem value={FILTER_ALL}>all</SelectItem>{OPERATIONAL_CATEGORIES.map((item) => <SelectItem key={item} value={item}>{operationalCategoryLabel(item)}</SelectItem>)}</SelectContent></Select>
-          <Select value={deviceFilter} onValueChange={setDeviceFilter}><SelectTrigger><SelectValue placeholder="Device" /></SelectTrigger><SelectContent><SelectItem value={FILTER_ALL}>all</SelectItem>{devices?.map((device: any) => <SelectItem key={device.id} value={String(device.id)}>{device.hostname}</SelectItem>)}</SelectContent></Select>
-        </CardContent>
-      </Card>
 
-      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)}>
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="findings">Lista de findings</TabsTrigger>
-            <TabsTrigger value="groups">Grupos de findings</TabsTrigger>
-          </TabsList>
-          <div className="text-xs text-muted-foreground">
-            {findings?.length ?? 0} findings · {groups?.length ?? 0} grupos
+          <div className="grid grid-cols-2 gap-6">
+            {/* Site Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Compliance por Site</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {dashboard?.siteAverages && Object.keys(dashboard.siteAverages).length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart
+                      data={Object.entries(dashboard.siteAverages).map(([site, score]) => ({
+                        name: site,
+                        score: Number(score),
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="score" fill="#10b981" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-muted-foreground text-sm">Sem dados</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Vendor Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Compliance por Vendor</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {dashboard?.failuresByContext && Object.keys(dashboard.failuresByContext).length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart
+                      data={Object.entries(dashboard.failuresByContext).map(([context, count]) => ({
+                        name: context,
+                        failures: count,
+                      }))}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="failures" fill="#ef4444" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-muted-foreground text-sm">Sem dados</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
-        </div>
 
-        <TabsContent value="findings">
+          {/* Trend Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Findings</CardTitle>
-              <CardDescription>Achados enriquecidos por source/confidence</CardDescription>
+              <CardTitle className="text-lg">Evolução Temporal (30 dias)</CardTitle>
             </CardHeader>
-            <div className="border-t">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Context</TableHead>
-                    <TableHead>Objeto</TableHead>
-                    <TableHead>Mensagem</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Confidence</TableHead>
-                    <TableHead>Freshness</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {findingsLoading ? (
-                    <TableRow><TableCell colSpan={10} className="text-center py-8">Loading...</TableCell></TableRow>
-                  ) : findings?.length === 0 ? (
-                    <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No findings.</TableCell></TableRow>
-                  ) : findings?.map((finding: ComplianceFinding) => (
-                    <TableRow key={finding.id}>
-                      <TableCell><Badge variant="outline" className={badgeClass(finding.severity)}>{finding.severity}</Badge></TableCell>
-                      <TableCell><Badge variant="outline" className={badgeClass(finding.status ?? finding.result)}>{finding.status ?? finding.result}</Badge></TableCell>
-                      <TableCell><OperationalCategoryBadge value={finding.operationalCategory} /></TableCell>
-                      <TableCell className="font-mono text-xs">{finding.context}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">{finding.objectName ?? finding.deviceHostname ?? "-"}</div>
-                        <div className="text-[11px] text-muted-foreground">{finding.objectType ?? "device"}</div>
-                      </TableCell>
-                      <TableCell className="max-w-[420px] truncate">{finding.message ?? finding.detail ?? "-"}</TableCell>
-                      <TableCell className="font-mono text-xs">{finding.source ?? "-"}</TableCell>
-                      <TableCell><Badge variant="outline" className={badgeClass(finding.confidence)}>{finding.confidence ?? "-"}</Badge></TableCell>
-                      <TableCell><Badge variant="outline" className={freshnessClass(finding.freshness)}>{freshnessLabel(finding.freshness)}</Badge></TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedFinding(finding)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <CardContent>
+              {trends && trends.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={trends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="snapshotDate" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="score" stroke="#3b82f6" name="Score" />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-muted-foreground text-sm">Sem dados de tendência</p>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="groups">
-          <Card>
-            <CardHeader>
-              <CardTitle>Grupos de findings</CardTitle>
-              <CardDescription>Agregação por ruleId, contexto, severidade, categoria operacional e mensagem normalizada</CardDescription>
-            </CardHeader>
+        {/* FINDINGS TAB */}
+        <TabsContent value="findings" className="space-y-4 mt-6">
+          {findings && findings.length > 0 ? (
             <ComplianceFindingGroupTable
-              groups={groups}
-              isLoading={groupsLoading}
-              badgeClass={badgeClass}
+              groups={findings}
               onSelectGroup={setSelectedGroup}
             />
+          ) : (
+            <p className="text-muted-foreground text-sm">Sem findings</p>
+          )}
+        </TabsContent>
+
+        {/* DRIFTS TAB */}
+        <TabsContent value="drifts" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuration Drifts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {drifts && drifts.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Device</TableHead>
+                      <TableHead>Drift Summary</TableHead>
+                      <TableHead>Created</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {drifts.map((drift) => (
+                      <TableRow key={drift.id}>
+                        <TableCell className="font-mono text-sm">#{drift.deviceId}</TableCell>
+                        <TableCell className="max-w-md truncate text-sm">{drift.driftSummary || "N/A"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(drift.createdAt).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-muted-foreground text-sm">Sem drifts detectados</p>
+              )}
+            </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* RUNS TAB */}
+        <TabsContent value="runs" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compliance Jobs</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {jobs && jobs.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Device</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Pass/Fail</TableHead>
+                      <TableHead>Completed</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {jobs.map((job) => (
+                      <TableRow key={job.id}>
+                        <TableCell className="font-mono text-sm">#{job.id}</TableCell>
+                        <TableCell>{job.deviceHostname}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={badgeClass(job.status)}>
+                            {job.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <span className="text-green-500">{job.passCount}</span> / <span className="text-red-500">{job.failCount}</span>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {job.completedAt ? new Date(job.completedAt).toLocaleString() : "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-muted-foreground text-sm">Sem jobs</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* RULES TAB */}
+        <TabsContent value="rules" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compliance Rules</CardTitle>
+              <CardDescription>Enable/disable rules and override severity</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {rules && rules.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Context</TableHead>
+                      <TableHead>Vendor</TableHead>
+                      <TableHead>Severity</TableHead>
+                      <TableHead>Enabled</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rules.map((rule) => (
+                      <TableRow key={rule.id}>
+                        <TableCell className="text-sm">{rule.name}</TableCell>
+                        <TableCell className="text-xs">{rule.context}</TableCell>
+                        <TableCell className="text-xs">{rule.vendor || "any"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={badgeClass(rule.severity)}>
+                            {rule.severity}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={rule.enabled}
+                            onChange={(e) =>
+                              updateRuleMutation.mutate({
+                                id: rule.id,
+                                enabled: e.target.checked,
+                              })
+                            }
+                          />
+                        </TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-muted-foreground text-sm">Sem rules</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* SCHEDULES TAB */}
+        <TabsContent value="schedules" className="space-y-4 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Compliance Schedules (v0.9.2)</CardTitle>
+              <CardDescription>Automated compliance runs on intervals</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Schedules feature available via API: GET/POST /compliance/schedules</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* BASELINES TAB */}
+        <TabsContent value="baselines" className="space-y-4 mt-6">
+          <div className="flex justify-end">
+            <Dialog open={createBaselineOpen} onOpenChange={setCreateBaselineOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Baseline
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Baseline</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <select
+                    value={baselineForm.scopeType}
+                    onChange={(e) => setBaselineForm({ ...baselineForm, scopeType: e.target.value })}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="GLOBAL">GLOBAL</option>
+                    <option value="SITE">SITE</option>
+                    <option value="VENDOR">VENDOR</option>
+                  </select>
+                  {baselineForm.scopeType !== "GLOBAL" && (
+                    <Input
+                      placeholder="Scope ID (site name or vendor)"
+                      value={baselineForm.scopeId || ""}
+                      onChange={(e) => setBaselineForm({ ...baselineForm, scopeId: e.target.value })}
+                    />
+                  )}
+                  <Input
+                    placeholder="Name"
+                    value={baselineForm.name}
+                    onChange={(e) => setBaselineForm({ ...baselineForm, name: e.target.value })}
+                  />
+                  <Textarea
+                    placeholder="Description (optional)"
+                    value={baselineForm.description || ""}
+                    onChange={(e) => setBaselineForm({ ...baselineForm, description: e.target.value })}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button
+                    onClick={() => createBaselineMutation.mutate(baselineForm)}
+                    disabled={createBaselineMutation.isPending}
+                  >
+                    Create
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {baselines && baselines.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Scope</TableHead>
+                  <TableHead>Scope ID</TableHead>
+                  <TableHead>Enabled</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {baselines.map((baseline) => (
+                  <TableRow key={baseline.id}>
+                    <TableCell className="font-medium">{baseline.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{baseline.scopeType}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">{baseline.scopeId || "—"}</TableCell>
+                    <TableCell>{baseline.enabled ? "Yes" : "No"}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteBaselineMutation.mutate(baseline.id)}
+                        disabled={deleteBaselineMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-muted-foreground text-sm">Sem baselines</p>
+          )}
         </TabsContent>
       </Tabs>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Compliance Job History</CardTitle>
-          <CardDescription>Recent policy evaluation runs</CardDescription>
-        </CardHeader>
-        <div className="border-t">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Target Device</TableHead>
-                <TableHead>Policy Profile</TableHead>
-                <TableHead>Contexts</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Findings</TableHead>
-                <TableHead>Completed</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8">Loading...</TableCell></TableRow>
-              ) : jobs?.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No compliance jobs found.</TableCell></TableRow>
-              ) : jobs?.map((job: any) => (
-                <TableRow key={job.id}>
-                  <TableCell className="font-mono text-sm">#{job.id}</TableCell>
-                  <TableCell className="font-medium">{job.deviceHostname}</TableCell>
-                  <TableCell className="font-mono text-xs"><Badge variant="outline">{job.policyProfileName ?? "balanced"}</Badge></TableCell>
-                  <TableCell><div className="flex flex-wrap gap-1">{job.contexts.map((ctx: string) => <Badge key={ctx} variant="secondary" className="text-[10px] font-mono">{ctx}</Badge>)}</div></TableCell>
-                  <TableCell><Badge variant="outline" className={badgeClass(job.status)}>{job.status}</Badge></TableCell>
-                  <TableCell><div className="text-xs"><span className="text-green-500 mr-2">{job.passCount} pass</span><span className="text-red-500">{job.failCount} fail</span></div></TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{job.completedAt ? new Date(job.completedAt).toLocaleString() : "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const url = `/api/compliance/jobs/${job.id}/report/download?format=markdown`;
-                        window.location.href = url;
-                      }}
-                      title="Download report"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-
-      <Dialog open={!!selectedFinding} onOpenChange={(open) => !open && setSelectedFinding(null)}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Finding Details</DialogTitle>
-          </DialogHeader>
-          {selectedFinding && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
-                <div><div className="text-muted-foreground">Status</div><Badge variant="outline" className={badgeClass(selectedFinding.status ?? selectedFinding.result)}>{selectedFinding.status ?? selectedFinding.result}</Badge></div>
-                <div><div className="text-muted-foreground">Severity</div><Badge variant="outline" className={badgeClass(selectedFinding.severity)}>{selectedFinding.severity}</Badge></div>
-                <div><div className="text-muted-foreground">Category</div><OperationalCategoryBadge value={selectedFinding.operationalCategory} /></div>
-                <div><div className="text-muted-foreground">Source</div><div className="font-mono text-xs">{selectedFinding.source ?? "-"}</div></div>
-                <div><div className="text-muted-foreground">Confidence</div><div className="font-mono text-xs">{selectedFinding.confidence ?? "-"}</div></div>
-                <div><div className="text-muted-foreground">Freshness</div><Badge variant="outline" className={freshnessClass(selectedFinding.freshness)}>{freshnessLabel(selectedFinding.freshness)}</Badge></div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Mensagem</div>
-                <div>{selectedFinding.message ?? selectedFinding.detail ?? "-"}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Recommendation</div>
-                <div>{selectedFinding.recommendation ?? "-"}</div>
-              </div>
-              <div className="rounded-md bg-muted p-3">
-                <div className="text-sm text-muted-foreground mb-2">Evidence</div>
-                <pre className="whitespace-pre-wrap text-xs">{selectedFinding.evidence ?? "Sem evidence sanitizada"}</pre>
-              </div>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div>Rule: {selectedFinding.ruleName ?? selectedFinding.policyName} {selectedFinding.ruleId ? `(${selectedFinding.ruleId})` : ""}</div>
-                <div>Object: {selectedFinding.objectType ?? "-"} / {selectedFinding.objectId ?? "-"} ({selectedFinding.objectName ?? "-"})</div>
-                <div>Engine/parser: {selectedFinding.complianceEngineVersion ?? "legacy"} / {selectedFinding.parserVersion ?? "legacy"}</div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       <ComplianceFindingGroupDrawer
         group={selectedGroup}
-        findings={findings ?? []}
+        findings={[]}
         open={!!selectedGroup}
         onOpenChange={(open) => !open && setSelectedGroup(null)}
         badgeClass={badgeClass}

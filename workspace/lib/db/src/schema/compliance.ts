@@ -75,6 +75,42 @@ export const insertComplianceJobSchema = createInsertSchema(complianceJobsTable)
 export const insertComplianceFindingSchema = createInsertSchema(complianceFindingsTable).omit({ id: true });
 export const insertCompliancePolicyProfileSchema = createInsertSchema(compliancePolicyProfilesTable).omit({ id: true, createdAt: true, updatedAt: true });
 
+export const complianceDriftsTable = pgTable("compliance_drifts", {
+  id: serial("id").primaryKey(),
+  deviceId: integer("device_id").notNull().references(() => devicesTable.id, { onDelete: "cascade" }),
+  serviceRequestId: integer("service_request_id"),
+  expectedStateJson: jsonb("expected_state_json").notNull().default({}),
+  actualStateJson: jsonb("actual_state_json").notNull().default({}),
+  driftSummary: text("drift_summary"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const complianceBaselinesTable = pgTable("compliance_baselines", {
+  id: serial("id").primaryKey(),
+  scopeType: text("scope_type").notNull().default("GLOBAL"),
+  scopeId: text("scope_id"),
+  name: text("name").notNull(),
+  description: text("description"),
+  rulesJson: jsonb("rules_json").notNull().default({}),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const complianceTrendsTable = pgTable("compliance_trends", {
+  id: serial("id").primaryKey(),
+  deviceId: integer("device_id").references(() => devicesTable.id, { onDelete: "cascade" }),
+  site: text("site"),
+  vendor: text("vendor"),
+  scope: text("scope").notNull().default("device"),
+  score: numeric("score", { precision: 5, scale: 2 }).notNull().default("0"),
+  passCount: integer("pass_count").notNull().default(0),
+  failCount: integer("fail_count").notNull().default(0),
+  totalDevices: integer("total_devices").notNull().default(1),
+  snapshotDate: text("snapshot_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type InsertCompliancePolicy = z.infer<typeof insertCompliancePolicySchema>;
 export type CompliancePolicy = typeof compliancePoliciesTable.$inferSelect;
 export type InsertComplianceJob = z.infer<typeof insertComplianceJobSchema>;
@@ -82,3 +118,6 @@ export type ComplianceJob = typeof complianceJobsTable.$inferSelect;
 export type ComplianceFinding = typeof complianceFindingsTable.$inferSelect;
 export type InsertCompliancePolicyProfile = z.infer<typeof insertCompliancePolicyProfileSchema>;
 export type CompliancePolicyProfile = typeof compliancePolicyProfilesTable.$inferSelect;
+export type ComplianceDrift = typeof complianceDriftsTable.$inferSelect;
+export type ComplianceBaseline = typeof complianceBaselinesTable.$inferSelect;
+export type ComplianceTrend = typeof complianceTrendsTable.$inferSelect;

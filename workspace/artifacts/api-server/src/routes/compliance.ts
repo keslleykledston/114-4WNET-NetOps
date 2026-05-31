@@ -4,6 +4,7 @@ import {
   compliancePoliciesTable,
   complianceJobsTable,
   complianceFindingsTable,
+  complianceDriftsTable,
   devicesTable,
 } from "@workspace/db";
 import { compliancePolicyProfilesTable } from "@workspace/db/schema";
@@ -904,6 +905,596 @@ router.get("/compliance-findings-groups", async (req, res) => {
   }).sort((a, b) => b.count - a.count);
 
   res.json(result);
+});
+
+// ── NEW ROUTES (FASE v0.9.0) ────────────────────────────────────────────────
+
+import { calculateComplianceScore } from "../modules/compliance/compliance-engine.js";
+import { detectDriftForDevice, getLatestDriftForDevice } from "../modules/compliance/drift-detector.service.js";
+import { generateRemediationPreview } from "../modules/compliance/remediation-preview.service.js";
+
+// POST /compliance/run/device/:id — Trigger compliance + drift for single device
+router.post("/compliance/run/device/:id", requirePermission("compliance.execute"), async (req, res) => {
+  try {
+    const deviceId = Number(req.params.id);
+    if (!deviceId) {
+      res.status(400).json({ error: "Invalid device ID" });
+      return;
+    }
+
+    const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
+    if (!device) {
+      res.status(404).json({ error: "Device not found" });
+      return;
+    }
+
+    // Create and execute compliance job
+    const [job] = await db
+      .insert(complianceJobsTable)
+      .values({
+        deviceId,
+        contexts: JSON.stringify(["security", "ntp", "snmp", "interface", "bgp", "l3vpn", "l2vpn"]),
+        policyProfileName: "huawei-vrp-edge-balanced",
+        status: "pending",
+      })
+      .returning();
+
+    await logAuditEvent({
+      action: "compliance_run_device",
+      objectType: "device",
+      objectId: String(deviceId),
+      metadata: { jobId: job.id },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    // Trigger execution asynchronously
+    void executeJob(job.id).catch(() => {});
+
+    // Trigger drift detection asynchronously
+    void detectDriftForDevice(deviceId).catch(() => {});
+
+    res.status(201).json({
+      jobId: job.id,
+      deviceId,
+      status: "pending",
+      createdAt: job.createdAt.toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+// POST /compliance/run/site/:siteName — Trigger compliance for all devices in site
+router.post("/compliance/run/site/:siteName", requirePermission("compliance.execute"), async (req, res) => {
+  try {
+    const siteName = Array.isArray(req.params.siteName) ? req.params.siteName[0] : req.params.siteName;
+    if (!siteName) {
+      res.status(400).json({ error: "Invalid site name" });
+      return;
+    }
+
+    const devices = await db.select().from(devicesTable).where(eq(devicesTable.site, siteName));
+
+    const jobIds: number[] = [];
+    for (const device of devices) {
+      const [job] = await db
+        .insert(complianceJobsTable)
+        .values({
+          deviceId: device.id,
+          contexts: JSON.stringify(["security", "ntp", "snmp", "interface", "bgp", "l3vpn", "l2vpn"]),
+          policyProfileName: "huawei-vrp-edge-balanced",
+          status: "pending",
+        })
+        .returning();
+
+      jobIds.push(job.id);
+
+      // Trigger async
+      void executeJob(job.id).catch(() => {});
+      void detectDriftForDevice(device.id).catch(() => {});
+    }
+
+    await logAuditEvent({
+      action: "compliance_run_site",
+      objectType: "site",
+      objectId: siteName,
+      metadata: { deviceCount: devices.length, jobIds },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    res.status(201).json({
+      siteName,
+      deviceCount: devices.length,
+      jobIds,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+// GET /compliance/dashboard — Dashboard metrics
+router.get("/compliance/dashboard", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const allJobs = await db.select().from(complianceJobsTable);
+    const allFindings = await db.select().from(complianceFindingsTable);
+
+    const passedJobs = allJobs.filter((j) => j.status === "passed").length;
+    const failedJobs = allJobs.filter((j) => j.status === "failed").length;
+    const runningJobs = allJobs.filter((j) => j.status === "running").length;
+
+    const passFindings = allFindings.filter((f) => (f.status ?? f.result) === "pass").length;
+    const failFindings = allFindings.filter((f) => (f.status ?? f.result) === "fail").length;
+    const warningFindings = allFindings.filter((f) => (f.status ?? f.result) === "warning").length;
+    const unknownFindings = allFindings.filter((f) => (f.status ?? f.result) === "unknown").length;
+
+    // Compute scores by device
+    const deviceScores = new Map<number, number>();
+    for (const job of allJobs) {
+      const findings = allFindings.filter((f) => f.jobId === job.id);
+      const score = calculateComplianceScore(findings);
+      deviceScores.set(job.deviceId, score);
+    }
+
+    // Group by site
+    const siteScores = new Map<string, number[]>();
+    const devicesByJob = new Map<number, { id: number; hostname: string; site: string }>();
+
+    const devicesWithData = await db
+      .select({ id: devicesTable.id, hostname: devicesTable.hostname, site: devicesTable.site })
+      .from(devicesTable);
+
+    for (const device of devicesWithData) {
+      devicesByJob.set(device.id, device);
+    }
+
+    for (const [deviceId, score] of deviceScores) {
+      const device = devicesByJob.get(deviceId);
+      if (device) {
+        const siteScores_ = siteScores.get(device.site) || [];
+        siteScores_.push(score);
+        siteScores.set(device.site, siteScores_);
+      }
+    }
+
+    // Average scores by site
+    const siteAverages: Record<string, number> = {};
+    for (const [site, scores] of siteScores) {
+      siteAverages[site] = scores.reduce((a, b) => a + b, 0) / scores.length;
+    }
+
+    // Group findings by context
+    const byContext: Record<string, number> = {};
+    for (const finding of failFindings) {
+      byContext[finding.context] = (byContext[finding.context] ?? 0) + 1;
+    }
+
+    // Group findings by vendor
+    const byVendor: Record<string, number> = {};
+    const vendorMap = new Map<number, string>();
+    for (const device of devicesWithData) {
+      vendorMap.set(device.id, device.hostname);
+    }
+
+    res.json({
+      totalJobs: allJobs.length,
+      passed: passedJobs,
+      failed: failedJobs,
+      running: runningJobs,
+      passFindings,
+      failFindings,
+      warningFindings,
+      unknownFindings,
+      deviceScores: Object.fromEntries(deviceScores),
+      siteAverages,
+      failuresByContext: byContext,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+// GET /devices/:id/compliance — Device compliance status + score
+router.get("/devices/:id/compliance", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const deviceId = Number(req.params.id);
+    if (!deviceId) {
+      res.status(400).json({ error: "Invalid device ID" });
+      return;
+    }
+
+    const jobs = await db
+      .select()
+      .from(complianceJobsTable)
+      .where(eq(complianceJobsTable.deviceId, deviceId))
+      .orderBy(desc(complianceJobsTable.createdAt));
+
+    const [latestJob] = jobs;
+    if (!latestJob) {
+      res.json({
+        deviceId,
+        hasData: false,
+        message: "No compliance data available",
+      });
+      return;
+    }
+
+    const findings = await db
+      .select()
+      .from(complianceFindingsTable)
+      .where(eq(complianceFindingsTable.jobId, latestJob.id));
+
+    const score = calculateComplianceScore(findings);
+    const failingFindings = findings.filter((f) => (f.status ?? f.result) === "fail").slice(0, 10);
+
+    const remediations = failingFindings.map((f) => {
+      const suggestion = generateRemediationPreview({
+        ruleId: f.ruleId || f.ruleName || "unknown",
+        objectName: f.objectName || undefined,
+        severity: f.severity,
+        message: f.message || "",
+      });
+      return { finding: f, remediation: suggestion };
+    });
+
+    res.json({
+      deviceId,
+      jobId: latestJob.id,
+      status: latestJob.status,
+      score,
+      scoreCategory: score >= 100 ? "PASS" : score >= 80 ? "WARNING" : "FAIL",
+      passCount: latestJob.passCount,
+      failCount: latestJob.failCount,
+      totalFindings: findings.length,
+      failingFindings: failingFindings.length,
+      completedAt: latestJob.completedAt?.toISOString() ?? null,
+      remediations,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+// GET /devices/:id/drift — Device drifts
+router.get("/devices/:id/drift", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const deviceId = Number(req.params.id);
+    if (!deviceId) {
+      res.status(400).json({ error: "Invalid device ID" });
+      return;
+    }
+
+    const drifts = await db
+      .select()
+      .from(complianceDriftsTable)
+      .where(eq(complianceDriftsTable.deviceId, deviceId))
+      .orderBy(desc(complianceDriftsTable.createdAt));
+
+    res.json(
+      drifts.map((d) => ({
+        ...d,
+        createdAt: d.createdAt.toISOString(),
+      }))
+    );
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+// GET /compliance/drifts — All drifts (paginated)
+router.get("/compliance/drifts", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const deviceId = req.query.deviceId ? Number(req.query.deviceId) : undefined;
+    const limit = Math.min(Number(req.query.limit) || 100, 500);
+
+    let query = db.select().from(complianceDriftsTable).orderBy(desc(complianceDriftsTable.createdAt)).limit(limit);
+
+    if (deviceId) {
+      query = db
+        .select()
+        .from(complianceDriftsTable)
+        .where(eq(complianceDriftsTable.deviceId, deviceId))
+        .orderBy(desc(complianceDriftsTable.createdAt))
+        .limit(limit);
+    }
+
+    const drifts = await query;
+
+    res.json(
+      drifts.map((d) => ({
+        ...d,
+        createdAt: d.createdAt.toISOString(),
+      }))
+    );
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+// ── BASELINES (v0.9.1) ──────────────────────────────────────────────────────
+
+import {
+  listBaselines,
+  getBaseline,
+  createBaseline,
+  updateBaseline,
+  deleteBaseline,
+  type CreateBaselineInput,
+  type UpdateBaselineInput,
+} from "../modules/compliance/compliance-baselines.service.js";
+import { getTrends } from "../modules/compliance/compliance-trends.service.js";
+
+router.get("/compliance/baselines", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const scopeType = req.query.scopeType as string | undefined;
+    const baselines = await listBaselines(scopeType);
+    res.json(baselines);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.post("/compliance/baselines", requirePermission("compliance.admin"), async (req, res) => {
+  try {
+    const data: CreateBaselineInput = req.body;
+    if (!data.scopeType || !data.name) {
+      res.status(400).json({ error: "scopeType and name required" });
+      return;
+    }
+    const baseline = await createBaseline(data);
+    await logAuditEvent({
+      action: "compliance_baseline_created",
+      objectType: "compliance_baseline",
+      objectId: String(baseline.id),
+      metadata: { scopeType: baseline.scopeType, scopeId: baseline.scopeId, name: baseline.name },
+      sourceIp: getRequestSourceIp(req),
+    });
+    res.status(201).json(baseline);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.get("/compliance/baselines/:id", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const baseline = await getBaseline(Number(req.params.id));
+    if (!baseline) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(baseline);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.put("/compliance/baselines/:id", requirePermission("compliance.admin"), async (req, res) => {
+  try {
+    const data: UpdateBaselineInput = req.body;
+    const baseline = await updateBaseline(Number(req.params.id), data);
+    await logAuditEvent({
+      action: "compliance_baseline_updated",
+      objectType: "compliance_baseline",
+      objectId: String(baseline.id),
+      metadata: { name: baseline.name },
+      sourceIp: getRequestSourceIp(req),
+    });
+    res.json(baseline);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.delete("/compliance/baselines/:id", requirePermission("compliance.admin"), async (req, res) => {
+  try {
+    await deleteBaseline(Number(req.params.id));
+    await logAuditEvent({
+      action: "compliance_baseline_deleted",
+      objectType: "compliance_baseline",
+      objectId: req.params.id,
+      metadata: {},
+      sourceIp: getRequestSourceIp(req),
+    });
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+// ── RULES OVERRIDE ──────────────────────────────────────────────────────────
+
+router.get("/compliance/rules", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const rules = await db.select().from(compliancePoliciesTable).orderBy(compliancePoliciesTable.name);
+    res.json(rules.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() })));
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.put("/compliance/rules/:id", requirePermission("compliance.admin"), async (req, res) => {
+  try {
+    const { enabled, severity } = req.body;
+    const [updated] = await db
+      .update(compliancePoliciesTable)
+      .set({
+        enabled: enabled !== undefined ? enabled : undefined,
+        severity: severity !== undefined ? severity : undefined,
+      })
+      .where(eq(compliancePoliciesTable.id, Number(req.params.id)))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+
+    await logAuditEvent({
+      action: "compliance_rule_updated",
+      objectType: "compliance_policy",
+      objectId: String(updated.id),
+      metadata: { name: updated.name, enabled: updated.enabled, severity: updated.severity },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    res.json({ ...updated, createdAt: updated.createdAt.toISOString() });
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+// ── TRENDS ──────────────────────────────────────────────────────────────────
+
+router.get("/compliance/trends", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const scope = (req.query.scope as string) || "global";
+    const scopeId = req.query.scopeId as string | number | undefined;
+    const days = req.query.days ? Number(req.query.days) : 30;
+
+    if (!["device", "site", "vendor", "global"].includes(scope)) {
+      res.status(400).json({ error: "Invalid scope" });
+      return;
+    }
+
+    const trends = await getTrends({
+      scope: scope as any,
+      scopeId,
+      days,
+    });
+
+    res.json(trends);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+// ── COMPLIANCE SCHEDULES (v0.9.2) ──────────────────────────────────────────
+
+import { listScheduledJobs, getScheduledJob, createScheduledJob, updateScheduledJob, deleteScheduledJob, runScheduledJob, listScheduledJobRuns, getScheduledJobRun } from "../modules/scheduler/scheduler.service.js";
+
+router.get("/compliance/schedules", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const jobs = await listScheduledJobs();
+    const filtered = jobs.filter((j) => j.jobType === "compliance");
+    res.json(filtered.map((j: any) => ({
+      id: j.id,
+      name: j.name,
+      targetType: j.targetType,
+      targetId: j.targetId,
+      contextsJson: j.contextsJson,
+      intervalMinutes: j.intervalMinutes,
+      enabled: j.enabled,
+      lastRunAt: j.lastRunAt ? (typeof j.lastRunAt === "string" ? j.lastRunAt : new Date(j.lastRunAt).toISOString()) : null,
+      nextRunAt: j.nextRunAt ? (typeof j.nextRunAt === "string" ? j.nextRunAt : new Date(j.nextRunAt).toISOString()) : null,
+    })));
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.post("/compliance/schedules", requirePermission("compliance.admin"), async (req, res) => {
+  try {
+    const { name, scopeType, scopeId, intervalHours, contexts, enabled } = req.body;
+    if (!name || !scopeType) {
+      res.status(400).json({ error: "name and scopeType required" });
+      return;
+    }
+
+    let targetType: "device" | "device_group" | "all_devices" | "site" | "global" =
+      scopeType === "global" ? "global" : scopeType === "site" ? "site" : "device";
+    let targetId = null;
+    let contextsJson: any = { contexts: Array.isArray(contexts) ? contexts : [] };
+
+    if (scopeType === "site" && scopeId) {
+      contextsJson.site = scopeId;
+    } else if (scopeType === "device" && scopeId) {
+      targetId = Number(scopeId);
+    }
+
+    const job = await createScheduledJob({
+      name,
+      jobType: "compliance",
+      targetType,
+      targetId,
+      contextsJson,
+      intervalMinutes: Math.max((intervalHours || 24) * 60, 60),
+      enabled: enabled !== false,
+    });
+
+    if (!job) {
+      res.status(500).json({ error: "Failed to create schedule" });
+      return;
+    }
+
+    await logAuditEvent({
+      action: "compliance_schedule_created",
+      objectType: "scheduled_job",
+      objectId: String(job.id),
+      metadata: { name: job.name, scopeType },
+      sourceIp: getRequestSourceIp(req),
+    });
+
+    res.status(201).json(job);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.get("/compliance/schedules/:id", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const job = await getScheduledJob(Number(req.params.id));
+    if (!job || job.jobType !== "compliance") {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(job);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.put("/compliance/schedules/:id", requirePermission("compliance.admin"), async (req, res) => {
+  try {
+    const job = await updateScheduledJob(Number(req.params.id), req.body);
+    if (!job) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json(job);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.delete("/compliance/schedules/:id", requirePermission("compliance.admin"), async (req, res) => {
+  try {
+    await deleteScheduledJob(Number(req.params.id));
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.post("/compliance/schedules/:id/run-now", requirePermission("compliance.admin"), async (req, res) => {
+  try {
+    const run = await runScheduledJob(Number(req.params.id), "manual", null, getRequestSourceIp(req));
+    res.json(run);
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
+});
+
+router.get("/compliance/schedules/:id/history", requirePermission("compliance.read"), async (req, res) => {
+  try {
+    const runs = await listScheduledJobRuns(Number(req.params.id));
+    res.json(runs.map((r: any) => ({
+      ...r,
+      startedAt: r.startedAt ? (typeof r.startedAt === "string" ? r.startedAt : new Date(r.startedAt).toISOString()) : null,
+      finishedAt: r.finishedAt ? (typeof r.finishedAt === "string" ? r.finishedAt : new Date(r.finishedAt).toISOString()) : null,
+    })));
+  } catch (error) {
+    res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });
+  }
 });
 
 export async function executeJob(jobId: number) {

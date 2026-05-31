@@ -31,6 +31,9 @@ import {
   connectorAgentRouter,
   connectorsManagementRouter,
 } from "../modules/connectors/connectors.routes.js";
+import resourceManagerRouter from "./resource-manager.js";
+import topologyRouter from "./topology.js";
+import impactRouter from "./impact.js";
 import { authorizeRequest } from "../lib/auth.js";
 import { requestContextMiddleware } from "../lib/request-context.js";
 
@@ -68,5 +71,8 @@ router.use(credentialVaultRouter);
 router.use(notificationsRouter);
 router.use(configHistoryRouter);
 router.use(connectorsManagementRouter);
+router.use(resourceManagerRouter);
+router.use(topologyRouter);
+router.use(impactRouter);
 
 export default router;

@@ -21,6 +21,22 @@ import { runSecurityChecks } from "./checks/security-checks.js";
 import { runVrfChecks } from "./checks/vrf-checks.js";
 import { COMPLIANCE_ENGINE_VERSION, COMPLIANCE_PARSER_VERSION, INTERFACE_PARSER_VERSION } from "../netops/versioning.js";
 
+export function calculateComplianceScore(findings: Array<{ status?: string; result?: string; severity: string }>): number {
+  const penalties: Record<string, number> = {
+    critical: 10,
+    high: 8,
+    medium: 5,
+    warning: 3,
+    low: 1,
+    info: 0,
+  };
+
+  const failedFindings = findings.filter((f) => (f.status ?? f.result) === "fail");
+  const totalPenalty = failedFindings.reduce((sum, f) => sum + (penalties[f.severity] ?? 1), 0);
+
+  return Math.max(0, 100 - totalPenalty);
+}
+
 const DEFAULT_POLICIES: Array<Pick<CompliancePolicy, "name" | "description" | "context" | "severity" | "ruleType" | "rulePattern" | "vendor" | "enabled">> = [
   { name: "Discovery snapshot disponível", description: "Snapshot estruturado existe para compliance.", context: "security", severity: "warning", ruleType: "structured", rulePattern: "structured-snapshot-present", vendor: "huawei", enabled: true },
   { name: "Telnet ausente", description: "Telnet não deve estar habilitado.", context: "security", severity: "high", ruleType: "structured", rulePattern: "huawei-security-telnet-disabled", vendor: "huawei", enabled: true },

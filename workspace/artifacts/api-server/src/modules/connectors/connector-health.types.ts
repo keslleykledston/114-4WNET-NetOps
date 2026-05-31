@@ -19,6 +19,8 @@ export const CONNECTOR_ALERT_TYPES = [
   "CONFIG_PARSE_FAILED",
   "BGP_PARSE_FAILED",
   "L2_PARSE_FAILED",
+  "CONFIG_DRIFT_DETECTED",
+  "CRITICAL_COMPLIANCE_FAILURE",
 ] as const;
 export type ConnectorAlertType = (typeof CONNECTOR_ALERT_TYPES)[number];
 

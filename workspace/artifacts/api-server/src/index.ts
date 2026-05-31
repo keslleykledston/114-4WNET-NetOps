@@ -4,6 +4,7 @@ import { startSnmpPoller } from "./lib/snmp-poller.js";
 import { ensureLocalAdminUser } from "./lib/auth.js";
 import { startScheduler } from "./modules/scheduler/scheduler.runner.js";
 import { startConnectorHealthEvaluation } from "./modules/connectors/connector-health.runner.js";
+import { startComplianceTrendRunner } from "./modules/compliance/compliance-trend.runner.js";
 import { ensureServiceTemplatesInDb } from "./modules/netops/provisioning-template-seed.js";
 
 const rawPort = process.env["PORT"];
@@ -38,5 +39,6 @@ void (async () => {
     startSnmpPoller();
     startScheduler();
     startConnectorHealthEvaluation();
+    startComplianceTrendRunner();
   });
 })();

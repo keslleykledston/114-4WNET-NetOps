@@ -1,7 +1,7 @@
 export const scheduledJobTypes = ["discovery", "compliance", "health_check"] as const;
 export type ScheduledJobType = (typeof scheduledJobTypes)[number];
 
-export const scheduledJobTargetTypes = ["device", "device_group", "all_devices"] as const;
+export const scheduledJobTargetTypes = ["device", "device_group", "all_devices", "site", "global"] as const;
 export type ScheduledJobTargetType = (typeof scheduledJobTargetTypes)[number];
 
 export const scheduledJobRunStatuses = ["pending", "running", "completed", "failed", "partial", "cancelled"] as const;

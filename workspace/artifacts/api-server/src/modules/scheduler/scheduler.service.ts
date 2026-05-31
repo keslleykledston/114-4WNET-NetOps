@@ -106,7 +106,13 @@ function serializeRunItem(item: DbScheduledJobRunItem): ScheduledJobRunItemRecor
 }
 
 function normalizeJobInputContexts(contexts: unknown): string[] {
-  return parseContexts(contexts).filter((context) => ["interfaces", "bgp", "l2vpn", "policies", "vrfs", "compliance", "health"].includes(context));
+  // Handle both array (normal) and object (site target has contexts array inside)
+  let ctxArray = contexts;
+  if (typeof contexts === "object" && contexts !== null && !Array.isArray(contexts)) {
+    const obj = contexts as Record<string, unknown>;
+    ctxArray = Array.isArray(obj.contexts) ? obj.contexts : [];
+  }
+  return parseContexts(ctxArray).filter((context) => ["interfaces", "bgp", "l2vpn", "policies", "vrfs", "compliance", "health"].includes(context));
 }
 
 function computeNextRunAt(now: Date, intervalMinutes: number): Date {
@@ -125,11 +131,30 @@ async function resolveTargetDevices(job: DbScheduledJob): Promise<SchedulerJobTa
     return await db.select().from(devicesTable).where(eq(devicesTable.groupId, job.targetId));
   }
 
+  if (job.targetType === "site") {
+    const ctx = (job.contextsJson ?? {}) as Record<string, unknown>;
+    const site = typeof ctx.site === "string" ? ctx.site : null;
+    if (!site) return [];
+    return await db.select().from(devicesTable).where(eq(devicesTable.site, site));
+  }
+
+  if (job.targetType === "global") {
+    return await db.select().from(devicesTable);
+  }
+
   return await db.select().from(devicesTable);
 }
 
 async function getTargetLabel(job: DbScheduledJob): Promise<string> {
   if (job.targetType === "all_devices") return "All devices";
+  if (job.targetType === "global") return "Global (all devices)";
+
+  if (job.targetType === "site") {
+    const ctx = (job.contextsJson ?? {}) as Record<string, unknown>;
+    const site = typeof ctx.site === "string" ? ctx.site : null;
+    return site ? `Site: ${site}` : "Site (unknown)";
+  }
+
   if (!job.targetId) return "N/A";
   if (job.targetType === "device") {
     const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, job.targetId));

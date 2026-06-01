@@ -1,5 +1,5 @@
 import express, { Request, Response, Router } from "express";
-import { requirePermission } from "@workspace/auth";
+import { requirePermission } from "../../lib/auth.js";
 import {
   listTemplateRegistry,
   getTemplateDetail,
@@ -73,8 +73,8 @@ router.get("/templates/:id/versions", requirePermission("provisioning.read"), as
 router.get("/templates/:id/diff/:vA/:vB", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const vA = req.params.vA;
-    const vB = req.params.vB;
+    const vA = String(req.params.vA);
+    const vB = String(req.params.vB);
 
     const diffs = await diffTemplateVersions(id, vA, vB);
     res.json(diffs);

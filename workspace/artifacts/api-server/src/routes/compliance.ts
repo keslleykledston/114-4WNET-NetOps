@@ -1024,7 +1024,8 @@ router.get("/compliance/dashboard", requirePermission("compliance.read"), async 
     const runningJobs = allJobs.filter((j) => j.status === "running").length;
 
     const passFindings = allFindings.filter((f) => (f.status ?? f.result) === "pass").length;
-    const failFindings = allFindings.filter((f) => (f.status ?? f.result) === "fail").length;
+    const failFindingRows = allFindings.filter((f) => (f.status ?? f.result) === "fail");
+    const failFindings = failFindingRows.length;
     const warningFindings = allFindings.filter((f) => (f.status ?? f.result) === "warning").length;
     const unknownFindings = allFindings.filter((f) => (f.status ?? f.result) === "unknown").length;
 
@@ -1032,7 +1033,10 @@ router.get("/compliance/dashboard", requirePermission("compliance.read"), async 
     const deviceScores = new Map<number, number>();
     for (const job of allJobs) {
       const findings = allFindings.filter((f) => f.jobId === job.id);
-      const score = calculateComplianceScore(findings);
+      const score = calculateComplianceScore(findings.map((finding) => ({
+        ...finding,
+        status: finding.status ?? undefined,
+      })));
       deviceScores.set(job.deviceId, score);
     }
 
@@ -1065,7 +1069,7 @@ router.get("/compliance/dashboard", requirePermission("compliance.read"), async 
 
     // Group findings by context
     const byContext: Record<string, number> = {};
-    for (const finding of failFindings) {
+    for (const finding of failFindingRows as Array<{ context: string }>) {
       byContext[finding.context] = (byContext[finding.context] ?? 0) + 1;
     }
 
@@ -1124,7 +1128,10 @@ router.get("/devices/:id/compliance", requirePermission("compliance.read"), asyn
       .from(complianceFindingsTable)
       .where(eq(complianceFindingsTable.jobId, latestJob.id));
 
-    const score = calculateComplianceScore(findings);
+    const score = calculateComplianceScore(findings.map((finding) => ({
+      ...finding,
+      status: finding.status ?? undefined,
+    })));
     const failingFindings = findings.filter((f) => (f.status ?? f.result) === "fail").slice(0, 10);
 
     const remediations = failingFindings.map((f) => {
@@ -1187,16 +1194,14 @@ router.get("/compliance/drifts", requirePermission("compliance.read"), async (re
     const deviceId = req.query.deviceId ? Number(req.query.deviceId) : undefined;
     const limit = Math.min(Number(req.query.limit) || 100, 500);
 
-    let query = db.select().from(complianceDriftsTable).orderBy(desc(complianceDriftsTable.createdAt)).limit(limit);
-
-    if (deviceId) {
-      query = db
-        .select()
-        .from(complianceDriftsTable)
-        .where(eq(complianceDriftsTable.deviceId, deviceId))
-        .orderBy(desc(complianceDriftsTable.createdAt))
-        .limit(limit);
-    }
+    const query = deviceId
+      ? db
+          .select()
+          .from(complianceDriftsTable)
+          .where(eq(complianceDriftsTable.deviceId, deviceId))
+          .orderBy(desc(complianceDriftsTable.createdAt))
+          .limit(limit)
+      : db.select().from(complianceDriftsTable).orderBy(desc(complianceDriftsTable.createdAt)).limit(limit);
 
     const drifts = await query;
 
@@ -1291,7 +1296,7 @@ router.delete("/compliance/baselines/:id", requirePermission("compliance.admin")
     await logAuditEvent({
       action: "compliance_baseline_deleted",
       objectType: "compliance_baseline",
-      objectId: req.params.id,
+      objectId: String(req.params.id),
       metadata: {},
       sourceIp: getRequestSourceIp(req),
     });

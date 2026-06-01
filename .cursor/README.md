@@ -15,6 +15,11 @@
 | Schema, migration, Drizzle | [agents/db-schema.md](./agents/db-schema.md) | `skills/db-schema/` |
 | Validar, smoke, selftest, CI | [agents/qa-smoke.md](./agents/qa-smoke.md) | `skills/netops-smoke-validation/` |
 | Parser Huawei CLI (L2 ou BGP) | [agents/huawei-parser.md](./agents/huawei-parser.md) | `skills/huawei-vrp-parsers/` |
+| Provisioning context / memory | [agents/provisioning-context-maintainer.md](./agents/provisioning-context-maintainer.md) | docs-only |
+| Provisioning preview / findings | [agents/provisioning-validator.md](./agents/provisioning-validator.md) | `skills/netops-smoke-validation/` |
+| Provisioning safety / RBAC | [agents/provisioning-security-reviewer.md](./agents/provisioning-security-reviewer.md) | `skills/compliance-ops/` |
+| Provisioning docs / phase notes | [agents/provisioning-docs-writer.md](./agents/provisioning-docs-writer.md) | docs-only |
+| Provisioning regression | [agents/provisioning-regression-runner.md](./agents/provisioning-regression-runner.md) | `skills/netops-smoke-validation/` |
 
 ## 2. Siga o workflow
 
@@ -27,6 +32,11 @@
 | Fechar fase / validar | [workflows/phase-validation.md](./workflows/phase-validation.md) |
 | Rebuild containers | [workflows/deploy-containers.md](./workflows/deploy-containers.md) |
 | Investigar flag OFF / 503 / pilot | [workflows/feature-flag-debug.md](./workflows/feature-flag-debug.md) |
+| Provisioning context refresh | [workflows/provisioning-context-refresh.md](./workflows/provisioning-context-refresh.md) |
+| Provisioning validation | [workflows/provisioning-validation.md](./workflows/provisioning-validation.md) |
+| Provisioning security review | [workflows/provisioning-security-review.md](./workflows/provisioning-security-review.md) |
+| Provisioning docs refresh | [workflows/provisioning-docs-refresh.md](./workflows/provisioning-docs-refresh.md) |
+| Provisioning regression | [workflows/provisioning-regression.md](./workflows/provisioning-regression.md) |
 
 ## 3. Rules automáticas (globs)
 

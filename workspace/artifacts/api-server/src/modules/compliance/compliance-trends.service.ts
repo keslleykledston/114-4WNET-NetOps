@@ -69,7 +69,10 @@ export async function snapshotComplianceTrends(): Promise<void> {
       .from(complianceFindingsTable)
       .where(eq(complianceFindingsTable.jobId, job.id));
 
-    const score = calculateComplianceScore(findings);
+    const score = calculateComplianceScore(findings.map((finding) => ({
+      ...finding,
+      status: finding.status ?? undefined,
+    })));
 
     trendsToInsert.push({
       deviceId,

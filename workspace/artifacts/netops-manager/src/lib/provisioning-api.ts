@@ -21,12 +21,18 @@ export interface ProvisioningPreviewResult {
   executionPlan: string[];
   validations: Array<{ name: string; passed: boolean; message: string; severity?: string }>;
   risks: Array<{ code?: string; message: string; severity?: string }>;
+  findings?: Array<{ code: string; severity: string; message: string; evidence: string[]; recommendation: string; blocking: boolean }>;
   missingData: string[];
   blockedReasons: string[];
   maintenanceWindow: { start: string | null; end: string | null } | null;
   rollbackPlan: string | null;
   applyBlocked: boolean;
   applyBlockedReason: string | null;
+  validationResultJson?: string | null;
+  renderedConfigJson?: string | null;
+  renderedRollbackJson?: string | null;
+  renderedValidationJson?: string | null;
+  riskSummaryJson?: string | null;
   commandsGenerated: string[];
   warnings: string[];
   conflicts: string[];
@@ -79,13 +85,76 @@ export function previewProvisioningJobMarkdown(jobId: number) {
   return apiFetch<{ previewMarkdown?: string } & Record<string, unknown>>(`/api/provisioning-jobs/${jobId}/preview`, { method: "POST" });
 }
 
+export function listStructuredProvisioningJobs() {
+  return apiFetch<ProvisioningJob[]>("/api/provisioning/jobs");
+}
+
+export function createStructuredProvisioningJob(body: StructuredProvisioningJobBody) {
+  return apiFetch<ProvisioningJob>("/api/provisioning/jobs", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateStructuredProvisioningJob(jobId: number, body: Partial<StructuredProvisioningJobBody>) {
+  return apiFetch<ProvisioningJob>(`/api/provisioning/jobs/${jobId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function precheckStructuredProvisioningJob(jobId: number) {
+  return apiFetch<{ preview: ProvisioningPreviewResult; job: ProvisioningJob }>(`/api/provisioning/jobs/${jobId}/precheck`, {
+    method: "POST",
+  });
+}
+
+export function previewStructuredProvisioningJob(jobId: number) {
+  return apiFetch<{ preview: ProvisioningPreviewResult; job: ProvisioningJob }>(`/api/provisioning/jobs/${jobId}/preview`, {
+    method: "POST",
+  });
+}
+
+export function approveStructuredProvisioningJob(jobId: number) {
+  return apiFetch<ProvisioningJob>(`/api/provisioning/jobs/${jobId}/approve`, { method: "POST" });
+}
+
+export function applyStructuredProvisioningJob(jobId: number) {
+  return apiFetch<ProvisioningJob>(`/api/provisioning/jobs/${jobId}/apply`, { method: "POST" });
+}
+
+export function reportStructuredProvisioningJob(jobId: number) {
+  return apiFetch<{ id: number; contentMarkdown: string; generatedAt: string }>(`/api/provisioning/jobs/${jobId}/report`, { method: "POST" });
+}
+
+export interface StructuredProvisioningJobBody {
+  serviceType: "l2vpn" | "l3vpn" | string;
+  customerName: string;
+  description?: string;
+  targetDevices: number[];
+  parameters: Record<string, unknown>;
+  tenantId?: number | null;
+}
+
 export interface ProvisioningJob {
   id: number;
   name: string;
   type: string;
+  serviceType?: string | null;
   status: string;
   deviceIds: number[];
+  targetDevices?: number[];
+  customerName?: string | null;
+  description?: string | null;
   parameters?: string | null;
+  parametersJson?: Record<string, unknown> | null;
+  validationResultJson?: Record<string, unknown> | null;
+  renderedConfigJson?: Record<string, unknown> | null;
+  renderedRollbackJson?: Record<string, unknown> | null;
+  renderedValidationJson?: Record<string, unknown> | null;
+  riskSummaryJson?: Record<string, unknown> | null;
+  approvalStatus?: string | null;
+  approvedBy?: string | null;
   approvedByUserId?: number | null;
   approvedAt?: string | null;
   executionPlanJson?: string | null;
@@ -95,6 +164,7 @@ export interface ProvisioningJob {
   postcheckOutput?: string | null;
   maintenanceWindowStart?: string | null;
   maintenanceWindowEnd?: string | null;
+  updatedAt?: string | null;
   createdAt: string;
   templateId?: number | null;
   validatedAt?: string | null;

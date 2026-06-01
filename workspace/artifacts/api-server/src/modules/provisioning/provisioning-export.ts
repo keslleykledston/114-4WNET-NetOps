@@ -21,6 +21,9 @@ export function exportProvisioningPreviewMarkdown(
     (item) => `- [${item.passed ? "PASS" : "FAIL"}] ${item.name}: ${item.message}`,
   );
   const riskLines = preview.risks.map((risk) => `- (${risk.severity}) ${risk.message}`);
+  const findingLines = preview.findings?.length
+    ? preview.findings.map((finding) => `- [${finding.severity}] ${finding.code}: ${finding.message}`)
+    : [];
   const precheckLines = preview.precheckHints.map((item) => `- ${item}`);
   const postcheckLines = preview.postcheckHints.map((item) => `- ${item}`);
   const executionLines = preview.executionPlan.map((item) => `- ${item}`);
@@ -51,6 +54,11 @@ export function exportProvisioningPreviewMarkdown(
     preview.configPreview,
     "```",
     "",
+    preview.renderedValidationJson ? "## Validation JSON" : null,
+    preview.renderedValidationJson ? "```json" : null,
+    preview.renderedValidationJson ? preview.renderedValidationJson : null,
+    preview.renderedValidationJson ? "```" : null,
+    "",
     "## Rollback Preview",
     "```text",
     preview.rollbackPreview,
@@ -61,6 +69,9 @@ export function exportProvisioningPreviewMarkdown(
     "",
     "## Risks",
     riskLines.length ? riskLines.join("\n") : "- None",
+    "",
+    preview.findings?.length ? "## Findings" : null,
+    preview.findings?.length ? findingLines.join("\n") : null,
     "",
     "## Precheck Hints",
     precheckLines.length ? precheckLines.join("\n") : "- None",

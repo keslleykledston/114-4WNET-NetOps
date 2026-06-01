@@ -119,6 +119,130 @@ bgp {{localAs}}
 {{/vpnInstance}}`,
   }),
   baseTemplate({
+    id: "huawei-vrp-l3vpn",
+    name: "L3VPN Preview",
+    description: "Preview-focused L3VPN service request with VRF, RD/RT and interface binding",
+    vendor: "huawei",
+    platform: "vrp",
+    serviceType: "l3vpn",
+    parameterSchema: {
+      customerName: field("string", "Customer name", { required: true }),
+      description: field("string", "Service description"),
+      interfaceName: field("string", "Access interface", { required: true }),
+      vlan: field("string", "Access VLAN", { required: true }),
+      vrfName: field("string", "VRF / VPN instance", { required: true }),
+      rd: field("string", "Route distinguisher", { required: true }),
+      rtImport: field("string", "Route-target import", { required: true }),
+      rtExport: field("string", "Route-target export", { required: true }),
+      ipWan: field("string", "WAN IP/mask", { required: true }),
+      peerBgp: field("string", "Remote BGP peer IP", { required: true }),
+      remoteAsn: field("string", "Remote ASN", { required: true }),
+      importRoutePolicy: field("string", "Import route-policy", { required: true }),
+      exportRoutePolicy: field("string", "Export route-policy", { required: true }),
+      prefixList: field("string", "Optional prefix-list"),
+      communityFilter: field("string", "Optional community-filter"),
+      notes: field("string", "Operator notes"),
+    },
+    risks: [
+      "VRF, RD and RT changes can affect routing for the service boundary.",
+      "Interface binding must be validated against discovery before approval.",
+    ],
+    precheckHints: [
+      "Confirm the VRF name, RD and RTs are unique and approved.",
+      "Validate interface availability and route-policy references.",
+    ],
+    postcheckHints: [
+      "display ip vpn-instance {{vrfName}}",
+      "display bgp peer {{peerBgp}}",
+      "display interface {{interfaceName}}",
+    ],
+    configTemplate: `# L3VPN Preview — {{customerName}}
+system-view
+ip vpn-instance {{vrfName}}
+ ipv4-family
+  route-distinguisher {{rd}}
+  vpn-target {{rtExport}} export-extcommunity
+  vpn-target {{rtImport}} import-extcommunity
+#
+interface {{interfaceName}}
+ description {{description}}
+ ip binding vpn-instance {{vrfName}}
+ dot1q termination vid {{vlan}}
+{{#ipWan}} ip address {{ipWan}}
+{{/ipWan}}{{#prefixList}} # prefix-list: {{prefixList}}
+{{/prefixList}}{{#communityFilter}} # community-filter: {{communityFilter}}
+{{/communityFilter}}{{#importRoutePolicy}} # import-policy: {{importRoutePolicy}}
+{{/importRoutePolicy}}{{#exportRoutePolicy}} # export-policy: {{exportRoutePolicy}}
+{{/exportRoutePolicy}}`,
+    rollbackTemplate: `# Rollback L3VPN {{vrfName}}
+interface {{interfaceName}}
+ undo ip binding vpn-instance {{vrfName}}
+ undo dot1q termination vid {{vlan}}
+undo ip vpn-instance {{vrfName}}`,
+  }),
+  baseTemplate({
+    id: "huawei-vrp-l2vpn",
+    name: "L2VPN Preview",
+    description: "Preview-focused L2VPN service request with two endpoints and pseudowire/VSI hints",
+    vendor: "huawei",
+    platform: "vrp",
+    serviceType: "l2vpn",
+    parameterSchema: {
+      customerName: field("string", "Customer name", { required: true }),
+      description: field("string", "Service description"),
+      deviceA: field("string", "Device A id or label", { required: true }),
+      interfaceA: field("string", "Interface A", { required: true }),
+      vlanA: field("string", "VLAN A", { required: true }),
+      qinqA: field("string", "QinQ A (optional)"),
+      deviceB: field("string", "Device B id or label", { required: true }),
+      interfaceB: field("string", "Interface B", { required: true }),
+      vlanB: field("string", "VLAN B", { required: true }),
+      qinqB: field("string", "QinQ B (optional)"),
+      type: field("string", "vpws | vpls | vsi | l2vc", { required: true }),
+      serviceId: field("string", "Service ID / VC ID / VSI name", { required: true }),
+      remotePeer: field("string", "Remote peer IP (optional)"),
+      notes: field("string", "Operator notes"),
+    },
+    risks: [
+      "L2VPN allocation can collide with existing VLANs, subinterfaces or pseudowire identifiers.",
+      "Device A and B snapshots must be current before approval.",
+    ],
+    precheckHints: [
+      "Confirm both endpoints exist and are accessible via discovery/connectors.",
+      "Validate VLAN, subinterface and service ID uniqueness.",
+    ],
+    postcheckHints: [
+      "display mpls l2vc",
+      "display vsi",
+      "display interface {{interfaceA}}",
+      "display interface {{interfaceB}}",
+    ],
+    configTemplate: `# L2VPN Preview — {{customerName}}
+system-view
+interface {{interfaceA}}
+ description {{description}}
+ dot1q termination vid {{vlanA}}
+{{#qinqA}} # qinq A: {{qinqA}}
+{{/qinqA}}{{#remotePeer}} # remote peer: {{remotePeer}}
+{{/remotePeer}}# service type: {{type}}
+{{#remotePeer}}mpls l2vpn
+ mpls l2vc {{remotePeer}} {{serviceId}}
+{{/remotePeer}}
+interface {{interfaceB}}
+ description {{description}}
+ dot1q termination vid {{vlanB}}
+{{#qinqB}} # qinq B: {{qinqB}}
+{{/qinqB}}`,
+    rollbackTemplate: `# Rollback L2VPN {{serviceId}}
+interface {{interfaceA}}
+ undo dot1q termination vid {{vlanA}}
+ undo description
+interface {{interfaceB}}
+ undo dot1q termination vid {{vlanB}}
+ undo description
+undo mpls l2vc {{remotePeer}} {{serviceId}}`,
+  }),
+  baseTemplate({
     id: "huawei-vrp-l3vpn-vrf",
     name: "L3VPN / VRF",
     description: "VPN instance with RD/RT",

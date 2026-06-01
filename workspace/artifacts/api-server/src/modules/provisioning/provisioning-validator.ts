@@ -9,6 +9,13 @@ import {
   getRequiredParameterNames,
   vendorPlatformCompatible,
 } from "./provisioning-template-registry.js";
+import type {
+  ProvisioningFinding,
+  ProvisioningFindingCode,
+  ProvisioningL2vpnPreviewInput,
+  ProvisioningL3vpnPreviewInput,
+  ProvisioningStructuredValidationResult,
+} from "./provisioning.types.js";
 
 function isBlank(value: unknown): boolean {
   return value === undefined || value === null || String(value).trim() === "";
@@ -40,6 +47,428 @@ function subinterfaceExists(context: ProvisioningContext, parent: string, vlanId
   if (!context.discoveryAvailable || !context.discovery) return null;
   const target = `${parent}.${vlanId}`.toLowerCase();
   return context.discovery.interfaces.some((item) => item.name?.toLowerCase() === target);
+}
+
+type ValidationContext = ProvisioningContext & {
+  peerContext?: ProvisioningContext | null;
+  connectorAvailable?: boolean | null;
+  peerConnectorAvailable?: boolean | null;
+  snapshotAgeHours?: number | null;
+  peerSnapshotAgeHours?: number | null;
+};
+
+function makeFinding(
+  code: ProvisioningFindingCode,
+  severity: ProvisioningFinding["severity"],
+  message: string,
+  evidence: string[],
+  recommendation: string,
+  blocking: boolean,
+): ProvisioningFinding {
+  return { code, severity, message, evidence, recommendation, blocking };
+}
+
+function pushFinding(
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+  finding: ProvisioningFinding,
+): void {
+  if (findingsMap.has(finding.code)) return;
+  findingsMap.set(finding.code, finding);
+  findings.push(finding);
+}
+
+function hasDiscovery(context: ValidationContext): boolean {
+  return Boolean(context.discoveryAvailable && context.discovery);
+}
+
+function deviceLabel(context: ProvisioningContext): string {
+  return `${context.device.hostname}${context.device.ipAddress ? ` (${context.device.ipAddress})` : ""}`;
+}
+
+function validateInterfaceDiscovery(
+  context: ValidationContext,
+  interfaceName: string,
+  label: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+  validations: ProvisioningValidationItem[],
+  blockedReasons: string[],
+): void {
+  if (!hasDiscovery(context) || isBlank(interfaceName)) return;
+  const exists = interfaceExists(context, interfaceName);
+  const passed = exists !== false;
+  validations.push({
+    name: label,
+    passed,
+    message: passed ? `Interface ${interfaceName} found in snapshot` : `Interface ${interfaceName} not found in snapshot`,
+    severity: passed ? "info" : "error",
+  });
+  if (exists === false) {
+    const finding = makeFinding(
+      "INTERFACE_NOT_FOUND",
+      "error",
+      `Interface ${interfaceName} not found on ${context.device.hostname}.`,
+      [`snapshot.deviceId=${context.device.id}`, `interface=${interfaceName}`],
+      "Refresh discovery and verify the target interface before approval.",
+      true,
+    );
+    pushFinding(findings, findingsMap, finding);
+    blockedReasons.push(finding.message);
+  }
+}
+
+function validateSnapshotFreshness(
+  context: ValidationContext,
+  label: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+): void {
+  const ageHours = context.snapshotAgeHours;
+  if (ageHours === null || ageHours === undefined) return;
+  if (ageHours <= 24) return;
+  const finding = makeFinding(
+    "SNAPSHOT_STALE",
+    "warn",
+    `${label} discovery snapshot is ${Math.round(ageHours)}h old.`,
+    [`snapshot_age_hours=${Math.round(ageHours)}`],
+    "Refresh discovery before approval to avoid stale interface and policy data.",
+    true,
+  );
+  pushFinding(findings, findingsMap, finding);
+}
+
+function validateConnectorAvailability(
+  context: ValidationContext,
+  label: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+): void {
+  if (context.connectorAvailable !== false) return;
+  const finding = makeFinding(
+    "CONNECTOR_UNAVAILABLE",
+    "error",
+    `${label} connector is unavailable.`,
+    [`device=${context.device.hostname}`],
+    "Restore connector connectivity or move the job to a reachable target before approval.",
+    true,
+  );
+  pushFinding(findings, findingsMap, finding);
+}
+
+function validateVlanConflict(
+  context: ValidationContext,
+  vlanValue: string,
+  label: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+): void {
+  if (!hasDiscovery(context) || isBlank(vlanValue)) return;
+  const vlan = Number(vlanValue);
+  if (!Number.isInteger(vlan)) return;
+  const conflict = context.discovery!.interfaces.find((item) => item.vlan === vlan || item.vlanId === vlan);
+  if (!conflict) return;
+  const finding = makeFinding(
+    "VLAN_CONFLICT",
+    "error",
+    `${label} VLAN ${vlan} already appears in discovery on ${conflict.name}.`,
+    [`conflict_interface=${conflict.name}`, `vlan=${vlan}`],
+    "Choose a free VLAN or free the existing service before approval.",
+    true,
+  );
+  pushFinding(findings, findingsMap, finding);
+}
+
+function validateSubinterfaceConflict(
+  context: ValidationContext,
+  parentInterface: string,
+  vlanValue: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+): void {
+  if (!hasDiscovery(context) || isBlank(parentInterface) || isBlank(vlanValue)) return;
+  const exists = subinterfaceExists(context, parentInterface, vlanValue);
+  if (!exists) return;
+  const finding = makeFinding(
+    "SUBINTERFACE_EXISTS",
+    "error",
+    `Subinterface ${parentInterface}.${vlanValue} already exists.`,
+    [`parent_interface=${parentInterface}`, `vlan=${vlanValue}`],
+    "Use a free subinterface or remove the existing one before approval.",
+    true,
+  );
+  pushFinding(findings, findingsMap, finding);
+}
+
+function validateBgpPeerConflict(
+  context: ValidationContext,
+  peerIp: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+): void {
+  if (!hasDiscovery(context) || isBlank(peerIp)) return;
+  const exists = context.discovery!.bgpPeers.some((peer) => peer.peerIp === peerIp);
+  if (!exists) return;
+  pushFinding(findings, findingsMap, makeFinding(
+    "BGP_PEER_EXISTS",
+    "warn",
+    `BGP peer ${peerIp} already exists in discovery.`,
+    [`peer_ip=${peerIp}`],
+    "Re-use the existing peer definition or adjust the new service parameters.",
+    false,
+  ));
+}
+
+function validateNamedResource(
+  context: ValidationContext,
+  resource: "policies" | "prefixLists" | "communities",
+  resourceName: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+  code: ProvisioningFindingCode,
+  messagePrefix: string,
+): void {
+  if (!hasDiscovery(context) || isBlank(resourceName)) return;
+  const list = context.discovery![resource];
+  const exists = list.some((item: { name?: string }) => item.name?.toLowerCase() === resourceName.toLowerCase());
+  if (exists) return;
+  pushFinding(findings, findingsMap, makeFinding(
+    code,
+    "warn",
+    `${messagePrefix} ${resourceName} not found in discovery.`,
+    [`resource=${resourceName}`],
+    "Synchronize discovery or adjust the referenced policy/filter before approval.",
+    false,
+  ));
+}
+
+function validateVrfConflict(
+  context: ValidationContext,
+  vrfName: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+): void {
+  if (!hasDiscovery(context) || isBlank(vrfName)) return;
+  const exists = context.discovery!.vrfs.some((vrf) => vrf.name.toLowerCase() === vrfName.toLowerCase());
+  if (!exists) return;
+  pushFinding(findings, findingsMap, makeFinding(
+    "VRF_CONFLICT",
+    "error",
+    `VRF ${vrfName} already exists in discovery.`,
+    [`vrf=${vrfName}`],
+    "Choose a new VRF name or remove the existing instance before approval.",
+    true,
+  ));
+}
+
+function validateRdConflict(
+  context: ValidationContext,
+  rd: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+): void {
+  if (!hasDiscovery(context) || isBlank(rd)) return;
+  const exists = context.discovery!.vrfs.some((vrf) => String(vrf.rd ?? "").toLowerCase() === rd.toLowerCase());
+  if (!exists) return;
+  pushFinding(findings, findingsMap, makeFinding(
+    "RD_CONFLICT",
+    "error",
+    `Route distinguisher ${rd} is already in use.`,
+    [`rd=${rd}`],
+    "Select a unique route distinguisher before approval.",
+    true,
+  ));
+}
+
+function validateRtConflict(
+  context: ValidationContext,
+  rt: string,
+  label: string,
+  findings: ProvisioningFinding[],
+  findingsMap: Map<ProvisioningFindingCode, ProvisioningFinding>,
+): void {
+  if (!hasDiscovery(context) || isBlank(rt)) return;
+  const seen = context.discovery!.vrfs.some((vrf) => [vrf.rd, vrf.name].some((item) => String(item ?? "").toLowerCase() === rt.toLowerCase()));
+  if (!seen) return;
+  pushFinding(findings, findingsMap, makeFinding(
+    "RT_CONFLICT",
+    "warn",
+    `${label} ${rt} already appears in discovery.`,
+    [`rt=${rt}`],
+    "Confirm the RT is intended or choose a unique one.",
+    false,
+  ));
+}
+
+function baseStructuredResult(): ProvisioningStructuredValidationResult {
+  return { validations: [], findings: [], risks: [], missingData: [], blockedReasons: [] };
+}
+
+export function validateL2vpnPreviewRequest(
+  input: ProvisioningL2vpnPreviewInput,
+  context: ValidationContext,
+): ProvisioningStructuredValidationResult {
+  const result = baseStructuredResult();
+  const findingsMap = new Map<ProvisioningFindingCode, ProvisioningFinding>();
+
+  result.validations.push({
+    name: "Device A exists",
+    passed: true,
+    message: deviceLabel(context),
+    severity: "info",
+  });
+
+  if (context.peerContext) {
+    result.validations.push({
+      name: "Device B exists",
+      passed: true,
+      message: deviceLabel(context.peerContext),
+      severity: "info",
+    });
+  }
+
+  if (context.discoveryAvailable) {
+    validateSnapshotFreshness(context, "Primary", result.findings, findingsMap);
+    validateConnectorAvailability(context, "Primary", result.findings, findingsMap);
+  } else {
+    pushFinding(result.findings, findingsMap, makeFinding(
+      "DEVICE_UNREACHABLE",
+      "error",
+      `Discovery snapshot is unavailable for ${context.device.hostname}.`,
+      [`device=${context.device.hostname}`],
+      "Run discovery before approval.",
+      true,
+    ));
+  }
+
+  if (context.peerContext?.discoveryAvailable) {
+    validateSnapshotFreshness(context.peerContext as ValidationContext, "Peer", result.findings, findingsMap);
+    validateConnectorAvailability(context.peerContext as ValidationContext, "Peer", result.findings, findingsMap);
+  }
+
+  const parameters = input.parameters;
+  const missing = ["customerName", "deviceA", "interfaceA", "vlanA", "deviceB", "interfaceB", "vlanB", "type", "serviceId"].filter(
+    (key) => isBlank((parameters as Record<string, unknown>)[key]),
+  );
+  result.missingData.push(...missing);
+  result.validations.push({
+    name: "Required parameters",
+    passed: missing.length === 0,
+    message: missing.length === 0 ? "All required parameters present" : `Missing: ${missing.join(", ")}`,
+    severity: missing.length === 0 ? "info" : "error",
+  });
+  if (missing.length > 0) {
+    result.blockedReasons.push(`Missing required parameters: ${missing.join(", ")}`);
+  }
+
+  validateInterfaceDiscovery(context, String(parameters.interfaceA ?? ""), "Interface A", result.findings, findingsMap, result.validations, result.blockedReasons);
+  if (context.peerContext) {
+    validateInterfaceDiscovery(context.peerContext as ValidationContext, String(parameters.interfaceB ?? ""), "Interface B", result.findings, findingsMap, result.validations, result.blockedReasons);
+  }
+
+  validateVlanConflict(context, String(parameters.vlanA ?? ""), "Device A", result.findings, findingsMap);
+  validateVlanConflict(context.peerContext ?? context, String(parameters.vlanB ?? ""), "Device B", result.findings, findingsMap);
+  validateSubinterfaceConflict(context, String(parameters.interfaceA ?? ""), String(parameters.vlanA ?? ""), result.findings, findingsMap);
+  if (context.peerContext) {
+    validateSubinterfaceConflict(context.peerContext as ValidationContext, String(parameters.interfaceB ?? ""), String(parameters.vlanB ?? ""), result.findings, findingsMap);
+  }
+
+  const serviceType = String(parameters.type ?? "");
+  if (serviceType === "vpws" || serviceType === "l2vc") {
+    validateBgpPeerConflict(context, String(parameters.remotePeer ?? ""), result.findings, findingsMap);
+  }
+
+  const l2vcId = String(parameters.serviceId ?? "");
+  if (hasDiscovery(context) && l2vcId) {
+    const existingL2vc = context.discovery!.l2vpn.l2vcs.some((item) => item.vcId?.toLowerCase() === l2vcId.toLowerCase() || item.name.toLowerCase() === l2vcId.toLowerCase());
+    if (existingL2vc) {
+      pushFinding(result.findings, findingsMap, makeFinding(
+        "L2VC_ID_CONFLICT",
+        "error",
+        `L2VC/service ID ${l2vcId} already exists.`,
+        [`service_id=${l2vcId}`],
+        "Select a unique L2VC/service ID before approval.",
+        true,
+      ));
+    }
+  }
+
+  if (serviceType === "vpls" || serviceType === "vsi") {
+    if (hasDiscovery(context) && l2vcId) {
+      const existingVsi = context.discovery!.l2vpn.vsis.some((item) => item.name.toLowerCase() === l2vcId.toLowerCase());
+      if (existingVsi) {
+        pushFinding(result.findings, findingsMap, makeFinding(
+          "VSI_NAME_CONFLICT",
+          "error",
+          `VSI name ${l2vcId} already exists.`,
+          [`vsi=${l2vcId}`],
+          "Pick a unique VSI name or adjust the service ID.",
+          true,
+        ));
+      }
+    }
+  }
+
+  const finalFindings = result.findings;
+  if (context.discoveryAvailable) {
+    validateNamedResource(context, "policies", String((parameters as Record<string, unknown>).importRoutePolicy ?? ""), finalFindings, findingsMap, "ROUTE_POLICY_MISSING", "Route-policy");
+    validateNamedResource(context, "policies", String((parameters as Record<string, unknown>).exportRoutePolicy ?? ""), finalFindings, findingsMap, "ROUTE_POLICY_MISSING", "Route-policy");
+    validateNamedResource(context, "prefixLists", String((parameters as Record<string, unknown>).prefixList ?? ""), finalFindings, findingsMap, "PREFIX_LIST_MISSING", "Prefix-list");
+    validateNamedResource(context, "communities", String((parameters as Record<string, unknown>).communityFilter ?? ""), finalFindings, findingsMap, "COMMUNITY_FILTER_MISSING", "Community-filter");
+  }
+
+  return result;
+}
+
+export function validateL3vpnPreviewRequest(
+  input: ProvisioningL3vpnPreviewInput,
+  context: ValidationContext,
+): ProvisioningStructuredValidationResult {
+  const result = baseStructuredResult();
+  const findingsMap = new Map<ProvisioningFindingCode, ProvisioningFinding>();
+
+  result.validations.push({
+    name: "Device exists",
+    passed: true,
+    message: deviceLabel(context),
+    severity: "info",
+  });
+
+  validateSnapshotFreshness(context, "Primary", result.findings, findingsMap);
+  validateConnectorAvailability(context, "Primary", result.findings, findingsMap);
+  validateInterfaceDiscovery(context, String(input.parameters.interfaceName ?? ""), "Interface", result.findings, findingsMap, result.validations, result.blockedReasons);
+
+  const parameters = input.parameters;
+  const missing = ["customerName", "interfaceName", "vlan", "vrfName", "rd", "rtImport", "rtExport", "ipWan", "peerBgp", "remoteAsn", "importRoutePolicy", "exportRoutePolicy"].filter(
+    (key) => isBlank((parameters as Record<string, unknown>)[key]),
+  );
+  result.missingData.push(...missing);
+  result.validations.push({
+    name: "Required parameters",
+    passed: missing.length === 0,
+    message: missing.length === 0 ? "All required parameters present" : `Missing: ${missing.join(", ")}`,
+    severity: missing.length === 0 ? "info" : "error",
+  });
+  if (missing.length > 0) {
+    result.blockedReasons.push(`Missing required parameters: ${missing.join(", ")}`);
+  }
+
+  validateVlanConflict(context, String(parameters.vlan ?? ""), "L3VPN", result.findings, findingsMap);
+  validateSubinterfaceConflict(context, String(parameters.interfaceName ?? ""), String(parameters.vlan ?? ""), result.findings, findingsMap);
+  validateVrfConflict(context, String(parameters.vrfName ?? ""), result.findings, findingsMap);
+  validateRdConflict(context, String(parameters.rd ?? ""), result.findings, findingsMap);
+  validateRtConflict(context, String(parameters.rtImport ?? ""), "RT import", result.findings, findingsMap);
+  validateRtConflict(context, String(parameters.rtExport ?? ""), "RT export", result.findings, findingsMap);
+  validateBgpPeerConflict(context, String(parameters.peerBgp ?? ""), result.findings, findingsMap);
+
+  if (hasDiscovery(context)) {
+    validateNamedResource(context, "policies", String(parameters.importRoutePolicy ?? ""), result.findings, findingsMap, "ROUTE_POLICY_MISSING", "Route-policy");
+    validateNamedResource(context, "policies", String(parameters.exportRoutePolicy ?? ""), result.findings, findingsMap, "ROUTE_POLICY_MISSING", "Route-policy");
+    validateNamedResource(context, "prefixLists", String(parameters.prefixList ?? ""), result.findings, findingsMap, "PREFIX_LIST_MISSING", "Prefix-list");
+    validateNamedResource(context, "communities", String(parameters.communityFilter ?? ""), result.findings, findingsMap, "COMMUNITY_FILTER_MISSING", "Community-filter");
+  }
+
+  return result;
 }
 
 export function validateProvisioningParameters(

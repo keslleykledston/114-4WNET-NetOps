@@ -4,15 +4,30 @@ import { z } from "zod/v4";
 import { devicesTable } from "./devices";
 import { configTemplatesTable } from "./templates";
 import { usersTable } from "./auth";
+import { tenantsTable } from "./connectors";
 
 export const provisioningJobsTable = pgTable("provisioning_jobs", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   type: text("type").notNull(),
   status: text("status").notNull().default("draft"),
+  serviceType: text("service_type"),
+  tenantId: integer("tenant_id").references(() => tenantsTable.id, { onDelete: "set null" }),
+  customerName: text("customer_name"),
+  description: text("description"),
   deviceIds: text("device_ids").notNull(),
+  targetDevicesJson: text("target_devices_json"),
   templateId: integer("template_id").references(() => configTemplatesTable.id),
   parameters: text("parameters"),
+  parametersJson: text("parameters_json"),
+  validationResultJson: text("validation_result_json"),
+  renderedConfigJson: text("rendered_config_json"),
+  renderedRollbackJson: text("rendered_rollback_json"),
+  renderedValidationJson: text("rendered_validation_json"),
+  riskSummaryJson: text("risk_summary_json"),
+  approvalStatus: text("approval_status"),
+  approvedBy: text("approved_by"),
+  approvedParametersJson: text("approved_parameters_json"),
   validatedAt: timestamp("validated_at"),
   executedAt: timestamp("executed_at"),
   completedAt: timestamp("completed_at"),
@@ -26,6 +41,8 @@ export const provisioningJobsTable = pgTable("provisioning_jobs", {
   postcheckOutput: text("postcheck_output"),
   maintenanceWindowStart: timestamp("maintenance_window_start"),
   maintenanceWindowEnd: timestamp("maintenance_window_end"),
+  createdBy: text("created_by"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -45,7 +62,7 @@ export const provisioningStepsTable = pgTable("provisioning_steps", {
   executedAt: timestamp("executed_at"),
 });
 
-export const insertProvisioningJobSchema = createInsertSchema(provisioningJobsTable).omit({ id: true, createdAt: true, validatedAt: true, executedAt: true, completedAt: true });
+export const insertProvisioningJobSchema = createInsertSchema(provisioningJobsTable).omit({ id: true, createdAt: true, updatedAt: true, validatedAt: true, executedAt: true, completedAt: true });
 export const insertProvisioningStepSchema = createInsertSchema(provisioningStepsTable).omit({ id: true });
 
 export type InsertProvisioningJob = z.infer<typeof insertProvisioningJobSchema>;

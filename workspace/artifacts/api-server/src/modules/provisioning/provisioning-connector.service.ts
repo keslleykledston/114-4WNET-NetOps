@@ -71,6 +71,9 @@ async function executeConnectorPreview(input: ProvisioningPreviewInput): Promise
   });
 
   if (!result.success) {
+    if (/unsupported job_type/i.test(result.stderr) || /unsupported job type/i.test(result.stderr)) {
+      return buildProvisioningPreview(input);
+    }
     return { error: result.stderr || "Provisioning preview failed", status: 502 };
   }
 

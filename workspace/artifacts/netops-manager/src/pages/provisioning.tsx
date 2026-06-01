@@ -29,6 +29,12 @@ import {
   postcheckProvisioningJob,
   getRollbackPreview,
   rollbackProvisioningJob,
+  createStructuredProvisioningJob,
+  precheckStructuredProvisioningJob,
+  previewStructuredProvisioningJob,
+  approveStructuredProvisioningJob,
+  applyStructuredProvisioningJob,
+  reportStructuredProvisioningJob,
   type ProvisioningPreviewResult,
   type ProvisioningServiceTemplate,
   type ProvisioningJob,
@@ -50,6 +56,8 @@ import {
 } from "lucide-react";
 
 const SERVICE_LABELS: Record<string, string> = {
+  l2vpn: "L2VPN Preview",
+  l3vpn: "L3VPN Preview",
   l2vpn_vpws: "L2VPN VPWS",
   l2vpn_vpls: "L2VPN VPLS/VSI",
   l3vpn_vrf: "L3VPN / VRF",
@@ -64,6 +72,17 @@ function statusBadgeVariant(status: string) {
   return "outline";
 }
 
+function isStructuredServiceType(serviceType?: string | null) {
+  return serviceType === "l2vpn" || serviceType === "l3vpn";
+}
+
+function parseStructuredTargets(values: Record<string, string>): number[] {
+  const targets = [values.deviceA, values.deviceB, values.deviceId]
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0);
+  return Array.from(new Set(targets));
+}
+
 export default function Provisioning() {
   const { data: jobs, isLoading: jobsLoading } = useListProvisioningJobs();
   const { data: devices } = useListDevices();
@@ -74,6 +93,7 @@ export default function Provisioning() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+  const provisioningJobs = useMemo(() => (jobs ?? []) as ProvisioningJob[], [jobs]);
 
   const [templates, setTemplates] = useState<ProvisioningServiceTemplate[]>([]);
   const [deviceId, setDeviceId] = useState<string>("");
@@ -118,10 +138,10 @@ export default function Provisioning() {
   }, [selectedTemplate?.serviceType]);
 
   useEffect(() => {
-    if (!activeJobId || !jobs) return;
-    const job = jobs.find((j) => j.id === activeJobId);
+    if (!activeJobId || provisioningJobs.length === 0) return;
+    const job = provisioningJobs.find((j) => j.id === activeJobId);
     setJobDetail(job || null);
-  }, [activeJobId, jobs]);
+  }, [activeJobId, provisioningJobs]);
 
   async function runPreview() {
     if (!deviceId) {
@@ -170,14 +190,27 @@ export default function Provisioning() {
       toast({ title: "Nome e device obrigatórios", variant: "destructive" });
       return;
     }
-    const created = await createJob.mutateAsync({
-      data: {
-        name: jobName,
-        type: serviceType,
-        deviceIds: [Number(deviceId)],
-        parameters: buildJobParametersJson(),
-      },
-    });
+    const structured = isStructuredServiceType(selectedTemplate?.serviceType);
+    const created = structured
+      ? await createStructuredProvisioningJob({
+        serviceType,
+        customerName: jobName,
+        description: paramValues.description || jobName,
+        targetDevices: parseStructuredTargets(paramValues),
+        parameters: {
+          ...paramValues,
+          customerName: jobName,
+          description: paramValues.description || jobName,
+        },
+      })
+      : await createJob.mutateAsync({
+        data: {
+          name: jobName,
+          type: serviceType,
+          deviceIds: [Number(deviceId)],
+          parameters: buildJobParametersJson(),
+        },
+      });
     setActiveJobId(created.id);
     await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     toast({ title: `Rascunho #${created.id} criado` });
@@ -188,11 +221,19 @@ export default function Provisioning() {
       toast({ title: "Salve um rascunho primeiro", variant: "destructive" });
       return;
     }
-    const result = await validateJob.mutateAsync({ id: activeJobId });
-    if (result.valid) {
-      toast({ title: "Job validado" });
+    const structured = isStructuredServiceType(jobDetail?.serviceType ?? jobDetail?.type);
+    if (structured) {
+      const result = await precheckStructuredProvisioningJob(activeJobId);
+      setJobDetail(result.job);
+      setPreview(result.preview);
+      toast({ title: "Pre-check executado", description: result.preview.findings?.some((finding) => finding.blocking) ? "Bloqueado" : "Validado" });
     } else {
-      toast({ title: "Validação falhou", variant: "destructive" });
+      const result = await validateJob.mutateAsync({ id: activeJobId });
+      if (result.valid) {
+        toast({ title: "Job validado" });
+      } else {
+        toast({ title: "Validação falhou", variant: "destructive" });
+      }
     }
     await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
   }
@@ -200,8 +241,16 @@ export default function Provisioning() {
   async function requestApproval() {
     if (!activeJobId) return;
     try {
-      await requestProvisioningApproval(activeJobId);
-      toast({ title: "Aprovação solicitada", description: "Status: pending_approval" });
+      const structured = isStructuredServiceType(jobDetail?.serviceType ?? jobDetail?.type);
+      if (structured) {
+        const result = await precheckStructuredProvisioningJob(activeJobId);
+        setJobDetail(result.job);
+        setPreview(result.preview);
+        toast({ title: "Pre-check executado", description: "Use Approve para aprovar o serviço." });
+      } else {
+        await requestProvisioningApproval(activeJobId);
+        toast({ title: "Aprovação solicitada", description: "Status: pending_approval" });
+      }
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
       toast({ title: "Erro", description: err instanceof Error ? err.message : "", variant: "destructive" });
@@ -247,11 +296,16 @@ export default function Provisioning() {
       return;
     }
     try {
-      const data = await previewProvisioningJobMarkdown(activeJobId);
-      const md = data.previewMarkdown ?? JSON.stringify(data, null, 2);
+      const structured = isStructuredServiceType(jobDetail?.serviceType ?? jobDetail?.type);
+      const data = structured ? await reportStructuredProvisioningJob(activeJobId) : await previewProvisioningJobMarkdown(activeJobId);
+      const md = ("contentMarkdown" in data
+        ? data.contentMarkdown
+        : data.previewMarkdown ?? JSON.stringify(data, null, 2)) as string;
       setExportMarkdown(md);
       downloadMarkdown(md, `provisioning-job-${activeJobId}.md`);
-      await createReport.mutateAsync({ id: activeJobId });
+      if (!structured) {
+        await createReport.mutateAsync({ id: activeJobId });
+      }
       toast({ title: "Plano exportado e report salvo" });
     } catch (err) {
       toast({ title: "Export falhou", description: err instanceof Error ? err.message : "", variant: "destructive" });
@@ -288,7 +342,13 @@ export default function Provisioning() {
     if (!activeJobId) return;
     setApproveLoading(true);
     try {
-      await approveProvisioningJob(activeJobId);
+      const structured = isStructuredServiceType(jobDetail?.serviceType ?? jobDetail?.type);
+      if (structured) {
+        const updated = await approveStructuredProvisioningJob(activeJobId);
+        setJobDetail(updated);
+      } else {
+        await approveProvisioningJob(activeJobId);
+      }
       toast({ title: "Job aprovado" });
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
@@ -302,7 +362,12 @@ export default function Provisioning() {
     if (!activeJobId) return;
     setExecuteLoading(true);
     try {
-      await executeProvisioningJob(activeJobId);
+      const structured = isStructuredServiceType(jobDetail?.serviceType ?? jobDetail?.type);
+      if (structured) {
+        await applyStructuredProvisioningJob(activeJobId);
+      } else {
+        await executeProvisioningJob(activeJobId);
+      }
       toast({ title: "Execução iniciada" });
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
@@ -320,7 +385,14 @@ export default function Provisioning() {
     if (!activeJobId) return;
     setPostcheckLoading(true);
     try {
-      await postcheckProvisioningJob(activeJobId);
+      const structured = isStructuredServiceType(jobDetail?.serviceType ?? jobDetail?.type);
+      if (structured) {
+        const result = await precheckStructuredProvisioningJob(activeJobId);
+        setJobDetail(result.job);
+        setPreview(result.preview);
+      } else {
+        await postcheckProvisioningJob(activeJobId);
+      }
       toast({ title: "Post-check executado" });
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
@@ -334,8 +406,16 @@ export default function Provisioning() {
     if (!activeJobId) return;
     setPreviewRollbackLoading(true);
     try {
-      const result = await getRollbackPreview(activeJobId);
-      setRollbackPreview(result.rollbackPlan);
+      const structured = isStructuredServiceType(jobDetail?.serviceType ?? jobDetail?.type);
+      if (structured) {
+        const result = await previewStructuredProvisioningJob(activeJobId);
+        setJobDetail(result.job);
+        setPreview(result.preview);
+        setRollbackPreview(result.preview.rollbackPreview);
+      } else {
+        const result = await getRollbackPreview(activeJobId);
+        setRollbackPreview(result.rollbackPlan);
+      }
       toast({ title: "Rollback preview carregado" });
     } catch (err) {
       toast({ title: "Erro ao carregar preview", description: err instanceof Error ? err.message : "", variant: "destructive" });
@@ -539,6 +619,31 @@ export default function Provisioning() {
                       ))}
                     </div>
                   </div>
+                  {preview.findings?.length ? (
+                    <div className="md:col-span-2 space-y-2">
+                      <p className="text-sm font-medium">Findings estruturados</p>
+                      <div className="space-y-2">
+                        {preview.findings.map((finding) => (
+                          <div key={finding.code} className="rounded-md border p-3 text-sm">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium">{finding.code}</span>
+                              <Badge variant={finding.blocking ? "destructive" : "secondary"}>{finding.severity}</Badge>
+                            </div>
+                            <p className="mt-1 text-muted-foreground">{finding.message}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">Recomendação: {finding.recommendation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {preview.renderedValidationJson ? (
+                    <div className="md:col-span-2 space-y-2">
+                      <p className="text-sm font-medium">Validation JSON</p>
+                      <pre className="text-xs max-h-48 overflow-auto rounded-md bg-muted/40 p-3">
+                        {preview.renderedValidationJson.slice(0, 4000)}
+                      </pre>
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
             </div>
@@ -574,18 +679,18 @@ export default function Provisioning() {
                 <TableBody>
                   {jobsLoading ? (
                     <TableRow><TableCell colSpan={5}>Carregando…</TableCell></TableRow>
-                  ) : jobs?.length === 0 ? (
+                  ) : provisioningJobs.length === 0 ? (
                     <TableRow><TableCell colSpan={5} className="text-muted-foreground">Nenhum job</TableCell></TableRow>
                   ) : (
-                    jobs?.map((job) => (
-                      <TableRow
+                    provisioningJobs.map((job) => (
+                        <TableRow
                         key={job.id}
                         className={activeJobId === job.id ? "bg-muted/40" : ""}
                         onClick={() => setActiveJobId(job.id)}
                       >
                         <TableCell>#{job.id}</TableCell>
                         <TableCell>{job.name}</TableCell>
-                        <TableCell><Badge variant="outline">{job.type}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{SERVICE_LABELS[job.serviceType ?? job.type] ?? (job.serviceType ?? job.type)}</Badge></TableCell>
                         <TableCell><Badge variant={statusBadgeVariant(job.status)}>{job.status}</Badge></TableCell>
                         <TableCell className="text-xs">{new Date(job.createdAt).toLocaleString()}</TableCell>
                       </TableRow>

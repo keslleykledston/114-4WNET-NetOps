@@ -56,15 +56,9 @@ export default function Compliance() {
     queryFn: () => fetchComplianceDrifts(),
   });
 
-  const { data: jobs } = useQuery({
-    queryKey: ["compliance-jobs"],
-    queryFn: useListComplianceJobs,
-  });
+  const { data: jobs } = useListComplianceJobs();
 
-  const { data: findings } = useQuery({
-    queryKey: ["compliance-findings-groups"],
-    queryFn: useListComplianceFindingsGroups,
-  });
+  const { data: findings } = useListComplianceFindingsGroups();
 
   const { data: rules } = useQuery({
     queryKey: ["compliance-rules"],
@@ -266,6 +260,7 @@ export default function Compliance() {
           {findings && findings.length > 0 ? (
             <ComplianceFindingGroupTable
               groups={findings}
+              badgeClass={badgeClass}
               onSelectGroup={setSelectedGroup}
             />
           ) : (

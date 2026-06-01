@@ -7,10 +7,10 @@ const CATALOG_SEEDS = [
     name: "L2VC",
     description: "Layer 2 Virtual Circuit (VPWS)",
     vendor: "any",
-    service_type: "l2vpn_vpws",
-    template_id: "huawei-vrp-l2vpn-vpws",
+    serviceType: "l2vpn_vpws",
+    templateId: "huawei-vrp-l2vpn-vpws",
     icon: "🔗",
-    form_schema_json: JSON.stringify([
+    formSchemaJson: JSON.stringify([
       { field: "circuit_id", label: "Circuit ID", type: "text", required: true },
       { field: "vc_id", label: "VC ID", type: "number", required: true },
       { field: "peer_ip", label: "Peer IP", type: "text", required: true },
@@ -22,10 +22,10 @@ const CATALOG_SEEDS = [
     name: "VSI",
     description: "Virtual Switching Instance (VPLS)",
     vendor: "any",
-    service_type: "l2vpn_vpls",
-    template_id: "huawei-vrp-l2vpn-vpls",
+    serviceType: "l2vpn_vpls",
+    templateId: "huawei-vrp-l2vpn-vpls",
     icon: "🌉",
-    form_schema_json: JSON.stringify([
+    formSchemaJson: JSON.stringify([
       { field: "vsi_name", label: "VSI Name", type: "text", required: true },
       { field: "vsi_id", label: "VSI ID", type: "number", required: true },
       { field: "peer_ips", label: "Peer IPs (comma-separated)", type: "text", required: false },
@@ -36,10 +36,10 @@ const CATALOG_SEEDS = [
     name: "BGP Customer",
     description: "BGP Peering for Customers",
     vendor: "any",
-    service_type: "bgp_peer_customer",
-    template_id: "huawei-vrp-bgp-customer",
+    serviceType: "bgp_peer_customer",
+    templateId: "huawei-vrp-bgp-customer",
     icon: "🌐",
-    form_schema_json: JSON.stringify([
+    formSchemaJson: JSON.stringify([
       { field: "bgp_asn", label: "BGP ASN", type: "number", required: true },
       { field: "neighbor_ip", label: "Neighbor IP", type: "text", required: true },
       { field: "import_policy", label: "Import Policy", type: "text", required: false },
@@ -51,10 +51,10 @@ const CATALOG_SEEDS = [
     name: "VRF",
     description: "Virtual Routing and Forwarding",
     vendor: "any",
-    service_type: "l3vpn_vrf",
-    template_id: "huawei-vrp-l3vpn-vrf",
+    serviceType: "l3vpn_vrf",
+    templateId: "huawei-vrp-l3vpn-vrf",
     icon: "🛣️",
-    form_schema_json: JSON.stringify([
+    formSchemaJson: JSON.stringify([
       { field: "vrf_name", label: "VRF Name", type: "text", required: true },
       { field: "rd", label: "Route Distinguisher", type: "text", required: true },
       { field: "rt_import", label: "RT Import", type: "text", required: false },
@@ -65,10 +65,10 @@ const CATALOG_SEEDS = [
     name: "Interface PTP",
     description: "Point-to-Point Interface",
     vendor: "any",
-    service_type: "interface_subinterface",
-    template_id: "huawei-vrp-subinterface-dot1q",
+    serviceType: "interface_subinterface",
+    templateId: "huawei-vrp-subinterface-dot1q",
     icon: "🔌",
-    form_schema_json: JSON.stringify([
+    formSchemaJson: JSON.stringify([
       { field: "interface_name", label: "Interface Name", type: "text", required: true },
       { field: "vlan_id", label: "VLAN ID", type: "number", required: true },
       { field: "ip_address", label: "IP Address", type: "text", required: true },
@@ -79,10 +79,10 @@ const CATALOG_SEEDS = [
     name: "BGP Provider",
     description: "BGP Peering with Providers",
     vendor: "any",
-    service_type: "bgp_peer_provider",
-    template_id: "huawei-vrp-bgp-provider",
+    serviceType: "bgp_peer_provider",
+    templateId: "huawei-vrp-bgp-provider",
     icon: "🌐",
-    form_schema_json: JSON.stringify([
+    formSchemaJson: JSON.stringify([
       { field: "bgp_asn", label: "BGP ASN", type: "number", required: true },
       { field: "neighbor_ip", label: "Neighbor IP", type: "text", required: true },
       { field: "local_pref", label: "Local Preference", type: "number", required: false },

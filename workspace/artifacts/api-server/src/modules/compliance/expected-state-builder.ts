@@ -101,11 +101,11 @@ export async function buildExpectedState(deviceId: number): Promise<ExpectedStat
     const catalog = catalogMap.get(request.serviceCatalogId);
     if (!catalog) continue;
 
-    const template = REQUIREMENT_TEMPLATES[catalog.service_type as keyof typeof REQUIREMENT_TEMPLATES];
+    const template = REQUIREMENT_TEMPLATES[catalog.serviceType as keyof typeof REQUIREMENT_TEMPLATES];
     const requirements = template || {};
 
     states.push({
-      serviceType: catalog.service_type,
+      serviceType: catalog.serviceType,
       catalogName: catalog.name,
       requestId: request.id,
       requirements,

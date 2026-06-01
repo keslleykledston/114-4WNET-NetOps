@@ -4,6 +4,10 @@
 
 Execução de provisioning com controle total: aprovação obrigatória, plano de execução locked, pós-validação, e rollback planejado.
 
+## Current phase note
+
+This document remains the historical reference for controlled execution. The current provisioning MVP extends this baseline with structured L2VPN/L3VPN preview, approval-aware safety gates, and read-only-by-default behavior.
+
 ## Fluxo Completo
 
 ```
@@ -80,6 +84,21 @@ PROVISIONING_EXECUTE_ENABLED=false
 # Permitir execução
 PROVISIONING_EXECUTE_ENABLED=true
 ```
+
+## Current safety flags
+
+The newer MVP keeps these flags alongside the legacy execution gate:
+
+- `PROVISIONING_PREVIEW_ENABLED=true`
+- `PROVISIONING_APPLY_ENABLED=false`
+- `PROVISIONING_ROLLBACK_ENABLED=false`
+- `PROVISIONING_REQUIRE_APPROVAL=true`
+- `PROVISIONING_DRY_RUN_DEFAULT=true`
+
+Compatibility flags remain valid and must not be removed:
+
+- `CONFIG_APPLY_ENABLED`
+- `PROVISIONING_EXECUTE_ENABLED`
 
 ## Campos Novos no Job
 

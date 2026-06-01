@@ -384,7 +384,7 @@ export default function DeviceDetail() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
-                  {deviceCompliance.remediations.slice(0, 10).map((item, idx) => (
+                  {deviceCompliance.remediations.slice(0, 10).map((item: any, idx: number) => (
                     <div key={idx} className="p-2 border rounded bg-muted/50">
                       <div className="font-mono text-xs">{item.remediation?.ruleId || 'unknown'}</div>
                       <div className="mt-1">{item.remediation?.cliSuggestion || 'No suggestion available'}</div>
@@ -428,11 +428,7 @@ export default function DeviceDetail() {
             </CardContent>
           </Card>
         </TabsContent>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
+
         <TabsContent value="provisioning" className="mt-6">
           <Card>
             <CardHeader>

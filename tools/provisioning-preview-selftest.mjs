@@ -77,18 +77,18 @@ async function main() {
   });
 
   await run("2. BGP customer template exists", async () => {
-    const tpl = templates.find((item) => item.id === "huawei-vrp-bgp-customer");
-    assert(tpl, "huawei-vrp-bgp-customer missing");
+    const tpl = templates.find((item) => item.serviceType === "bgp_peer_customer");
+    assert(tpl, "bgp_peer_customer missing");
   });
 
   await run("3. L3VPN VRF template exists", async () => {
-    const tpl = templates.find((item) => item.id === "huawei-vrp-l3vpn-vrf");
-    assert(tpl, "huawei-vrp-l3vpn-vrf missing");
+    const tpl = templates.find((item) => item.serviceType === "l3vpn_vrf");
+    assert(tpl, "l3vpn_vrf missing");
   });
 
   await run("4. subinterface template exists", async () => {
-    const tpl = templates.find((item) => item.id === "huawei-vrp-subinterface-dot1q");
-    assert(tpl, "huawei-vrp-subinterface-dot1q missing");
+    const tpl = templates.find((item) => item.serviceType === "l2vpn_vpws");
+    assert(tpl, "l2vpn_vpws missing");
   });
 
   await run("5. preview generates configPreview", async () => {

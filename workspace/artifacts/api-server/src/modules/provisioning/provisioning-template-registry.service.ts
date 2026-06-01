@@ -125,22 +125,17 @@ export async function listTemplateRegistry(filters?: {
   limit?: number;
   offset?: number;
 }): Promise<TemplateRegistryEntry[]> {
-  let query = db.select().from(provisioningTemplatesTable);
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(provisioningTemplatesTable.status, filters.status));
+  if (filters?.vendor) conditions.push(eq(provisioningTemplatesTable.vendor, filters.vendor));
 
-  if (filters?.status) {
-    query = query.where(eq(provisioningTemplatesTable.status, filters.status));
-  }
+  const query = conditions.length > 0
+    ? db.select().from(provisioningTemplatesTable).where(and(...conditions))
+    : db.select().from(provisioningTemplatesTable);
 
-  if (filters?.vendor) {
-    query = query.where(eq(provisioningTemplatesTable.vendor, filters.vendor));
-  }
-
-  // @ts-ignore - drizzle generics
   const limit = filters?.limit || 100;
-  // @ts-ignore
   const offset = filters?.offset || 0;
 
-  // @ts-ignore
   const results = await query.limit(limit).offset(offset);
 
   return results.map((t) => ({

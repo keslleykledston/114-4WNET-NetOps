@@ -154,8 +154,11 @@ async function main() {
     method: "POST",
     cookie: admin.cookie,
   });
-  assert(executeBlocked.response.ok, "blocked execute should return 200 payload");
-  assert(executeBlocked.data?.status === "blocked", "execute must stay blocked by default");
+  assert(executeBlocked.response.status === 503, `blocked execute should return 503, got ${executeBlocked.response.status}`);
+  assert(
+    typeof executeBlocked.data?.error === "string" && executeBlocked.data.error.includes("Execução bloqueada"),
+    "execute must stay blocked by default",
+  );
 
   const audit = await request("/api/audit-logs?action=provisioning_execute_blocked&limit=20", {
     cookie: admin.cookie,

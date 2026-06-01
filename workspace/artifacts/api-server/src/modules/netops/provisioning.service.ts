@@ -13,6 +13,11 @@ function parseJson(value: string | null): unknown {
   }
 }
 
+function parseJsonArray<T>(value: string | null, fallback: T[]): T[] {
+  const parsed = parseJson(value);
+  return Array.isArray(parsed) ? parsed as T[] : fallback;
+}
+
 function renderTemplate(template: string, params: Record<string, unknown>): string {
   let rendered = template;
   for (const [key, value] of Object.entries(params)) {
@@ -46,9 +51,22 @@ export async function getProvisioningJobDetail(id: number) {
   return {
     ...job,
     deviceIds: JSON.parse(job.deviceIds ?? "[]"),
+    targetDevices: parseJsonArray<number>(job.targetDevicesJson, []),
+    serviceType: job.serviceType ?? job.type,
+    parametersJson: parseJson(job.parametersJson),
+    validationResultJson: parseJson(job.validationResultJson),
+    renderedConfigJson: parseJson(job.renderedConfigJson),
+    renderedRollbackJson: parseJson(job.renderedRollbackJson),
+    renderedValidationJson: parseJson(job.renderedValidationJson),
+    riskSummaryJson: parseJson(job.riskSummaryJson),
+    approvalStatus: job.approvalStatus,
+    approvedBy: job.approvedBy,
+    createdBy: job.createdBy,
+    updatedAt: job.updatedAt?.toISOString?.() ?? null,
     validatedAt: job.validatedAt?.toISOString() ?? null,
     executedAt: job.executedAt?.toISOString() ?? null,
     completedAt: job.completedAt?.toISOString() ?? null,
+    approvedAt: job.approvedAt?.toISOString() ?? null,
     createdAt: job.createdAt.toISOString(),
     steps: steps.map((step) => ({
       ...step,
@@ -81,6 +99,15 @@ export async function buildProvisioningJobReportMarkdown(id: number) {
 
   const { detail, template, targetDevices } = summary;
   const parameters = parseJson(detail.parameters) as Record<string, unknown> | null;
+  const structuredParameters = detail.parametersJson && typeof detail.parametersJson === "object"
+    ? detail.parametersJson as Record<string, unknown>
+    : null;
+  const validationResult = detail.validationResultJson && typeof detail.validationResultJson === "object"
+    ? detail.validationResultJson as Record<string, unknown>
+    : null;
+  const renderedValidation = detail.renderedValidationJson && typeof detail.renderedValidationJson === "object"
+    ? detail.renderedValidationJson as Record<string, unknown>
+    : null;
   const auditTrail = await db.select().from(auditLogsTable)
     .where(eq(auditLogsTable.objectType, "provisioning_job"))
     .orderBy(desc(auditLogsTable.createdAt))
@@ -95,8 +122,16 @@ export async function buildProvisioningJobReportMarkdown(id: number) {
     `- Steps would be marked skipped`,
     `- No SSH apply is executed in v0.4.0`,
   ].join("\n");
+  const renderedConfigJson = detail.renderedConfigJson as { configPreview?: string } | null;
+  const renderedRollbackJson = detail.renderedRollbackJson as { rollbackPreview?: string } | null;
+  if (renderedConfigJson?.configPreview) {
+    previewConfig = renderedConfigJson.configPreview;
+  }
+  if (renderedRollbackJson?.rollbackPreview) {
+    rollbackPreview = renderedRollbackJson.rollbackPreview;
+  }
 
-  const serviceType = typeof parameters?.serviceType === "string" ? parameters.serviceType : detail.type;
+  const serviceType = typeof parameters?.serviceType === "string" ? parameters.serviceType : detail.serviceType ?? detail.type;
   const deviceId = Array.isArray(detail.deviceIds) && detail.deviceIds[0] ? Number(detail.deviceIds[0]) : null;
   if (deviceId && getServiceTemplate(serviceType)) {
     const structured = await buildProvisioningPreview({
@@ -118,9 +153,13 @@ export async function buildProvisioningJobReportMarkdown(id: number) {
     `- Template: ${template?.name ?? "N/A"}`,
     `- Job type: ${detail.type}`,
     `- Current status: ${detail.status}`,
+    detail.approvalStatus ? `- Approval status: ${detail.approvalStatus}` : null,
   ].join("\n");
 
-  const findings = detail.steps.length
+  const findings = Array.isArray(validationResult?.findings)
+    ? (validationResult.findings as Array<{ code?: string; severity?: string; message?: string }>)
+        .map((finding) => `- [${finding.severity ?? "info"}] ${finding.code ?? "unknown"}: ${finding.message ?? ""}`).join("\n")
+    : detail.steps.length
     ? detail.steps.map((step: { stepName: string; status: string; errorMessage: string | null; }) => `- ${step.stepName}: ${step.status}${step.errorMessage ? ` (${step.errorMessage})` : ""}`).join("\n")
     : "- No findings recorded.";
 
@@ -146,10 +185,12 @@ export async function buildProvisioningJobReportMarkdown(id: number) {
     targetDeviceLines,
     "",
     `## Parameters`,
-    parameters ? "```json\n" + JSON.stringify(parameters, null, 2) + "\n```" : "- No parameters provided.",
+    structuredParameters ? "```json\n" + JSON.stringify(structuredParameters, null, 2) + "\n```" : parameters ? "```json\n" + JSON.stringify(parameters, null, 2) + "\n```" : "- No parameters provided.",
     "",
     `## Preview Config`,
     "```text\n" + previewConfig + "\n```",
+    "",
+    detail.renderedValidationJson ? `## Rendered Validation\n\`\`\`json\n${JSON.stringify(renderedValidation ?? {}, null, 2)}\n\`\`\`` : null,
     "",
     `## Rollback Preview`,
     "```text\n" + rollbackPreview + "\n```",

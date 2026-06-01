@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS resource_pools (
   resource_type TEXT NOT NULL,
   vendor TEXT,
   tenant_id INTEGER REFERENCES tenants(id),
-  site_id INTEGER REFERENCES sites(id),
+  site_id INTEGER,
   range_start INTEGER NOT NULL,
   range_end INTEGER NOT NULL,
   metadata_json JSONB DEFAULT '{}',

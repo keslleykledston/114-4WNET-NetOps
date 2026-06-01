@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { requirePermission } from "@workspace/auth";
+import { requirePermission } from "../../lib/auth.js";
 import { listServiceCatalog, getServiceCatalogItem, seedServiceCatalog } from "./service-catalog.service";
 
 const router = Router();
@@ -16,9 +16,9 @@ router.use(async (_r, _res, next) => {
 router.get("/service-catalog", requirePermission("provisioning.read"), async (_req: Request, res: Response) => {
   try {
     const items = await listServiceCatalog();
-    res.json(items);
+    return res.json(items);
   } catch (err) {
-    res.status(500).json({ error: "Failed" });
+    return res.status(500).json({ error: "Failed" });
   }
 });
 
@@ -26,9 +26,9 @@ router.get("/service-catalog/:id", requirePermission("provisioning.read"), async
   try {
     const item = await getServiceCatalogItem(Number(req.params.id));
     if (!item) return res.status(404).json({ error: "Not found" });
-    res.json(item);
+    return res.json(item);
   } catch (err) {
-    res.status(500).json({ error: "Failed" });
+    return res.status(500).json({ error: "Failed" });
   }
 });
 

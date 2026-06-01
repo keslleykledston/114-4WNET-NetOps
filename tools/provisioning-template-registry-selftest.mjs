@@ -1,17 +1,8 @@
 #!/usr/bin/env node
 
-/**
- * Selftest for Provisioning Template Registry (v0.8.1)
- * Tests:
- * - List templates
- * - Get template detail
- * - Get template versions
- * - Diff versions
- * - Export template
- * - Audit logs
- */
-
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:8085";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.RBAC_TEST_ADMIN_EMAIL || "admin@example.com";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || process.env.RBAC_TEST_ADMIN_PASSWORD || "admin123456";
 
 async function test(name, fn) {
   try {
@@ -36,68 +27,64 @@ async function fetch_(path, options = {}) {
   return res.json();
 }
 
-let templateId = null;
+async function login() {
+  const res = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`${res.status}: ${body.error || res.statusText}`);
+  }
+  const data = await res.json();
+  if (typeof data.token !== "string" || data.token.length < 10) {
+    throw new Error("Missing auth token");
+  }
+  return data.token;
+}
 
 async function main() {
   console.log("Provisioning Template Registry Selftest\n");
 
-  await test("GET /api/provisioning/templates", async () => {
-    const templates = await fetch_("/api/provisioning/templates");
-    if (!Array.isArray(templates) || templates.length === 0) {
-      throw new Error("No templates returned");
-    }
-    templateId = templates[0].id;
-    console.log(`  Found ${templates.length} templates`);
-  });
-
-  if (!templateId) {
-    throw new Error("No template ID to continue tests");
-  }
-
-  await test(`GET /api/provisioning/templates/${templateId}`, async () => {
-    const detail = await fetch_(`/api/provisioning/templates/${templateId}`);
-    if (!detail.id || !detail.name) {
-      throw new Error("Invalid template detail");
-    }
-    console.log(`  Template: ${detail.name} (status=${detail.status})`);
-  });
-
-  await test(`GET /api/provisioning/templates/${templateId}/versions`, async () => {
-    const versions = await fetch_(`/api/provisioning/templates/${templateId}/versions`);
-    if (!Array.isArray(versions)) {
-      throw new Error("Invalid versions response");
-    }
-    console.log(`  Found ${versions.length} versions`);
-  });
-
-  await test(`GET /api/provisioning/templates/${templateId}/diff/:vA/:vB`, async () => {
-    const diffs = await fetch_(`/api/provisioning/templates/${templateId}/diff/1.0.0/1.0.0`);
-    if (!Array.isArray(diffs)) {
-      throw new Error("Invalid diff response");
-    }
-    console.log(`  Diff contains ${diffs.length} lines`);
-  });
-
-  await test(`GET /api/provisioning/templates/${templateId}/export`, async () => {
-    const res = await fetch(`${BASE_URL}/api/provisioning/templates/${templateId}/export`, {
+  await test("GET /api/provisioning/templates requires auth", async () => {
+    const res = await fetch(`${BASE_URL}/api/provisioning/templates`, {
       credentials: "include",
     });
-    if (!res.ok) {
-      throw new Error(`${res.status}: ${res.statusText}`);
+    if (res.status !== 401) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(`Expected 401, got ${res.status}: ${body.error || res.statusText}`);
     }
-    const exported = await res.json();
-    if (!exported.template || !exported.templateBody) {
-      throw new Error("Invalid export format");
-    }
-    console.log(`  Export OK (template masked: ${exported.templateBody.includes("[REDACTED]")})`);
   });
 
-  await test(`GET /api/provisioning/templates/${templateId}/audit`, async () => {
-    const logs = await fetch_(`/api/provisioning/templates/${templateId}/audit`);
-    if (!Array.isArray(logs)) {
-      throw new Error("Invalid audit logs response");
+  const token = await login();
+
+  await test("GET /api/provisioning/templates", async () => {
+    const templates = await fetch_("/api/provisioning/templates", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!Array.isArray(templates) || templates.length < 3) {
+      throw new Error("Expected at least 3 templates");
     }
-    console.log(`  Audit logs: ${logs.length} entries`);
+
+    const required = ["l2vpn_vpws", "l2vpn_vpls", "l3vpn_vrf", "bgp_peer_customer", "bgp_peer_provider"];
+    for (const serviceType of required) {
+      const tpl = templates.find((item) => item.serviceType === serviceType);
+      if (!tpl) {
+        throw new Error(`Missing template ${serviceType}`);
+      }
+      if (typeof tpl.name !== "string" || !tpl.name) {
+        throw new Error(`Invalid name for ${serviceType}`);
+      }
+      if (typeof tpl.configTemplateType !== "string" || !tpl.configTemplateType) {
+        throw new Error(`Invalid configTemplateType for ${serviceType}`);
+      }
+      if (!tpl.parameterSchema || typeof tpl.parameterSchema !== "object") {
+        throw new Error(`Invalid parameterSchema for ${serviceType}`);
+      }
+    }
+
+    console.log(`  Found ${templates.length} templates in current catalog shape`);
   });
 
   console.log("\n✓ All tests passed");

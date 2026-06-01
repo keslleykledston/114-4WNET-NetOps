@@ -150,7 +150,7 @@ export default function Topology() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    {Object.entries(orphansSummary.byType).map(([type, count]) => (
+                    {Object.entries(orphansSummary.byType as Record<string, number>).map(([type, count]) => (
                       <div key={type}>
                         <p className="text-sm font-semibold">{type}</p>
                         <p className="text-2xl font-bold">{count}</p>

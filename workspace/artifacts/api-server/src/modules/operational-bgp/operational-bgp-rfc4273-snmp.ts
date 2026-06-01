@@ -90,6 +90,7 @@ function classifyAfi(peerIp: string): string {
 
 function rowsToPeers(
   walks: Awaited<ReturnType<typeof walkPeerColumns>>,
+  localAs: number | null,
 ): CollectedBgpPeerRow[] {
   const { stateResult, remoteAddrResult, remoteAsResult, adminResult, uptimeResult } = walks;
   const peerIndexes = new Set<string>([
@@ -107,11 +108,17 @@ function rowsToPeers(
 
     const fsmState = mapFsmState(toSnmpNumber(stateResult.rows[index]));
     const uptimeTicks = toSnmpNumber(uptimeResult.rows[index]);
+    const remoteAs = toSnmpNumber(remoteAsResult.rows[index]);
+
+    let peerType = "unknown";
+    if (localAs != null && remoteAs != null) {
+      peerType = remoteAs === localAs ? "iBGP" : "eBGP";
+    }
 
     peers.push({
       peerIp,
-      peerAs: toSnmpNumber(remoteAsResult.rows[index]),
-      peerType: "unknown",
+      peerAs: remoteAs,
+      peerType,
       vrf: null,
       afi: classifyAfi(peerIp),
       safi: "unicast",
@@ -133,13 +140,16 @@ export async function collectRfc4273BgpPeers(
   session: SnmpSession,
   warnings: string[],
 ): Promise<CollectedBgpPeerRow[]> {
+  const localAsResult = await snmpGet(session, "1.3.6.1.2.1.15.1.1.0");
+  const localAs = toSnmpNumber(localAsResult);
+
   const rfc4273 = await walkPeerColumns(session, RFC4273_BGP_PEER_COLUMNS, warnings, "rfc4273");
-  const peers = rowsToPeers(rfc4273);
+  const peers = rowsToPeers(rfc4273, localAs);
   if (peers.length > 0) return peers;
 
   warnings.push("rfc4273 bgpPeerTable (15.2.1) empty — trying BGP4-MIB 15.3.1");
   const legacy = await walkPeerColumns(session, BGP4_MIB_PEER_COLUMNS, warnings, "bgp4-mib");
-  return rowsToPeers(legacy);
+  return rowsToPeers(legacy, localAs);
 }
 
 export async function withBgpSnmpSession<T>(

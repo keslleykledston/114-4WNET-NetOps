@@ -137,6 +137,7 @@ export default function OperationalBgpPage() {
                 <TableRow>
                   <TableHead>peer_ip</TableHead>
                   <TableHead>peer_as</TableHead>
+                  <TableHead>peer_type</TableHead>
                   <TableHead>fsm_state</TableHead>
                   <TableHead>oper_status</TableHead>
                   <TableHead>uptime_seconds</TableHead>
@@ -149,6 +150,7 @@ export default function OperationalBgpPage() {
                   <TableRow key={`${peer.peerIp}-${peer.afi}-${peer.safi}`}>
                     <TableCell className="font-mono text-xs">{peer.peerIp}</TableCell>
                     <TableCell>{peer.peerAs ?? "-"}</TableCell>
+                    <TableCell className="font-semibold">{peer.peerType}</TableCell>
                     <TableCell><BgpFsmStateBadge state={peer.fsmState} /></TableCell>
                     <TableCell><BgpOperStatusBadge status={peer.operStatus} /></TableCell>
                     <TableCell>{peer.uptimeSeconds ?? "-"}</TableCell>

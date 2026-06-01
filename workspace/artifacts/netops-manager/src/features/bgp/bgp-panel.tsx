@@ -485,9 +485,10 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-6 w-6 p-0 hover:bg-slate-800"
+                              className="h-7 px-2 text-[11px] gap-1 hover:bg-slate-800"
                             >
                               <GitBranch className="h-3.5 w-3.5" />
+                              <span className="hidden xl:inline">Drilldown</span>
                             </Button>
                           </Link>
                           <Button

@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { useListDevices } from "@workspace/api-client-react";
+import {
+  getListNetopsDeviceBgpPeersQueryKey,
+  useListDevices,
+  useListNetopsDeviceBgpPeers,
+} from "@workspace/api-client-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +30,7 @@ import {
   useBgpPeerSshDetail,
 } from "@/features/bgp-drilldown";
 import type { BgpPeerSshDetailStatus } from "@/features/bgp-drilldown/types";
+import { BgpPeerContextCard } from "@/features/bgp/bgp-peer-context-card";
 
 function readInitialQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -71,6 +76,13 @@ export default function BgpPeerDrilldownPage() {
     peer: submitted?.peer ?? "",
     enabled: Boolean(submitted),
     limit: 20,
+  });
+  const netopsPeersQuery = useListNetopsDeviceBgpPeers(submitted?.deviceId ?? 0, undefined, {
+    query: {
+      enabled: Boolean(submitted?.deviceId),
+      staleTime: 60_000,
+      queryKey: getListNetopsDeviceBgpPeersQueryKey(submitted?.deviceId ?? 0),
+    },
   });
   const refetchHistory = historyQuery.refetch;
 
@@ -122,13 +134,19 @@ export default function BgpPeerDrilldownPage() {
     });
   }
 
+  const device = submitted ? devices.find((item) => item.id === submitted.deviceId) ?? null : null;
+  const peerSummary = netopsPeersQuery.data?.find((item) => item.peerIp === (submitted?.peer ?? ""));
+  const netopsHref = submitted?.deviceId ? `/netops-operations?deviceId=${submitted.deviceId}` : "/netops-operations";
+  const operationalHref = submitted?.deviceId ? `/operational/bgp?deviceId=${submitted.deviceId}` : "/operational/bgp";
+  const drilldownHref = submitted ? `/bgp/peer-drilldown?deviceId=${submitted.deviceId}&peer=${encodeURIComponent(submitted.peer)}&auto=1` : "/bgp/peer-drilldown";
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center gap-3">
-        <Link href="/netops-operations">
+        <Link href={netopsHref}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            NetOps
+            Voltar ao cockpit do device
           </Button>
         </Link>
         <div>
@@ -188,6 +206,16 @@ export default function BgpPeerDrilldownPage() {
       </Card>
 
       {submitted ? <BgpDrilldownRecomputeNotice /> : null}
+
+      {submitted ? (
+        <BgpPeerContextCard
+          device={device}
+          peer={peerSummary ?? null}
+          drilldownHref={drilldownHref}
+          netopsHref={netopsHref}
+          operationalHref={operationalHref}
+        />
+      ) : null}
 
       <Card>
         <CardHeader>

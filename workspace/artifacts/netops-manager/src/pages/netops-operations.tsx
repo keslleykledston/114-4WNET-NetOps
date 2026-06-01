@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useListDevices } from "@workspace/api-client-react";
 import { BgpPanel } from "@/features/bgp/bgp-panel";
 import { FiltersPanel } from "@/features/bgp/filters-panel";
@@ -18,6 +18,19 @@ export default function NetopsOperations() {
     [devices],
   );
   const [selection, setSelection] = useState<NetopsTreeSelection | null>(null);
+  const initialDeviceId = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("deviceId") ?? params.get("device_id");
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }, []);
+
+  useEffect(() => {
+    if (!initialDeviceId || sortedDevices.length === 0) return;
+    const device = sortedDevices.find((item) => item.id === initialDeviceId);
+    if (!device) return;
+    setSelection((current) => (current?.device.id === device.id ? current : { device, view: "device" as const }));
+  }, [initialDeviceId, sortedDevices]);
 
   const activeSelection = selection ?? (sortedDevices[0] ? { device: sortedDevices[0], view: "device" as const } : null);
 

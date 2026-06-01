@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useListDevices } from "@workspace/api-client-react";
+import { Link } from "wouter";
 import { Activity, GitBranch, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,7 +35,14 @@ export default function OperationalBgpPage() {
     [devices],
   );
 
-  const [deviceId, setDeviceId] = useState<number | null>(null);
+  const initialDeviceId = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("deviceId") ?? params.get("device_id");
+    const parsed = Number(raw);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }, []);
+
+  const [deviceId, setDeviceId] = useState<number | null>(initialDeviceId);
   const effectiveDeviceId = deviceId ?? sortedDevices[0]?.id ?? null;
 
   const peersQuery = useOperationalBgpPeers(effectiveDeviceId);
@@ -135,14 +143,15 @@ export default function OperationalBgpPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>peer_ip</TableHead>
-                  <TableHead>peer_as</TableHead>
-                  <TableHead>peer_type</TableHead>
-                  <TableHead>fsm_state</TableHead>
-                  <TableHead>oper_status</TableHead>
-                  <TableHead>uptime_seconds</TableHead>
-                  <TableHead>collected_at</TableHead>
-                  <TableHead>freshness</TableHead>
+                  <TableHead>IP Peer</TableHead>
+                  <TableHead>AS</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Operacional</TableHead>
+                  <TableHead>Uptime</TableHead>
+                  <TableHead>Coletado em</TableHead>
+                  <TableHead>Frescor</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -153,9 +162,20 @@ export default function OperationalBgpPage() {
                     <TableCell className="font-semibold">{peer.peerType}</TableCell>
                     <TableCell><BgpFsmStateBadge state={peer.fsmState} /></TableCell>
                     <TableCell><BgpOperStatusBadge status={peer.operStatus} /></TableCell>
-                    <TableCell>{peer.uptimeSeconds ?? "-"}</TableCell>
-                    <TableCell>{fmtDate(peer.collectedAt)}</TableCell>
-                    <TableCell>{freshnessLabel(summary?.freshness ?? "unknown")}</TableCell>
+                      <TableCell>{peer.uptimeSeconds ?? "-"}</TableCell>
+                      <TableCell>{fmtDate(peer.collectedAt)}</TableCell>
+                      <TableCell>{freshnessLabel(summary?.freshness ?? "unknown")}</TableCell>
+                      <TableCell>
+                        <Button asChild variant="outline" size="sm" className="h-8">
+                          <Link
+                            href={`/bgp/peer-drilldown?deviceId=${effectiveDeviceId ?? ""}&peer=${encodeURIComponent(peer.peerIp)}&auto=1`}
+                            title="Abrir drilldown técnico"
+                          >
+                            <GitBranch className="h-4 w-4" />
+                            Drilldown
+                          </Link>
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -31,6 +31,9 @@ import {
 } from "@/features/bgp-drilldown";
 import type { BgpPeerSshDetailStatus } from "@/features/bgp-drilldown/types";
 import { BgpPeerContextCard } from "@/features/bgp/bgp-peer-context-card";
+import { BGP_POLICY_EDITOR_ENABLED } from "@/features/bgp-policy-editor/bgp-policy-editor.utils";
+import { BgpPolicyEditorModal } from "@/features/bgp-policy-editor/bgp-policy-editor-modal";
+import { useCommunityLibraryItems, useCommunitySets } from "@/features/device-discovery/community-api";
 
 function readInitialQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -49,6 +52,7 @@ export default function BgpPeerDrilldownPage() {
   const [forceRecompute, setForceRecompute] = useState(false);
   const [detailStatus, setDetailStatus] = useState<BgpPeerSshDetailStatus>("idle");
   const [detailDisabled, setDetailDisabled] = useState(false);
+  const [policyEditorOpen, setPolicyEditorOpen] = useState(false);
 
   const { data: devices = [] } = useListDevices();
   const detailMutation = useBgpPeerSshDetail();
@@ -84,6 +88,8 @@ export default function BgpPeerDrilldownPage() {
       queryKey: getListNetopsDeviceBgpPeersQueryKey(submitted?.deviceId ?? 0),
     },
   });
+  const communityLibraryQuery = useCommunityLibraryItems(submitted?.deviceId ?? 0);
+  const communitySetsQuery = useCommunitySets(submitted?.deviceId ?? 0);
   const refetchHistory = historyQuery.refetch;
 
   useEffect(() => {
@@ -214,6 +220,7 @@ export default function BgpPeerDrilldownPage() {
           drilldownHref={drilldownHref}
           netopsHref={netopsHref}
           operationalHref={operationalHref}
+          onEditPolicy={BGP_POLICY_EDITOR_ENABLED ? () => setPolicyEditorOpen(true) : undefined}
         />
       ) : null}
 
@@ -297,6 +304,21 @@ export default function BgpPeerDrilldownPage() {
           />
         </TabsContent>
       </Tabs>
+
+      {BGP_POLICY_EDITOR_ENABLED ? (
+        <BgpPolicyEditorModal
+          open={policyEditorOpen}
+          onOpenChange={setPolicyEditorOpen}
+          deviceId={submitted?.deviceId ?? 0}
+          deviceName={device?.hostname ?? `Device #${submitted?.deviceId ?? "—"}`}
+          peerIp={submitted?.peer ?? ""}
+          peerRemoteAs={peerSummary?.remoteAs ?? null}
+          peerVrf={peerSummary?.vrf ?? null}
+          drilldown={query.data ?? null}
+          communityLibraryItems={communityLibraryQuery.data ?? []}
+          communitySets={communitySetsQuery.data ?? []}
+        />
+      ) : null}
     </div>
   );
 }

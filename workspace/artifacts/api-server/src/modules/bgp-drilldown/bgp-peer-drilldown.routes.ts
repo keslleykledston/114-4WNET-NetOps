@@ -4,6 +4,7 @@ import {
   getBgpPeerDrilldownHandler,
   getBgpPeerDrilldownHistoryCompareHandler,
   getBgpPeerDrilldownHistoryHandler,
+  postBgpPolicyEditorPreviewHandler,
   postBgpPeerDrilldownDetailHandler,
 } from "./bgp-peer-drilldown.controller.js";
 
@@ -31,6 +32,12 @@ router.post(
   "/bgp/peers/:deviceId/:peer/drilldown/detail",
   requirePermission("devices.read"),
   postBgpPeerDrilldownDetailHandler,
+);
+
+router.post(
+  "/bgp/peers/:deviceId/:peer/policy-editor/preview",
+  requirePermission("devices.read"),
+  postBgpPolicyEditorPreviewHandler,
 );
 
 export default router;

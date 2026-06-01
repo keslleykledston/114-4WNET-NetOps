@@ -11,6 +11,7 @@ interface BgpPeerContextCardProps {
   drilldownHref: string;
   netopsHref: string;
   operationalHref: string;
+  onEditPolicy?: () => void;
   className?: string;
 }
 
@@ -25,6 +26,7 @@ export function BgpPeerContextCard({
   drilldownHref,
   netopsHref,
   operationalHref,
+  onEditPolicy,
   className,
 }: BgpPeerContextCardProps) {
   return (
@@ -56,6 +58,11 @@ export function BgpPeerContextCard({
                 BGP Drilldown
               </Link>
             </Button>
+            {onEditPolicy ? (
+              <Button variant="secondary" size="sm" onClick={onEditPolicy}>
+                Editar policy
+              </Button>
+            ) : null}
           </div>
         </div>
       </CardHeader>

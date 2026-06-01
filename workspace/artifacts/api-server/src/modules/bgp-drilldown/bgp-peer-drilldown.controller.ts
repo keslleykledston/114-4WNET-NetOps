@@ -4,6 +4,7 @@ import { parseDrilldownQueryParams } from "./bgp-peer-drilldown-query.js";
 import { getBgpPeerDrilldown, getBgpPeerDrilldownHistory, compareBgpPeerDrilldownHistory } from "./bgp-peer-drilldown.service.js";
 import { parseSshDetailRequest } from "./bgp-peer-drilldown-ssh-detail.js";
 import { BGP_DRILLDOWN_SSH_DETAIL_DISABLED, getBgpPeerSshDetail } from "./bgp-peer-drilldown-ssh-detail.service.js";
+export { postBgpPolicyEditorPreviewHandler } from "./bgp-policy-editor.controller.js";
 
 function queryOne(value: unknown): string | undefined {
   if (Array.isArray(value)) return value[0];

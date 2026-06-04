@@ -1,5 +1,13 @@
 # Roadmap
 
+## v0.4.1 — BGP Peer Cleanup Planner (Completed)
+
+- ✅ Read-only planner added to BGP drilldown
+- ✅ Dependency buckets: exclusive/shared/ambiguous
+- ✅ Safe script export with validation commands
+- ✅ Modal frontend with review-only banner
+- ✅ Selftest and validation report
+
 ## v0.3.5 — Compliance Profile Assignment (In Development)
 
 - ✅ Database schema extension (complianceProfileName field)

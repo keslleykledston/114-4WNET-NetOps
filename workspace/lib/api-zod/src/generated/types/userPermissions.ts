@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { UserPermissionsAudit } from './userPermissionsAudit';
+import type { UserPermissionsBgp } from './userPermissionsBgp';
 import type { UserPermissionsCompliance } from './userPermissionsCompliance';
 import type { UserPermissionsDevices } from './userPermissionsDevices';
 import type { UserPermissionsIntegrations } from './userPermissionsIntegrations';
@@ -19,4 +20,5 @@ export interface UserPermissions {
   integrations?: UserPermissionsIntegrations;
   users?: UserPermissionsUsers;
   audit?: UserPermissionsAudit;
+  bgp?: UserPermissionsBgp;
 }

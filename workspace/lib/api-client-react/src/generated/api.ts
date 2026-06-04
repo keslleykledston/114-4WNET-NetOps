@@ -23,6 +23,9 @@ import type {
   AuditLogListResponse,
   AuthLoginRequest,
   AuthLoginResponse,
+  BgpPeerCleanupAnalysis,
+  BgpPeerCleanupAnalyzeRequest,
+  BgpPeerCleanupExportResponse,
   BgpPeerDetails,
   BgpPeerSummary,
   CollectConfigInput,
@@ -43,6 +46,9 @@ import type {
   CompliancePolicyInput,
   CompliancePolicyUpdate,
   ComplianceSummary,
+  ConfigDetail,
+  ConfigDiff,
+  ConfigHistoryItem,
   ConfigTemplate,
   ConfigTemplateInput,
   ConfigTemplateUpdate,
@@ -67,6 +73,8 @@ import type {
   EffectivePermissionsResponse,
   ExportComplianceFindingsGroupsParams,
   ExportComplianceFindingsParams,
+  GetNetconfConfig200,
+  GetNetconfConfigBody,
   HealthStatus,
   IntegrationListResponse,
   IntegrationSetting,
@@ -135,6 +143,8 @@ import type {
   SnmpSnapshot,
   TemplateRenderInput,
   TemplateRenderResult,
+  TestNetconfConnector200,
+  TestNetconfConnectorBody,
   UpdateCommunitySetBody,
   UpdateIntegrationBody,
   UpdateUserRequest,
@@ -2655,6 +2665,83 @@ export function useGetDeviceCollectedConfig<TData = Awaited<ReturnType<typeof ge
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetDeviceCollectedConfigQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListDeviceConfigHistoryUrl = (id: number,) => {
+
+
+
+
+  return `/api/devices/${id}/config-history`
+}
+
+/**
+ * @summary List device config history
+ */
+export const listDeviceConfigHistory = async (id: number, options?: RequestInit): Promise<ConfigHistoryItem[]> => {
+
+  return customFetch<ConfigHistoryItem[]>(getListDeviceConfigHistoryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDeviceConfigHistoryQueryKey = (id: number,) => {
+    return [
+    `/api/devices/${id}/config-history`
+    ] as const;
+    }
+
+
+export const getListDeviceConfigHistoryQueryOptions = <TData = Awaited<ReturnType<typeof listDeviceConfigHistory>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeviceConfigHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDeviceConfigHistoryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeviceConfigHistory>>> = ({ signal }) => listDeviceConfigHistory(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDeviceConfigHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDeviceConfigHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof listDeviceConfigHistory>>>
+export type ListDeviceConfigHistoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List device config history
+ */
+
+export function useListDeviceConfigHistory<TData = Awaited<ReturnType<typeof listDeviceConfigHistory>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeviceConfigHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDeviceConfigHistoryQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -6347,6 +6434,160 @@ export function useGetCollectedConfig<TData = Awaited<ReturnType<typeof getColle
 
 
 
+export const getGetConfigUrl = (id: number,) => {
+
+
+
+
+  return `/api/configs/${id}`
+}
+
+/**
+ * @summary Get config history entry
+ */
+export const getConfig = async (id: number, options?: RequestInit): Promise<ConfigDetail> => {
+
+  return customFetch<ConfigDetail>(getGetConfigUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigQueryKey = (id: number,) => {
+    return [
+    `/api/configs/${id}`
+    ] as const;
+    }
+
+
+export const getGetConfigQueryOptions = <TData = Awaited<ReturnType<typeof getConfig>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfig>>> = ({ signal }) => getConfig(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getConfig>>>
+export type GetConfigQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get config history entry
+ */
+
+export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetConfigDiffUrl = (id: number,) => {
+
+
+
+
+  return `/api/configs/${id}/diff`
+}
+
+/**
+ * @summary Get config diff against previous version
+ */
+export const getConfigDiff = async (id: number, options?: RequestInit): Promise<ConfigDiff> => {
+
+  return customFetch<ConfigDiff>(getGetConfigDiffUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigDiffQueryKey = (id: number,) => {
+    return [
+    `/api/configs/${id}/diff`
+    ] as const;
+    }
+
+
+export const getGetConfigDiffQueryOptions = <TData = Awaited<ReturnType<typeof getConfigDiff>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigDiff>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigDiffQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigDiff>>> = ({ signal }) => getConfigDiff(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigDiff>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigDiffQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigDiff>>>
+export type GetConfigDiffQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get config diff against previous version
+ */
+
+export function useGetConfigDiff<TData = Awaited<ReturnType<typeof getConfigDiff>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigDiff>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigDiffQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getListSnmpSnapshotsUrl = (params?: ListSnmpSnapshotsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -8164,6 +8405,227 @@ export const useQueryDeviceBgpPeerRoutes = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getQueryDeviceBgpPeerRoutesMutationOptions(options));
+    }
+
+export const getAnalyzeDeviceBgpPeerCleanupUrl = (id: number,
+    peerIp: string,) => {
+
+
+
+
+  return `/api/devices/${id}/bgp/peers/${peerIp}/cleanup/analyze`
+}
+
+/**
+ * @summary Analyze a BGP peer cleanup plan
+ */
+export const analyzeDeviceBgpPeerCleanup = async (id: number,
+    peerIp: string,
+    bgpPeerCleanupAnalyzeRequest?: BgpPeerCleanupAnalyzeRequest, options?: RequestInit): Promise<BgpPeerCleanupAnalysis> => {
+
+  return customFetch<BgpPeerCleanupAnalysis>(getAnalyzeDeviceBgpPeerCleanupUrl(id,peerIp),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      bgpPeerCleanupAnalyzeRequest,)
+  }
+);}
+
+
+
+
+export const getAnalyzeDeviceBgpPeerCleanupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeDeviceBgpPeerCleanup>>, TError,{id: number;peerIp: string;data?: BodyType<BgpPeerCleanupAnalyzeRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyzeDeviceBgpPeerCleanup>>, TError,{id: number;peerIp: string;data?: BodyType<BgpPeerCleanupAnalyzeRequest>}, TContext> => {
+
+const mutationKey = ['analyzeDeviceBgpPeerCleanup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzeDeviceBgpPeerCleanup>>, {id: number;peerIp: string;data?: BodyType<BgpPeerCleanupAnalyzeRequest>}> = (props) => {
+          const {id,peerIp,data} = props ?? {};
+
+          return  analyzeDeviceBgpPeerCleanup(id,peerIp,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyzeDeviceBgpPeerCleanupMutationResult = NonNullable<Awaited<ReturnType<typeof analyzeDeviceBgpPeerCleanup>>>
+    export type AnalyzeDeviceBgpPeerCleanupMutationBody = BodyType<BgpPeerCleanupAnalyzeRequest> | undefined
+    export type AnalyzeDeviceBgpPeerCleanupMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Analyze a BGP peer cleanup plan
+ */
+export const useAnalyzeDeviceBgpPeerCleanup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeDeviceBgpPeerCleanup>>, TError,{id: number;peerIp: string;data?: BodyType<BgpPeerCleanupAnalyzeRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyzeDeviceBgpPeerCleanup>>,
+        TError,
+        {id: number;peerIp: string;data?: BodyType<BgpPeerCleanupAnalyzeRequest>},
+        TContext
+      > => {
+      return useMutation(getAnalyzeDeviceBgpPeerCleanupMutationOptions(options));
+    }
+
+export const getGetBgpPeerCleanupAnalysisUrl = (id: number,) => {
+
+
+
+
+  return `/api/bgp-cleanup-analyses/${id}`
+}
+
+/**
+ * @summary Get a saved BGP cleanup analysis
+ */
+export const getBgpPeerCleanupAnalysis = async (id: number, options?: RequestInit): Promise<BgpPeerCleanupAnalysis> => {
+
+  return customFetch<BgpPeerCleanupAnalysis>(getGetBgpPeerCleanupAnalysisUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBgpPeerCleanupAnalysisQueryKey = (id: number,) => {
+    return [
+    `/api/bgp-cleanup-analyses/${id}`
+    ] as const;
+    }
+
+
+export const getGetBgpPeerCleanupAnalysisQueryOptions = <TData = Awaited<ReturnType<typeof getBgpPeerCleanupAnalysis>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBgpPeerCleanupAnalysis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBgpPeerCleanupAnalysisQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBgpPeerCleanupAnalysis>>> = ({ signal }) => getBgpPeerCleanupAnalysis(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBgpPeerCleanupAnalysis>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBgpPeerCleanupAnalysisQueryResult = NonNullable<Awaited<ReturnType<typeof getBgpPeerCleanupAnalysis>>>
+export type GetBgpPeerCleanupAnalysisQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get a saved BGP cleanup analysis
+ */
+
+export function useGetBgpPeerCleanupAnalysis<TData = Awaited<ReturnType<typeof getBgpPeerCleanupAnalysis>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBgpPeerCleanupAnalysis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBgpPeerCleanupAnalysisQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getExportBgpPeerCleanupAnalysisUrl = (id: number,) => {
+
+
+
+
+  return `/api/bgp-cleanup-analyses/${id}/export`
+}
+
+/**
+ * @summary Export a BGP cleanup analysis as markdown
+ */
+export const exportBgpPeerCleanupAnalysis = async (id: number, options?: RequestInit): Promise<BgpPeerCleanupExportResponse> => {
+
+  return customFetch<BgpPeerCleanupExportResponse>(getExportBgpPeerCleanupAnalysisUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getExportBgpPeerCleanupAnalysisMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportBgpPeerCleanupAnalysis>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof exportBgpPeerCleanupAnalysis>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['exportBgpPeerCleanupAnalysis'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportBgpPeerCleanupAnalysis>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  exportBgpPeerCleanupAnalysis(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExportBgpPeerCleanupAnalysisMutationResult = NonNullable<Awaited<ReturnType<typeof exportBgpPeerCleanupAnalysis>>>
+
+    export type ExportBgpPeerCleanupAnalysisMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Export a BGP cleanup analysis as markdown
+ */
+export const useExportBgpPeerCleanupAnalysis = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportBgpPeerCleanupAnalysis>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof exportBgpPeerCleanupAnalysis>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getExportBgpPeerCleanupAnalysisMutationOptions(options));
     }
 
 export const getGetCommunitiesLibraryUrl = (id: number,) => {
@@ -10124,5 +10586,147 @@ export const useSyncNetBoxDevicesLocal = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSyncNetBoxDevicesLocalMutationOptions(options));
+    }
+
+export const getTestNetconfConnectorUrl = () => {
+
+
+
+
+  return `/api/connectors/netconf/test`
+}
+
+/**
+ * @summary Test NETCONF connectivity for a device
+ */
+export const testNetconfConnector = async (testNetconfConnectorBody: TestNetconfConnectorBody, options?: RequestInit): Promise<TestNetconfConnector200> => {
+
+  return customFetch<TestNetconfConnector200>(getTestNetconfConnectorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      testNetconfConnectorBody,)
+  }
+);}
+
+
+
+
+export const getTestNetconfConnectorMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testNetconfConnector>>, TError,{data: BodyType<TestNetconfConnectorBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof testNetconfConnector>>, TError,{data: BodyType<TestNetconfConnectorBody>}, TContext> => {
+
+const mutationKey = ['testNetconfConnector'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof testNetconfConnector>>, {data: BodyType<TestNetconfConnectorBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  testNetconfConnector(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TestNetconfConnectorMutationResult = NonNullable<Awaited<ReturnType<typeof testNetconfConnector>>>
+    export type TestNetconfConnectorMutationBody = BodyType<TestNetconfConnectorBody>
+    export type TestNetconfConnectorMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Test NETCONF connectivity for a device
+ */
+export const useTestNetconfConnector = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof testNetconfConnector>>, TError,{data: BodyType<TestNetconfConnectorBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof testNetconfConnector>>,
+        TError,
+        {data: BodyType<TestNetconfConnectorBody>},
+        TContext
+      > => {
+      return useMutation(getTestNetconfConnectorMutationOptions(options));
+    }
+
+export const getGetNetconfConfigUrl = () => {
+
+
+
+
+  return `/api/connectors/netconf/get-config`
+}
+
+/**
+ * @summary Fetch running-config via NETCONF
+ */
+export const getNetconfConfig = async (getNetconfConfigBody: GetNetconfConfigBody, options?: RequestInit): Promise<GetNetconfConfig200> => {
+
+  return customFetch<GetNetconfConfig200>(getGetNetconfConfigUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      getNetconfConfigBody,)
+  }
+);}
+
+
+
+
+export const getGetNetconfConfigMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getNetconfConfig>>, TError,{data: BodyType<GetNetconfConfigBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getNetconfConfig>>, TError,{data: BodyType<GetNetconfConfigBody>}, TContext> => {
+
+const mutationKey = ['getNetconfConfig'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getNetconfConfig>>, {data: BodyType<GetNetconfConfigBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  getNetconfConfig(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetNetconfConfigMutationResult = NonNullable<Awaited<ReturnType<typeof getNetconfConfig>>>
+    export type GetNetconfConfigMutationBody = BodyType<GetNetconfConfigBody>
+    export type GetNetconfConfigMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Fetch running-config via NETCONF
+ */
+export const useGetNetconfConfig = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getNetconfConfig>>, TError,{data: BodyType<GetNetconfConfigBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getNetconfConfig>>,
+        TError,
+        {data: BodyType<GetNetconfConfigBody>},
+        TContext
+      > => {
+      return useMutation(getGetNetconfConfigMutationOptions(options));
     }
 

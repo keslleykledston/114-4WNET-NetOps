@@ -67,7 +67,7 @@ Uma linha = **um peer** observado numa coleta (append-only recomendado; GET “l
 | `collection_job_id` | int FK `operational_bgp_collection_jobs` | job atual |
 | `peer_ip` | inet / text | remote addr (IPv4 texto; IPv6 ver riscos) |
 | `peer_as` | bigint | `bgpPeerRemoteAs` |
-| `peer_type` | text | `ebgp` \| `ibgp` \| `unknown` — comparar `peer_as` vs `bgpLocalAs` |
+| `peer_type` | text | `ebgp` \| `ibgp` \| `unknown` — comparar `peer_as` vs `bgpLocalAs`; se SNMP nao trouxer `bgpLocalAs`, usar `parsed_config.bgp_peer_model.localAs` da descoberta local |
 | `vrf` | text nullable | VRF MIB / Huawei; `null` = default/global |
 | `afi` | text | default `ipv4` piloto; `ipv6` quando OID V2/Huawei |
 | `safi` | text | default `unicast`; extensível |
@@ -139,6 +139,8 @@ Se `bgpVersion` timeout/unavailable → fail **`SNMP_BGP_UNAVAILABLE`** (não ga
 |-----|-------------|
 | `1.3.6.1.2.1.15.1.4.0` | `bgpLocalAs.0` (local AS para peer_type) |
 | `1.3.6.1.2.1.15.1.1.0` | `bgpVersion.0` (preflight) |
+
+**Fallback local AS:** quando `bgpLocalAs.0` nao estiver disponivel no SNMP, o coletor usa o `localAs` do ultimo `parsed_config.bgp_peer_model` salvo pela descoberta do dispositivo. `peer_as` continua vindo dos walks de `bgpPeerRemoteAs` suportados.
 
 ### RFC4273 — `bgpPeerTable` (`1.3.6.1.2.1.15.2.1` — índice = peer Id conforme agente)
 

@@ -41,13 +41,13 @@ export default function ResourceManager() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return <div className="p-0">Loading...</div>;
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Resource Manager</h1>
+        <h1 className="text-2xl font-bold">Resource Manager</h1>
         <Button onClick={loadData}>Refresh</Button>
       </div>
 

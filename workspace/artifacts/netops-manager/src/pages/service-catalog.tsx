@@ -23,7 +23,7 @@ export default function ServiceCatalogPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Service Catalog</h1>
+      <h1 className="text-2xl font-bold">Service Catalog</h1>
       <div className="grid grid-cols-3 gap-4">
         {catalog?.map((item) => (
           <Card key={item.id} className="hover:shadow-lg cursor-pointer">

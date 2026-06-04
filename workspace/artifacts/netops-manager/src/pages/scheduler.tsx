@@ -251,7 +251,7 @@ export default function SchedulerPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Scheduler</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Scheduler</h1>
           <p className="mt-1 text-muted-foreground">Discovery, compliance and health jobs on a safe local loop.</p>
         </div>
         <div className="flex gap-2">

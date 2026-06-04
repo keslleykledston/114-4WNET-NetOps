@@ -13,6 +13,7 @@
 - Preferir icones `lucide-react`.
 - Evitar cores hardcoded; usar tokens `background`, `card`, `muted`, `border`, `primary`, `sidebar`.
 - Cards so para paineis ou itens repetidos. Nao criar card dentro de card.
+- A densidade visual deve se manter mais perto do legado `60-bgp_manager` do que de um dashboard genérico: títulos principais menores, sidebar compacta, espaçamento de 32px no canvas principal e uso consistente de `Inter` com `JetBrains Mono`.
 - Identidade K3G pode ser aplicada somente como asset compativel: favicon, icone pequeno no header/dashboard/sidebar, ou marca discreta onde o layout atual ja tiver ponto visual equivalente.
 - Nao usar assets K3G para trocar estrutura, spacing, tema ou hierarquia visual.
 - Nao sobrescrever assets existentes sem backup ou novo nome claro.
@@ -78,6 +79,7 @@ Alteracao permitida:
 - Mostrar discovery como bloco operacional no detalhe do device, usando cards compactos.
 - Acoes de coleta SSH iniciadas pela UI devem tratar `/api/devices/:id/discover` como assíncrono: iniciar, aguardar `discovery-status` sair de `running`, buscar snapshot e so entao exibir resumo.
 - BGP deve consumir dados estruturados da API; nao interpretar CLI nem OID no frontend.
+- Communities deve expor busca na biblioteca e botões de `Sync backup` / `Sync live (SSH)` no mesmo fluxo do device, sem mover isso para sidebar global.
 - Evidence deve aparecer como source/confidence curto, sem payload bruto grande.
 - Alertas de compliance/confianca devem usar `Alert` compacto e manter densidade NOC.
 - Empty state de BGP sem snapshot deve orientar "Execute discovery para carregar peers BGP."

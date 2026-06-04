@@ -14,6 +14,7 @@ export type UserPermissions = {
   users?: { read?: boolean; write?: boolean };
   audit?: { read?: boolean };
   provisioning?: { read?: boolean; write?: boolean; export?: boolean };
+  bgp?: { read?: boolean; cleanup?: { plan?: boolean } };
 };
 
 export const AUTH_COOKIE_NAME = "netops_session";
@@ -199,6 +200,17 @@ function roleRank(role: UserRole): number {
   return ROLE_ORDER.indexOf(role);
 }
 
+function getPermissionValue(source: unknown, parts: string[]): boolean {
+  if (!source || typeof source !== "object") return false;
+  if (parts.length === 0) return false;
+
+  const [head, ...rest] = parts;
+  const record = source as Record<string, unknown>;
+  const value = record[head];
+  if (rest.length === 0) return value === true;
+  return getPermissionValue(value, rest);
+}
+
 export function requireRole(allowed: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     void (async () => {
@@ -300,6 +312,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       users: { read: true, write: true },
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
+      bgp: { read: true, cleanup: { plan: true } },
     };
   }
   if (role === "operator") {
@@ -311,6 +324,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       users: { read: true, write: false },
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
+      bgp: { read: true, cleanup: { plan: true } },
     };
   }
   // viewer
@@ -322,20 +336,15 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
     users: { read: true, write: false },
     audit: { read: true },
     provisioning: { read: true, write: false, export: true },
+    bgp: { read: false, cleanup: { plan: false } },
   };
 }
 
 export function checkPermission(user: { role: UserRole; permissionsJson: UserPermissions | null }, permission: string): boolean {
-  const [module, action] = permission.split(".");
-  if (!module || !action) return false;
-
   // Use override permissions if present, otherwise fall back to role defaults
   const effectivePerms = user.permissionsJson ?? getDefaultPermissions(user.role);
-  const modulePerms = effectivePerms[module as keyof UserPermissions];
-  if (!modulePerms) return false;
-
-  const actionValue = modulePerms[action as keyof typeof modulePerms];
-  return actionValue === true;
+  const parts = permission.split(".").filter(Boolean);
+  return getPermissionValue(effectivePerms, parts);
 }
 
 export function requirePermission(permission: string) {

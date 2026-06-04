@@ -147,7 +147,7 @@ export default function BgpPeerDrilldownPage() {
   const drilldownHref = submitted ? `/bgp/peer-drilldown?deviceId=${submitted.deviceId}&peer=${encodeURIComponent(submitted.peer)}&auto=1` : "/bgp/peer-drilldown";
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center gap-3">
         <Link href={netopsHref}>
           <Button variant="ghost" size="sm">

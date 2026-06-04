@@ -29,6 +29,8 @@ Nao cobre nesta baseline:
 1. preflight SNMP (`sysDescr.0`, `bgpVersion.0`)
 2. resolve credencial SNMP (redacted output)
 3. walk peers (RFC4273 baseline)
+   - `peer_type` usa `bgpLocalAs.0` ou, se ausente, o `localAs` salvo no ultimo `parsed_config.bgp_peer_model`
+   - `peer_as` vem dos walks de `bgpPeerRemoteAs` suportados; se faltar, vira `unknown` e gera warning
 4. persistencia operacional
 5. exposicao por GET API
 6. render na UI read-only

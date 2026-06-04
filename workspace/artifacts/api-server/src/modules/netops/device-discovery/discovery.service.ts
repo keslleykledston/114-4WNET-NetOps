@@ -1,4 +1,4 @@
-import type { DeviceDiscoveryRequest, DeviceDiscoverySnapshot, DiscoveryStatus, DiscoveryWarning } from "./discovery.types.js";
+import type { BgpPeerSummary, DeviceDiscoveryRequest, DeviceDiscoverySnapshot, DiscoveryStatus, DiscoveryWarning } from "./discovery.types.js";
 import { collectionOrchestrator } from "./discovery.orchestrator.js";
 import { rawEvidenceStore } from "./evidence/evidence-store.js";
 import { bgpPeerRoleOverridesTable, db, devicesTable, snmpSnapshotsTable } from "@workspace/db";
@@ -9,7 +9,7 @@ import { snapshotToNetopsData } from "../adapters/snapshot-adapter.js";
 
 const DEFAULT_CONTEXTS = ["interfaces", "bgp", "l2vpn", "policies", "vrfs"] as const;
 
-async function applyRoleOverrides(deviceId: number, peers: ReturnType<typeof normalizeDiscoveryBgpPeers>) {
+async function applyRoleOverrides(deviceId: number, peers: BgpPeerSummary[]) {
   const overrides = await db
     .select()
     .from(bgpPeerRoleOverridesTable)
@@ -124,7 +124,23 @@ async function getLatestSnmpBgpPeers(deviceId: number) {
   return normalizeDiscoveryBgpPeers([], data.bgpPeers, [], []);
 }
 
-async function applyRoleOverridesToPeers(deviceId: number, peers: ReturnType<typeof normalizeDiscoveryBgpPeers>) {
+async function mergeDiscoveryBgpPeersWithLatestSnmp(deviceId: number, peers: BgpPeerSummary[]) {
+  const snmpPeers = await getLatestSnmpBgpPeers(deviceId);
+  if (!snmpPeers?.length) {
+    return peers;
+  }
+
+  const discoveryPeers = peers as unknown as Parameters<typeof normalizeDiscoveryBgpPeers>[0];
+  const snmpDiscoveryPeers = snmpPeers as unknown as Parameters<typeof normalizeDiscoveryBgpPeers>[1];
+  return normalizeDiscoveryBgpPeers(
+    discoveryPeers,
+    snmpDiscoveryPeers,
+    [],
+    [],
+  );
+}
+
+async function applyRoleOverridesToPeers(deviceId: number, peers: BgpPeerSummary[]) {
   const overrides = await db
     .select()
     .from(bgpPeerRoleOverridesTable)
@@ -151,7 +167,10 @@ export async function getLatestDiscoverySnapshot(deviceId: number) {
   if (memorySnapshot) {
     return {
       ...memorySnapshot,
-      bgpPeers: await applyRoleOverridesToPeers(deviceId, memorySnapshot.bgpPeers),
+      bgpPeers: await mergeDiscoveryBgpPeersWithLatestSnmp(
+        deviceId,
+        await applyRoleOverridesToPeers(deviceId, memorySnapshot.bgpPeers),
+      ),
     };
   }
 
@@ -170,7 +189,10 @@ export async function getLatestDiscoverySnapshot(deviceId: number) {
     status,
     persistedSnapshotId: persisted.id,
     cachedFromPersistedSnapshot: true,
-    bgpPeers: await applyRoleOverrides(deviceId, snapshot.bgpPeers),
+    bgpPeers: await mergeDiscoveryBgpPeersWithLatestSnmp(
+      deviceId,
+      await applyRoleOverrides(deviceId, snapshot.bgpPeers),
+    ),
     warnings: [
       ...snapshot.warnings,
       recoveredWarning,

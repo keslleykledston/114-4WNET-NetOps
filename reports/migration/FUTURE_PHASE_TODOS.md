@@ -15,6 +15,8 @@
 - FASE 5.1.fix concluida: IF-MIB agora coleta 164 interfaces. Root cause: net-snmp doneCallback passa varbind array em error param. Fix: type-check error antes de rejeitar.
 - FASE 5.2 planejada: inventario persistido (interfaces/vrfs/config), SSH config collection read-only.
 - FASE 5.3 concluida: Device Discovery persistente com `discovery_runs`, `discovery_snapshots`, `discovery_evidence`, OpenAPI atualizado e client Orval regenerado.
+- Consolidacao funcional: o mecanismo operacional do 60-bgp_manager ja vive em `/netops-operations`, `/devices/:id`, `/snmp-history` e `config-history`; a aba `/devices` ficou como inventario/admin.
+- Consolidacao Communities: a biblioteca agora suporta busca server-side e os syncs `backup`/`live (SSH)`; community sets sao mostrados com origem/status/members no detalhe do device, com layout e comportamento alinhados ao legacy, tags na biblioteca, comparacao local de sets e aviso de referencias ausentes.
 - **FASE 5.4 planejada (2026-05-30):** backup automático de config no SSH via connector — ver `docs/connectors/SSH_CONFIG_BACKUP_PLAN.md`.
 - v0.4.0 preview MVP concluida: Provisioning preview & approval workflow — templates L2/L3/BGP (5 tipos), `POST /api/provisioning/preview`, estados draft→approved, UI `/provisioning`, apply bloqueado, docs `PROVISIONING_PREVIEW_WORKFLOW.md`.
 - v0.4.x planejada: Provisioning operacional seguro — ver `reports/V0_4_PROVISIONING_OPERATIONAL_PLAN.md` (v0.4.0 engine → v0.4.4 apply readiness doc only).
@@ -66,7 +68,7 @@ Plano completo: `reports/V0_4_PROVISIONING_OPERATIONAL_PLAN.md`
 
 ---
 
-- FASE 6 planejada: BGP import policy editor preview (seguro, sem apply), route-policy parser, community library read-only.
+- FASE 6 planejada: BGP import policy editor preview (seguro, sem apply), route-policy parser e refinamentos restantes de communities/provisioning.
 - FASE 7 planejada: apply real com RBAC, duplo check, auditoria completa, SSH write controlado.
 - FASE 8+ pendente: export policy, provisioning seguro com aprovacao.
 - FASE 4.1 pendente: migrar favicon/icone K3G do `60-bgp_manager`.

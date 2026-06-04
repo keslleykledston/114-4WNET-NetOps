@@ -6,16 +6,24 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ProvisioningPreviewResultMaintenanceWindow } from './provisioningPreviewResultMaintenanceWindow';
+import type { ProvisioningPreviewResultStatus } from './provisioningPreviewResultStatus';
 import type { ProvisioningPreviewValidation } from './provisioningPreviewValidation';
+import type { ProvisioningRisk } from './provisioningRisk';
 
 export interface ProvisioningPreviewResult {
+  status: ProvisioningPreviewResultStatus;
   deviceId: number;
+  templateId: string;
   serviceType: string;
   configPreview: string;
   rollbackPreview: string;
+  executionPlan: string[];
   validations: ProvisioningPreviewValidation[];
-  risks: string[];
+  risks: ProvisioningRisk[];
+  precheckHints: string[];
+  postcheckHints: string[];
   missingData: string[];
+  blockedReasons: string[];
   /** @nullable */
   maintenanceWindow?: ProvisioningPreviewResultMaintenanceWindow;
   /** @nullable */
@@ -23,4 +31,8 @@ export interface ProvisioningPreviewResult {
   applyBlocked: boolean;
   /** @nullable */
   applyBlockedReason?: string | null;
+  commandsGenerated: string[];
+  warnings: string[];
+  conflicts: string[];
+  missingResources: string[];
 }

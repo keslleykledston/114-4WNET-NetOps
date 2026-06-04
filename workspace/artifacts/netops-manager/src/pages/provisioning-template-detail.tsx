@@ -93,7 +93,7 @@ export default function ProvisioningTemplateDetailPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{template.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{template.name}</h1>
           <p className="text-muted-foreground text-sm">
             {template.vendor} • {template.serviceType} • v{template.version}
           </p>

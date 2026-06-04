@@ -5,6 +5,7 @@
  * NetOps Manager API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConnectionTestResultConfigCollect } from './connectionTestResultConfigCollect';
 
 export interface ConnectionTestResult {
   success: boolean;
@@ -13,4 +14,5 @@ export interface ConnectionTestResult {
   latencyMs: number | null;
   /** @nullable */
   hostname?: string | null;
+  configCollect?: ConnectionTestResultConfigCollect;
 }

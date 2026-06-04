@@ -1,19 +1,25 @@
 import type { Device } from "@workspace/api-client-react";
 import type { DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { AlertCircle } from "lucide-react";
 
 interface BgpPeerDetailModalProps {
   device: Device;
   peer: DiscoveryBgpPeer | null;
   isOpen: boolean;
   onClose: () => void;
+  onPlanCleanup?: (peer: DiscoveryBgpPeer) => void;
 }
 
 function peerTableDisplayName(peer: DiscoveryBgpPeer): string {
+  if (peer?.description && String(peer.description).trim()) {
+    return String(peer.description).trim();
+  }
   if (peer?.name && String(peer.name).trim()) {
     return String(peer.name).trim();
   }
-  return peer?.description || "—";
+  return "—";
 }
 
 function peerDetailModalTitle(peer: DiscoveryBgpPeer | null): string {
@@ -27,6 +33,7 @@ export function BgpPeerDetailModal({
   peer,
   isOpen,
   onClose,
+  onPlanCleanup,
 }: BgpPeerDetailModalProps) {
   if (!peer) return null;
 
@@ -103,6 +110,24 @@ export function BgpPeerDetailModal({
             These prefix counters are persisted when Huawei SSH collection succeeds and{" "}
             <span className="font-mono text-slate-300">display bgp … peer verbose</span> is available.
           </p>
+
+          <div className="flex flex-col gap-2 pt-2">
+            {peer.state !== "Established" && onPlanCleanup ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => onPlanCleanup(peer)}
+                title="Planejar remoção segura do peer"
+              >
+                <AlertCircle className="h-4 w-4" />
+                Planejar Remoção
+              </Button>
+            ) : (
+              <p className="text-[11px] text-red-300">
+                Peer Established protegido: nenhum plano de remoção será apresentado.
+              </p>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -22,7 +22,10 @@ export interface NetopsInterface {
   operStatus: NetopsInterfaceOperStatus;
   ipv4: string[];
   ipv6: string[];
-  /** @nullable */
+  /**
+     * Service VLAN only. Default/reserved VLAN 1 is normalized to null.
+     * @nullable
+     */
   vlan?: number | null;
   /** @nullable */
   vrf?: string | null;
@@ -30,6 +33,7 @@ export interface NetopsInterface {
   ifIndex?: number;
   kind?: NetopsInterfaceKind;
   parentInterface?: string;
+  /** Service VLAN only. Default/reserved VLAN 1 is omitted. */
   vlanId?: number;
   encapsulation?: string;
 }

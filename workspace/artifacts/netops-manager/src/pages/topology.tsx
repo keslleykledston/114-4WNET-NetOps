@@ -47,13 +47,13 @@ export default function Topology() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return <div className="p-0">Loading...</div>;
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Topology Intelligence</h1>
+        <h1 className="text-2xl font-bold">Topology Intelligence</h1>
         <Button onClick={handleRebuild}>Rebuild</Button>
       </div>
 
@@ -73,7 +73,7 @@ export default function Topology() {
                   <CardTitle className="text-lg">Devices</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{summary.deviceCount || 0}</p>
+                  <p className="text-2xl font-bold">{summary.deviceCount || 0}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -81,7 +81,7 @@ export default function Topology() {
                   <CardTitle className="text-lg">Interfaces</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{summary.interfaceCount || 0}</p>
+                  <p className="text-2xl font-bold">{summary.interfaceCount || 0}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -89,7 +89,7 @@ export default function Topology() {
                   <CardTitle className="text-lg">BGP Peers</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{summary.bgpPeerCount || 0}</p>
+                  <p className="text-2xl font-bold">{summary.bgpPeerCount || 0}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -97,7 +97,7 @@ export default function Topology() {
                   <CardTitle className="text-lg">L2 Circuits</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{summary.l2CircuitCount || 0}</p>
+                  <p className="text-2xl font-bold">{summary.l2CircuitCount || 0}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -105,7 +105,7 @@ export default function Topology() {
                   <CardTitle className="text-lg">Nodes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{summary.totalNodes || 0}</p>
+                  <p className="text-2xl font-bold">{summary.totalNodes || 0}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -113,7 +113,7 @@ export default function Topology() {
                   <CardTitle className="text-lg">Edges</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{summary.totalEdges || 0}</p>
+                  <p className="text-2xl font-bold">{summary.totalEdges || 0}</p>
                 </CardContent>
               </Card>
             </div>

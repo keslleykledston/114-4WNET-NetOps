@@ -16,6 +16,7 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 
 - Status funcional e pendências: [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)
 - **Documentação para IA (agentes/skills):** [docs/ai/README.md](docs/ai/README.md)
+- Handoff completo do projeto: [docs/PROJECT_HANDOFF.md](docs/PROJECT_HANDOFF.md)
 - Contexto agente (raiz): [AGENTS.md](AGENTS.md)
 - Plano de fechamento do MVP: [docs/MVP_CLOSURE_PLAN.md](docs/MVP_CLOSURE_PLAN.md)
 - RBAC local e auth: [docs/RBAC_MODEL.md](docs/RBAC_MODEL.md)
@@ -25,6 +26,7 @@ Monorepo fica em `workspace/`. Raiz agora guarda bootstrap e operação local co
 - NetBox read-only sync: [docs/NETBOX_READONLY_SYNC.md](docs/NETBOX_READONLY_SYNC.md)
 - Compliance v2 source/confidence: [docs/COMPLIANCE_ENGINE_V2.md](docs/COMPLIANCE_ENGINE_V2.md)
 - Provisioning preview engine (v0.4.0): [docs/PROVISIONING_PREVIEW_ENGINE.md](docs/PROVISIONING_PREVIEW_ENGINE.md)
+- BGP peer cleanup planner: [docs/BGP_PEER_CLEANUP_PLANNER.md](docs/BGP_PEER_CLEANUP_PLANNER.md)
 
 ## Subir com Docker
 

@@ -5,7 +5,6 @@ import {
   getGetNetopsDeviceSummaryQueryKey,
   getListDeviceBgpPeersQueryKey,
   getListNetopsDeviceBgpPeersQueryKey,
-  getListNetopsDeviceCommunitiesQueryKey,
   getListNetopsDeviceFiltersQueryKey,
   getListNetopsDeviceInterfacesQueryKey,
   getListNetopsDeviceLogsQueryKey,
@@ -92,12 +91,13 @@ export function CollectSshButton({ device, variant = "outline", size = "sm" }: C
     void queryClient.invalidateQueries({ queryKey: getListNetopsDeviceInterfacesQueryKey(device.id) });
     void queryClient.invalidateQueries({ queryKey: getListNetopsDeviceBgpPeersQueryKey(device.id) });
     void queryClient.invalidateQueries({ queryKey: getListNetopsDeviceFiltersQueryKey(device.id) });
-    void queryClient.invalidateQueries({ queryKey: getListNetopsDeviceCommunitiesQueryKey(device.id) });
     void queryClient.invalidateQueries({ queryKey: getListNetopsDeviceLogsQueryKey(device.id) });
     void queryClient.invalidateQueries({ queryKey: getGetDeviceDiscoverySnapshotQueryKey(device.id) });
     void queryClient.invalidateQueries({ queryKey: getListDeviceBgpPeersQueryKey(device.id) });
     void queryClient.invalidateQueries({ queryKey: l2CircuitsQueryKey(device.id) });
     void queryClient.invalidateQueries({ queryKey: l2CircuitsQueryKey() });
+    void queryClient.invalidateQueries({ queryKey: ["communityLibrary", device.id] });
+    void queryClient.invalidateQueries({ queryKey: ["communitySets", device.id] });
   };
 
   const handleCollect = () => {

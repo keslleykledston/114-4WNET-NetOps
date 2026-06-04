@@ -76,7 +76,7 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 210 40% 98%; /* Light gray-blue */
+  --background: 210 40% 98%;
   --foreground: 222.2 84% 4.9%;
   --border: 214.3 31.8% 91.4%;
   --card: 0 0% 100%;
@@ -96,7 +96,7 @@
   --popover-foreground: 222.2 84% 4.9%;
   --popover-border: 214.3 31.8% 91.4%;
   
-  --primary: 191 97% 31%; /* Deep Cyan */
+  --primary: 217 91% 60%;
   --primary-foreground: 0 0% 100%;
   
   --secondary: 210 40% 96.1%;
@@ -151,50 +151,50 @@
   --badge-outline: rgba(255,255,255, .05);
   --opaque-button-border-intensity: 9;
 
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(255,255,255, .03);
+  --elevate-2: rgba(255,255,255, .07);
 
-  /* Cockpit dark mode */
-  --background: 224 71% 4%; /* Very deep blue/black */
+  /* Legacy-aligned dark mode */
+  --background: 226 31% 8%;
   --foreground: 213 31% 91%;
-  
-  --border: 216 34% 17%;
-  --card: 224 71% 6%;
+
+  --border: 228 26% 17%;
+  --card: 225 27% 10%;
   --card-foreground: 213 31% 91%;
-  --card-border: 216 34% 17%;
-  
-  --sidebar: 224 71% 5%;
+  --card-border: 228 26% 17%;
+
+  --sidebar: 225 20% 12%;
   --sidebar-foreground: 213 31% 91%;
-  --sidebar-border: 216 34% 17%;
-  --sidebar-primary: 191 97% 41%;
+  --sidebar-border: 228 26% 17%;
+  --sidebar-primary: 217 91% 60%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 216 34% 17%;
+  --sidebar-accent: 227 22% 16%;
   --sidebar-accent-foreground: 213 31% 91%;
-  --sidebar-ring: 191 97% 41%;
+  --sidebar-ring: 217 91% 60%;
   
-  --popover: 224 71% 6%;
+  --popover: 225 27% 10%;
   --popover-foreground: 213 31% 91%;
-  --popover-border: 216 34% 17%;
+  --popover-border: 228 26% 17%;
   
-  --primary: 191 97% 41%; /* Bright Cyan for NOC feel */
-  --primary-foreground: 224 71% 4%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 226 31% 8%;
   
-  --secondary: 216 34% 17%;
+  --secondary: 227 22% 16%;
   --secondary-foreground: 213 31% 91%;
   
-  --muted: 216 34% 17%;
+  --muted: 227 22% 16%;
   --muted-foreground: 215 20.2% 65.1%;
   
-  --accent: 216 34% 17%;
+  --accent: 227 22% 16%;
   --accent-foreground: 213 31% 91%;
   
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
   
-  --input: 216 34% 17%;
-  --ring: 191 97% 41%;
+  --input: 228 26% 17%;
+  --ring: 217 91% 60%;
   
-  --chart-1: 191 97% 41%;
+  --chart-1: 217 91% 60%;
   --chart-2: 210 100% 60%;
   --chart-3: 30 100% 60%;
   --chart-4: 120 100% 40%;
@@ -217,6 +217,8 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-size: 14px;
+    line-height: 1.45;
   }
 }
 
@@ -243,6 +245,24 @@
 
   .toggle-elevate.toggle-elevated::before {
     background-color: var(--elevate-2);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(228 26% 17%);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(227 22% 24%);
   }
 
   .border.toggle-elevate::before {

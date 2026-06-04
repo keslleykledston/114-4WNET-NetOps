@@ -234,6 +234,12 @@ export const GetMyPermissionsResponse = zod.object({
 }).optional(),
   "audit": zod.object({
   "read": zod.boolean().optional()
+}).optional(),
+  "bgp": zod.object({
+  "read": zod.boolean().optional(),
+  "cleanup": zod.object({
+  "plan": zod.boolean().optional()
+}).optional()
 }).optional()
 })
 })
@@ -571,15 +577,7 @@ export const ListDevicesResponseItem = zod.object({
   "site": zod.string(),
   "role": zod.string().nullish().describe('pe, p, ce, sw'),
   "groupId": zod.number().nullish(),
-  "connectorId": zod.number().nullish(),
-  "connectorGroupId": zod.number().nullish(),
   "snmpCommunity": zod.string().nullish(),
-  "connectorName": zod.string().nullish(),
-  "connectorGroupName": zod.string().nullish(),
-  "connectorGroupStrategy": zod.string().nullish(),
-  "tenantId": zod.number().nullish(),
-  "tenantName": zod.string().nullish(),
-  "accessMode": zod.string().nullish(),
   "netboxDeviceId": zod.number().nullish().describe('Future Netbox integration ID'),
   "lastSeen": zod.string().nullish(),
   "status": zod.string().describe('active, unreachable, unknown'),
@@ -603,8 +601,6 @@ export const CreateDeviceBody = zod.object({
   "site": zod.string(),
   "role": zod.string().optional(),
   "groupId": zod.number().optional(),
-  "connectorId": zod.number().optional(),
-  "connectorGroupId": zod.number().optional(),
   "snmpCommunity": zod.string().optional(),
   "netboxDeviceId": zod.number().optional()
 })
@@ -647,15 +643,7 @@ export const GetDeviceResponse = zod.object({
   "site": zod.string(),
   "role": zod.string().nullish().describe('pe, p, ce, sw'),
   "groupId": zod.number().nullish(),
-  "connectorId": zod.number().nullish(),
-  "connectorGroupId": zod.number().nullish(),
   "snmpCommunity": zod.string().nullish(),
-  "connectorName": zod.string().nullish(),
-  "connectorGroupName": zod.string().nullish(),
-  "connectorGroupStrategy": zod.string().nullish(),
-  "tenantId": zod.number().nullish(),
-  "tenantName": zod.string().nullish(),
-  "accessMode": zod.string().nullish(),
   "netboxDeviceId": zod.number().nullish().describe('Future Netbox integration ID'),
   "lastSeen": zod.string().nullish(),
   "status": zod.string().describe('active, unreachable, unknown'),
@@ -682,8 +670,6 @@ export const UpdateDeviceBody = zod.object({
   "site": zod.string().optional(),
   "role": zod.string().optional(),
   "groupId": zod.number().optional(),
-  "connectorId": zod.number().optional(),
-  "connectorGroupId": zod.number().optional(),
   "snmpCommunity": zod.string().optional(),
   "status": zod.string().optional()
 })
@@ -699,15 +685,7 @@ export const UpdateDeviceResponse = zod.object({
   "site": zod.string(),
   "role": zod.string().nullish().describe('pe, p, ce, sw'),
   "groupId": zod.number().nullish(),
-  "connectorId": zod.number().nullish(),
-  "connectorGroupId": zod.number().nullish(),
   "snmpCommunity": zod.string().nullish(),
-  "connectorName": zod.string().nullish(),
-  "connectorGroupName": zod.string().nullish(),
-  "connectorGroupStrategy": zod.string().nullish(),
-  "tenantId": zod.number().nullish(),
-  "tenantName": zod.string().nullish(),
-  "accessMode": zod.string().nullish(),
   "netboxDeviceId": zod.number().nullish().describe('Future Netbox integration ID'),
   "lastSeen": zod.string().nullish(),
   "status": zod.string().describe('active, unreachable, unknown'),
@@ -735,7 +713,12 @@ export const TestDeviceConnectionResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
   "latencyMs": zod.number().nullable(),
-  "hostname": zod.string().nullish()
+  "hostname": zod.string().nullish(),
+  "configCollect": zod.object({
+  "status": zod.enum(['queued', 'failed']).optional(),
+  "jobId": zod.number().optional(),
+  "message": zod.string().optional()
+}).optional()
 })
 
 
@@ -758,6 +741,29 @@ export const GetDeviceCollectedConfigResponse = zod.object({
   "parsedL3vpn": zod.string().nullish().describe('JSON VRF\/L3VPN instances'),
   "collectedAt": zod.string()
 })
+
+
+/**
+ * @summary List device config history
+ */
+export const ListDeviceConfigHistoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListDeviceConfigHistoryResponseItem = zod.object({
+  "id": zod.number(),
+  "device_id": zod.number(),
+  "device_hostname": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "size_bytes": zod.number(),
+  "hash": zod.string(),
+  "parser_status": zod.string().nullish(),
+  "parser_error": zod.string().nullish(),
+  "collected_at": zod.string(),
+  "diff_id": zod.number().nullish(),
+  "previous_config_id": zod.number().nullish()
+})
+export const ListDeviceConfigHistoryResponse = zod.array(ListDeviceConfigHistoryResponseItem)
 
 
 /**
@@ -1512,7 +1518,8 @@ export const previewProvisioningConfigBodyTwoModeDefault = `dry_run`;
 
 export const PreviewProvisioningConfigBody = zod.union([zod.object({
   "deviceId": zod.number(),
-  "serviceType": zod.string(),
+  "serviceType": zod.string().optional(),
+  "templateId": zod.string().optional(),
   "parameters": zod.record(zod.string(), zod.unknown()),
   "maintenanceWindowStart": zod.string().nullish(),
   "maintenanceWindowEnd": zod.string().nullish(),
@@ -1528,25 +1535,39 @@ export const PreviewProvisioningConfigBody = zod.union([zod.object({
 })])
 
 export const PreviewProvisioningConfigResponse = zod.union([zod.object({
+  "status": zod.enum(['valid', 'warning', 'blocked']),
   "deviceId": zod.number(),
+  "templateId": zod.string(),
   "serviceType": zod.string(),
   "configPreview": zod.string(),
   "rollbackPreview": zod.string(),
+  "executionPlan": zod.array(zod.string()),
   "validations": zod.array(zod.object({
   "name": zod.string(),
   "passed": zod.boolean(),
   "message": zod.string(),
   "severity": zod.string().optional()
 })),
-  "risks": zod.array(zod.string()),
+  "risks": zod.array(zod.object({
+  "code": zod.string(),
+  "message": zod.string(),
+  "severity": zod.enum(['info', 'warn', 'error'])
+})),
+  "precheckHints": zod.array(zod.string()),
+  "postcheckHints": zod.array(zod.string()),
   "missingData": zod.array(zod.string()),
+  "blockedReasons": zod.array(zod.string()),
   "maintenanceWindow": zod.object({
   "start": zod.string().nullish(),
   "end": zod.string().nullish()
 }).nullish(),
   "rollbackPlan": zod.string().nullish(),
   "applyBlocked": zod.boolean(),
-  "applyBlockedReason": zod.string().nullish()
+  "applyBlockedReason": zod.string().nullish(),
+  "commandsGenerated": zod.array(zod.string()),
+  "warnings": zod.array(zod.string()),
+  "conflicts": zod.array(zod.string()),
+  "missingResources": zod.array(zod.string())
 }),zod.object({
   "status": zod.enum(['valid', 'warning', 'blocked']),
   "deviceId": zod.number(),
@@ -1980,6 +2001,51 @@ export const GetCollectedConfigResponse = zod.object({
 
 
 /**
+ * @summary Get config history entry
+ */
+export const GetConfigParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConfigResponse = zod.object({
+  "id": zod.number(),
+  "device_id": zod.number(),
+  "device_hostname": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "size_bytes": zod.number(),
+  "hash": zod.string(),
+  "parser_status": zod.string().nullish(),
+  "parser_error": zod.string().nullish(),
+  "collected_at": zod.string(),
+  "diff_id": zod.number().nullish(),
+  "previous_config_id": zod.number().nullish()
+}).and(zod.object({
+  "raw_config": zod.string().nullish(),
+  "connector_id": zod.number().nullish(),
+  "connector_job_id": zod.number().nullish(),
+  "parsed_summary_json": zod.record(zod.string(), zod.unknown()).nullish()
+}))
+
+
+/**
+ * @summary Get config diff against previous version
+ */
+export const GetConfigDiffParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConfigDiffResponse = zod.object({
+  "id": zod.number(),
+  "device_id": zod.number(),
+  "previous_config_id": zod.number().nullish(),
+  "current_config_id": zod.number(),
+  "diff_summary": zod.string().nullish(),
+  "diff_text": zod.string().nullish(),
+  "created_at": zod.string()
+})
+
+
+/**
  * @summary List SNMP polling snapshots
  */
 export const listSnmpSnapshotsQueryLimitDefault = 200;
@@ -2057,13 +2123,13 @@ export const ListNetopsDeviceInterfacesResponseItem = zod.object({
   "operStatus": zod.enum(['up', 'down', 'unknown']),
   "ipv4": zod.array(zod.string()),
   "ipv6": zod.array(zod.string()),
-  "vlan": zod.number().nullish(),
+  "vlan": zod.number().nullish().describe('Service VLAN only. Default\/reserved VLAN 1 is normalized to null.'),
   "vrf": zod.string().nullish(),
   "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db']),
   "ifIndex": zod.number().optional(),
   "kind": zod.enum(['physical', 'aggregate', 'subinterface', 'vlanif', 'loopback', 'tunnel', 'virtual_template', 'null', 'other']).optional(),
   "parentInterface": zod.string().optional(),
-  "vlanId": zod.number().optional(),
+  "vlanId": zod.number().optional().describe('Service VLAN only. Default\/reserved VLAN 1 is omitted.'),
   "encapsulation": zod.string().optional()
 })
 export const ListNetopsDeviceInterfacesResponse = zod.array(ListNetopsDeviceInterfacesResponseItem)
@@ -2431,13 +2497,13 @@ export const GetDeviceDiscoverySnapshotResponse = zod.union([zod.object({
   "operStatus": zod.enum(['up', 'down', 'unknown']),
   "ipv4": zod.array(zod.string()),
   "ipv6": zod.array(zod.string()),
-  "vlan": zod.number().nullish(),
+  "vlan": zod.number().nullish().describe('Service VLAN only. Default\/reserved VLAN 1 is normalized to null.'),
   "vrf": zod.string().nullish(),
   "source": zod.enum(['snmp', 'ssh', 'snapshot', 'mock', 'db']),
   "ifIndex": zod.number().optional(),
   "kind": zod.enum(['physical', 'aggregate', 'subinterface', 'vlanif', 'loopback', 'tunnel', 'virtual_template', 'null', 'other']).optional(),
   "parentInterface": zod.string().optional(),
-  "vlanId": zod.number().optional(),
+  "vlanId": zod.number().optional().describe('Service VLAN only. Default\/reserved VLAN 1 is omitted.'),
   "encapsulation": zod.string().optional()
 }).and(zod.object({
   "source": zod.enum(['ssh_live', 'ssh_running_config', 'manual_upload', 'snmp_snapshot', 'local_db', 'netbox']),
@@ -2724,6 +2790,119 @@ export const QueryDeviceBgpPeerRoutesResponse = zod.object({
   "evidence": zod.string()
 })),
   "errorMessage": zod.string().optional()
+})
+
+
+/**
+ * @summary Analyze a BGP peer cleanup plan
+ */
+export const AnalyzeDeviceBgpPeerCleanupParams = zod.object({
+  "id": zod.coerce.number(),
+  "peerIp": zod.coerce.string()
+})
+
+export const AnalyzeDeviceBgpPeerCleanupBody = zod.object({
+  "validateReadOnly": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Get a saved BGP cleanup analysis
+ */
+export const GetBgpPeerCleanupAnalysisParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetBgpPeerCleanupAnalysisResponse = zod.object({
+  "analysisId": zod.number(),
+  "deviceId": zod.number(),
+  "peerIp": zod.string(),
+  "vrf": zod.string().nullable(),
+  "afi": zod.string(),
+  "safi": zod.string(),
+  "peerRole": zod.string().nullish(),
+  "peerCategory": zod.string().nullish(),
+  "state": zod.string(),
+  "peerAs": zod.number().nullable(),
+  "importPolicies": zod.array(zod.string()),
+  "exportPolicies": zod.array(zod.string()),
+  "recommendation": zod.enum(['full', 'partial', 'skip']),
+  "riskLevel": zod.enum(['low', 'medium', 'high']),
+  "dependencies": zod.object({
+  "exclusive": zod.array(zod.object({
+  "type": zod.enum(['route-policy', 'ip-prefix', 'ipv6-prefix', 'community-filter', 'as-path-filter', 'extcommunity-filter', 'acl']),
+  "name": zod.string(),
+  "status": zod.enum(['exclusive', 'shared', 'ambiguous']),
+  "users": zod.array(zod.object({
+  "peerIp": zod.string(),
+  "state": zod.string(),
+  "vrf": zod.string().nullable(),
+  "afi": zod.string(),
+  "safi": zod.string()
+})),
+  "evidence": zod.string(),
+  "reason": zod.string().nullish()
+})),
+  "shared": zod.array(zod.object({
+  "type": zod.enum(['route-policy', 'ip-prefix', 'ipv6-prefix', 'community-filter', 'as-path-filter', 'extcommunity-filter', 'acl']),
+  "name": zod.string(),
+  "status": zod.enum(['exclusive', 'shared', 'ambiguous']),
+  "users": zod.array(zod.object({
+  "peerIp": zod.string(),
+  "state": zod.string(),
+  "vrf": zod.string().nullable(),
+  "afi": zod.string(),
+  "safi": zod.string()
+})),
+  "evidence": zod.string(),
+  "reason": zod.string().nullish()
+})),
+  "ambiguous": zod.array(zod.object({
+  "type": zod.enum(['route-policy', 'ip-prefix', 'ipv6-prefix', 'community-filter', 'as-path-filter', 'extcommunity-filter', 'acl']),
+  "name": zod.string(),
+  "status": zod.enum(['exclusive', 'shared', 'ambiguous']),
+  "users": zod.array(zod.object({
+  "peerIp": zod.string(),
+  "state": zod.string(),
+  "vrf": zod.string().nullable(),
+  "afi": zod.string(),
+  "safi": zod.string()
+})),
+  "evidence": zod.string(),
+  "reason": zod.string().nullish()
+}))
+}),
+  "script": zod.object({
+  "removalCommands": zod.array(zod.string()),
+  "validationBefore": zod.array(zod.string()),
+  "validationAfter": zod.array(zod.string()),
+  "sha256": zod.string()
+}),
+  "warnings": zod.array(zod.string()),
+  "blockedReasons": zod.array(zod.string()),
+  "twin": zod.object({
+  "peerIp": zod.string().optional(),
+  "state": zod.string().optional(),
+  "afi": zod.string().optional(),
+  "vrf": zod.string().nullish(),
+  "remoteAs": zod.number().nullish()
+}).nullish(),
+  "collectedAt": zod.coerce.date().nullable(),
+  "snapshotSource": zod.string()
+})
+
+
+/**
+ * @summary Export a BGP cleanup analysis as markdown
+ */
+export const ExportBgpPeerCleanupAnalysisParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ExportBgpPeerCleanupAnalysisResponse = zod.object({
+  "analysisId": zod.number(),
+  "markdown": zod.string(),
+  "exportedAt": zod.coerce.date()
 })
 
 
@@ -3297,4 +3476,49 @@ export const SyncNetBoxDevicesLocalResponse = zod.object({
   "skipped": zod.number(),
   "warningsList": zod.array(zod.string())
 }))
+
+
+/**
+ * @summary Test NETCONF connectivity for a device
+ */
+export const testNetconfConnectorBodyPortDefault = 830;
+
+export const TestNetconfConnectorBody = zod.object({
+  "device_id": zod.number(),
+  "credential_id": zod.string().optional(),
+  "rpc": zod.string().optional().describe('Optional NETCONF RPC name; defaults to get'),
+  "port": zod.number().default(testNetconfConnectorBodyPortDefault),
+  "timeout_seconds": zod.number().optional()
+})
+
+export const TestNetconfConnectorResponse = zod.object({
+  "success": zod.boolean().optional(),
+  "stdout": zod.string().optional(),
+  "stderr": zod.string().optional(),
+  "exit_code": zod.number().optional(),
+  "result_json": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+
+/**
+ * @summary Fetch running-config via NETCONF
+ */
+export const getNetconfConfigBodyPortDefault = 830;
+
+export const GetNetconfConfigBody = zod.object({
+  "device_id": zod.number(),
+  "credential_id": zod.string().optional(),
+  "rpc": zod.string().optional().describe('Optional NETCONF RPC name; defaults to get-config'),
+  "port": zod.number().default(getNetconfConfigBodyPortDefault),
+  "timeout_seconds": zod.number().optional()
+})
+
+export const GetNetconfConfigResponse = zod.object({
+  "success": zod.boolean().optional(),
+  "stdout": zod.string().optional(),
+  "stderr": zod.string().optional(),
+  "exit_code": zod.number().optional(),
+  "result_json": zod.record(zod.string(), zod.unknown()).optional()
+})
+
 

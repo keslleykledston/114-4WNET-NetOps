@@ -29,6 +29,7 @@
 - `/` -> Dashboard
 - `/devices` -> Devices
 - `/devices/:id` -> Device detail
+- `/netops-operations` -> arvore operacional por cliente/empresa/dispositivo
 - `/compliance` -> Compliance
 - `/provisioning` -> Provisioning
 - `/templates` -> Templates
@@ -44,6 +45,7 @@
 - Radius pequeno via `--radius: 0.25rem`.
 - Destaque ativo usa `bg-sidebar-primary text-sidebar-primary-foreground`.
 - Cores derivadas de tokens, nao de paleta hardcoded.
+- Tipografia e densidade foram afinadas para ficar mais perto do legado `60-bgp_manager`: `Inter` + `JetBrains Mono`, sidebar de 220px, padding principal de 32px, títulos principais menores e menu mais compacto.
 
 ## Pontos seguros para extensao
 
@@ -63,6 +65,8 @@
 - Modal de peer mantem desenho escuro redesenhado e adiciona source/confidence/evidence curta.
 - Discovery panel mostra status persistido, fontes SSH/SNMP/cache, data do ultimo run e contadores de interfaces, peers, VRFs, L2VPN e policies.
 - Quando nao ha snapshot persistido, BGP mostra empty state pedindo discovery em vez de tentar interpretar CLI.
+- A rota `NetOps Operations` agora concentra a arvore operacional e tambem as acoes de inventario/admin (criar, editar, importar, testar e remover device); `/devices` virou redirect legado e a entrada saiu da sidebar.
+- Communities no detalhe do device agora trazem biblioteca com busca, sync backup/live e community sets com origem/status/members, mantendo o layout shadcn atual.
 
 ## Baseline v0.2.8 compliance grouping
 

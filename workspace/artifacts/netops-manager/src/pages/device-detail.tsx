@@ -109,7 +109,6 @@ export default function DeviceDetail() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || "",
-      connectorGroupId: values.connectorGroupId ? Number(values.connectorGroupId) : null,
     };
 
     if (values.snmpCommunity.trim().length > 0) {
@@ -143,7 +142,7 @@ export default function DeviceDetail() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
             <Server className="h-8 w-8 text-primary" />
             {device.hostname}
           </h1>

@@ -25,6 +25,15 @@
 - [ ] **Próximo:** diff histórico de config — ver `docs/connectors/SSH_CONFIG_BACKUP_PLAN.md`
 - [x] FASE 5.4 A+B: job `SSH_CONFIG_BUNDLE` + enqueue após SSH OK + persist raw + parse async
 
+## v0.4.1 — BGP Peer Cleanup Planner (Completed)
+
+- [x] Backend planner module read-only
+- [x] Frontend modal and API helpers
+- [x] OpenAPI schemas and routes
+- [x] Selftest dedicated do planner
+- [x] Validation report atualizado
+- [x] Build/typecheck local concluídos
+
 ## v0.3.4 — Operational Pilot NOC (In Development)
 
 - [ ] TAREFA 1: Select pilot devices (3 devices, create device matrix) — ✅ DONE

@@ -155,6 +155,16 @@
   - botoes BGP read-only por peer
   - endpoints stub para detalhes, prefixos, policies, communities e diagnostico
 
+### BGP Peer Cleanup Planner
+
+- planner read-only para peers BGP inativos
+- analise de dependencias exclusivas, compartilhadas e ambíguas
+- export de script manual para revisão humana
+- modal dedicado em drilldown BGP com banner de segurança
+- audit events:
+  - `bgp_cleanup_analysis_created`
+  - `bgp_cleanup_script_exported`
+
 ### CI
 
 - workflow GitHub Actions em `.github/workflows/ci.yml`

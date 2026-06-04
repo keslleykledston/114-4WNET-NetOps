@@ -141,7 +141,7 @@ export default function ConnectorGroupsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Waypoints className="h-6 w-6 text-primary" />
             Connector Groups
           </h1>

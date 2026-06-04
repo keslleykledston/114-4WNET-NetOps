@@ -166,7 +166,7 @@ function ActionBody({
       return (
         <dl className="grid gap-3 text-sm">
           <DetailRow label="Peer IP" value={data.peerIp} mono />
-          <DetailRow label="Nome" value={data.name ?? data.description ?? "-"} />
+          <DetailRow label="Nome" value={data.description ?? data.name ?? "-"} />
           <DetailRow label="ASN remoto" value={data.remoteAs?.toString() ?? "-"} />
           <DetailRow label="Estado" value={data.state} />
           <DetailRow label="Papel" value={`${data.role} (${data.roleSource})`} />

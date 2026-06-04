@@ -9,7 +9,8 @@ import type { ProvisioningPreviewInputParameters } from './provisioningPreviewIn
 
 export interface ProvisioningPreviewInput {
   deviceId: number;
-  serviceType: string;
+  serviceType?: string;
+  templateId?: string;
   parameters: ProvisioningPreviewInputParameters;
   /** @nullable */
   maintenanceWindowStart?: string | null;

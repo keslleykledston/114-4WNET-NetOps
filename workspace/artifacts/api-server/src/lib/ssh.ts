@@ -61,7 +61,7 @@ function normalizeSSHErrorMessage(message: string): string {
 }
 
 const PASSWORD_CHANGE_PROMPT = /Change now\?\s*\[Y\/N\]:/i;
-const SHELL_PROMPT_LINE = /^<[^>\n]+>\s*$/;
+const SHELL_PROMPT_LINE = /^(<[^>\n]+>|\[[^\]\n]+\])\s*$/;
 const ANSI_ESCAPE = /\u001b\[[0-9;]*[A-Za-z]/g;
 
 function stripAnsi(value: string): string {

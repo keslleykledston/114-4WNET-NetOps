@@ -445,7 +445,10 @@ export interface NetopsInterface {
   operStatus: NetopsInterfaceOperStatus;
   ipv4: string[];
   ipv6: string[];
-  /** @nullable */
+  /**
+     * Service VLAN only. Default/reserved VLAN 1 is normalized to null.
+     * @nullable
+     */
   vlan?: number | null;
   /** @nullable */
   vrf?: string | null;
@@ -453,6 +456,7 @@ export interface NetopsInterface {
   ifIndex?: number;
   kind?: NetopsInterfaceKind;
   parentInterface?: string;
+  /** Service VLAN only. Default/reserved VLAN 1 is omitted. */
   vlanId?: number;
   encapsulation?: string;
 }
@@ -634,6 +638,131 @@ export interface BgpPeerDetails {
   evidence: DiscoveryEvidenceSummary[];
 }
 
+export interface BgpPeerCleanupAnalyzeRequest {
+  validateReadOnly?: boolean;
+}
+
+export type BgpPeerCleanupRecommendation = typeof BgpPeerCleanupRecommendation[keyof typeof BgpPeerCleanupRecommendation];
+
+
+export const BgpPeerCleanupRecommendation = {
+  full: 'full',
+  partial: 'partial',
+  skip: 'skip',
+} as const;
+
+export type BgpPeerCleanupRisk = typeof BgpPeerCleanupRisk[keyof typeof BgpPeerCleanupRisk];
+
+
+export const BgpPeerCleanupRisk = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
+export type BgpPeerCleanupDependencyStatus = typeof BgpPeerCleanupDependencyStatus[keyof typeof BgpPeerCleanupDependencyStatus];
+
+
+export const BgpPeerCleanupDependencyStatus = {
+  exclusive: 'exclusive',
+  shared: 'shared',
+  ambiguous: 'ambiguous',
+} as const;
+
+export type BgpPeerCleanupDependencyType = typeof BgpPeerCleanupDependencyType[keyof typeof BgpPeerCleanupDependencyType];
+
+
+export const BgpPeerCleanupDependencyType = {
+  'route-policy': 'route-policy',
+  'ip-prefix': 'ip-prefix',
+  'ipv6-prefix': 'ipv6-prefix',
+  'community-filter': 'community-filter',
+  'as-path-filter': 'as-path-filter',
+  'extcommunity-filter': 'extcommunity-filter',
+  acl: 'acl',
+} as const;
+
+export type BgpPeerCleanupDependencyUsersItem = {
+  peerIp: string;
+  state: string;
+  /** @nullable */
+  vrf: string | null;
+  afi: string;
+  safi: string;
+};
+
+export interface BgpPeerCleanupDependency {
+  type: BgpPeerCleanupDependencyType;
+  name: string;
+  status: BgpPeerCleanupDependencyStatus;
+  users: BgpPeerCleanupDependencyUsersItem[];
+  evidence: string;
+  /** @nullable */
+  reason?: string | null;
+}
+
+export interface BgpPeerCleanupScript {
+  removalCommands: string[];
+  validationBefore: string[];
+  validationAfter: string[];
+  sha256: string;
+}
+
+export type BgpPeerCleanupAnalysisDependencies = {
+  exclusive: BgpPeerCleanupDependency[];
+  shared: BgpPeerCleanupDependency[];
+  ambiguous: BgpPeerCleanupDependency[];
+};
+
+/**
+ * @nullable
+ */
+export type BgpPeerCleanupAnalysisTwin = {
+  peerIp?: string;
+  state?: string;
+  afi?: string;
+  /** @nullable */
+  vrf?: string | null;
+  /** @nullable */
+  remoteAs?: number | null;
+} | null;
+
+export interface BgpPeerCleanupAnalysis {
+  analysisId: number;
+  deviceId: number;
+  peerIp: string;
+  /** @nullable */
+  vrf: string | null;
+  afi: string;
+  safi: string;
+  /** @nullable */
+  peerRole?: string | null;
+  /** @nullable */
+  peerCategory?: string | null;
+  state: string;
+  /** @nullable */
+  peerAs: number | null;
+  importPolicies: string[];
+  exportPolicies: string[];
+  recommendation: BgpPeerCleanupRecommendation;
+  riskLevel: BgpPeerCleanupRisk;
+  dependencies: BgpPeerCleanupAnalysisDependencies;
+  script: BgpPeerCleanupScript;
+  warnings: string[];
+  blockedReasons: string[];
+  /** @nullable */
+  twin?: BgpPeerCleanupAnalysisTwin;
+  /** @nullable */
+  collectedAt: string | null;
+  snapshotSource: string;
+}
+
+export interface BgpPeerCleanupExportResponse {
+  analysisId: number;
+  markdown: string;
+  exportedAt: string;
+}
+
 export type DeviceDiscoverySnapshotParserVersions = {
   interface?: string;
 };
@@ -772,22 +901,6 @@ export interface Device {
   /** @nullable */
   groupId?: number | null;
   /** @nullable */
-  connectorId?: number | null;
-  /** @nullable */
-  connectorGroupId?: number | null;
-  /** @nullable */
-  connectorName?: string | null;
-  /** @nullable */
-  connectorGroupName?: string | null;
-  /** @nullable */
-  connectorGroupStrategy?: string | null;
-  /** @nullable */
-  tenantId?: number | null;
-  /** @nullable */
-  tenantName?: string | null;
-  /** @nullable */
-  accessMode?: string | null;
-  /** @nullable */
   snmpCommunity?: string | null;
   /**
      * Future Netbox integration ID
@@ -813,8 +926,6 @@ export interface DeviceInput {
   site: string;
   role?: string;
   groupId?: number;
-  connectorId?: number | null;
-  connectorGroupId?: number | null;
   snmpCommunity?: string;
   netboxDeviceId?: number;
 }
@@ -830,8 +941,6 @@ export interface DeviceUpdate {
   site?: string;
   role?: string;
   groupId?: number;
-  connectorId?: number | null;
-  connectorGroupId?: number | null;
   snmpCommunity?: string;
   status?: string;
 }
@@ -850,6 +959,20 @@ export interface DeviceStats {
   bySite: CountByKey[];
 }
 
+export type ConnectionTestResultConfigCollectStatus = typeof ConnectionTestResultConfigCollectStatus[keyof typeof ConnectionTestResultConfigCollectStatus];
+
+
+export const ConnectionTestResultConfigCollectStatus = {
+  queued: 'queued',
+  failed: 'failed',
+} as const;
+
+export type ConnectionTestResultConfigCollect = {
+  status?: ConnectionTestResultConfigCollectStatus;
+  jobId?: number;
+  message?: string;
+};
+
 export interface ConnectionTestResult {
   success: boolean;
   message: string;
@@ -857,6 +980,7 @@ export interface ConnectionTestResult {
   latencyMs: number | null;
   /** @nullable */
   hostname?: string | null;
+  configCollect?: ConnectionTestResultConfigCollect;
 }
 
 export interface DeviceGroup {
@@ -1154,7 +1278,8 @@ export type ProvisioningPreviewInputParameters = { [key: string]: unknown };
 
 export interface ProvisioningPreviewInput {
   deviceId: number;
-  serviceType: string;
+  serviceType?: string;
+  templateId?: string;
   parameters: ProvisioningPreviewInputParameters;
   /** @nullable */
   maintenanceWindowStart?: string | null;
@@ -1171,6 +1296,15 @@ export interface ProvisioningPreviewValidation {
   severity?: string;
 }
 
+export type ProvisioningPreviewResultStatus = typeof ProvisioningPreviewResultStatus[keyof typeof ProvisioningPreviewResultStatus];
+
+
+export const ProvisioningPreviewResultStatus = {
+  valid: 'valid',
+  warning: 'warning',
+  blocked: 'blocked',
+} as const;
+
 /**
  * @nullable
  */
@@ -1181,14 +1315,35 @@ export type ProvisioningPreviewResultMaintenanceWindow = {
   end?: string | null;
 } | null;
 
+export type ProvisioningRiskSeverity = typeof ProvisioningRiskSeverity[keyof typeof ProvisioningRiskSeverity];
+
+
+export const ProvisioningRiskSeverity = {
+  info: 'info',
+  warn: 'warn',
+  error: 'error',
+} as const;
+
+export interface ProvisioningRisk {
+  code: string;
+  message: string;
+  severity: ProvisioningRiskSeverity;
+}
+
 export interface ProvisioningPreviewResult {
+  status: ProvisioningPreviewResultStatus;
   deviceId: number;
+  templateId: string;
   serviceType: string;
   configPreview: string;
   rollbackPreview: string;
+  executionPlan: string[];
   validations: ProvisioningPreviewValidation[];
-  risks: string[];
+  risks: ProvisioningRisk[];
+  precheckHints: string[];
+  postcheckHints: string[];
   missingData: string[];
+  blockedReasons: string[];
   /** @nullable */
   maintenanceWindow?: ProvisioningPreviewResultMaintenanceWindow;
   /** @nullable */
@@ -1196,6 +1351,10 @@ export interface ProvisioningPreviewResult {
   applyBlocked: boolean;
   /** @nullable */
   applyBlockedReason?: string | null;
+  commandsGenerated: string[];
+  warnings: string[];
+  conflicts: string[];
+  missingResources: string[];
 }
 
 export interface ProvisioningParameterField {
@@ -1235,21 +1394,6 @@ export interface ProvisioningValidationItem {
   passed: boolean;
   message: string;
   severity?: ProvisioningValidationItemSeverity;
-}
-
-export type ProvisioningRiskSeverity = typeof ProvisioningRiskSeverity[keyof typeof ProvisioningRiskSeverity];
-
-
-export const ProvisioningRiskSeverity = {
-  info: 'info',
-  warn: 'warn',
-  error: 'error',
-} as const;
-
-export interface ProvisioningRisk {
-  code: string;
-  message: string;
-  severity: ProvisioningRiskSeverity;
 }
 
 export type ProvisioningPreviewRequestParameters = { [key: string]: unknown };
@@ -1467,6 +1611,55 @@ export interface CollectedConfig {
      */
   parsedL3vpn?: string | null;
   collectedAt: string;
+}
+
+export interface ConfigHistoryItem {
+  id: number;
+  device_id: number;
+  /** @nullable */
+  device_hostname?: string | null;
+  /** @nullable */
+  source?: string | null;
+  size_bytes: number;
+  hash: string;
+  /** @nullable */
+  parser_status?: string | null;
+  /** @nullable */
+  parser_error?: string | null;
+  collected_at: string;
+  /** @nullable */
+  diff_id?: number | null;
+  /** @nullable */
+  previous_config_id?: number | null;
+}
+
+/**
+ * @nullable
+ */
+export type ConfigDetailParsedSummaryJson = { [key: string]: unknown } | null;
+
+export type ConfigDetail = ConfigHistoryItem & ({
+  /** @nullable */
+  raw_config?: string | null;
+  /** @nullable */
+  connector_id?: number | null;
+  /** @nullable */
+  connector_job_id?: number | null;
+  /** @nullable */
+  parsed_summary_json?: ConfigDetailParsedSummaryJson;
+});
+
+export interface ConfigDiff {
+  id: number;
+  device_id: number;
+  /** @nullable */
+  previous_config_id?: number | null;
+  current_config_id: number;
+  /** @nullable */
+  diff_summary?: string | null;
+  /** @nullable */
+  diff_text?: string | null;
+  created_at: string;
 }
 
 export interface CollectConfigInput {
@@ -2482,6 +2675,15 @@ export type UserPermissionsAudit = {
   read?: boolean;
 };
 
+export type UserPermissionsBgpCleanup = {
+  plan?: boolean;
+};
+
+export type UserPermissionsBgp = {
+  read?: boolean;
+  cleanup?: UserPermissionsBgpCleanup;
+};
+
 export interface UserPermissions {
   devices?: UserPermissionsDevices;
   compliance?: UserPermissionsCompliance;
@@ -2489,6 +2691,7 @@ export interface UserPermissions {
   integrations?: UserPermissionsIntegrations;
   users?: UserPermissionsUsers;
   audit?: UserPermissionsAudit;
+  bgp?: UserPermissionsBgp;
 }
 
 export interface UserSession {
@@ -2736,3 +2939,42 @@ export type UpdateIntegrationBody = {
   enabled?: boolean;
   configJson?: UpdateIntegrationBodyConfigJson;
 };
+
+export type TestNetconfConnectorBody = {
+  device_id: number;
+  credential_id?: string;
+  /** Optional NETCONF RPC name; defaults to get */
+  rpc?: string;
+  port?: number;
+  timeout_seconds?: number;
+};
+
+export type TestNetconfConnector200ResultJson = { [key: string]: unknown };
+
+export type TestNetconfConnector200 = {
+  success?: boolean;
+  stdout?: string;
+  stderr?: string;
+  exit_code?: number;
+  result_json?: TestNetconfConnector200ResultJson;
+};
+
+export type GetNetconfConfigBody = {
+  device_id: number;
+  credential_id?: string;
+  /** Optional NETCONF RPC name; defaults to get-config */
+  rpc?: string;
+  port?: number;
+  timeout_seconds?: number;
+};
+
+export type GetNetconfConfig200ResultJson = { [key: string]: unknown };
+
+export type GetNetconfConfig200 = {
+  success?: boolean;
+  stdout?: string;
+  stderr?: string;
+  exit_code?: number;
+  result_json?: GetNetconfConfig200ResultJson;
+};
+

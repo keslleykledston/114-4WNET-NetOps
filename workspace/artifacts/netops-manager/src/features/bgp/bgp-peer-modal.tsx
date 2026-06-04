@@ -56,7 +56,7 @@ export function BgpPeerModal({ device, peer, open, onOpenChange }: BgpPeerModalP
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-xl font-semibold text-slate-100">
-                {data?.name || data?.description || "BGP Peer"}
+                {data?.description || data?.name || "BGP Peer"}
               </DialogTitle>
               <DialogDescription className="font-mono text-sm text-slate-400 mt-2">
                 <span className="text-slate-300">{peerIp}</span>
@@ -329,7 +329,7 @@ function ReferencesTabContent({ peer }: { peer: DiscoveryBgpPeer }) {
     <div className="space-y-4">
       <DetailLine label="Peer IP" value={peer.peerIp} mono />
       <DetailLine label="ASN Remoto" value={peer.remoteAs?.toString() ?? "—"} />
-      <DetailLine label="Nome/Descrição" value={peer.name || peer.description || "—"} />
+      <DetailLine label="Nome/Descrição" value={peer.description || peer.name || "—"} />
       <DetailLine label="Address Family" value={peer.addressFamily} />
       <DetailLine label="Tipo de Sessão" value={peer.sessionType} />
       <DetailLine label="VRF" value={peer.vrf || "—"} />

@@ -49,13 +49,13 @@ export default function ImpactAnalysis() {
   }
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return <div className="p-0">Loading...</div>;
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Impact Analysis</h1>
+        <h1 className="text-2xl font-bold">Impact Analysis</h1>
         <Button onClick={loadData}>Refresh</Button>
       </div>
 
@@ -75,7 +75,7 @@ export default function ImpactAnalysis() {
                   <CardTitle className="text-lg">Total Scenarios</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{summary.totalScenarios || 0}</p>
+                  <p className="text-2xl font-bold">{summary.totalScenarios || 0}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -83,7 +83,7 @@ export default function ImpactAnalysis() {
                   <CardTitle className="text-lg">Open</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-red-600">{summary.openScenarios || 0}</p>
+                  <p className="text-2xl font-bold text-red-600">{summary.openScenarios || 0}</p>
                 </CardContent>
               </Card>
               <Card className="border-red-200 bg-red-50">
@@ -91,7 +91,7 @@ export default function ImpactAnalysis() {
                   <CardTitle className="text-lg text-red-800">Critical</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-red-600">{summary.criticalScenarios || 0}</p>
+                  <p className="text-2xl font-bold text-red-600">{summary.criticalScenarios || 0}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -99,7 +99,7 @@ export default function ImpactAnalysis() {
                   <CardTitle className="text-lg">Affected Services</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{summary.affectedServices || 0}</p>
+                  <p className="text-2xl font-bold">{summary.affectedServices || 0}</p>
                 </CardContent>
               </Card>
             </div>

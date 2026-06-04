@@ -170,7 +170,7 @@ export default function TemplateStudioPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Pencil className="h-8 w-8" />
-        <h1 className="text-3xl font-bold">Template Studio</h1>
+        <h1 className="text-2xl font-bold">Template Studio</h1>
       </div>
 
       <Button onClick={() => { setView("edit"); setCurrentDraft({ body: "" }); }} className="bg-blue-600">

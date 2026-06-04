@@ -12,7 +12,7 @@ import {
 
 export { isNetopsSnmpBgpRealEnabled } from "./operational-bgp.gate.js";
 
-/** RFC4273 peer table base — walks deferred to H3.2+. */
+/** RFC4273 peer table base - walks deferred to H3.2+. */
 export const RFC4273_BGP_PEER_TABLE_BASE = "1.3.6.1.2.1.15.2.1";
 
 /** Placeholder roots for fallback collectors (inventory in pilot). */
@@ -55,7 +55,7 @@ async function collectLiveMode(input: {
   const started = Date.now();
 
   const peers = await withBgpSnmpSession(input.host, input.community, async (session) => {
-    return collectRfc4273BgpPeers(session, warnings);
+    return collectRfc4273BgpPeers(input.deviceId, session, warnings);
   });
 
   console.log(

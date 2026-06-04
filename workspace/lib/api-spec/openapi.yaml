@@ -41,6 +41,8 @@ tags:
     description: Read-only NetOps operational views
   - name: connectors
     description: Connector management and execution
+  - name: bgp-cleanup
+    description: BGP cleanup planning and analysis
 
 paths:
   /healthz:
@@ -2334,6 +2336,74 @@ paths:
               schema:
                 $ref: "#/components/schemas/RouteQueryResponse"
 
+  /devices/{id}/bgp/peers/{peerIp}/cleanup/analyze:
+    post:
+      operationId: analyzeDeviceBgpPeerCleanup
+      tags: [bgp-cleanup]
+      summary: Analyze a BGP peer cleanup plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: peerIp
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BgpPeerCleanupAnalyzeRequest"
+      responses:
+        "201":
+          description: Cleanup analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BgpPeerCleanupAnalysis"
+
+  /bgp-cleanup-analyses/{id}:
+    get:
+      operationId: getBgpPeerCleanupAnalysis
+      tags: [bgp-cleanup]
+      summary: Get a saved BGP cleanup analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cleanup analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BgpPeerCleanupAnalysis"
+
+  /bgp-cleanup-analyses/{id}/export:
+    post:
+      operationId: exportBgpPeerCleanupAnalysis
+      tags: [bgp-cleanup]
+      summary: Export a BGP cleanup analysis as markdown
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Markdown export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BgpPeerCleanupExportResponse"
+
   /devices/{id}/communities/library:
     get:
       operationId: getCommunitiesLibrary
@@ -3627,6 +3697,186 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DiscoveryEvidenceSummary"
+
+    BgpPeerCleanupAnalyzeRequest:
+      type: object
+      properties:
+        validateReadOnly:
+          type: boolean
+
+    BgpPeerCleanupRecommendation:
+      type: string
+      enum: [full, partial, skip]
+
+    BgpPeerCleanupRisk:
+      type: string
+      enum: [low, medium, high]
+
+    BgpPeerCleanupDependencyStatus:
+      type: string
+      enum: [exclusive, shared, ambiguous]
+
+    BgpPeerCleanupDependency:
+      type: object
+      required: [type, name, status, users, evidence]
+      properties:
+        type:
+          type: string
+          enum: [route-policy, ip-prefix, ipv6-prefix, community-filter, as-path-filter, extcommunity-filter, acl]
+        name:
+          type: string
+        status:
+          $ref: "#/components/schemas/BgpPeerCleanupDependencyStatus"
+        users:
+          type: array
+          items:
+            type: object
+            required: [peerIp, state, vrf, afi, safi]
+            properties:
+              peerIp:
+                type: string
+              state:
+                type: string
+              vrf:
+                type: ["string", "null"]
+              afi:
+                type: string
+              safi:
+                type: string
+        evidence:
+          type: string
+        reason:
+          type: ["string", "null"]
+
+    BgpPeerCleanupScript:
+      type: object
+      required: [removalCommands, validationBefore, validationAfter, sha256]
+      properties:
+        removalCommands:
+          type: array
+          items:
+            type: string
+        validationBefore:
+          type: array
+          items:
+            type: string
+        validationAfter:
+          type: array
+          items:
+            type: string
+        sha256:
+          type: string
+
+    BgpPeerCleanupAnalysis:
+      type: object
+      required:
+        - analysisId
+        - deviceId
+        - peerIp
+        - vrf
+        - afi
+        - safi
+        - state
+        - peerAs
+        - importPolicies
+        - exportPolicies
+        - recommendation
+        - riskLevel
+        - dependencies
+        - script
+        - warnings
+        - blockedReasons
+        - collectedAt
+        - snapshotSource
+      properties:
+        analysisId:
+          type: integer
+        deviceId:
+          type: integer
+        peerIp:
+          type: string
+        vrf:
+          type: ["string", "null"]
+        afi:
+          type: string
+        safi:
+          type: string
+        peerRole:
+          type: ["string", "null"]
+        peerCategory:
+          type: ["string", "null"]
+        state:
+          type: string
+        peerAs:
+          type: ["integer", "null"]
+        importPolicies:
+          type: array
+          items:
+            type: string
+        exportPolicies:
+          type: array
+          items:
+            type: string
+        recommendation:
+          $ref: "#/components/schemas/BgpPeerCleanupRecommendation"
+        riskLevel:
+          $ref: "#/components/schemas/BgpPeerCleanupRisk"
+        dependencies:
+          type: object
+          required: [exclusive, shared, ambiguous]
+          properties:
+            exclusive:
+              type: array
+              items:
+                $ref: "#/components/schemas/BgpPeerCleanupDependency"
+            shared:
+              type: array
+              items:
+                $ref: "#/components/schemas/BgpPeerCleanupDependency"
+            ambiguous:
+              type: array
+              items:
+                $ref: "#/components/schemas/BgpPeerCleanupDependency"
+        script:
+          $ref: "#/components/schemas/BgpPeerCleanupScript"
+        warnings:
+          type: array
+          items:
+            type: string
+        blockedReasons:
+          type: array
+          items:
+            type: string
+        twin:
+          type: ["object", "null"]
+          properties:
+            peerIp:
+              type: string
+            state:
+              type: string
+            afi:
+              type: string
+            vrf:
+              type: ["string", "null"]
+            remoteAs:
+              type: ["integer", "null"]
+        collectedAt:
+          type: ["string", "null"]
+          format: date-time
+        snapshotSource:
+          type: string
+
+    BgpPeerCleanupExportResponse:
+      type: object
+      required: [analysisId, markdown, exportedAt]
+      properties:
+        analysisId:
+          type: integer
+        markdown:
+          type: string
+        exportedAt:
+          type: string
+          format: date-time
 
     DeviceDiscoverySnapshot:
       type: object
@@ -6004,6 +6254,16 @@ components:
           properties:
             read:
               type: boolean
+        bgp:
+          type: object
+          properties:
+            read:
+              type: boolean
+            cleanup:
+              type: object
+              properties:
+                plan:
+                  type: boolean
 
     UserSession:
       type: object

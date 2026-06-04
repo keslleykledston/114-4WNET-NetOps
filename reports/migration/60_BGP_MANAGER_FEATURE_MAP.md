@@ -24,8 +24,22 @@
 - API e tela de historico SNMP: `/api/snmp-snapshots` e `SNMP History`.
 - Discovery BGP agora e VRF-aware: coleta SSH cobre `display bgp peer verbose`, `display bgp ipv6 peer verbose`, `vpnv4` e `vpnv6` por `vpn-instance`.
 - Override local de papel BGP ja persistido em `bgp_peer_role_overrides`, com `manual_override > classifier > snapshot > customer(default)`.
+- Communities no detalhe do device ja expõe biblioteca com busca server-side, `Sync backup`, `Sync live (SSH)` e community sets com origem/status/members, em layout shadcn adaptado.
+- O painel de Communities agora preserva a mesma estrutura funcional do legacy: tabela de biblioteca com tags e estado, lista lateral de sets, area de detalhe com preview/aplicar, comparacao de sets via backend dedicado e aviso de referencias ausentes, mantendo o backend atual intacto.
 - OpenAPI, Orval e Zod.
 - CI com typecheck, build e smoke Docker.
+
+## Paridade pratica com a aba `Dispositivos`
+
+- A rota `/netops-operations` deste projeto concentra a arvore operacional e tambem as acoes de inventario/admin que no 60 viviam em `devices`.
+- A rota `/devices` agora e apenas redirect legado para `/netops-operations`.
+- O mecanismo operacional do 60 foi trazido em blocos separados:
+  - `/netops-operations` para a arvore cliente/empresa/dispositivo e subviews operacionais;
+  - `/devices/:id` para resumo, discovery, communities, filters, compliance e provisioning;
+  - `/snmp-history` e `config-history` para historico;
+  - `bgp_peer_role_overrides` e discovery read-only para a classificacao BGP operacional.
+- Na pratica, o 114 ja cobre o fluxo funcional do 60 para inventario, teste de conectividade, coleta read-only e BGP/communities, mas distribui os mecanismos em paginas e painéis diferentes.
+- O que ainda nao esta consolidado na propria aba `Dispositivos` e a arvore hierarquica embutida por cliente/empresa e os subviews internos por device no mesmo layout.
 
 ## Sera portado/adaptado depois
 

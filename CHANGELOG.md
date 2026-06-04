@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.1 — BGP Peer Cleanup Planner (2026-06-04)
+
+- Added read-only BGP peer cleanup planner in the drilldown flow.
+- New endpoints: analyze, fetch saved analysis, export markdown script.
+- Frontend modal with dependency buckets, risk badge, validation commands and copy/export actions.
+- Script generation is review-only: no command execution, no apply, no rollback.
+- Selftest added: `tools/bgp-peer-cleanup-planner-selftest.mjs`.
+
 ## v0.5.1 — Connector Agent Container (2026-05-28)
 
 - Phase 2: `infra/connector-agent/` Python agent (Docker, host network, read-only jobs).

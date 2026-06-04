@@ -11,6 +11,8 @@ import {
   getCommunitiesLibrary,
   getCommunitySets,
   getCommunitySetDetails,
+  postResyncCommunitiesFromConfig,
+  postResyncCommunitiesLive,
   postCreateCommunitySet,
   putUpdateCommunitySet,
   deleteCommunityset,
@@ -33,6 +35,8 @@ router.post("/devices/:id/bgp/peers/:peerIp/routes/query", postDiscoveryRouteQue
 
 // Communities
 router.get("/devices/:id/communities/library", getCommunitiesLibrary);
+router.post("/devices/:id/communities/resync-from-config", postResyncCommunitiesFromConfig);
+router.post("/devices/:id/communities/resync-live", postResyncCommunitiesLive);
 router.get("/devices/:id/community-sets", getCommunitySets);
 router.get("/devices/:id/community-sets/:setId", getCommunitySetDetails);
 router.post("/devices/:id/community-sets", postCreateCommunitySet);

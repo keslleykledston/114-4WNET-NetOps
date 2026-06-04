@@ -31,6 +31,7 @@ import { Download, FileSearch, GitBranch, Network, Save, Search } from "lucide-r
 import { BgpPeerModal } from "./bgp-peer-modal";
 import { BgpPeerRoutesModal } from "./bgp-peer-routes-modal";
 import { BgpPeerDetailModal } from "./bgp-peer-detail-modal";
+import { BgpPeerCleanupModal } from "./bgp-peer-cleanup-modal";
 import { formatBgpUptime } from "./format-bgp-uptime";
 import { CollectSnmpButton } from "@/features/device-inventory/collect-snmp-button";
 import { useDiscoveryBgpPeers, type DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
@@ -152,6 +153,8 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   const [routesDirection, setRoutesDirection] = useState<"received" | "advertised">("received");
   const [detailModalPeer, setDetailModalPeer] = useState<DiscoveryBgpPeer | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [cleanupModalPeer, setCleanupModalPeer] = useState<DiscoveryBgpPeer | null>(null);
+  const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
 
   const listParams = useMemo(
     () => buildListParams(role, stateFilter, afFilter),
@@ -459,9 +462,10 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Peer IP</TableHead>
-                  <TableHead>Nome</TableHead>
+                  <TableHead>Nome / Descrição</TableHead>
                   <TableHead>ASN remoto</TableHead>
-                  <TableHead>Sessao / VRF</TableHead>
+                  <TableHead>Sessão</TableHead>
+                  <TableHead>VRF</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Uptime</TableHead>
                   <TableHead>Papel</TableHead>
@@ -485,10 +489,9 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-[11px] gap-1 hover:bg-slate-800"
+                              className="h-7 w-7 p-0 hover:bg-slate-800"
                             >
                               <GitBranch className="h-3.5 w-3.5" />
-                              <span className="hidden xl:inline">Drilldown</span>
                             </Button>
                           </Link>
                           <Button
@@ -516,13 +519,13 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>{peer.name ?? peer.description ?? "-"}</TableCell>
+                      <TableCell>{peer.description ?? peer.name ?? "-"}</TableCell>
                       <TableCell>{peer.remoteAs ?? "-"}</TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Badge variant="outline" className="w-fit">{peer.sessionType}</Badge>
-                          <span className="text-[10px] text-muted-foreground">{peer.vrf ?? "-"}</span>
-                        </div>
+                        <Badge variant="outline" className="w-fit">{peer.sessionType ?? "-"}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {peer.vrf ?? "-"}
                       </TableCell>
                       <TableCell><Badge variant="outline">{peer.state}</Badge></TableCell>
                       <TableCell>{formatBgpUptime(peer.uptime)}</TableCell>
@@ -593,6 +596,18 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
         peer={detailModalPeer}
         isOpen={detailModalOpen}
         onClose={() => setDetailModalOpen(false)}
+        onPlanCleanup={(selectedPeer) => {
+          setDetailModalOpen(false);
+          setCleanupModalPeer(selectedPeer);
+          setCleanupModalOpen(true);
+        }}
+      />
+
+      <BgpPeerCleanupModal
+        device={device}
+        peer={cleanupModalPeer}
+        open={cleanupModalOpen}
+        onOpenChange={setCleanupModalOpen}
       />
     </Card>
   );

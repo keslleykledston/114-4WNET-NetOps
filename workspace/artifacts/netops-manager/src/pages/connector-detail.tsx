@@ -137,14 +137,14 @@ export default function ConnectorDetailPage() {
 
   const c = connectorQuery.data;
   if (connectorQuery.isLoading) {
-    return <div className="p-6">Carregando…</div>;
+    return <div className="p-0">Carregando…</div>;
   }
   if (!c) {
-    return <div className="p-6">Connector não encontrado.</div>;
+    return <div className="p-0">Connector não encontrado.</div>;
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex items-center gap-3">
         <Link href="/infrastructure/connectors">
           <Button variant="ghost" size="sm">

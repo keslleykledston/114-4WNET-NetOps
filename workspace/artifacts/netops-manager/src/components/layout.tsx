@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getConnectorHealthSummary } from "@/features/connectors/connectors-api";
 import {
-  Server,
   ShieldCheck,
   Rocket,
   FileCode,
@@ -23,6 +23,9 @@ import {
   GitBranch,
   KeyRound,
   BellRing,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
@@ -31,7 +34,6 @@ import { useAuth } from "./auth-provider";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/devices", icon: Server, label: "Devices" },
   { href: "/l2-circuits", icon: Network, label: "L2 Circuits" },
   { href: "/compliance", icon: ShieldCheck, label: "Compliance" },
   { href: "/provisioning", icon: Rocket, label: "Provisioning" },
@@ -59,6 +61,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const connectorSummaryQuery = useQuery({
     queryKey: ["connector-health-summary"],
     queryFn: getConnectorHealthSummary,
@@ -70,13 +73,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 border-r border-border bg-sidebar flex flex-col">
-        <div className="h-14 flex items-center px-4 border-b border-sidebar-border gap-2">
-          <Activity className="h-5 w-5 text-primary" />
-          <span className="font-bold tracking-tight text-sidebar-foreground">NetOps Manager</span>
+      <aside
+        className={[
+          "flex flex-shrink-0 flex-col border-r border-border bg-sidebar transition-all duration-200",
+          sidebarCollapsed ? "w-12" : "w-[220px]",
+        ].join(" ")}
+      >
+        <div className="h-12 flex items-center px-4 border-b border-sidebar-border gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          {!sidebarCollapsed ? <span className="text-[13px] font-bold tracking-tight text-sidebar-foreground">NetOps Manager</span> : null}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            onClick={() => setSidebarCollapsed((current) => !current)}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+          </Button>
         </div>
         
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1 scrollbar-thin scrollbar-track-sidebar scrollbar-thumb-sidebar-accent">
+        <nav className={["flex-1 overflow-y-auto py-3 space-y-0.5 scrollbar-thin scrollbar-track-sidebar scrollbar-thumb-sidebar-accent", sidebarCollapsed ? "px-1" : "px-2"].join(" ")}>
           {navItems.map((item) => {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             const Icon = item.icon;
@@ -89,34 +106,42 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Link key={item.href} href={item.href}>
                 <div
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer text-sm font-medium min-h-10",
+                    "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
+                    sidebarCollapsed ? "justify-center px-2 gap-0" : "gap-2.5 px-3 py-2",
                     isActive
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      ? "bg-[#1e2a45] text-primary"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
                   data-testid={`link-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  title={sidebarCollapsed ? label : undefined}
                 >
+                  {isActive ? <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" /> : null}
                   <Icon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{label}</span>
+                  {!sidebarCollapsed ? <span className="truncate">{label}</span> : null}
                 </div>
               </Link>
             );
           })}
 
-          {user?.role === "admin" && (
+        {user?.role === "admin" && (
             <div className="pt-4 border-t border-sidebar-border">
-              <div className="text-xs font-semibold text-sidebar-foreground/60 px-3 py-2 mb-1">ADMINISTRATION</div>
+              {!sidebarCollapsed ? (
+                <div className="text-[11px] font-semibold tracking-[0.18em] text-sidebar-foreground/60 px-3 py-2 mb-1">ADMINISTRATION</div>
+              ) : null}
               <Link href="/users">
                 <div
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer text-sm font-medium min-h-10",
+                    "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
+                    sidebarCollapsed ? "justify-center px-2 gap-0" : "gap-2.5 px-3 py-2",
                     location === "/users"
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                      ? "bg-[#1e2a45] text-primary"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
+                  title={sidebarCollapsed ? "Users" : undefined}
                 >
+                  {location === "/users" ? <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" /> : null}
                   <Users className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Users</span>
+                  {!sidebarCollapsed ? <span className="truncate">Users</span> : null}
                 </div>
               </Link>
             </div>
@@ -124,33 +149,44 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
         
         <div className="p-4 border-t border-sidebar-border">
-          <div className="mb-3 rounded-md border border-sidebar-border bg-sidebar-accent/40 p-3 text-xs text-sidebar-foreground">
-            <div className="font-semibold">{user?.name ?? "Usuário"}</div>
-            <div className="truncate opacity-80">{user?.email ?? "sem sessão"}</div>
-            <div className="mt-1 uppercase tracking-[0.2em] opacity-70">{user?.role ?? "viewer"}</div>
-          </div>
+          {!sidebarCollapsed ? (
+            <div className="mb-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 text-[11px] text-sidebar-foreground">
+              <div className="font-semibold text-[12px]">{user?.name ?? "Usuário"}</div>
+              <div className="truncate opacity-80">{user?.email ?? "sem sessão"}</div>
+              <div className="mt-1 uppercase tracking-[0.18em] opacity-70">{user?.role ?? "viewer"}</div>
+            </div>
+          ) : null}
           <Button 
             variant="outline" 
-            className="w-full justify-start text-sidebar-foreground bg-transparent border-sidebar-border hover:bg-sidebar-accent"
+            className={cn(
+              "w-full text-[12px] text-sidebar-foreground bg-transparent border-sidebar-border hover:bg-sidebar-accent",
+              sidebarCollapsed ? "justify-center px-0" : "justify-start",
+            )}
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             data-testid="button-toggle-theme"
+            title={sidebarCollapsed ? "Toggle Theme" : undefined}
           >
-            <Settings className="mr-2 h-4 w-4" />
-            Toggle Theme
+            <Settings className={cn("h-3.5 w-3.5", sidebarCollapsed ? "" : "mr-2")} />
+            {!sidebarCollapsed ? "Toggle Theme" : null}
           </Button>
           <Button
             variant="outline"
-            className="mt-2 w-full justify-start text-sidebar-foreground bg-transparent border-sidebar-border hover:bg-sidebar-accent"
+            className={cn(
+              "mt-2 w-full text-[12px] text-sidebar-foreground bg-transparent border-sidebar-border hover:bg-sidebar-accent",
+              sidebarCollapsed ? "justify-center px-0" : "justify-start",
+            )}
             onClick={() => void logout()}
+            title={sidebarCollapsed ? "Logout" : undefined}
           >
-            Logout
+            <LogOut className={cn("h-3.5 w-3.5", sidebarCollapsed ? "" : "mr-2")} />
+            {!sidebarCollapsed ? "Logout" : null}
           </Button>
         </div>
       </aside>
       
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-background">
-        <div className="p-6">
+        <div className="p-8">
           {children}
         </div>
       </main>

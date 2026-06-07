@@ -38,6 +38,10 @@ function normalizeCommand(command: string): string {
   return command.trim().replace(/\s+/g, " ");
 }
 
+function normalizeBgpKeyPart(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() ?? "";
+}
+
 function parseVrfNameFromCommand(command: string): string | null {
   const normalized = normalizeCommand(command);
   const match = /^display bgp vpnv(?:4|6) vpn-instance (\S+) peer verbose$/i.exec(normalized);
@@ -56,7 +60,7 @@ function isBgpCommand(command: string): boolean {
 }
 
 function bgpPeerKey(peer: Pick<NetopsBgpPeer, "peerIp" | "addressFamily" | "vrf">): string {
-  return `${peer.peerIp}|${peer.addressFamily}|${peer.vrf ?? ""}`;
+  return `${normalizeBgpKeyPart(peer.peerIp)}|${peer.addressFamily}|${normalizeBgpKeyPart(peer.vrf)}`;
 }
 
 function mergeBgpPeer(existing: NetopsBgpPeer | undefined, incoming: NetopsBgpPeer): NetopsBgpPeer {

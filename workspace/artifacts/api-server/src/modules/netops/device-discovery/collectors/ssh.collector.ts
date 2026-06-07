@@ -10,6 +10,7 @@ import { parseHuaweiInterfaces } from "../../huawei-vrp/parsers/interface-parser
 import { parseHuaweiL2vpn } from "../../huawei-vrp/parsers/l2vpn-parser.js";
 import { parseHuaweiPolicies } from "../../huawei-vrp/parsers/policy-parser.js";
 import { parseHuaweiVrfs } from "../../huawei-vrp/parsers/vrf-parser.js";
+import type { NetopsBgpPeer } from "../../types.js";
 import type { CollectorOutput, DiscoveryContext, VrfSummary } from "../discovery.types.js";
 import { emptyL2vpnSummary } from "../normalizers/l2vpn.normalizer.js";
 
@@ -22,7 +23,7 @@ const BUNDLE_COMMAND_ALIASES: Record<string, string[]> = {
 
 const CONTEXT_COMMANDS: Record<DiscoveryContext, string[]> = {
   interfaces: ["display interface brief", "display interface description"],
-  bgp: ["display bgp peer", "display bgp peer verbose", "display bgp ipv6 peer verbose"],
+  bgp: ["display bgp peer", "display bgp peer verbose", "display bgp ipv6 peer", "display bgp ipv6 peer verbose"],
   l2vpn: ["display mpls l2vc", "display vsi"],
   policies: ["display route-policy", "display ip ip-prefix"],
   vrfs: [],
@@ -48,19 +49,51 @@ function isBgpCommand(command: string): boolean {
   return (
     normalized === "display bgp peer"
     || normalized === "display bgp peer verbose"
+    || normalized === "display bgp ipv6 peer"
     || normalized === "display bgp ipv6 peer verbose"
     || /^display bgp vpnv(?:4|6) vpn-instance \S+ peer verbose$/i.test(normalized)
   );
 }
 
-function parseBgpPeersFromResults(results: Array<{ command: string; output: string }>) {
-  const peers = [];
+function bgpPeerKey(peer: Pick<NetopsBgpPeer, "peerIp" | "addressFamily" | "vrf">): string {
+  return `${peer.peerIp}|${peer.addressFamily}|${peer.vrf ?? ""}`;
+}
+
+function mergeBgpPeer(existing: NetopsBgpPeer | undefined, incoming: NetopsBgpPeer): NetopsBgpPeer {
+  if (!existing) return incoming;
+
+  return {
+    ...existing,
+    ...incoming,
+    description: incoming.description ?? existing.description ?? null,
+    name: incoming.name ?? existing.name ?? null,
+    state: existing.state !== "Unknown" ? existing.state : incoming.state,
+    remoteAs: incoming.remoteAs ?? existing.remoteAs ?? null,
+    vrf: incoming.vrf ?? existing.vrf ?? null,
+    importPolicy: incoming.importPolicy ?? existing.importPolicy ?? null,
+    exportPolicy: incoming.exportPolicy ?? existing.exportPolicy ?? null,
+    receivedPrefixes: incoming.receivedPrefixes ?? existing.receivedPrefixes ?? null,
+    advertisedPrefixes: incoming.advertisedPrefixes ?? existing.advertisedPrefixes ?? null,
+    activePrefixes: incoming.activePrefixes ?? existing.activePrefixes ?? null,
+    uptime: incoming.uptime ?? existing.uptime ?? null,
+  };
+}
+
+export function parseBgpPeersFromResults(results: Array<{ command: string; output: string }>) {
+  const peersByKey = new Map<string, NetopsBgpPeer>();
   for (const result of results) {
     if (!isBgpCommand(result.command)) continue;
     const vrfName = parseVrfNameFromCommand(result.command) ?? undefined;
-    peers.push(...parseHuaweiBgpPeers(result.output, { vrfName }));
+    for (const peer of parseHuaweiBgpPeers(result.output, { vrfName })) {
+      const key = bgpPeerKey(peer);
+      peersByKey.set(key, mergeBgpPeer(peersByKey.get(key), peer));
+    }
   }
-  return peers;
+  return [...peersByKey.values()].sort((left, right) => {
+    const leftKey = bgpPeerKey(left);
+    const rightKey = bgpPeerKey(right);
+    return leftKey.localeCompare(rightKey);
+  });
 }
 
 function buildVrfBgpCommands(vrfs: VrfSummary[]): string[] {
@@ -140,6 +173,7 @@ export async function collectDiscoverySsh(
   device: Device,
   _password: string,
   contexts: DiscoveryContext[],
+  options?: { useConnectorBundleCache?: boolean },
 ): Promise<CollectorOutput> {
   const commands = getDiscoverySshCommands(contexts);
   const commandChecks = validateReadonlyCommands(commands);
@@ -164,7 +198,7 @@ export async function collectDiscoverySsh(
   let results: Array<{ command: string; output: string; error?: string }> = [];
   let bundleNote: string | undefined;
 
-  if (deviceUsesConnector(device)) {
+  if (deviceUsesConnector(device) && options?.useConnectorBundleCache !== false) {
     const rawBundle = await loadLatestConnectorBundle(device.id);
     if (rawBundle) {
       const bundle = splitCommandBundle(rawBundle);

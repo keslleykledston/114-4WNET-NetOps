@@ -1,19 +1,64 @@
 import { useState, useEffect } from "react";
 import { useListNetopsDeviceInterfaces, useGetNetopsDeviceSummary } from "@workspace/api-client-react";
-import type { Device } from "@workspace/api-client-react";
+import type { Device, NetopsInterface } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GitBranch } from "lucide-react";
+import { GitBranch, Info } from "lucide-react";
 import { CollectSnmpButton } from "./collect-snmp-button";
 import { getInterfaceFilterOptions, getInterfaceKindLabel } from "../netops/labels";
+
+function formatAddressList(addresses: string[] | undefined): string {
+  if (!addresses?.length) return "—";
+  return addresses.join(", ");
+}
+
+function InterfaceAddressDialog({
+  iface,
+  open,
+  onOpenChange,
+}: {
+  iface: NetopsInterface | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-mono text-base">{iface?.name ?? "Interface"}</DialogTitle>
+          <DialogDescription>Endereços configurados na interface.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">IPv4</div>
+            <div className="mt-1 font-mono break-all">{formatAddressList(iface?.ipv4)}</div>
+          </div>
+          <div>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">IPv6</div>
+            <div className="mt-1 font-mono break-all">{formatAddressList(iface?.ipv6)}</div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export function InterfacesPanel({ device }: { device: Device }) {
   const { data: interfaces, isLoading, isError } = useListNetopsDeviceInterfaces(device.id);
   const { data: summary } = useGetNetopsDeviceSummary(device.id);
   const [selectedKind, setSelectedKind] = useState<string | "all">("all");
+  const [addressModalIface, setAddressModalIface] = useState<NetopsInterface | null>(null);
 
   useEffect(() => {
     const storageKey = `interfaces-filter-${device.id}`;
@@ -99,53 +144,75 @@ export function InterfacesPanel({ device }: { device: Device }) {
                 <TableBody>
                   {filteredInterfaces?.map((iface) => (
                     <TableRow key={`${iface.name}-${iface.vlan ?? "none"}`}>
-                  <TableCell className="font-mono">{iface.name}</TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {iface.description && (
-                      <div className="text-sm">{iface.description}</div>
-                    )}
-                    {iface.rawDescr && iface.description !== iface.rawDescr && (
-                      <div className="text-xs text-muted-foreground">{iface.rawDescr}</div>
-                    )}
-                    {!iface.description && !iface.rawDescr && <span>-</span>}
-                  </TableCell>
-                  <TableCell>
-                    {iface.kind ? getInterfaceKindLabel(iface.kind) : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{iface.adminStatus}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{iface.operStatus}</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {iface.parentInterface && iface.vlanId ? (
-                      <div>
-                        <div>{iface.parentInterface}.{iface.vlanId}</div>
-                        {iface.encapsulation && (
-                          <div className="text-xs text-muted-foreground">{iface.encapsulation}</div>
+                      <TableCell className="font-mono">
+                        <span className="inline-flex items-center gap-1.5">
+                          {iface.name}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
+                            aria-label={`Ver endereços de ${iface.name}`}
+                            onClick={() => setAddressModalIface(iface)}
+                          >
+                            <Info className="h-3.5 w-3.5" />
+                          </Button>
+                        </span>
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {iface.description && (
+                          <div className="text-sm">{iface.description}</div>
                         )}
-                      </div>
-                    ) : iface.vlanId ? (
-                      <div>{iface.vlanId}</div>
-                    ) : iface.parentInterface ? (
-                      <div>{iface.parentInterface}</div>
-                    ) : (
-                      <span>-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>{iface.parentInterface || "-"}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {iface.source}
-                  </TableCell>
-                </TableRow>
-              ))}
-              </TableBody>
-            </Table>
+                        {iface.rawDescr && iface.description !== iface.rawDescr && (
+                          <div className="text-xs text-muted-foreground">{iface.rawDescr}</div>
+                        )}
+                        {!iface.description && !iface.rawDescr && <span>-</span>}
+                      </TableCell>
+                      <TableCell>
+                        {iface.kind ? getInterfaceKindLabel(iface.kind) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{iface.adminStatus}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{iface.operStatus}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {iface.parentInterface && iface.vlanId ? (
+                          <div>
+                            <div>{iface.parentInterface}.{iface.vlanId}</div>
+                            {iface.encapsulation && (
+                              <div className="text-xs text-muted-foreground">{iface.encapsulation}</div>
+                            )}
+                          </div>
+                        ) : iface.vlanId ? (
+                          <div>{iface.vlanId}</div>
+                        ) : iface.parentInterface ? (
+                          <div>{iface.parentInterface}</div>
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{iface.parentInterface || "-"}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {iface.source}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </>
         )}
       </CardContent>
+
+      <InterfaceAddressDialog
+        iface={addressModalIface}
+        open={addressModalIface !== null}
+        onOpenChange={(open) => {
+          if (!open) setAddressModalIface(null);
+        }}
+      />
     </Card>
   );
 }

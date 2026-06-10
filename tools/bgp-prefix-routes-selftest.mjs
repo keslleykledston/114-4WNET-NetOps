@@ -46,6 +46,8 @@ const manyRoutes = Array.from({ length: 450 }, (_, i) => {
 async function main() {
   assert.equal(MAX_DISPLAY_ROUTES, 200);
   assert(buildRouteCommands("10.20.1.5", "received", null).some((cmd) => cmd.includes("display bgp routing-table peer 10.20.1.5 received-routes")));
+  assert(buildRouteCommands("10.20.1.5", "received", "Public").some((cmd) => cmd.includes("display bgp routing-table peer 10.20.1.5 received-routes")));
+  assert(!buildRouteCommands("10.20.1.5", "received", "Public").some((cmd) => cmd.includes("vpn-instance Public")));
   assert(buildRouteCommands("2001:db8::5", "advertised", "CUST-VRF").some((cmd) => cmd.includes("vpnv6")));
 
   const parsed = parseHuaweiRoutes(fixture);

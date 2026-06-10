@@ -60,8 +60,16 @@ function pathFromAttrTail(parts: string[]): string | null {
 }
 
 function isValidCidr(cidr: string): boolean {
-  const match = /^([0-9a-fA-F:.]+)\/(\d+)$/.test(cidr);
-  return match;
+  return /^([0-9a-fA-F:.]+)\/(\d+)$/.test(cidr);
+}
+
+/** Huawei compact peer route tables often omit prefix length (Network column only). */
+function normalizeClassicPrefix(raw: string): string | null {
+  const prefix = raw.trim();
+  if (isValidCidr(prefix)) return prefix;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(prefix)) return `${prefix}/32`;
+  if (prefix.includes(":")) return `${prefix}/128`;
+  return null;
 }
 
 function parseHuaweiNetworkPrefixlenPathOgn(text: string): PrefixRoute[] {
@@ -154,12 +162,12 @@ function parseClassicAdvertisedTableLines(text: string): PrefixRoute[] {
       continue;
     }
 
-    const prefix = m[2].trim();
-    const rest = (m[4] || "").trim();
-
-    if (!isValidCidr(prefix)) {
+    const prefix = normalizeClassicPrefix(m[2].trim());
+    if (!prefix) {
       continue;
     }
+
+    const rest = (m[4] || "").trim();
 
     let asPath = "";
     if (pathColIdx !== null && raw.length > pathColIdx) {

@@ -24,6 +24,21 @@ import { buildBgpPolicyGraph } from "../workspace/artifacts/api-server/src/modul
 import { buildAnnouncementMatrix } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/resolvers/announcement-matrix.resolver.ts";
 import { compileAnnouncementPreview } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/services/announcement-preview.service.ts";
 import { runUpstreamAudit } from "../workspace/artifacts/api-server/src/modules/bgp-upstream-audit/bgp-upstream-audit.service.ts";
+import {
+  computeSnapshotCounters,
+  computeSnapshotWarnings,
+  determineSnapshotStatus,
+  SNAPSHOT_REFRESH_ALLOWED_SOURCES,
+} from "../workspace/artifacts/api-server/src/modules/bgp-announcements/services/announcement-snapshot-refresh.service.ts";
+import {
+  matrixSnapshotRowToResponse,
+  persistAnnouncementMatrixSnapshot,
+} from "../workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-matrix-snapshot.service.ts";
+import { assertMatrixEnabled } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcement.gate.ts";
+import { checkPermission, getDefaultPermissions } from "../workspace/artifacts/api-server/src/lib/auth.ts";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -352,6 +367,153 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
       fn: () => {
         assert(extractCircuitIdFromName("C01-EXPORT-IPV4") === "01", "policy");
         assert(extractCircuitIdFromName("C01-EXPORT-P2") === "01", "filter");
+      },
+    },
+  ],
+  "snapshot-refresh": [
+    {
+      name: "counters include origin/customer/upstreams",
+      fn: () => {
+        const parsed = parseHuaweiPolicyDependencyPipeline(FIXTURE, "ssh_running_config");
+        const graph = buildBgpPolicyGraph(parsed, FIXTURE);
+        const { rows, findings } = buildAnnouncementMatrix({
+          deviceId: 1,
+          parsedConfig: parsed,
+          graph,
+          upstreams: [{ circuitId: "01", displayName: "INFORR", role: "provider" }, { circuitId: "10", displayName: "EBT", role: "provider" }],
+          collectionAgeMinutes: 5,
+          lastCollectedAt: new Date().toISOString(),
+        });
+        const counters = computeSnapshotCounters({
+          deviceId: 1,
+          upstreams: [{ circuitId: "01", displayName: "INFORR", role: "provider" }],
+          rows,
+          findings,
+          generatedAt: new Date().toISOString(),
+        }, 3);
+        assert(counters.originTargets >= 2, "origin count");
+        assert(counters.customerTargets >= 1, "customer count");
+        assert(counters.upstreamCount === 1, "upstream count");
+        assert(counters.communitySetCount === 3, "community sets");
+      },
+    },
+    {
+      name: "warnings persisted for stale collected_config",
+      fn: () => {
+        const parsed = parseHuaweiPolicyDependencyPipeline(FIXTURE, "ssh_running_config");
+        const graph = buildBgpPolicyGraph(parsed, FIXTURE);
+        const { rows, findings } = buildAnnouncementMatrix({
+          deviceId: 1,
+          parsedConfig: parsed,
+          graph,
+          upstreams: [{ circuitId: "01", displayName: "INFORR", role: "provider" }],
+          collectionAgeMinutes: 120,
+          lastCollectedAt: new Date().toISOString(),
+        });
+        const warnings = computeSnapshotWarnings({
+          deviceId: 1,
+          snapshot: null,
+          rawConfig: FIXTURE,
+          parsedConfig: parsed,
+          graph,
+          collectionAgeMinutes: 120,
+          lastCollectedAt: new Date().toISOString(),
+          source: "collected_config",
+        }, {
+          deviceId: 1,
+          upstreams: [],
+          rows,
+          findings,
+          generatedAt: new Date().toISOString(),
+        });
+        assert(warnings.some((w) => w.includes("collected_config")), "collected_config warning");
+        assert(warnings.some((w) => w.includes("120 min")), "stale warning");
+      },
+    },
+    {
+      name: "empty state status when no rows",
+      fn: () => {
+        const status = determineSnapshotStatus({
+          deviceId: 1,
+          upstreams: [],
+          rows: [],
+          findings: [],
+          generatedAt: new Date().toISOString(),
+        });
+        assert(status === "empty", "empty status");
+      },
+    },
+    {
+      name: "viewer cannot refresh operator can",
+      fn: () => {
+        const viewer = { role: "viewer" as const, permissionsJson: null };
+        const operator = { role: "operator" as const, permissionsJson: null };
+        assert(!checkPermission(viewer, "bgp.announcements.refresh"), "viewer blocked");
+        assert(checkPermission(operator, "bgp.announcements.refresh"), "operator allowed");
+        assert(getDefaultPermissions("admin").bgp?.announcements?.refresh === true, "admin refresh");
+      },
+    },
+    {
+      name: "feature flag off blocks matrix endpoints",
+      fn: () => {
+        const previous = process.env.BGP_ANNOUNCEMENT_MATRIX_ENABLED;
+        process.env.BGP_ANNOUNCEMENT_MATRIX_ENABLED = "false";
+        const gate = assertMatrixEnabled();
+        assert(!gate.ok && gate.status === 503, "503 when disabled");
+        if (previous === undefined) delete process.env.BGP_ANNOUNCEMENT_MATRIX_ENABLED;
+        else process.env.BGP_ANNOUNCEMENT_MATRIX_ENABLED = previous;
+      },
+    },
+    {
+      name: "snapshot roundtrip stores full rows",
+      fn: () => {
+        const parsed = parseHuaweiPolicyDependencyPipeline(FIXTURE, "ssh_running_config");
+        const graph = buildBgpPolicyGraph(parsed, FIXTURE);
+        const { rows, findings } = buildAnnouncementMatrix({
+          deviceId: 1,
+          parsedConfig: parsed,
+          graph,
+          upstreams: [{ circuitId: "01", displayName: "INFORR", role: "provider" }],
+          collectionAgeMinutes: 5,
+          lastCollectedAt: new Date().toISOString(),
+        });
+        const counters = computeSnapshotCounters({
+          deviceId: 1,
+          upstreams: [{ circuitId: "01", displayName: "INFORR", role: "provider" }],
+          rows,
+          findings,
+          generatedAt: new Date().toISOString(),
+        }, 1);
+        const matrix = matrixSnapshotRowToResponse({
+          id: 99,
+          deviceId: 1,
+          rowsJson: rows,
+          upstreamsJson: [{ circuitId: "01", displayName: "INFORR", role: "provider" }],
+          metaJson: { findings, generatedAt: new Date().toISOString(), counters, warnings: [], status: "ok", refreshMode: "database_only" },
+          rowCount: rows.length,
+          createdAt: new Date(),
+        });
+        assert(matrix?.rows[0]?.targetKey, "full row roundtrip");
+        assert(matrix?.meta?.snapshotId === 99, "snapshot id in meta");
+      },
+    },
+    {
+      name: "refresh service avoids ssh snmp connector imports",
+      fn: () => {
+        const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+        const refreshFile = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/services/announcement-snapshot-refresh.service.ts"), "utf8");
+        const matrixFile = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-matrix.service.ts"), "utf8");
+        for (const token of ["connector", "net-snmp", "ssh2", "runDiscovery", "collectSnmp"]) {
+          assert(!refreshFile.toLowerCase().includes(token.toLowerCase()), `refresh file must not reference ${token}`);
+        }
+        assert(!matrixFile.includes("connector-snmp"), "matrix service no snmp connector");
+        assert(SNAPSHOT_REFRESH_ALLOWED_SOURCES.includes("discovery_snapshot"), "allowed sources");
+      },
+    },
+    {
+      name: "persist export available for append-only snapshots",
+      fn: () => {
+        assert(typeof persistAnnouncementMatrixSnapshot === "function", "persist export");
       },
     },
   ],

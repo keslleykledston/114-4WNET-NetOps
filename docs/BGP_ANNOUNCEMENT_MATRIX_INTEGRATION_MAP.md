@@ -42,6 +42,12 @@ Registro de rotas (fase wiring — 2026-06-10):
 - UI: `App.tsx` → `/bgp-announcements` (redirect para NetOps Operations com `view=bgp-announcements`)
 - Menu: `layout.tsx` → BGP Announcements
 
+Snapshot refresh (fase DATA-SNAPSHOT-REFRESH — 2026-06-10):
+
+- `POST /bgp/announcements/snapshots/refresh` — recompila matriz a partir do banco (sem SSH/SNMP)
+- `GET /bgp/announcements/snapshots/latest|/:id` — leitura de snapshots append-only
+- UI: **Recarregar** = refetch; **Atualizar matriz** = POST refresh; aba **Histórico**
+
 ---
 
 ## 3. Pipeline de coleta existente

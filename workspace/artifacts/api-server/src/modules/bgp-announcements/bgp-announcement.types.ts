@@ -110,10 +110,49 @@ export interface MatrixResponse {
   generatedAt: string;
   meta?: {
     source: string;
+    dataSource?: string;
     collectionAgeMinutes: number | null;
     lastCollectedAt: string | null;
     readOnly: boolean;
+    refreshMode?: "database_only";
+    snapshotId?: number;
+    snapshotCreatedAt?: string;
+    counters?: SnapshotCounters;
+    warnings?: string[];
+    status?: SnapshotRefreshStatus;
   };
+}
+
+export type SnapshotRefreshStatus = "ok" | "partial" | "empty";
+
+export interface SnapshotCounters {
+  originTargets: number;
+  customerTargets: number;
+  upstreamCount: number;
+  communitySetCount: number;
+  policyCount: number;
+  conflictCount: number;
+  rowCount: number;
+}
+
+export interface SnapshotRefreshResult {
+  snapshotId: number;
+  deviceId: number;
+  createdAt: string;
+  counters: SnapshotCounters;
+  warnings: string[];
+  status: SnapshotRefreshStatus;
+}
+
+export interface SnapshotSummary {
+  id: number;
+  deviceId: number;
+  createdAt: string;
+  rowCount: number;
+  counters: SnapshotCounters;
+  conflictCount: number;
+  status: SnapshotRefreshStatus;
+  warnings: string[];
 }
 
 export interface PreviewChangeRequest {

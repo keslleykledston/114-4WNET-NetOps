@@ -7,19 +7,27 @@ import {
   getCommunitySets,
   getEvidence,
   getExpandedPrefixesHandler,
+  getLatestSnapshot,
   getMatrix,
   getPolicyDependencies,
+  getSnapshotById,
   getUpstreamAudit,
+  listSnapshots,
   postChangePlan,
   postCommunitySetFindMatch,
   postCommunitySetResolve,
   postPreviewChange,
+  postRefreshSnapshot,
   postSyncCommunitySets,
 } from "./bgp-announcement.controller.js";
 
 const router = Router();
 
 router.get("/bgp/announcements/feature", requirePermission("bgp.announcements.read"), getAnnouncementFeature);
+router.get("/bgp/announcements/snapshots/latest", requirePermission("bgp.announcements.read"), getLatestSnapshot);
+router.get("/bgp/announcements/snapshots", requirePermission("bgp.announcements.read"), listSnapshots);
+router.get("/bgp/announcements/snapshots/:id", requirePermission("bgp.announcements.read"), getSnapshotById);
+router.post("/bgp/announcements/snapshots/refresh", requirePermission("bgp.announcements.refresh"), postRefreshSnapshot);
 router.get("/bgp/announcements/matrix", requirePermission("bgp.announcements.read"), getMatrix);
 router.get("/bgp/announcements/evidence", requirePermission("bgp.announcements.read"), getEvidence);
 router.get("/bgp/announcements/expanded-prefixes", requirePermission("bgp.announcements.read"), getExpandedPrefixesHandler);

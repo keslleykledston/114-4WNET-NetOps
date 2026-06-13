@@ -10,10 +10,14 @@ import {
   findExactCommunitySetMatch,
   getAnnouncementMatrix,
   getExpandedPrefixes,
+  getLatestMatrixSnapshotSummary,
+  getMatrixSnapshotById,
   getTargetEvidence,
   listCommunitySets,
+  listMatrixSnapshotSummaries,
   loadAnnouncementDeviceContext,
   previewAnnouncementChange,
+  refreshAnnouncementMatrixSnapshot,
   resolveCommunitySetSemantics,
   syncCommunitySetsFromGraph,
 } from "./announcement-matrix.service.js";
@@ -49,22 +53,141 @@ export async function getMatrix(req: Request, res: Response) {
     return;
   }
 
+  const snapshotIdRaw = req.query.snapshotId;
+  const snapshotId = snapshotIdRaw != null ? Number(snapshotIdRaw) : undefined;
+
   const result = await getAnnouncementMatrix(deviceId, {
     family: typeof req.query.family === "string" ? req.query.family : undefined,
     targetType: typeof req.query.targetType === "string" ? req.query.targetType : undefined,
     search: typeof req.query.search === "string" ? req.query.search : undefined,
-  });
+  }, Number.isFinite(snapshotId) ? { snapshotId } : undefined);
 
   if (result === "device_not_found") {
     res.status(404).json({ error: "Device not found" });
     return;
   }
   if (result === "no_snapshot") {
-    res.status(404).json({ error: "No discovery snapshot or collected config available" });
+    res.status(404).json({ error: "No matrix snapshot available. Use Atualizar matriz to build from persisted data." });
     return;
   }
 
   res.json(result);
+}
+
+export async function getLatestSnapshot(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const deviceId = Number(req.query.deviceId);
+  if (!Number.isFinite(deviceId)) {
+    res.status(400).json({ error: "deviceId required" });
+    return;
+  }
+
+  const summary = await getLatestMatrixSnapshotSummary(deviceId);
+  if (!summary) {
+    res.status(404).json({ error: "No matrix snapshot available" });
+    return;
+  }
+
+  res.json(summary);
+}
+
+export async function listSnapshots(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const deviceId = Number(req.query.deviceId);
+  if (!Number.isFinite(deviceId)) {
+    res.status(400).json({ error: "deviceId required" });
+    return;
+  }
+
+  const limit = Number(req.query.limit ?? 20);
+  const snapshots = await listMatrixSnapshotSummaries(deviceId, Number.isFinite(limit) ? limit : 20);
+  res.json({ deviceId, snapshots });
+}
+
+export async function getSnapshotById(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const snapshotId = Number(req.params.id);
+  const deviceId = req.query.deviceId != null ? Number(req.query.deviceId) : undefined;
+  if (!Number.isFinite(snapshotId)) {
+    res.status(400).json({ error: "Invalid snapshot id" });
+    return;
+  }
+
+  const matrix = await getMatrixSnapshotById(snapshotId, Number.isFinite(deviceId) ? deviceId : undefined);
+  if (matrix === "snapshot_not_found") {
+    res.status(404).json({ error: "Matrix snapshot not found" });
+    return;
+  }
+  if (matrix === "snapshot_incompatible") {
+    res.status(409).json({ error: "Snapshot format incompatible; refresh required" });
+    return;
+  }
+
+  res.json(matrix);
+}
+
+export async function postRefreshSnapshot(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const body = req.body ?? {};
+  const deviceId = Number(body.deviceId ?? req.query.deviceId);
+  if (!Number.isFinite(deviceId)) {
+    res.status(400).json({ error: "deviceId required" });
+    return;
+  }
+
+  const result = await refreshAnnouncementMatrixSnapshot(deviceId);
+  if (result === "device_not_found") {
+    res.status(404).json({ error: "Device not found" });
+    return;
+  }
+  if (result === "no_data") {
+    res.status(422).json({
+      error: "Insufficient persisted data to build matrix snapshot",
+      code: "NO_PERSISTED_DATA",
+      warnings: [
+        "Nenhum discovery snapshot ou collected_config encontrado para este device.",
+        "Popule inventário via config collection ou discovery em outro módulo antes de atualizar a matriz.",
+      ],
+    });
+    return;
+  }
+
+  const user = getRequestContext()?.user;
+  await logAuditEvent({
+    action: "announcement_matrix_snapshot_refresh",
+    objectType: "bgp_announcement_matrix_snapshot",
+    objectId: String(result.snapshotId),
+    metadata: {
+      deviceId,
+      status: result.status,
+      counters: result.counters,
+      warnings: result.warnings,
+      refreshMode: "database_only",
+      userId: user?.id ?? null,
+    },
+  });
+
+  res.status(201).json(result);
 }
 
 export async function getEvidence(req: Request, res: Response) {

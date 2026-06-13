@@ -1,6 +1,7 @@
-import { bgpAnnouncementMatrixSnapshotsTable, db } from "@workspace/db";
+import { bgpAnnouncementMatrixSnapshotsTable, db, type BgpAnnouncementMatrixSnapshot } from "@workspace/db";
 import { and, desc, eq, gte, lt } from "drizzle-orm";
-import type { MatrixResponse } from "./bgp-announcement.types.js";
+import type { MatrixResponse, MatrixRow, SnapshotSummary } from "./bgp-announcement.types.js";
+import { snapshotSummaryFromMeta } from "./services/announcement-snapshot-refresh.service.js";
 
 export interface CompactMatrixRow {
   key: string;
@@ -11,7 +12,11 @@ export interface CompactMatrixRow {
   cells: Array<{ circuitId: string; state: string; upstreamName: string }>;
 }
 
-function compactMatrixRows(rows: MatrixResponse["rows"]): CompactMatrixRow[] {
+function isFullMatrixRow(row: unknown): row is MatrixRow {
+  return typeof row === "object" && row !== null && "targetKey" in row && "cells" in row;
+}
+
+export function compactMatrixRows(rows: MatrixResponse["rows"]): CompactMatrixRow[] {
   return rows.map((row) => ({
     key: `${row.routePolicyName}|${row.family}|${row.affectedPrefixes.join(",")}`,
     routePolicyName: row.routePolicyName,
@@ -26,20 +31,68 @@ function compactMatrixRows(rows: MatrixResponse["rows"]): CompactMatrixRow[] {
   }));
 }
 
+export function matrixSnapshotRowToResponse(row: BgpAnnouncementMatrixSnapshot): MatrixResponse | null {
+  const rawRows = Array.isArray(row.rowsJson) ? row.rowsJson : [];
+  if (rawRows.length > 0 && !isFullMatrixRow(rawRows[0])) {
+    return null;
+  }
+
+  const meta = (row.metaJson ?? {}) as MatrixResponse["meta"] & {
+    findings?: MatrixResponse["findings"];
+    generatedAt?: string;
+  };
+
+  return {
+    deviceId: row.deviceId,
+    upstreams: Array.isArray(row.upstreamsJson)
+      ? row.upstreamsJson as MatrixResponse["upstreams"]
+      : [],
+    rows: rawRows as MatrixRow[],
+    findings: Array.isArray(meta.findings) ? meta.findings : [],
+    generatedAt: meta.generatedAt ?? row.createdAt.toISOString(),
+    meta: {
+      source: meta.source ?? "persisted_snapshot",
+      dataSource: meta.dataSource,
+      collectionAgeMinutes: meta.collectionAgeMinutes ?? null,
+      lastCollectedAt: meta.lastCollectedAt ?? null,
+      readOnly: true,
+      refreshMode: meta.refreshMode ?? "database_only",
+      snapshotId: row.id,
+      snapshotCreatedAt: row.createdAt.toISOString(),
+      counters: meta.counters,
+      warnings: meta.warnings,
+      status: meta.status,
+    },
+  };
+}
+
 export async function persistAnnouncementMatrixSnapshot(matrix: MatrixResponse): Promise<number | null> {
-  const rows = compactMatrixRows(matrix.rows);
   const [row] = await db
     .insert(bgpAnnouncementMatrixSnapshotsTable)
     .values({
       deviceId: matrix.deviceId,
-      rowsJson: rows,
+      rowsJson: matrix.rows,
       upstreamsJson: matrix.upstreams,
-      metaJson: matrix.meta ?? {},
-      rowCount: rows.length,
+      metaJson: {
+        ...(matrix.meta ?? {}),
+        findings: matrix.findings,
+        generatedAt: matrix.generatedAt,
+      },
+      rowCount: matrix.rows.length,
     })
     .returning({ id: bgpAnnouncementMatrixSnapshotsTable.id });
 
   return row?.id ?? null;
+}
+
+export async function loadMatrixSnapshotById(snapshotId: number) {
+  const [row] = await db
+    .select()
+    .from(bgpAnnouncementMatrixSnapshotsTable)
+    .where(eq(bgpAnnouncementMatrixSnapshotsTable.id, snapshotId))
+    .limit(1);
+
+  return row ?? null;
 }
 
 export async function loadMatrixSnapshotAt(deviceId: number, at: Date) {
@@ -65,6 +118,17 @@ export async function loadLatestMatrixSnapshot(deviceId: number) {
     .limit(1);
 
   return latest ?? null;
+}
+
+export async function listRecentMatrixSnapshots(deviceId: number, limit = 20): Promise<SnapshotSummary[]> {
+  const rows = await db
+    .select()
+    .from(bgpAnnouncementMatrixSnapshotsTable)
+    .where(eq(bgpAnnouncementMatrixSnapshotsTable.deviceId, deviceId))
+    .orderBy(desc(bgpAnnouncementMatrixSnapshotsTable.createdAt))
+    .limit(limit);
+
+  return rows.map((row) => snapshotSummaryFromMeta(row));
 }
 
 export async function loadMatrixSnapshotSince(deviceId: number, since: Date) {

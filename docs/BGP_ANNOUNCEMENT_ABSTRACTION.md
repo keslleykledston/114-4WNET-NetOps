@@ -149,5 +149,40 @@ Ver também: [BGP_POLICY_GRAPH_MODEL.md](./BGP_POLICY_GRAPH_MODEL.md), [BGP_ANNO
 | `bgp.announcements.read` | ✓ | ✓ | ✓ |
 | `bgp.announcements.preview` | | ✓ | ✓ |
 | `bgp.announcements.plan` | | ✓ | ✓ |
+| `bgp.announcements.refresh` | | ✓ | ✓ |
 | `bgp.announcements.approve` | | | ✓ |
 | `bgp.announcements.execute` | | | ✓ (flag OFF) |
+
+## Snapshot refresh (fase DATA-SNAPSHOT-REFRESH)
+
+### Recarregar vs Atualizar matriz
+
+| Ação UI | Endpoint | Comportamento |
+|---------|----------|---------------|
+| **Recarregar** | `GET /bgp/announcements/matrix` (refetch) | Lê o snapshot já salvo — **sem** recompilar |
+| **Atualizar matriz** | `POST /bgp/announcements/snapshots/refresh` | Recompila a matriz **somente** a partir de dados persistidos (discovery snapshot, collected_config, catálogos BGP) e grava **novo** registro append-only |
+
+### Regras
+
+- Snapshots em `bgp_announcement_matrix_snapshots` são **append-only** (timelapse).
+- Refresh **nunca** chama SSH, SNMP, connector ou discovery runtime.
+- Sem apply/write em rede; audit log `announcement_matrix_snapshot_refresh`.
+- Tela abre com o último snapshot (`GET .../snapshots/latest` + matrix default).
+
+### Endpoints
+
+| Método | Path | RBAC |
+|--------|------|------|
+| POST | `/bgp/announcements/snapshots/refresh` | `bgp.announcements.refresh` |
+| GET | `/bgp/announcements/snapshots/latest` | `bgp.announcements.read` |
+| GET | `/bgp/announcements/snapshots` | `bgp.announcements.read` |
+| GET | `/bgp/announcements/snapshots/:id` | `bgp.announcements.read` |
+| GET | `/bgp/announcements/matrix?snapshotId=` | `bgp.announcements.read` |
+
+### Validação
+
+```bash
+cd workspace && pnpm run typecheck
+node tools/bgp-announcement-snapshot-refresh-selftest.mjs
+node tools/bgp-announcement-matrix-selftest.mjs   # regressão
+```

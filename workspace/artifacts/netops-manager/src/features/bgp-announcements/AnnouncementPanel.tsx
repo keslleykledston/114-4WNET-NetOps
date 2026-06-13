@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Device } from "@workspace/api-client-react";
 import { useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { Database, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,15 +12,18 @@ import { useToast } from "@/hooks/use-toast";
 import { AnnouncementMatrixTable } from "@/features/bgp-announcements/AnnouncementMatrixTable";
 import { AnnouncementEditModal } from "@/features/bgp-announcements/AnnouncementEditModal";
 import { AnnouncementEvidencePanel } from "@/features/bgp-announcements/AnnouncementEvidencePanel";
+import { SnapshotHistoryPanel } from "@/features/bgp-announcements/SnapshotHistoryPanel";
 import {
   createChangePlan,
   fetchAnnouncementFeature,
   fetchAnnouncementMatrix,
   fetchChangePlans,
   fetchCommunitySets,
+  fetchMatrixSnapshots,
   fetchTargetEvidence,
   fetchUpstreamAudit,
   previewAnnouncementChange,
+  refreshMatrixSnapshot,
   syncCommunitySets,
 } from "@/features/bgp-announcements/announcement-api";
 import type { MatrixRow, PreviewChangeResponse } from "@/features/bgp-announcements/announcement-types";
@@ -31,7 +34,7 @@ interface AnnouncementPanelProps {
 
 function isNoSnapshotError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  return /no discovery snapshot|no data available|404/i.test(error.message);
+  return /no matrix snapshot|no snapshot|insufficient persisted|404/i.test(error.message);
 }
 
 function isFeatureDisabledError(error: unknown): boolean {
@@ -39,12 +42,23 @@ function isFeatureDisabledError(error: unknown): boolean {
   return /disabled|503/i.test(error.message);
 }
 
+function formatSnapshotTime(iso: string | undefined | null): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("pt-BR");
+  } catch {
+    return iso;
+  }
+}
+
 export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const deviceId = device.id;
   const [search, setSearch] = useState("");
   const [family, setFamily] = useState("");
   const [targetType, setTargetType] = useState("");
+  const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
   const [editRow, setEditRow] = useState<MatrixRow | null>(null);
   const [editCircuitId, setEditCircuitId] = useState<string | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ targetKey: string; circuitId: string } | null>(null);
@@ -56,15 +70,48 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
 
   const matrixEnabled = featureQuery.data?.enabled !== false;
 
+  const snapshotsQuery = useQuery({
+    queryKey: ["bgp-announcement-snapshots", deviceId],
+    queryFn: () => fetchMatrixSnapshots(deviceId),
+    enabled: matrixEnabled,
+  });
+
+  const activeSnapshotId = selectedSnapshotId ?? snapshotsQuery.data?.snapshots[0]?.id ?? null;
+
   const matrixQuery = useQuery({
-    queryKey: ["bgp-announcement-matrix", deviceId, search, family, targetType],
+    queryKey: ["bgp-announcement-matrix", deviceId, search, family, targetType, activeSnapshotId],
     queryFn: () => fetchAnnouncementMatrix(deviceId, {
       search: search || undefined,
       family: family || undefined,
       targetType: targetType || undefined,
+      snapshotId: activeSnapshotId ?? undefined,
     }),
     enabled: matrixEnabled,
     retry: false,
+  });
+
+  const refreshMutation = useMutation({
+    mutationFn: () => refreshMatrixSnapshot(deviceId),
+    onSuccess: async (result) => {
+      setSelectedSnapshotId(result.snapshotId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["bgp-announcement-snapshots", deviceId] }),
+        queryClient.invalidateQueries({ queryKey: ["bgp-announcement-matrix", deviceId] }),
+        queryClient.invalidateQueries({ queryKey: ["bgp-community-sets", deviceId] }),
+      ]);
+      toast({
+        title: "Matriz atualizada",
+        description: `Snapshot #${result.snapshotId} gerado a partir dos dados persistidos (${result.status}).`,
+        variant: result.status === "ok" ? "default" : "destructive",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Falha ao atualizar matriz",
+        description: error instanceof Error ? error.message : "Não foi possível gerar snapshot.",
+        variant: "destructive",
+      });
+    },
   });
 
   const evidenceQuery = useQuery({
@@ -99,6 +146,8 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
   const upstreamName = matrixQuery.data?.upstreams.find((u) => u.circuitId === editCircuitId)?.displayName ?? null;
   const noSnapshot = matrixQuery.isError && isNoSnapshotError(matrixQuery.error);
   const previewEnabled = featureQuery.data?.previewEnabled !== false;
+  const meta = matrixQuery.data?.meta;
+  const counters = meta?.counters;
 
   function handleCellSelect(row: MatrixRow, circuitId: string) {
     setSelectedCell({ targetKey: row.targetKey, circuitId });
@@ -109,14 +158,15 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
   async function handleReloadData() {
     await Promise.all([
       matrixQuery.refetch(),
+      snapshotsQuery.refetch(),
       evidenceQuery.refetch(),
       auditQuery.refetch(),
       setsQuery.refetch(),
       plansQuery.refetch(),
     ]);
     toast({
-      title: "Dados recarregados",
-      description: "Matriz e auditoria atualizadas a partir dos snapshots persistidos.",
+      title: "Recarregado",
+      description: "Refetch do snapshot atual — sem recompilação.",
     });
   }
 
@@ -142,7 +192,7 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
         <div>
           <h3 className="text-base font-semibold text-foreground">Anúncios (matriz)</h3>
           <p className="text-[12px] text-muted-foreground">
-            Read-only — origin e import de cliente são o foco de edição futura; upstreams aparecem só em auditoria.
+            Read-only — origin/cliente para edição futura; upstreams só em auditoria. Sem SSH/SNMP neste painel.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -179,24 +229,61 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
             <RefreshCw className={`mr-2 h-3.5 w-3.5 ${matrixQuery.isFetching ? "animate-spin" : ""}`} />
             Recarregar
           </Button>
+          <Button
+            size="sm"
+            onClick={() => refreshMutation.mutate()}
+            disabled={refreshMutation.isPending}
+          >
+            <Database className={`mr-2 h-3.5 w-3.5 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+            {refreshMutation.isPending ? "Atualizando…" : "Atualizar matriz"}
+          </Button>
         </div>
       </div>
 
-      {matrixQuery.data?.meta ? (
-        <div className="flex flex-wrap gap-2 text-[11px]">
-          <Badge variant="outline" className="bg-sky-500/10 text-sky-200">Read-only</Badge>
-          <Badge variant="secondary">Fonte: {matrixQuery.data.meta.source}</Badge>
-          {matrixQuery.data.meta.collectionAgeMinutes != null ? (
-            <Badge variant={matrixQuery.data.meta.collectionAgeMinutes > 30 ? "destructive" : "outline"}>
-              Snapshot: {matrixQuery.data.meta.collectionAgeMinutes} min atrás
-            </Badge>
-          ) : null}
-        </div>
+      {meta ? (
+        <Card className="border-border bg-card/40">
+          <CardContent className="space-y-3 py-4">
+            <div className="flex flex-wrap gap-2 text-[11px]">
+              <Badge variant="outline" className="bg-sky-500/10 text-sky-200">Read-only</Badge>
+              <Badge variant="secondary">Origem: dados persistidos</Badge>
+              <Badge variant="outline">Fonte base: {meta.dataSource ?? meta.source}</Badge>
+              {meta.snapshotId ? (
+                <Badge variant="outline">Snapshot #{meta.snapshotId}</Badge>
+              ) : null}
+              {meta.status ? (
+                <Badge variant={meta.status === "ok" ? "outline" : "destructive"} className="capitalize">
+                  {meta.status}
+                </Badge>
+              ) : null}
+            </div>
+            <div className="grid gap-2 text-[12px] text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+              <div>Timestamp: <span className="text-foreground">{formatSnapshotTime(meta.snapshotCreatedAt ?? matrixQuery.data?.generatedAt)}</span></div>
+              {counters ? (
+                <>
+                  <div>Origin: <span className="text-foreground">{counters.originTargets}</span></div>
+                  <div>Clientes: <span className="text-foreground">{counters.customerTargets}</span></div>
+                  <div>Upstreams: <span className="text-foreground">{counters.upstreamCount}</span></div>
+                  <div>Community sets: <span className="text-foreground">{counters.communitySetCount}</span></div>
+                  <div>Policies: <span className="text-foreground">{counters.policyCount}</span></div>
+                  <div>Conflitos: <span className="text-foreground">{counters.conflictCount}</span></div>
+                </>
+              ) : null}
+            </div>
+            {(meta.warnings ?? []).length > 0 ? (
+              <div className="space-y-1 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-100">
+                {(meta.warnings ?? []).map((warning, index) => (
+                  <div key={`${warning}-${index}`}>{warning}</div>
+                ))}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
       ) : null}
 
       <Tabs defaultValue="matrix">
         <TabsList className="h-8">
           <TabsTrigger value="matrix" className="text-[12px]">Matriz</TabsTrigger>
+          <TabsTrigger value="history" className="text-[12px]">Histórico</TabsTrigger>
           <TabsTrigger value="audit" className="text-[12px]">Auditoria Upstreams</TabsTrigger>
           <TabsTrigger value="sets" className="text-[12px]">Community Sets</TabsTrigger>
           {previewEnabled ? (
@@ -211,8 +298,11 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
             <div className="rounded-md border border-dashed border-border bg-muted/20 p-8 text-center">
               <p className="text-sm font-medium text-foreground">Nenhum snapshot disponível</p>
               <p className="mt-2 text-[12px] text-muted-foreground">
-                A matriz usa dados já persistidos (discovery ou config collection). Nesta fase não há coleta automática pelo painel.
+                Use <strong className="text-foreground">Atualizar matriz</strong> para compilar a partir de discovery snapshot ou collected_config já persistidos.
               </p>
+              <Button className="mt-4" size="sm" onClick={() => refreshMutation.mutate()} disabled={refreshMutation.isPending}>
+                Atualizar matriz
+              </Button>
             </div>
           ) : matrixQuery.isError ? (
             <div className="rounded-md border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
@@ -223,7 +313,7 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
               <div className="rounded-md border border-dashed border-border bg-muted/20 p-8 text-center">
                 <p className="text-sm font-medium text-foreground">Matriz vazia</p>
                 <p className="mt-2 text-[12px] text-muted-foreground">
-                  Nenhum target de origin ou import de cliente encontrado no snapshot atual.
+                  Snapshot salvo sem targets origin/cliente. Verifique dados persistidos ou warnings acima.
                 </p>
               </div>
             ) : (
@@ -240,6 +330,18 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
               </>
             )
           ) : null}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-3">
+          <SnapshotHistoryPanel
+            snapshots={snapshotsQuery.data?.snapshots ?? []}
+            activeSnapshotId={activeSnapshotId}
+            loading={snapshotsQuery.isLoading}
+            onOpenSnapshot={(snapshotId) => {
+              setSelectedSnapshotId(snapshotId);
+              void matrixQuery.refetch();
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="audit" className="mt-3 space-y-3">

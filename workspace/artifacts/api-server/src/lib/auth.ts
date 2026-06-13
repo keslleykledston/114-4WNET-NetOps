@@ -22,6 +22,7 @@ export type UserPermissions = {
       read?: boolean;
       preview?: boolean;
       plan?: boolean;
+      refresh?: boolean;
       approve?: boolean;
       execute?: boolean;
     };
@@ -327,7 +328,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       bgp: {
         read: true,
         cleanup: { plan: true },
-        announcements: { read: true, preview: true, plan: true, approve: true, execute: true },
+        announcements: { read: true, preview: true, plan: true, refresh: true, approve: true, execute: true },
       },
     };
   }
@@ -344,7 +345,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       bgp: {
         read: true,
         cleanup: { plan: true },
-        announcements: { read: true, preview: true, plan: true, approve: false, execute: false },
+        announcements: { read: true, preview: true, plan: true, refresh: true, approve: false, execute: false },
       },
     };
   }
@@ -361,7 +362,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
     bgp: {
       read: false,
       cleanup: { plan: false },
-      announcements: { read: true, preview: false, plan: false, approve: false, execute: false },
+      announcements: { read: true, preview: false, plan: false, refresh: false, approve: false, execute: false },
     },
   };
 }

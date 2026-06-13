@@ -3,6 +3,8 @@ import type {
   CommunitySetRow,
   MatrixResponse,
   PreviewChangeResponse,
+  SnapshotRefreshResult,
+  SnapshotSummary,
   TargetEvidence,
   UpstreamAuditReport,
 } from "./announcement-types";
@@ -42,12 +44,29 @@ export function fetchAnnouncementMatrix(deviceId: number, params?: {
   family?: string;
   targetType?: string;
   search?: string;
+  snapshotId?: number;
 }): Promise<MatrixResponse> {
   const query = new URLSearchParams({ deviceId: String(deviceId) });
   if (params?.family) query.set("family", params.family);
   if (params?.targetType) query.set("targetType", params.targetType);
   if (params?.search) query.set("search", params.search);
+  if (params?.snapshotId != null) query.set("snapshotId", String(params.snapshotId));
   return apiFetch(`/api/bgp/announcements/matrix?${query}`);
+}
+
+export function fetchLatestMatrixSnapshot(deviceId: number): Promise<SnapshotSummary> {
+  return apiFetch(`/api/bgp/announcements/snapshots/latest?deviceId=${deviceId}`);
+}
+
+export function fetchMatrixSnapshots(deviceId: number, limit = 20): Promise<{ deviceId: number; snapshots: SnapshotSummary[] }> {
+  return apiFetch(`/api/bgp/announcements/snapshots?deviceId=${deviceId}&limit=${limit}`);
+}
+
+export function refreshMatrixSnapshot(deviceId: number): Promise<SnapshotRefreshResult> {
+  return apiFetch("/api/bgp/announcements/snapshots/refresh", {
+    method: "POST",
+    body: JSON.stringify({ deviceId }),
+  });
 }
 
 export function fetchTargetEvidence(deviceId: number, targetKey: string, upstreamCircuitId: string): Promise<TargetEvidence> {

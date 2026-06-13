@@ -1,19 +1,44 @@
 import { eq } from "drizzle-orm";
-import { bgpAnnouncementTargetsTable, bgpCommunitySetsTable, db, devicesTable } from "@workspace/db";
-import type { MatrixResponse, PreviewChangeRequest, PreviewChangeResponse } from "./bgp-announcement.types.js";
+import {
+  bgpAnnouncementMatrixSnapshotsTable,
+  bgpAnnouncementTargetsTable,
+  bgpCommunitySetsTable,
+  db,
+  devicesTable,
+} from "@workspace/db";
+import type {
+  MatrixResponse,
+  PreviewChangeRequest,
+  PreviewChangeResponse,
+  SnapshotRefreshResult,
+  SnapshotSummary,
+} from "./bgp-announcement.types.js";
 import { getBgpAnnouncementMaxCollectionAgeMinutes } from "./bgp-announcement.gate.js";
 import { buildAnnouncementMatrix } from "./resolvers/announcement-matrix.resolver.js";
 import type { BgpPolicyGraph } from "./graph/bgp-policy-graph.builder.js";
 import { hashCommunitySet } from "./resolvers/community-set-matcher.js";
 import { normalizePolicyLookupKey } from "../netops/huawei-vrp/parsers/policy-utils.js";
 import { compileAnnouncementPreview } from "./services/announcement-preview.service.js";
-import { loadAnnouncementDeviceContext } from "./services/announcement-context.service.js";
+import { loadAnnouncementDeviceContext, type AnnouncementDeviceContext } from "./services/announcement-context.service.js";
 import { ensureUpstreamCircuitsInDb } from "./services/upstream-circuit-discovery.service.js";
 import {
   buildTargetEvidence,
   getExpandedPrefixesForPolicyNode,
 } from "./services/announcement-evidence.service.js";
-import { persistAnnouncementMatrixSnapshot } from "./announcement-matrix-snapshot.service.js";
+import {
+  listRecentMatrixSnapshots,
+  loadLatestMatrixSnapshot,
+  loadMatrixSnapshotById,
+  matrixSnapshotRowToResponse,
+  persistAnnouncementMatrixSnapshot,
+} from "./announcement-matrix-snapshot.service.js";
+import {
+  buildSnapshotRefreshResult,
+  computeSnapshotCounters,
+  computeSnapshotWarnings,
+  determineSnapshotStatus,
+  snapshotSummaryFromMeta,
+} from "./services/announcement-snapshot-refresh.service.js";
 import { parseCircuitPolicyName } from "./parsers/circuit-policy.parser.js";
 
 const MATRIX_UPSTREAM_ROLES = new Set(["provider", "cdn", "ix", "pni", "transit"]);
@@ -93,46 +118,11 @@ async function persistAnnouncementTargets(deviceId: number, rows: MatrixResponse
   }));
 }
 
-export async function getAnnouncementMatrix(deviceId: number, filters?: {
+function applyMatrixFilters(rows: MatrixResponse["rows"], filters?: {
   family?: string;
   targetType?: string;
   search?: string;
-}): Promise<MatrixResponse | "device_not_found" | "no_snapshot"> {
-  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
-  if (!device) return "device_not_found";
-
-  const ctx = await loadAnnouncementDeviceContext(deviceId);
-  if (ctx === "no_data") return "no_snapshot";
-
-  await ensureCommunitySetsFromGraph(deviceId, ctx.graph);
-  const upstreams = await ensureUpstreamCircuitsInDb(deviceId, ctx.parsedConfig);
-
-  const { rows, findings } = buildAnnouncementMatrix({
-    deviceId,
-    parsedConfig: ctx.parsedConfig,
-    graph: ctx.graph,
-    upstreams,
-    collectionAgeMinutes: ctx.collectionAgeMinutes,
-    lastCollectedAt: ctx.lastCollectedAt,
-  });
-
-  await persistAnnouncementTargets(deviceId, rows, ctx.source);
-
-  const matrixForSnapshot = {
-    deviceId,
-    upstreams,
-    rows,
-    findings,
-    generatedAt: new Date().toISOString(),
-    meta: {
-      source: ctx.source,
-      collectionAgeMinutes: ctx.collectionAgeMinutes,
-      lastCollectedAt: ctx.lastCollectedAt,
-      readOnly: true as const,
-    },
-  };
-  await persistAnnouncementMatrixSnapshot(matrixForSnapshot).catch(() => undefined);
-
+}) {
   let filteredRows = rows;
   if (filters?.family) {
     filteredRows = filteredRows.filter((r) => r.family === filters.family);
@@ -148,19 +138,134 @@ export async function getAnnouncementMatrix(deviceId: number, filters?: {
       || r.cells.some((c) => (c.community ?? "").toLowerCase().includes(q)),
     );
   }
+  return filteredRows;
+}
 
-  return {
+export async function buildMatrixFromPersistedData(deviceId: number): Promise<
+  { matrix: MatrixResponse; ctx: AnnouncementDeviceContext } | "device_not_found" | "no_data"
+> {
+  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
+  if (!device) return "device_not_found";
+
+  const ctx = await loadAnnouncementDeviceContext(deviceId);
+  if (ctx === "no_data") return "no_data";
+
+  await ensureCommunitySetsFromGraph(deviceId, ctx.graph);
+  const upstreams = await ensureUpstreamCircuitsInDb(deviceId, ctx.parsedConfig);
+
+  const { rows, findings } = buildAnnouncementMatrix({
+    deviceId,
+    parsedConfig: ctx.parsedConfig,
+    graph: ctx.graph,
+    upstreams,
+    collectionAgeMinutes: ctx.collectionAgeMinutes,
+    lastCollectedAt: ctx.lastCollectedAt,
+  });
+
+  await persistAnnouncementTargets(deviceId, rows, ctx.source);
+
+  const matrix: MatrixResponse = {
     deviceId,
     upstreams,
-    rows: filteredRows,
+    rows,
     findings,
     generatedAt: new Date().toISOString(),
     meta: {
-      source: ctx.source,
+      source: "persisted_database",
+      dataSource: ctx.source,
       collectionAgeMinutes: ctx.collectionAgeMinutes,
       lastCollectedAt: ctx.lastCollectedAt,
       readOnly: true,
+      refreshMode: "database_only",
     },
+  };
+
+  return { matrix, ctx };
+}
+
+export async function refreshAnnouncementMatrixSnapshot(deviceId: number): Promise<
+  SnapshotRefreshResult | "device_not_found" | "no_data"
+> {
+  const built = await buildMatrixFromPersistedData(deviceId);
+  if (built === "device_not_found" || built === "no_data") return built;
+
+  const { matrix, ctx } = built;
+  const communitySets = await listCommunitySets(deviceId);
+  const counters = computeSnapshotCounters(matrix, communitySets.length);
+  const warnings = computeSnapshotWarnings(ctx, matrix);
+  const status = determineSnapshotStatus(matrix);
+
+  matrix.meta = {
+    ...matrix.meta!,
+    counters,
+    warnings,
+    status,
+  };
+
+  const snapshotId = await persistAnnouncementMatrixSnapshot(matrix);
+  if (!snapshotId) {
+    throw new Error("Failed to persist matrix snapshot");
+  }
+
+  const [snapshotRow] = await db
+    .select({ createdAt: bgpAnnouncementMatrixSnapshotsTable.createdAt })
+    .from(bgpAnnouncementMatrixSnapshotsTable)
+    .where(eq(bgpAnnouncementMatrixSnapshotsTable.id, snapshotId))
+    .limit(1);
+
+  return buildSnapshotRefreshResult(
+    snapshotId,
+    matrix,
+    counters,
+    warnings,
+    status,
+    snapshotRow?.createdAt ?? new Date(),
+  );
+}
+
+export async function getLatestMatrixSnapshotSummary(deviceId: number): Promise<SnapshotSummary | null> {
+  const snapshot = await loadLatestMatrixSnapshot(deviceId);
+  if (!snapshot) return null;
+  return snapshotSummaryFromMeta(snapshot);
+}
+
+export async function listMatrixSnapshotSummaries(deviceId: number, limit = 20): Promise<SnapshotSummary[]> {
+  return listRecentMatrixSnapshots(deviceId, limit);
+}
+
+export async function getMatrixSnapshotById(snapshotId: number, deviceId?: number) {
+  const snapshot = await loadMatrixSnapshotById(snapshotId);
+  if (!snapshot) return "snapshot_not_found" as const;
+  if (deviceId != null && snapshot.deviceId !== deviceId) return "snapshot_not_found" as const;
+  const matrix = matrixSnapshotRowToResponse(snapshot);
+  if (!matrix) return "snapshot_incompatible" as const;
+  return matrix;
+}
+
+export async function getAnnouncementMatrix(deviceId: number, filters?: {
+  family?: string;
+  targetType?: string;
+  search?: string;
+}, options?: { snapshotId?: number }): Promise<MatrixResponse | "device_not_found" | "no_snapshot"> {
+  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
+  if (!device) return "device_not_found";
+
+  const snapshotRow = options?.snapshotId != null
+    ? await loadMatrixSnapshotById(options.snapshotId)
+    : await loadLatestMatrixSnapshot(deviceId);
+
+  if (!snapshotRow || snapshotRow.deviceId !== deviceId) {
+    return "no_snapshot";
+  }
+
+  const matrix = matrixSnapshotRowToResponse(snapshotRow);
+  if (!matrix) {
+    return "no_snapshot";
+  }
+
+  return {
+    ...matrix,
+    rows: applyMatrixFilters(matrix.rows, filters),
   };
 }
 

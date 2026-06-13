@@ -1,0 +1,100 @@
+import type {
+  ChangePlanRow,
+  CommunitySetRow,
+  MatrixResponse,
+  PreviewChangeResponse,
+  TargetEvidence,
+  UpstreamAuditReport,
+} from "./announcement-types";
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    ...init,
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
+  if (!response.ok) {
+    let message = `HTTP ${response.status}`;
+    try {
+      const data = await response.json() as { error?: string };
+      if (data.error) message = data.error;
+    } catch {
+      // ignore
+    }
+    throw new Error(message);
+  }
+  return response.json() as Promise<T>;
+}
+
+export function fetchAnnouncementMatrix(deviceId: number, params?: {
+  family?: string;
+  targetType?: string;
+  search?: string;
+}): Promise<MatrixResponse> {
+  const query = new URLSearchParams({ deviceId: String(deviceId) });
+  if (params?.family) query.set("family", params.family);
+  if (params?.targetType) query.set("targetType", params.targetType);
+  if (params?.search) query.set("search", params.search);
+  return apiFetch(`/api/bgp/announcements/matrix?${query}`);
+}
+
+export function fetchTargetEvidence(deviceId: number, targetKey: string, upstreamCircuitId: string): Promise<TargetEvidence> {
+  const query = new URLSearchParams({
+    deviceId: String(deviceId),
+    targetKey,
+    upstreamCircuitId,
+  });
+  return apiFetch(`/api/bgp/announcements/evidence?${query}`);
+}
+
+export function previewAnnouncementChange(body: {
+  deviceId: number;
+  targetPolicyName: string;
+  node: number;
+  family: "ipv4" | "ipv6";
+  upstreamCircuitId: string;
+  newState: string;
+}): Promise<PreviewChangeResponse> {
+  return apiFetch("/api/bgp/announcements/preview-change", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function createChangePlan(body: {
+  deviceId: number;
+  preview: PreviewChangeResponse;
+  upstreamCircuitId: string;
+  upstreamName: string;
+  targetType: string;
+  family: "ipv4" | "ipv6";
+  newState: string;
+}): Promise<ChangePlanRow> {
+  return apiFetch("/api/bgp/announcements/change-plans", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function fetchChangePlans(deviceId: number): Promise<ChangePlanRow[]> {
+  return apiFetch(`/api/bgp/announcements/change-plans?deviceId=${deviceId}`);
+}
+
+export function fetchUpstreamAudit(deviceId: number): Promise<UpstreamAuditReport> {
+  return apiFetch(`/api/bgp/upstreams/audit?deviceId=${deviceId}`);
+}
+
+export function fetchCommunitySets(deviceId: number): Promise<CommunitySetRow[]> {
+  return apiFetch(`/api/bgp/community-sets?deviceId=${deviceId}`);
+}
+
+export function syncCommunitySets(deviceId: number): Promise<{ synced: number }> {
+  return apiFetch("/api/bgp/community-sets/sync", {
+    method: "POST",
+    body: JSON.stringify({ deviceId }),
+  });
+}

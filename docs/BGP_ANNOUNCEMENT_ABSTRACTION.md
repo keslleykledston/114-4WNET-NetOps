@@ -2,6 +2,8 @@
 
 Data: 2026-06-06
 
+> **MVP read-only fechado:** ver [`BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md`](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)
+
 ## Frase-guia
 
 > Observar primeiro, explicar sempre, simular antes de alterar, aprovar antes de executar, validar depois de aplicar.

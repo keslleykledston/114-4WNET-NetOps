@@ -3,6 +3,8 @@
 Data: 2026-06-06  
 Escopo: Fase 0 — alinhamento antes da implementação do módulo `bgp-announcement-matrix`.
 
+> **MVP read-only fechado:** ver [`BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md`](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)
+
 ## 1. Objetivo
 
 Documentar **onde plugar** o novo módulo no pipeline existente do 114-4WNET-NetOps, sem duplicar parsers, coleta ou resolvers já entregues.
@@ -392,6 +394,7 @@ Fixtures Huawei existentes: `modules/netops/huawei-vrp/` tests inline, complianc
 8. Execução via Connector (MVP 3, flag OFF)
 9. ✅ **CHANGE-PREVIEW** — ver [`BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md`](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 10. ✅ **CHANGE-PLAN-LINK** — `announcement-change-plan-link.service.ts`, adapter `bgp-announcement-preview.adapter.ts`, migration `0050` — ver [`BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md`](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md)
+11. ✅ **MVP READ-ONLY CLOSURE** — [`BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md`](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)
 
 ---
 

@@ -2,6 +2,8 @@
 
 Read-only flow to propose logical changes on **Cliente/ORIGIN** targets from the BGP Announcement Matrix snapshot.
 
+> **MVP read-only fechado:** ver [`BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md`](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)
+
 ## O que é
 
 - Proposta de alteração (`announcementChangePreview`) com estado atual/proposto, diff lógico, riscos e ticket Markdown.

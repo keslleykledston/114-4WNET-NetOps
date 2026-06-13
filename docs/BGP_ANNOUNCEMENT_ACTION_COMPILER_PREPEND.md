@@ -2,7 +2,8 @@
 
 **Data:** 2026-06-10  
 **Fase:** `BGP-ANNOUNCEMENTS.ACTION-COMPILER-PREPEND`  
-**Status:** Preview lógico/documental — sem comandos vendor
+**Status:** ✅ Fechado — ver [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md)  
+**Commit:** `6b37e77` — `feat(bgp-announcements): add read-only prepend action previews`
 
 ---
 
@@ -133,6 +134,7 @@ Seção obrigatória **## Prepend / AS-PATH** com:
 
 ## Referências
 
+- [**Closure oficial**](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md)
 - [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 - [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md)
 - [MVP Read-Only Closure](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)

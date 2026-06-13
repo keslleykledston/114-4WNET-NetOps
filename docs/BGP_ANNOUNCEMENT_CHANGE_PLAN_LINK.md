@@ -7,7 +7,7 @@ Vínculo seguro entre **Change Preview** (read-only) e **Change Plan** formal (d
 
 ## actionTypes elegíveis
 
-Inclui `set_prepend` e `clear_prepend` quando preview validation `ok` ou `warning` (não `blocked` / `unsupported_preview`). Ver [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md).
+Inclui `set_prepend` e `clear_prepend` quando preview validation `ok` ou `warning` (não `blocked` / `unsupported_preview`). Ver [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md) e [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md).
 
 ## Preview vs Change Plan
 

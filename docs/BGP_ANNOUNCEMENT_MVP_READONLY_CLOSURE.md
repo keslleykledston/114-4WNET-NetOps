@@ -36,6 +36,7 @@ Runtime smoke test concluído em **device 94** (`4WNET-BVA-BRT-RB`), snapshot **
 | Snapshot Timelapse Diff | Comparação read-only entre snapshots | ✅ |
 | Snapshot Timelapse Diff Closure | Smoke runtime 192→193 + doc oficial | ✅ |
 | Prepend Action Preview | set_prepend/clear_prepend preview lógico | ✅ |
+| Prepend Action Preview Closure | Smoke runtime previews #10–11, plan #29 | ✅ |
 | Runtime smoke | API + UI end-to-end device 94 | ✅ |
 
 **Fora de escopo (MVP read-only):** apply, execute, Controlled Execution, SSH/SNMP/connector no fluxo da matriz, edição de upstream/provider/IX/CDN, remoção de globais protegidos.
@@ -147,7 +148,7 @@ Todas aplicadas em lab (`migrate:safe` → `Applied 0 pending`).
 | GET | `/api/bgp/announcements/change-plans?previewId=` | `read` |
 | GET | `/api/bgp/upstreams/audit` | `read` |
 
-Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md), [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md), [Snapshot Timelapse Diff](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md), [Snapshot Timelapse Diff Closure](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md).
+Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md), [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md), [Snapshot Timelapse Diff](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md), [Snapshot Timelapse Diff Closure](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md), [Prepend Preview Closure](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md).
 
 ---
 
@@ -244,7 +245,7 @@ node tools/bgp-announcement-snapshot-timelapse-diff-selftest.mjs
 - **Não altera config** — depende 100% de dados já persistidos no DB.
 - **Idade da coleta** — warning quando discovery > `BGP_ANNOUNCEMENT_MAX_COLLECTION_AGE_MINUTES` (default 30 min).
 - **Upstreams** — apenas auditoria; rows `audit_only` podem ser 0 quando export está na aba separada.
-- **`set_prepend` / `clear_prepend`** — preview lógico/documental (fase ACTION-COMPILER-PREPEND); sem script vendor.
+- **`set_prepend` / `clear_prepend`** — ✅ preview lógico/documental entregue e fechado. Ver [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md).
 - **Rollback** — documental em metadata; apply/rollback automático é fase futura.
 - **Device sem discovery** — refresh retorna `422 NO_PERSISTED_DATA`.
 
@@ -254,9 +255,10 @@ node tools/bgp-announcement-snapshot-timelapse-diff-selftest.mjs
 
 1. **Change Plan Review Workflow** — ✅ entregue e fechado. Ver [`CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md`](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md).
 2. **Controlled Execution Adapter** — somente após flags explícitas + RBAC `execute`.
-3. **Richer policy compiler** — prepend, export edge cases, large-community.
-4. **Timelapse / diff entre snapshots** — ✅ entregue e fechado. Ver [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md) e [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md).
-5. **Integração ticket externo** — Jira/GLPI a partir do ticket markdown.
+3. **Vendor Command Compiler (prepend)** — gerar script documental a partir do diff estruturado (fase futura).
+4. **Richer policy compiler** — export edge cases, large-community.
+5. **Timelapse / diff entre snapshots** — ✅ entregue e fechado. Ver [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md) e [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md).
+6. **Integração ticket externo** — Jira/GLPI a partir do ticket markdown.
 
 ---
 
@@ -339,3 +341,5 @@ docker compose logs api | rg "/api/bgp/announcements" | rg -i "ssh|snmp|connecto
 - [Change Plans Review Workflow Closure](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md)
 - [Snapshot Timelapse Diff](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md)
 - [Snapshot Timelapse Diff Closure](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md)
+- [Prepend Preview](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md)
+- [Prepend Preview Closure](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md)

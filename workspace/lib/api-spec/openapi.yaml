@@ -1088,6 +1088,66 @@ paths:
               schema:
                 $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
 
+  /config-generator/runs/{id}/change-request-preview:
+    get:
+      operationId: getConfigGeneratorChangeRequestPreview
+      tags: [config-generator]
+      summary: Get saved change request preview package for a run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Change request preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewEnvelope"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Preview not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+    post:
+      operationId: generateConfigGeneratorChangeRequestPreview
+      tags: [config-generator]
+      summary: Generate change request preview package (preview-only, no execution)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Generated preview package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
   /config-generator/runs/{id}/request-approval:
     post:
       operationId: requestConfigGeneratorApproval
@@ -7177,7 +7237,7 @@ components:
 
     ConfigGeneratorRiskLevel:
       type: string
-      enum: [low, medium, high]
+      enum: [low, medium, high, blocked]
 
     ConfigGeneratorRunStatus:
       type: string
@@ -7185,7 +7245,7 @@ components:
 
     ConfigGeneratorArtifactType:
       type: string
-      enum: [candidate_config, postcheck_commands, rollback_placeholder, ticket_markdown, diff_notes, precheck_diff, semantic_diff]
+      enum: [candidate_config, postcheck_commands, rollback_placeholder, ticket_markdown, diff_notes, precheck_diff, semantic_diff, change_request_preview, risk_assessment, implementation_package]
 
     ConfigGeneratorFieldSchema:
       type: object
@@ -8104,3 +8164,249 @@ components:
           additionalProperties:
             type: string
             enum: [id_allocator, manual]
+
+    ConfigGeneratorChangeRequestPreviewStatus:
+      type: string
+      enum: [draft_preview]
+
+    ConfigGeneratorRiskAssessmentFactor:
+      type: object
+      required: [code, severity, message]
+      properties:
+        code:
+          type: string
+        severity:
+          $ref: "#/components/schemas/ConfigGeneratorRiskLevel"
+        message:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+
+    ConfigGeneratorChangeRequestPreviewSummary:
+      type: object
+      required: [title, description, deviceName, vendor, platform]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        customerName:
+          type: ["string", "null"]
+        circuitId:
+          type: ["string", "null"]
+        deviceName:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+
+    ConfigGeneratorChangeRequestPreviewScope:
+      type: object
+      required: [tenant, device, interfaces, bgpPeers, vlans, l2vcIds, vsiIds]
+      properties:
+        tenant:
+          type: string
+        site:
+          type: ["string", "null"]
+        device:
+          type: string
+        interfaces:
+          type: array
+          items:
+            type: string
+        bgpPeers:
+          type: array
+          items:
+            type: string
+        vlans:
+          type: array
+          items:
+            type: integer
+        l2vcIds:
+          type: array
+          items:
+            type: integer
+        vsiIds:
+          type: array
+          items:
+            type: integer
+
+    ConfigGeneratorChangeRequestPreviewInputs:
+      type: object
+      required: [fieldOrigins, manualFields, suggestedFields]
+      properties:
+        fieldOrigins:
+          $ref: "#/components/schemas/ConfigGeneratorFieldOrigins"
+        manualFields:
+          type: array
+          items:
+            type: string
+        suggestedFields:
+          type: array
+          items:
+            type: string
+
+    ConfigGeneratorChangeRequestPreviewValidations:
+      type: object
+      required: [errors, warnings, infos]
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+        infos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+
+    ConfigGeneratorChangeRequestPreviewIdAllocation:
+      type: object
+      required: [suggestions, usedIdsSummary, conflicts]
+      properties:
+        suggestions:
+          type: object
+          additionalProperties: true
+        usedIdsSummary:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: integer
+        conflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+
+    ConfigGeneratorChangeRequestPreviewDiff:
+      type: object
+      required: [baseline, summary, blocking]
+      properties:
+        baseline:
+          $ref: "#/components/schemas/ConfigGeneratorDiffBaseline"
+        summary:
+          $ref: "#/components/schemas/ConfigGeneratorDiffSummary"
+        blocking:
+          type: boolean
+        candidateChecksum:
+          type: ["string", "null"]
+        baselineChecksum:
+          type: ["string", "null"]
+        precheckChecksum:
+          type: ["string", "null"]
+
+    ConfigGeneratorChangeRequestPreviewRollbackPlan:
+      type: object
+      required: [type, notes, content]
+      properties:
+        type:
+          type: string
+          enum: [manual_placeholder]
+        notes:
+          type: array
+          items:
+            type: string
+        content:
+          type: string
+
+    ConfigGeneratorChangeRequestPreviewRiskAssessment:
+      type: object
+      required: [score, factors]
+      properties:
+        score:
+          type: integer
+        factors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorRiskAssessmentFactor"
+
+    ConfigGeneratorChangeRequestPreview:
+      type: object
+      required:
+        - id
+        - runId
+        - tenantId
+        - deviceId
+        - serviceType
+        - templateKey
+        - status
+        - riskLevel
+        - summary
+        - scope
+        - inputs
+        - validations
+        - idAllocation
+        - diff
+        - candidateConfig
+        - postcheckCommands
+        - rollbackPlan
+        - riskAssessment
+        - ticketMarkdown
+        - generatedAt
+      properties:
+        id:
+          type: string
+        runId:
+          type: integer
+        tenantId:
+          type: integer
+        deviceId:
+          type: integer
+        serviceType:
+          type: string
+        templateKey:
+          type: string
+        status:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewStatus"
+        riskLevel:
+          $ref: "#/components/schemas/ConfigGeneratorRiskLevel"
+        summary:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewSummary"
+        scope:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewScope"
+        inputs:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewInputs"
+        validations:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewValidations"
+        idAllocation:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewIdAllocation"
+        diff:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewDiff"
+        candidateConfig:
+          type: string
+        postcheckCommands:
+          type: string
+        rollbackPlan:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewRollbackPlan"
+        riskAssessment:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreviewRiskAssessment"
+        ticketMarkdown:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        generatedBy:
+          type: ["integer", "null"]
+        artifactChecksum:
+          type: ["string", "null"]
+
+    ConfigGeneratorChangeRequestPreviewResponse:
+      type: object
+      required: [preview, artifactId]
+      properties:
+        preview:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreview"
+        artifactId:
+          type: integer
+
+    ConfigGeneratorChangeRequestPreviewEnvelope:
+      type: object
+      required: [preview]
+      properties:
+        preview:
+          $ref: "#/components/schemas/ConfigGeneratorChangeRequestPreview"

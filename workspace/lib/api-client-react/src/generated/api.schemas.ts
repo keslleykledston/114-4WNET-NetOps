@@ -2800,6 +2800,7 @@ export const ConfigGeneratorRiskLevel = {
   low: 'low',
   medium: 'medium',
   high: 'high',
+  blocked: 'blocked',
 } as const;
 
 export type ConfigGeneratorRunStatus = typeof ConfigGeneratorRunStatus[keyof typeof ConfigGeneratorRunStatus];
@@ -2823,6 +2824,9 @@ export const ConfigGeneratorArtifactType = {
   diff_notes: 'diff_notes',
   precheck_diff: 'precheck_diff',
   semantic_diff: 'semantic_diff',
+  change_request_preview: 'change_request_preview',
+  risk_assessment: 'risk_assessment',
+  implementation_package: 'implementation_package',
 } as const;
 
 export interface ConfigGeneratorFieldSchema {
@@ -3404,6 +3408,134 @@ export interface ConfigGeneratorIdValidateResponse {
   warnings: ConfigGeneratorValidationFinding[];
   blockingConflicts: ConfigGeneratorValidationFinding[];
   fieldOrigins: ConfigGeneratorIdValidateResponseFieldOrigins;
+}
+
+export type ConfigGeneratorChangeRequestPreviewStatus = typeof ConfigGeneratorChangeRequestPreviewStatus[keyof typeof ConfigGeneratorChangeRequestPreviewStatus];
+
+
+export const ConfigGeneratorChangeRequestPreviewStatus = {
+  draft_preview: 'draft_preview',
+} as const;
+
+export type ConfigGeneratorRiskAssessmentFactorContext = { [key: string]: unknown };
+
+export interface ConfigGeneratorRiskAssessmentFactor {
+  code: string;
+  severity: ConfigGeneratorRiskLevel;
+  message: string;
+  context?: ConfigGeneratorRiskAssessmentFactorContext;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewSummary {
+  title: string;
+  description: string;
+  /** @nullable */
+  customerName?: string | null;
+  /** @nullable */
+  circuitId?: string | null;
+  deviceName: string;
+  vendor: string;
+  platform: string;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewScope {
+  tenant: string;
+  /** @nullable */
+  site?: string | null;
+  device: string;
+  interfaces: string[];
+  bgpPeers: string[];
+  vlans: number[];
+  l2vcIds: number[];
+  vsiIds: number[];
+}
+
+export interface ConfigGeneratorChangeRequestPreviewInputs {
+  fieldOrigins: ConfigGeneratorFieldOrigins;
+  manualFields: string[];
+  suggestedFields: string[];
+}
+
+export interface ConfigGeneratorChangeRequestPreviewValidations {
+  errors: ConfigGeneratorValidationFinding[];
+  warnings: ConfigGeneratorValidationFinding[];
+  infos: ConfigGeneratorValidationFinding[];
+}
+
+export type ConfigGeneratorChangeRequestPreviewIdAllocationSuggestions = { [key: string]: unknown };
+
+export type ConfigGeneratorChangeRequestPreviewIdAllocationUsedIdsSummary = {[key: string]: number[]};
+
+export interface ConfigGeneratorChangeRequestPreviewIdAllocation {
+  suggestions: ConfigGeneratorChangeRequestPreviewIdAllocationSuggestions;
+  usedIdsSummary: ConfigGeneratorChangeRequestPreviewIdAllocationUsedIdsSummary;
+  conflicts: ConfigGeneratorValidationFinding[];
+}
+
+export interface ConfigGeneratorChangeRequestPreviewDiff {
+  baseline: ConfigGeneratorDiffBaseline;
+  summary: ConfigGeneratorDiffSummary;
+  blocking: boolean;
+  /** @nullable */
+  candidateChecksum?: string | null;
+  /** @nullable */
+  baselineChecksum?: string | null;
+  /** @nullable */
+  precheckChecksum?: string | null;
+}
+
+export type ConfigGeneratorChangeRequestPreviewRollbackPlanType = typeof ConfigGeneratorChangeRequestPreviewRollbackPlanType[keyof typeof ConfigGeneratorChangeRequestPreviewRollbackPlanType];
+
+
+export const ConfigGeneratorChangeRequestPreviewRollbackPlanType = {
+  manual_placeholder: 'manual_placeholder',
+} as const;
+
+export interface ConfigGeneratorChangeRequestPreviewRollbackPlan {
+  type: ConfigGeneratorChangeRequestPreviewRollbackPlanType;
+  notes: string[];
+  content: string;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewRiskAssessment {
+  score: number;
+  factors: ConfigGeneratorRiskAssessmentFactor[];
+}
+
+export interface ConfigGeneratorChangeRequestPreview {
+  id: string;
+  runId: number;
+  tenantId: number;
+  deviceId: number;
+  serviceType: string;
+  templateKey: string;
+  status: ConfigGeneratorChangeRequestPreviewStatus;
+  riskLevel: ConfigGeneratorRiskLevel;
+  summary: ConfigGeneratorChangeRequestPreviewSummary;
+  scope: ConfigGeneratorChangeRequestPreviewScope;
+  inputs: ConfigGeneratorChangeRequestPreviewInputs;
+  validations: ConfigGeneratorChangeRequestPreviewValidations;
+  idAllocation: ConfigGeneratorChangeRequestPreviewIdAllocation;
+  diff: ConfigGeneratorChangeRequestPreviewDiff;
+  candidateConfig: string;
+  postcheckCommands: string;
+  rollbackPlan: ConfigGeneratorChangeRequestPreviewRollbackPlan;
+  riskAssessment: ConfigGeneratorChangeRequestPreviewRiskAssessment;
+  ticketMarkdown: string;
+  generatedAt: string;
+  /** @nullable */
+  generatedBy?: number | null;
+  /** @nullable */
+  artifactChecksum?: string | null;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewResponse {
+  preview: ConfigGeneratorChangeRequestPreview;
+  artifactId: number;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewEnvelope {
+  preview: ConfigGeneratorChangeRequestPreview;
 }
 
 export type DisableUser200 = {

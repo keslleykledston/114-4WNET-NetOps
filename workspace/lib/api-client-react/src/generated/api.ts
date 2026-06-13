@@ -50,6 +50,8 @@ import type {
   ConfigDiff,
   ConfigGeneratorArtifactResponse,
   ConfigGeneratorChangeRequest,
+  ConfigGeneratorChangeRequestPreviewEnvelope,
+  ConfigGeneratorChangeRequestPreviewResponse,
   ConfigGeneratorDeviceContextResponse,
   ConfigGeneratorDevicesResponse,
   ConfigGeneratorDiffResponse,
@@ -3346,6 +3348,153 @@ export const useDiffConfigGeneratorRun = <TError = ErrorType<ConfigGeneratorErro
         TContext
       > => {
       return useMutation(getDiffConfigGeneratorRunMutationOptions(options));
+    }
+
+export const getGetConfigGeneratorChangeRequestPreviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/runs/${id}/change-request-preview`
+}
+
+/**
+ * @summary Get saved change request preview package for a run
+ */
+export const getConfigGeneratorChangeRequestPreview = async (id: number, options?: RequestInit): Promise<ConfigGeneratorChangeRequestPreviewEnvelope> => {
+
+  return customFetch<ConfigGeneratorChangeRequestPreviewEnvelope>(getGetConfigGeneratorChangeRequestPreviewUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigGeneratorChangeRequestPreviewQueryKey = (id: number,) => {
+    return [
+    `/api/config-generator/runs/${id}/change-request-preview`
+    ] as const;
+    }
+
+
+export const getGetConfigGeneratorChangeRequestPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigGeneratorChangeRequestPreviewQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>> = ({ signal }) => getConfigGeneratorChangeRequestPreview(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigGeneratorChangeRequestPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>>
+export type GetConfigGeneratorChangeRequestPreviewQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary Get saved change request preview package for a run
+ */
+
+export function useGetConfigGeneratorChangeRequestPreview<TData = Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigGeneratorChangeRequestPreviewQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGenerateConfigGeneratorChangeRequestPreviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/runs/${id}/change-request-preview`
+}
+
+/**
+ * @summary Generate change request preview package (preview-only, no execution)
+ */
+export const generateConfigGeneratorChangeRequestPreview = async (id: number, options?: RequestInit): Promise<ConfigGeneratorChangeRequestPreviewResponse> => {
+
+  return customFetch<ConfigGeneratorChangeRequestPreviewResponse>(getGenerateConfigGeneratorChangeRequestPreviewUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenerateConfigGeneratorChangeRequestPreviewMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['generateConfigGeneratorChangeRequestPreview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  generateConfigGeneratorChangeRequestPreview(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateConfigGeneratorChangeRequestPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>>
+
+    export type GenerateConfigGeneratorChangeRequestPreviewMutationError = ErrorType<ConfigGeneratorErrorResponse>
+
+    /**
+ * @summary Generate change request preview package (preview-only, no execution)
+ */
+export const useGenerateConfigGeneratorChangeRequestPreview = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGenerateConfigGeneratorChangeRequestPreviewMutationOptions(options));
     }
 
 export const getRequestConfigGeneratorApprovalUrl = (id: number,) => {

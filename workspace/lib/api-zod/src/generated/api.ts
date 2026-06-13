@@ -959,7 +959,7 @@ export const ListConfigGeneratorRunsResponseItem = zod.object({
   "templateName": zod.string().nullable(),
   "templateVersion": zod.string().nullable(),
   "status": zod.string(),
-  "riskLevel": zod.enum(['low', 'medium', 'high']),
+  "riskLevel": zod.enum(['low', 'medium', 'high', 'blocked']),
   "createdBy": zod.number().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -1027,7 +1027,7 @@ export const GetConfigGeneratorRunResponse = zod.object({
   "templateName": zod.string().nullable(),
   "templateVersion": zod.string().nullable(),
   "status": zod.string(),
-  "riskLevel": zod.enum(['low', 'medium', 'high']),
+  "riskLevel": zod.enum(['low', 'medium', 'high', 'blocked']),
   "createdBy": zod.number().nullable(),
   "createdAt": zod.coerce.date()
 }).and(zod.object({
@@ -1062,7 +1062,7 @@ export const GetConfigGeneratorRunArtifactsParams = zod.object({
 export const GetConfigGeneratorRunArtifactsResponseItem = zod.object({
   "id": zod.number(),
   "runId": zod.number(),
-  "artifactType": zod.enum(['candidate_config', 'postcheck_commands', 'rollback_placeholder', 'ticket_markdown', 'diff_notes', 'precheck_diff', 'semantic_diff']),
+  "artifactType": zod.enum(['candidate_config', 'postcheck_commands', 'rollback_placeholder', 'ticket_markdown', 'diff_notes', 'precheck_diff', 'semantic_diff', 'change_request_preview', 'risk_assessment', 'implementation_package']),
   "content": zod.string(),
   "checksum": zod.string(),
   "createdAt": zod.coerce.date()
@@ -1122,6 +1122,131 @@ export const DiffConfigGeneratorRunResponse = zod.object({
   "renderedConfig": zod.string(),
   "candidateChecksum": zod.string(),
   "baselineChecksum": zod.string().nullable()
+})
+
+
+/**
+ * @summary Get saved change request preview package for a run
+ */
+export const GetConfigGeneratorChangeRequestPreviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConfigGeneratorChangeRequestPreviewResponse = zod.object({
+  "preview": zod.object({
+  "id": zod.string(),
+  "runId": zod.number(),
+  "tenantId": zod.number(),
+  "deviceId": zod.number(),
+  "serviceType": zod.string(),
+  "templateKey": zod.string(),
+  "status": zod.enum(['draft_preview']),
+  "riskLevel": zod.enum(['low', 'medium', 'high', 'blocked']),
+  "summary": zod.object({
+  "title": zod.string(),
+  "description": zod.string(),
+  "customerName": zod.string().nullish(),
+  "circuitId": zod.string().nullish(),
+  "deviceName": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string()
+}),
+  "scope": zod.object({
+  "tenant": zod.string(),
+  "site": zod.string().nullish(),
+  "device": zod.string(),
+  "interfaces": zod.array(zod.string()),
+  "bgpPeers": zod.array(zod.string()),
+  "vlans": zod.array(zod.number()),
+  "l2vcIds": zod.array(zod.number()),
+  "vsiIds": zod.array(zod.number())
+}),
+  "inputs": zod.object({
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['device_context', 'inventory', 'bgp_peer', 'l2_circuit', 'service_catalog', 'announcement_matrix', 'discovery', 'id_allocator', 'manual'])),
+  "manualFields": zod.array(zod.string()),
+  "suggestedFields": zod.array(zod.string())
+}),
+  "validations": zod.object({
+  "errors": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "infos": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "idAllocation": zod.object({
+  "suggestions": zod.record(zod.string(), zod.unknown()),
+  "usedIdsSummary": zod.record(zod.string(), zod.array(zod.number())),
+  "conflicts": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "diff": zod.object({
+  "baseline": zod.object({
+  "source": zod.enum(['collected_configs', 'discovery_snapshots', 'snmp_snapshots', 'policy_catalog', 'none']),
+  "collectedAt": zod.coerce.date().nullish(),
+  "deviceId": zod.number(),
+  "checksum": zod.string().nullish()
+}),
+  "summary": zod.object({
+  "alreadyPresent": zod.number(),
+  "newCandidate": zod.number(),
+  "conflicts": zod.number(),
+  "manualReview": zod.number(),
+  "unknown": zod.number(),
+  "missingDependencies": zod.number(),
+  "globalExisting": zod.number(),
+  "globalMissing": zod.number()
+}),
+  "blocking": zod.boolean(),
+  "candidateChecksum": zod.string().nullish(),
+  "baselineChecksum": zod.string().nullish(),
+  "precheckChecksum": zod.string().nullish()
+}),
+  "candidateConfig": zod.string(),
+  "postcheckCommands": zod.string(),
+  "rollbackPlan": zod.object({
+  "type": zod.enum(['manual_placeholder']),
+  "notes": zod.array(zod.string()),
+  "content": zod.string()
+}),
+  "riskAssessment": zod.object({
+  "score": zod.number(),
+  "factors": zod.array(zod.object({
+  "code": zod.string(),
+  "severity": zod.enum(['low', 'medium', 'high', 'blocked']),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "ticketMarkdown": zod.string(),
+  "generatedAt": zod.coerce.date(),
+  "generatedBy": zod.number().nullish(),
+  "artifactChecksum": zod.string().nullish()
+})
+})
+
+
+/**
+ * @summary Generate change request preview package (preview-only, no execution)
+ */
+export const GenerateConfigGeneratorChangeRequestPreviewParams = zod.object({
+  "id": zod.coerce.number()
 })
 
 

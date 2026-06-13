@@ -32,6 +32,7 @@ Runtime smoke test concluído em **device 94** (`4WNET-BVA-BRT-RB`), snapshot **
 | Change Preview | Persistência + ticket markdown + validações | ✅ |
 | Change Plan Link | Preview → draft `change_plans` | ✅ |
 | Change Plan Review | Workflow documental (submit/reject/approve manual) | ✅ |
+| Change Plan Review Closure | Smoke runtime #28 + doc oficial | ✅ |
 | Runtime smoke | API + UI end-to-end device 94 | ✅ |
 
 **Fora de escopo (MVP read-only):** apply, execute, Controlled Execution, SSH/SNMP/connector no fluxo da matriz, edição de upstream/provider/IX/CDN, remoção de globais protegidos.
@@ -241,7 +242,7 @@ node tools/bgp-announcement-change-plan-link-selftest.mjs    # 12/12
 
 ## 14. Próximas fases recomendadas
 
-1. **Change Plan Review Workflow** — ✅ entregue: `ready_for_review`, `needs_changes`, `rejected`, `approved_for_manual_implementation`, `archived`. Ver [`BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md`](./BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md).
+1. **Change Plan Review Workflow** — ✅ entregue e fechado. Ver [`CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md`](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md).
 2. **Controlled Execution Adapter** — somente após flags explícitas + RBAC `execute`.
 3. **Richer policy compiler** — prepend, export edge cases, large-community.
 4. **Timelapse / diff entre snapshots** — comparar matrix snapshots no tempo.
@@ -325,3 +326,4 @@ docker compose logs api | rg "/api/bgp/announcements" | rg -i "ssh|snmp|connecto
 - [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 - [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md)
 - [Change Plan Review Workflow](./BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md)
+- [Change Plans Review Workflow Closure](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md)

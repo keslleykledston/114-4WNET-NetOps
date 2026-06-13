@@ -2,6 +2,8 @@
 
 Workflow **documental** de revisão humana para Change Plans originados da BGP Announcement Matrix. Nenhum comando é executado, nenhuma configuração é aplicada e **Controlled Execution não é invocado**.
 
+> **Status:** ✅ Fechado — runtime smoke validado (Change Plan #28). Ver [`CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md`](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md).
+
 ## Draft vs revisão vs aprovação manual
 
 | Estágio | `workflowStatus` | Significado |
@@ -119,3 +121,4 @@ node tools/bgp-announcement-change-plan-link-selftest.mjs
 - [`BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md`](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md)
 - [`BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md`](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)
 - [`BGP_ANNOUNCEMENT_MATRIX_INTEGRATION_MAP.md`](./BGP_ANNOUNCEMENT_MATRIX_INTEGRATION_MAP.md)
+- [`CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md`](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md) — encerramento oficial + smoke runtime

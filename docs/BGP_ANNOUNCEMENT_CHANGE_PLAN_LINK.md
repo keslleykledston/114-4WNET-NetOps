@@ -2,7 +2,8 @@
 
 Vínculo seguro entre **Change Preview** (read-only) e **Change Plan** formal (draft), sem execução em device.
 
-> **MVP read-only fechado:** ver [`BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md`](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)
+> **MVP read-only fechado:** [`BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md`](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)  
+> **Review workflow fechado:** [`CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md`](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md)
 
 ## Preview vs Change Plan
 

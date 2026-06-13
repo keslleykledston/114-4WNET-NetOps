@@ -24,6 +24,7 @@ export * from "./bgp_peer_cleanup_analyses";
 export * from "./bgp_peer_collection_history";
 export * from "./bgp_announcements";
 export * from "./change_plans";
+export * from "./change_plan_review_events";
 export * from "./copilot";
 export * from "./connectors";
 export * from "./credentials";

@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { Link } from "wouter";
 import { Download } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type {
@@ -249,7 +250,11 @@ export function ChangePreviewModal({
                 </Badge>
                 <Badge variant="secondary">{preview.validation.status}</Badge>
                 {preview.id ? <Badge variant="outline">Preview #{preview.id}</Badge> : null}
-                {planLink ? <Badge variant="secondary">Plano #{planLink.changePlanId} (draft)</Badge> : null}
+                {planLink ? (
+                  <Badge variant="secondary">
+                    Plano #{planLink.changePlanId} ({planLink.workflowStatus})
+                  </Badge>
+                ) : null}
               </div>
 
               {requiresHighRiskAck && canCreatePlan ? (
@@ -261,14 +266,23 @@ export function ChangePreviewModal({
 
               {planLink ? (
                 <div className="rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-[11px]">
-                  <div className="font-medium text-foreground">Plano de mudança draft #{planLink.changePlanId}</div>
-                  <div className="mt-1 text-muted-foreground">Status: {planLink.workflowStatus} — sem execução automática.</div>
-                  <a
+                  <div className="font-medium text-foreground">
+                    Plano de mudança #{planLink.changePlanId}
+                  </div>
+                  <div className="mt-1 text-muted-foreground">
+                    Status: {planLink.workflowStatus} — sem execução automática.
+                  </div>
+                  {planLink.workflowStatus === "approved_for_manual_implementation" ? (
+                    <div className="mt-2 rounded border border-emerald-500/30 bg-emerald-500/10 p-2 text-emerald-200">
+                      Aprovado apenas para implementação manual. Nenhum comando será executado pelo sistema.
+                    </div>
+                  ) : null}
+                  <Link
                     href={`/change-plans?highlight=${planLink.changePlanId}`}
                     className="mt-2 inline-block text-sky-300 underline"
                   >
                     Ver plano
-                  </a>
+                  </Link>
                 </div>
               ) : null}
 

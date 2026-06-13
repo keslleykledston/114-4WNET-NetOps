@@ -23,18 +23,33 @@ Vínculo seguro entre **Change Preview** (read-only) e **Change Plan** formal (d
 
 ## Status permitidos (esta fase)
 
-- `draft` — status persistido em `change_plans.status`
-- `workflowStatus: draft` em metadata (extensível para `ready_for_review`, `rejected`, `archived`)
+Workflow documental em `metadata.workflowStatus`:
 
-**Não criados:** `approved_for_execution`, `executing`, `executed`, `applied`, `rollback_executed`
+- `draft` — criado a partir do preview
+- `ready_for_review` — submetido por operador
+- `needs_changes` — revisor solicitou ajustes (nota obrigatória)
+- `rejected` — rejeitado (nota obrigatória)
+- `approved_for_manual_implementation` — aprovado **somente** para implementação humana (não executa)
+- `archived` — encerrado sem execução
 
-## Endpoints
+Ver workflow completo: [`BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md`](./BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md)
+
+**Não criados / bloqueados:** `approved_for_execution`, `executing`, `executed`, `applied`, `rollback_executed`
+
+## Endpoints (criação + revisão)
 
 | Método | Path | RBAC |
 |--------|------|------|
 | POST | `/bgp/announcements/change-preview/:id/create-plan` | `bgp.announcements.plan` |
 | GET | `/bgp/announcements/change-preview/:id/plan` | `bgp.announcements.read` |
 | GET | `/bgp/announcements/change-plans?previewId=` | `bgp.announcements.read` |
+| GET | `/change-plans` | `bgp.announcements.read` |
+| GET | `/change-plans/:id` | `bgp.announcements.read` |
+| POST | `/change-plans/:id/submit-review` | `bgp.announcements.plan` |
+| POST | `/change-plans/:id/request-changes` | `bgp.announcements.approve` |
+| POST | `/change-plans/:id/reject` | `bgp.announcements.approve` |
+| POST | `/change-plans/:id/approve-manual` | `bgp.announcements.approve` |
+| POST | `/change-plans/:id/archive` | `bgp.announcements.plan` / `.approve` (por status) |
 
 Body opcional para POST:
 ```json
@@ -78,4 +93,6 @@ Metadata: `sourcePreviewId`, `changePlanId`, `deviceId`, `targetId`, `riskLevel`
 ```bash
 node tools/bgp-announcement-change-plan-link-selftest.mjs
 node tools/bgp-announcement-change-preview-selftest.mjs
+node tools/change-plans-review-workflow-selftest.mjs
+```
 ```

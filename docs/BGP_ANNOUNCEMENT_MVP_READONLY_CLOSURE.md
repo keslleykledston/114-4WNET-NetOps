@@ -31,6 +31,7 @@ Runtime smoke test concluído em **device 94** (`4WNET-BVA-BRT-RB`), snapshot **
 | Semantic View | `semanticView` no read model + tabs UI | ✅ |
 | Change Preview | Persistência + ticket markdown + validações | ✅ |
 | Change Plan Link | Preview → draft `change_plans` | ✅ |
+| Change Plan Review | Workflow documental (submit/reject/approve manual) | ✅ |
 | Runtime smoke | API + UI end-to-end device 94 | ✅ |
 
 **Fora de escopo (MVP read-only):** apply, execute, Controlled Execution, SSH/SNMP/connector no fluxo da matriz, edição de upstream/provider/IX/CDN, remoção de globais protegidos.
@@ -150,7 +151,7 @@ Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 | **Conflitos** | Apenas conflitos reais (não globais compartilhados) |
 | **Histórico** | Snapshots append-only |
 | **Change Preview Modal** | Ticket markdown, diff lógico, copiar/baixar |
-| **Draft Change Plan** | Badge + link `/change-plans?highlight=`; sem execute |
+| **Draft Change Plan** | Badge + link `/change-plans?highlight=`; workflow de revisão; sem execute |
 
 Banner: *"Read-only — origin/cliente para edição futura; upstreams só em auditoria. Sem SSH/SNMP neste painel."*
 
@@ -240,7 +241,7 @@ node tools/bgp-announcement-change-plan-link-selftest.mjs    # 12/12
 
 ## 14. Próximas fases recomendadas
 
-1. **Change Plan Review Workflow** — `ready_for_review`, rejeição, arquivamento.
+1. **Change Plan Review Workflow** — ✅ entregue: `ready_for_review`, `needs_changes`, `rejected`, `approved_for_manual_implementation`, `archived`. Ver [`BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md`](./BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md).
 2. **Controlled Execution Adapter** — somente após flags explícitas + RBAC `execute`.
 3. **Richer policy compiler** — prepend, export edge cases, large-community.
 4. **Timelapse / diff entre snapshots** — comparar matrix snapshots no tempo.
@@ -323,3 +324,4 @@ docker compose logs api | rg "/api/bgp/announcements" | rg -i "ssh|snmp|connecto
 - [Policy graph model](./BGP_POLICY_GRAPH_MODEL.md)
 - [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 - [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md)
+- [Change Plan Review Workflow](./BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md)

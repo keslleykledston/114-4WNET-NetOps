@@ -26,6 +26,7 @@ import operationalBgpRouter from "../modules/operational-bgp/operational-bgp.rou
 import bgpDrilldownRouter from "../modules/bgp-drilldown/bgp-peer-drilldown.routes.js";
 import bgpCleanupRouter from "../modules/bgp-drill-cleanup/bgp-drill-cleanup.routes.js";
 import bgpAnnouncementRouter from "../modules/bgp-announcements/bgp-announcement.routes.js";
+import changePlansRouter from "../modules/change-plans/change-plans.routes.js";
 import credentialVaultRouter from "../modules/credentials/credential-vault.routes.js";
 import notificationsRouter from "../modules/notifications/notifications.routes.js";
 import configHistoryRouter from "../modules/config-history/config-history.routes.js";
@@ -72,6 +73,7 @@ router.use(operationalBgpRouter);
 router.use(bgpDrilldownRouter);
 router.use(bgpCleanupRouter);
 router.use(bgpAnnouncementRouter);
+router.use(changePlansRouter);
 router.use(credentialVaultRouter);
 router.use(notificationsRouter);
 router.use(configHistoryRouter);

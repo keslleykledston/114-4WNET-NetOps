@@ -322,7 +322,13 @@ export interface BgpPreviewChangePlanLinkSummary {
   title: string;
   description: string;
   status: string;
-  workflowStatus: "draft" | "ready_for_review" | "rejected" | "archived";
+  workflowStatus:
+    | "draft"
+    | "ready_for_review"
+    | "needs_changes"
+    | "rejected"
+    | "approved_for_manual_implementation"
+    | "archived";
   riskLevel: string;
   ticketMarkdown: string;
   logicalDiff: string[];

@@ -23,6 +23,7 @@ import {
   Network,
   Users,
   GitBranch,
+  FileText,
   KeyRound,
   BellRing,
   ChevronLeft,
@@ -65,6 +66,7 @@ const navItems: NavItem[] = [
   { href: "/copilot", icon: Bot, label: "Copiloto IA" },
   { href: "/operational/bgp", icon: GitBranch, label: "BGP Operations" },
   { href: "/bgp-announcements", icon: GitBranch, label: "BGP Announcements" },
+  { href: "/change-plans", icon: FileText, label: "Change Plans" },
   { href: "/bgp/peer-drilldown", icon: GitBranch, label: "BGP Drilldown" },
   {
     href: "/audit",

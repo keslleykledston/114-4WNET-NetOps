@@ -21,6 +21,7 @@ import type {
   ChangePlanSnapshotPayload,
   ChangePlanStatus,
   ChangePlanSummary,
+  ChangePlanWorkflowStatus,
 } from "./change-plans.types.js";
 
 function mapItemRow(row: typeof changePlanItemsTable.$inferSelect): ChangePlanItemRecord {
@@ -35,6 +36,22 @@ function mapItemRow(row: typeof changePlanItemsTable.$inferSelect): ChangePlanIt
     users: (row.usersJson as ChangePlanItemRecord["users"]) ?? [],
     metadata: (row.metadataJson as Record<string, unknown>) ?? {},
   };
+}
+
+function getWorkflowStatusFromMetadata(metadata: Record<string, unknown>): ChangePlanWorkflowStatus {
+  const raw = metadata.workflowStatus;
+  const allowed = [
+    "draft",
+    "ready_for_review",
+    "needs_changes",
+    "rejected",
+    "approved_for_manual_implementation",
+    "archived",
+  ] as const;
+  if (typeof raw === "string" && (allowed as readonly string[]).includes(raw)) {
+    return raw as ChangePlanWorkflowStatus;
+  }
+  return "draft";
 }
 
 function resolveStatus(input: ChangePlanCreateInput): ChangePlanStatus {
@@ -62,6 +79,11 @@ function summaryFromRow(row: typeof changePlansTable.$inferSelect, hostname: str
     peerIp: typeof metadata.peerIp === "string" ? metadata.peerIp : null,
     recommendation: typeof metadata.recommendation === "string" ? metadata.recommendation : null,
     riskLevel: typeof metadata.riskLevel === "string" ? metadata.riskLevel : null,
+    workflowStatus: row.module === "bgp_announcements" ? getWorkflowStatusFromMetadata(metadata) : null,
+    ticketMarkdown: typeof metadata.ticketMarkdown === "string" ? metadata.ticketMarkdown : null,
+    logicalDiff: Array.isArray(metadata.logicalDiff) ? metadata.logicalDiff.map(String) : undefined,
+    reviewedBy: typeof metadata.reviewedBy === "string" ? metadata.reviewedBy : null,
+    reviewedAt: typeof metadata.reviewedAt === "string" ? metadata.reviewedAt : null,
   };
 }
 
@@ -154,6 +176,9 @@ export async function getChangePlanById(id: number): Promise<ChangePlanDetail | 
 
   const hostname = await loadHostname(planRow.deviceId);
   const summary = summaryFromRow(planRow, hostname);
+  const reviewHistory = planRow.module === "bgp_announcements"
+    ? await (await import("./change-plan-review.service.js")).listReviewEvents(id)
+    : undefined;
 
   return {
     ...summary,
@@ -181,6 +206,7 @@ export async function getChangePlanById(id: number): Promise<ChangePlanDetail | 
     rollback: (diffRow?.rollbackJson as ChangePlanRollbackDocument) ?? { valid: false, script: [], steps: [], dependencies: [], warnings: [] },
     beforeState: (diffRow?.beforeJson as Record<string, unknown[]>) ?? {},
     afterState: (diffRow?.afterJson as Record<string, unknown[]>) ?? {},
+    reviewHistory,
   };
 }
 
@@ -200,6 +226,9 @@ export async function listChangePlans(query: ChangePlanListQuery = {}): Promise<
   }
   if (query.sourceObjectId) {
     filters.push(eq(changePlansTable.sourceObjectId, query.sourceObjectId));
+  }
+  if (query.workflowStatus) {
+    filters.push(sql`${changePlansTable.metadataJson}->>'workflowStatus' = ${query.workflowStatus}`);
   }
 
   const whereClause = filters.length ? and(...filters) : undefined;

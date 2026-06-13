@@ -127,6 +127,7 @@ Para cada `Cxx-EXPORT*`:
 | `resolvers/policy-classifier.ts` | Classifica policies |
 | `resolvers/semantic-dependency-classifier.ts` | targetRole, editMode, dependencyScope, protected globals |
 | `services/semantic-matrix-view.service.ts` | Read model `semanticView` (counters, conflitos reais, globais) |
+| `announcement-change-preview.service.ts` | Change preview read-only + ticket markdown |
 | `resolvers/announcement-matrix.resolver.ts` | Matriz + células |
 | `resolvers/community-set-matcher.ts` | Match exato |
 | `services/announcement-preview.service.ts` | Preview compiler |
@@ -139,3 +140,4 @@ Entrada canônica: `buildPolicyDependencyConfigFromSnapshot()` + raw config text
 - **Export Cxx:** excluída da matriz; visível em auditoria upstream (`audit_only`).
 - **Globais protegidos:** `GLOBAL-*`, community-filters compartilhados — `protected_global`, sem falso positivo de remoção.
 - **Conflitos reais:** apenas células `conflict` em rows editáveis; globais compartilhados suprimem finding `PREFIX_LIST_SHARED_BY_MULTIPLE_POLICIES`.
+- **Change preview:** proposta read-only via `announcement-change-preview.service.ts` — somente Cliente/ORIGIN `editable_future`; ticket markdown sem execução.

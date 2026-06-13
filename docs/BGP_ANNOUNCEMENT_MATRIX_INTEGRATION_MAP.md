@@ -357,7 +357,8 @@ Execução real: **stub 503** enquanto `BGP_ANNOUNCEMENT_EXECUTION_ENABLED=false
 |---------------|-------------------------|
 | `bgp-announcement-community-resolver-selftest.mjs` | Sample `parsed_config` ou texto VRP inline |
 | `bgp-announcement-matrix-selftest.mjs` | Resolver + catálogo seed |
-| `bgp-announcement-preview-compiler-selftest.mjs` | Casos §19 preservação unknown |
+| `bgp-announcement-semantic-view-selftest.mjs` | Semântica MATRIX-SEMANTIC-VIEW |
+| `bgp-announcement-change-preview-selftest.mjs` | CHANGE-PREVIEW read-only |
 | `bgp-announcement-risk-selftest.mjs` | Regras §17 |
 | `bgp-announcement-shared-policy-selftest.mjs` | Multi-prefix same policy |
 
@@ -388,6 +389,7 @@ Fixtures Huawei existentes: `modules/netops/huawei-vrp/` tests inline, complianc
 6. Preview compiler + diff/rollback (MVP 2)
 7. Change plans draft (MVP 2)
 8. Execução via Connector (MVP 3, flag OFF)
+9. ✅ **CHANGE-PREVIEW** — `announcement-change-preview.service.ts`, endpoints `/change-preview`, UI modal, selftest `bgp-announcement-change-preview-selftest.mjs` — ver [`BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md`](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 
 ---
 

@@ -256,6 +256,97 @@ export interface PreviewChangeResponse {
   findings: AnnouncementFinding[];
 }
 
+export type ChangePreviewActionType =
+  | "set_community"
+  | "add_community"
+  | "remove_community"
+  | "set_prepend"
+  | "clear_prepend"
+  | "block_announcement"
+  | "allow_announcement"
+  | "audit_only_note";
+
+export type ChangePreviewRiskLevel = "blocked" | "high" | "medium" | "low";
+
+export type ChangePreviewValidationStatus = "ok" | "blocked" | "unsupported_preview" | "warning";
+
+export interface ChangePreviewValidation {
+  status: ChangePreviewValidationStatus;
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ChangePreviewRiskAssessment {
+  level: ChangePreviewRiskLevel;
+  blocked: boolean;
+  reasons: string[];
+  summary: string;
+}
+
+export interface ChangePreviewState {
+  communities: string[];
+  cellStates: Record<string, string>;
+  prependCounts: Record<string, number | null>;
+  announcementAllowed: boolean;
+  notes: string[];
+}
+
+export interface UpstreamAuditImpactItem {
+  circuitId: string;
+  displayName: string;
+  exportPolicyName: string | null;
+  auditNotes: string[];
+  readOnly: true;
+}
+
+export interface AnnouncementChangePreview {
+  id?: number;
+  snapshotId: number | null;
+  tenantId: number | null;
+  deviceId: number;
+  targetId: string;
+  targetName: string;
+  targetRole: TargetRole;
+  targetEditMode: TargetEditMode;
+  actionType: ChangePreviewActionType;
+  upstreamCircuitId: string | null;
+  currentState: ChangePreviewState;
+  proposedState: ChangePreviewState;
+  logicalDiff: string[];
+  affectedPolicies: string[];
+  affectedCommunities: string[];
+  protectedGlobals: ProtectedGlobalDependency[];
+  upstreamAuditImpact: UpstreamAuditImpactItem[];
+  validation: ChangePreviewValidation;
+  riskAssessment: ChangePreviewRiskAssessment;
+  ticketMarkdown: string;
+  createdAt?: string;
+  createdBy: number | null;
+}
+
+export interface CreateChangePreviewRequest {
+  deviceId: number;
+  snapshotId?: number;
+  targetId: string;
+  actionType: ChangePreviewActionType;
+  upstreamCircuitId?: string;
+  newState?: Exclude<CellState, "unknown" | "conflict">;
+  community?: string;
+  prependCount?: number;
+}
+
+export const CHANGE_PREVIEW_ACTION_TYPES: ChangePreviewActionType[] = [
+  "set_community",
+  "add_community",
+  "remove_community",
+  "set_prepend",
+  "clear_prepend",
+  "block_announcement",
+  "allow_announcement",
+  "audit_only_note",
+];
+
 export const CELL_STATE_TO_LABEL: Record<CellState, CellStateLabel> = {
   on: "On",
   p1: "P1",

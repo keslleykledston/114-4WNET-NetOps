@@ -119,6 +119,38 @@ export function fetchCommunitySets(deviceId: number): Promise<CommunitySetRow[]>
   return apiFetch(`/api/bgp/community-sets?deviceId=${deviceId}`);
 }
 
+export function createAnnouncementChangePreview(body: {
+  deviceId: number;
+  snapshotId?: number;
+  targetId: string;
+  actionType: string;
+  upstreamCircuitId?: string;
+  newState?: string;
+  community?: string;
+  prependCount?: number;
+}): Promise<import("./announcement-types").AnnouncementChangePreview> {
+  return apiFetch("/api/bgp/announcements/change-preview", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function fetchAnnouncementChangePreview(previewId: number): Promise<import("./announcement-types").AnnouncementChangePreview> {
+  return apiFetch(`/api/bgp/announcements/change-preview/${previewId}`);
+}
+
+export function fetchAnnouncementChangePreviews(params: {
+  deviceId?: number;
+  snapshotId?: number;
+  targetId?: string;
+}): Promise<{ previews: import("./announcement-types").AnnouncementChangePreview[] }> {
+  const query = new URLSearchParams();
+  if (params.deviceId != null) query.set("deviceId", String(params.deviceId));
+  if (params.snapshotId != null) query.set("snapshotId", String(params.snapshotId));
+  if (params.targetId) query.set("targetId", params.targetId);
+  return apiFetch(`/api/bgp/announcements/change-preview?${query}`);
+}
+
 export function syncCommunitySets(deviceId: number): Promise<{ synced: number }> {
   return apiFetch("/api/bgp/community-sets/sync", {
     method: "POST",

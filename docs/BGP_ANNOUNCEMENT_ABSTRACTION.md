@@ -224,3 +224,21 @@ Snapshots antigos sem campos semânticos nas rows são enriquecidos no read mode
 ```bash
 node tools/bgp-announcement-semantic-view-selftest.mjs
 ```
+
+## Change Preview (fase CHANGE-PREVIEW)
+
+Fluxo read-only de proposta para targets `editable_future` (Cliente/ORIGIN).
+
+| Item | Detalhe |
+|------|---------|
+| Serviço | `announcement-change-preview.service.ts` |
+| Tabela | `bgp_announcement_change_previews` (append-only) |
+| POST | `/bgp/announcements/change-preview` (`bgp.announcements.preview`) |
+| GET | `/bgp/announcements/change-preview/:id` (`bgp.announcements.read`) |
+| UI | Botão **Gerar preview** na aba Clientes/ORIGIN; modal com ticket markdown |
+
+Documentação completa: [`BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md`](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
+
+```bash
+node tools/bgp-announcement-change-preview-selftest.mjs
+```

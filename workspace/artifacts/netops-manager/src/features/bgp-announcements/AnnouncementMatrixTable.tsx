@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { AnnouncementCell } from "./AnnouncementCell";
 import { SemanticBadges } from "./SemanticBadges";
 import type { MatrixRow } from "./announcement-types";
@@ -9,9 +10,11 @@ interface AnnouncementMatrixTableProps {
   rows: MatrixRow[];
   upstreams: Array<{ circuitId: string; displayName: string }>;
   onCellClick?: (row: MatrixRow, circuitId: string) => void;
+  onPreviewClick?: (row: MatrixRow) => void;
+  previewEnabled?: boolean;
 }
 
-export function AnnouncementMatrixTable({ rows, upstreams, onCellClick }: AnnouncementMatrixTableProps) {
+export function AnnouncementMatrixTable({ rows, upstreams, onCellClick, onPreviewClick, previewEnabled }: AnnouncementMatrixTableProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   if (rows.length === 0) {
@@ -37,6 +40,7 @@ export function AnnouncementMatrixTable({ rows, upstreams, onCellClick }: Announ
               </th>
             ))}
             <th className="px-2 py-2 font-medium">Risco</th>
+            {previewEnabled ? <th className="px-2 py-2 font-medium">Preview</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -82,10 +86,23 @@ export function AnnouncementMatrixTable({ rows, upstreams, onCellClick }: Announ
                       {row.riskLevel}
                     </Badge>
                   </td>
+                  {previewEnabled ? (
+                    <td className="px-2 py-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px]"
+                        disabled={row.targetEditMode !== "editable_future" || !row.modifiable}
+                        onClick={() => onPreviewClick?.(row)}
+                      >
+                        Gerar preview
+                      </Button>
+                    </td>
+                  ) : null}
                 </tr>
                 {isOpen ? (
                   <tr className="border-b border-border/40 bg-muted/10">
-                    <td colSpan={5 + upstreams.length} className="px-6 py-3">
+                    <td colSpan={6 + upstreams.length} className="px-6 py-3">
                       <div className="space-y-2 text-[11px] text-muted-foreground">
                         {row.prefixListName ? (
                           <div>

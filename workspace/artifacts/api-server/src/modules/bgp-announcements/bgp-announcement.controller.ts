@@ -29,6 +29,12 @@ import {
 import { runUpstreamAudit } from "../bgp-upstream-audit/bgp-upstream-audit.service.js";
 import type { ParsedPolicyDependencyConfig } from "../netops/huawei-vrp/parsers/policy-dependency-pipeline.js";
 import { ensureUpstreamCircuitsInDb } from "./services/upstream-circuit-discovery.service.js";
+import {
+  createAnnouncementChangePreview,
+  getAnnouncementChangePreviewById,
+  listAnnouncementChangePreviews,
+} from "./announcement-change-preview.service.js";
+import type { ChangePreviewActionType } from "./bgp-announcement.types.js";
 import { logAuditEvent } from "../../lib/audit.js";
 import { getRequestContext } from "../../lib/request-context.js";
 
@@ -284,6 +290,104 @@ export async function postPreviewChange(req: Request, res: Response) {
   });
 
   res.json(result);
+}
+
+export async function postChangePreview(req: Request, res: Response) {
+  const gate = assertPreviewEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const body = req.body ?? {};
+  const deviceId = Number(body.deviceId);
+  if (!Number.isFinite(deviceId) || !body.targetId || !body.actionType) {
+    res.status(400).json({ error: "deviceId, targetId and actionType required" });
+    return;
+  }
+
+  const user = getRequestContext()?.user;
+  const result = await createAnnouncementChangePreview({
+    deviceId,
+    snapshotId: body.snapshotId != null ? Number(body.snapshotId) : undefined,
+    targetId: String(body.targetId),
+    actionType: String(body.actionType) as ChangePreviewActionType,
+    upstreamCircuitId: body.upstreamCircuitId != null ? String(body.upstreamCircuitId) : undefined,
+    newState: body.newState,
+    community: body.community != null ? String(body.community) : undefined,
+    prependCount: body.prependCount != null ? Number(body.prependCount) : undefined,
+  }, user?.id ?? null);
+
+  if (result === "snapshot_not_found") {
+    res.status(404).json({ error: "Matrix snapshot not found" });
+    return;
+  }
+  if (result === "target_not_found") {
+    res.status(404).json({ error: "Target not found in snapshot" });
+    return;
+  }
+  if (result === "invalid_request") {
+    res.status(400).json({ error: "Invalid actionType" });
+    return;
+  }
+
+  await logAuditEvent({
+    action: "announcement_change_preview_created",
+    objectType: "bgp_announcement_change_preview",
+    objectId: String(result.id),
+    metadata: {
+      deviceId,
+      targetId: result.targetId,
+      actionType: result.actionType,
+      riskLevel: result.riskAssessment.level,
+      blocked: result.riskAssessment.blocked,
+    },
+  });
+
+  res.status(201).json(result);
+}
+
+export async function getChangePreviewById(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const previewId = Number(req.params.id);
+  if (!Number.isFinite(previewId)) {
+    res.status(400).json({ error: "Invalid preview id" });
+    return;
+  }
+
+  const preview = await getAnnouncementChangePreviewById(previewId);
+  if (!preview) {
+    res.status(404).json({ error: "Change preview not found" });
+    return;
+  }
+
+  res.json(preview);
+}
+
+export async function getChangePreview(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const deviceId = req.query.deviceId != null ? Number(req.query.deviceId) : undefined;
+  const snapshotId = req.query.snapshotId != null ? Number(req.query.snapshotId) : undefined;
+  const targetId = typeof req.query.targetId === "string" ? req.query.targetId : undefined;
+
+  const previews = await listAnnouncementChangePreviews({
+    deviceId: Number.isFinite(deviceId) ? deviceId : undefined,
+    snapshotId: Number.isFinite(snapshotId) ? snapshotId : undefined,
+    targetId,
+    limit: Number(req.query.limit ?? 20),
+  });
+
+  res.json({ previews });
 }
 
 export async function postChangePlan(req: Request, res: Response) {

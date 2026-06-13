@@ -245,3 +245,70 @@ export interface CommunitySetRow {
   isShared: boolean;
   usageCount: number;
 }
+
+export type ChangePreviewActionType =
+  | "set_community"
+  | "add_community"
+  | "remove_community"
+  | "set_prepend"
+  | "clear_prepend"
+  | "block_announcement"
+  | "allow_announcement"
+  | "audit_only_note";
+
+export type ChangePreviewRiskLevel = "blocked" | "high" | "medium" | "low";
+
+export interface ChangePreviewValidation {
+  status: "ok" | "blocked" | "unsupported_preview" | "warning";
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ChangePreviewRiskAssessment {
+  level: ChangePreviewRiskLevel;
+  blocked: boolean;
+  reasons: string[];
+  summary: string;
+}
+
+export interface ChangePreviewState {
+  communities: string[];
+  cellStates: Record<string, string>;
+  prependCounts: Record<string, number | null>;
+  announcementAllowed: boolean;
+  notes: string[];
+}
+
+export interface UpstreamAuditImpactItem {
+  circuitId: string;
+  displayName: string;
+  exportPolicyName: string | null;
+  auditNotes: string[];
+  readOnly: true;
+}
+
+export interface AnnouncementChangePreview {
+  id?: number;
+  snapshotId: number | null;
+  tenantId: number | null;
+  deviceId: number;
+  targetId: string;
+  targetName: string;
+  targetRole: TargetRole;
+  targetEditMode: TargetEditMode;
+  actionType: ChangePreviewActionType;
+  upstreamCircuitId: string | null;
+  currentState: ChangePreviewState;
+  proposedState: ChangePreviewState;
+  logicalDiff: string[];
+  affectedPolicies: string[];
+  affectedCommunities: string[];
+  protectedGlobals: ProtectedGlobalDependency[];
+  upstreamAuditImpact: UpstreamAuditImpactItem[];
+  validation: ChangePreviewValidation;
+  riskAssessment: ChangePreviewRiskAssessment;
+  ticketMarkdown: string;
+  createdAt?: string;
+  createdBy: number | null;
+}

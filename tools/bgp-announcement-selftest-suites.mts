@@ -50,6 +50,15 @@ import {
   buildSemanticMatrixView,
   enrichMatrixResponseSemantics,
 } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/services/semantic-matrix-view.service.ts";
+import {
+  assessRisk,
+  buildBlockAllowProposedState,
+  buildCurrentState,
+  generateChangePreviewTicketMarkdown,
+  previewLogicalDiffFromStates,
+  validateGlobalCommunityRemoval,
+  validateTargetForPreview,
+} from "../workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-change-preview.service.ts";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -667,6 +676,365 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
       name: "persist export available for append-only snapshots",
       fn: () => {
         assert(typeof persistAnnouncementMatrixSnapshot === "function", "persist export");
+      },
+    },
+  ],
+  "change-preview": [
+    {
+      name: "customer target editable_future allowed",
+      fn: () => {
+        const row = enrichMatrixRowSemantics({
+          targetKey: "origin:10:ipv4",
+          targetType: "customer",
+          routePolicyName: "AS269485-NICKNET-Import-V4",
+          node: 10,
+          family: "ipv4",
+          prefixScope: "AS269485-NICKNET",
+          affectedPrefixes: ["45.187.202.0/24"],
+          prefixListName: "AS269485-NICKNET",
+          modifiable: true,
+          riskLevel: "low",
+          cells: [],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+        });
+        const validation = validateTargetForPreview(row, "set_community", undefined);
+        assert(validation.ok, "customer editable");
+      },
+    },
+    {
+      name: "origin target editable_future allowed",
+      fn: () => {
+        const row = enrichMatrixRowSemantics({
+          targetKey: "origin:10:ipv4",
+          targetType: "origin",
+          routePolicyName: "ORIGIN-45-169-160-000-23",
+          node: 10,
+          family: "ipv4",
+          prefixScope: "ORIGIN-45-169-160",
+          affectedPrefixes: ["45.169.160.0/23"],
+          prefixListName: "ORIGIN-45-169-160",
+          modifiable: true,
+          riskLevel: "low",
+          cells: [],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+        });
+        assert(validateTargetForPreview(row, "set_community", undefined).ok, "origin editable");
+      },
+    },
+    {
+      name: "upstream/provider/ix/cdn blocked",
+      fn: () => {
+        for (const role of ["upstream", "provider", "ix", "cdn"] as const) {
+          const row = {
+            targetKey: "x",
+            targetType: "unknown" as const,
+            routePolicyName: "C01-EXPORT-IPV4",
+            node: 10,
+            family: "ipv4" as const,
+            prefixScope: "x",
+            affectedPrefixes: [],
+            prefixListName: null,
+            modifiable: false,
+            riskLevel: "low" as const,
+            cells: [],
+            findings: [],
+            lastCollectedAt: null,
+            collectionAgeMinutes: null,
+            targetRole: role,
+            targetEditMode: "audit_only" as const,
+          };
+          const validation = validateTargetForPreview(row, "set_community", undefined);
+          assert(!validation.ok && validation.status === "blocked", `${role} blocked`);
+        }
+      },
+    },
+    {
+      name: "unknown target blocked",
+      fn: () => {
+        const row = enrichMatrixRowSemantics({
+          targetKey: "u",
+          targetType: "unknown",
+          routePolicyName: "UNKNOWN-POLICY",
+          node: 10,
+          family: "ipv4",
+          prefixScope: "x",
+          affectedPrefixes: [],
+          prefixListName: null,
+          modifiable: false,
+          riskLevel: "low",
+          cells: [],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+        });
+        assert(!validateTargetForPreview(row, "set_community", undefined).ok, "unknown blocked");
+      },
+    },
+    {
+      name: "protected_global blocks alteration",
+      fn: () => {
+        const row = {
+          targetKey: "g",
+          targetType: "customer" as const,
+          routePolicyName: "AS1-Import",
+          node: 10,
+          family: "ipv4" as const,
+          prefixScope: "GLOBAL-ROUTE-V4",
+          affectedPrefixes: [],
+          prefixListName: "GLOBAL-ROUTE-V4",
+          modifiable: true,
+          riskLevel: "low" as const,
+          cells: [],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+          targetRole: "customer" as const,
+          targetEditMode: "editable_future" as const,
+          dependencyProtection: "protected_global" as const,
+        };
+        assert(!validateTargetForPreview(row, "remove_community", "64777:51001").ok, "protected global row");
+      },
+    },
+    {
+      name: "set_community logicalDiff",
+      fn: () => {
+        const current = buildCurrentState({
+          targetKey: "t",
+          targetType: "origin",
+          routePolicyName: "ORIGIN-TEST",
+          node: 10,
+          family: "ipv4",
+          prefixScope: "x",
+          affectedPrefixes: [],
+          prefixListName: null,
+          modifiable: true,
+          riskLevel: "low",
+          cells: [{ circuitId: "01", upstreamName: "INFORR", state: "on", label: "On", community: "64777:51001", actionCode: "01", prependCount: null, confidence: "high" }],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+        });
+        const proposed = buildBlockAllowProposedState(current, "01", "block_announcement");
+        const diff = previewLogicalDiffFromStates(current, proposed);
+        assert(diff.some((line) => line.includes("Off") || line.includes("community")), "diff lines");
+      },
+    },
+    {
+      name: "block_announcement proposedState",
+      fn: () => {
+        const current = buildCurrentState({
+          targetKey: "t",
+          targetType: "origin",
+          routePolicyName: "ORIGIN-TEST",
+          node: 10,
+          family: "ipv4",
+          prefixScope: "x",
+          affectedPrefixes: [],
+          prefixListName: null,
+          modifiable: true,
+          riskLevel: "low",
+          cells: [{ circuitId: "01", upstreamName: "INFORR", state: "on", label: "On", community: "64777:51001", actionCode: "01", prependCount: null, confidence: "high" }],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+        });
+        const proposed = buildBlockAllowProposedState(current, "01", "block_announcement");
+        assert(!proposed.announcementAllowed, "blocked announcement");
+        assert(proposed.cellStates["01"] === "Off", "off cell");
+      },
+    },
+    {
+      name: "remove global community blocked",
+      fn: () => {
+        const validation = validateGlobalCommunityRemoval("GLOBAL-EXPORT-UPSTREAM-P3");
+        assert(!validation.ok, "global filter blocked");
+      },
+    },
+    {
+      name: "ticket contains no command executed notice",
+      fn: () => {
+        const markdown = generateChangePreviewTicketMarkdown({
+          snapshotId: 1,
+          tenantId: null,
+          deviceId: 1,
+          targetId: "t",
+          targetName: "ORIGIN-TEST",
+          targetRole: "origin",
+          targetEditMode: "editable_future",
+          actionType: "set_community",
+          upstreamCircuitId: "01",
+          currentState: buildCurrentState({
+            targetKey: "t",
+            targetType: "origin",
+            routePolicyName: "ORIGIN-TEST",
+            node: 10,
+            family: "ipv4",
+            prefixScope: "x",
+            affectedPrefixes: [],
+            prefixListName: null,
+            modifiable: true,
+            riskLevel: "low",
+            cells: [],
+            findings: [],
+            lastCollectedAt: null,
+            collectionAgeMinutes: null,
+          }),
+          proposedState: buildCurrentState({
+            targetKey: "t",
+            targetType: "origin",
+            routePolicyName: "ORIGIN-TEST",
+            node: 10,
+            family: "ipv4",
+            prefixScope: "x",
+            affectedPrefixes: [],
+            prefixListName: null,
+            modifiable: true,
+            riskLevel: "low",
+            cells: [],
+            findings: [],
+            lastCollectedAt: null,
+            collectionAgeMinutes: null,
+          }),
+          logicalDiff: ["test"],
+          affectedPolicies: ["ORIGIN-TEST"],
+          affectedCommunities: [],
+          protectedGlobals: [],
+          upstreamAuditImpact: [],
+          validation: { status: "ok", ok: true, errors: [], warnings: [] },
+          riskAssessment: { level: "low", blocked: false, reasons: [], summary: "ok" },
+          ticketMarkdown: "",
+          createdBy: null,
+        });
+        assert(markdown.includes("Nenhum comando foi executado"), "ticket notice");
+        assert(markdown.includes("Preview gerado a partir de snapshot persistido"), "snapshot notice");
+      },
+    },
+    {
+      name: "service avoids ssh snmp connector imports",
+      fn: () => {
+        const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+        const file = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-change-preview.service.ts"), "utf8");
+        for (const token of ["connector", "net-snmp", "ssh2", "runDiscovery", "collectSnmp"]) {
+          assert(!file.toLowerCase().includes(token.toLowerCase()), `must not reference ${token}`);
+        }
+      },
+    },
+    {
+      name: "viewer read operator generate rbac",
+      fn: () => {
+        const viewer = { role: "viewer" as const, permissionsJson: null };
+        const operator = { role: "operator" as const, permissionsJson: null };
+        assert(checkPermission(viewer, "bgp.announcements.read"), "viewer read");
+        assert(!checkPermission(viewer, "bgp.announcements.preview"), "viewer no preview");
+        assert(checkPermission(operator, "bgp.announcements.preview"), "operator preview");
+      },
+    },
+    {
+      name: "risk levels blocked high medium low",
+      fn: () => {
+        const editableRow = enrichMatrixRowSemantics({
+          targetKey: "t",
+          targetType: "origin",
+          routePolicyName: "ORIGIN-TEST",
+          node: 10,
+          family: "ipv4",
+          prefixScope: "x",
+          affectedPrefixes: [],
+          prefixListName: null,
+          modifiable: true,
+          riskLevel: "low",
+          cells: [],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+        });
+        const blocked = assessRisk({
+          row: editableRow,
+          validation: { status: "blocked", ok: false, errors: ["audit"], warnings: [] },
+          hasSharedDependency: false,
+          hasRealConflict: false,
+          ambiguousCommunity: false,
+          multiCustomerImpact: false,
+        });
+        assert(blocked.level === "blocked", "blocked");
+        const high = assessRisk({
+          row: editableRow,
+          validation: { status: "warning", ok: true, errors: [], warnings: [] },
+          hasSharedDependency: false,
+          hasRealConflict: true,
+          ambiguousCommunity: false,
+          multiCustomerImpact: false,
+        });
+        assert(high.level === "high", "high");
+        const medium = assessRisk({
+          row: editableRow,
+          validation: { status: "warning", ok: true, errors: [], warnings: ["shared"] },
+          hasSharedDependency: true,
+          hasRealConflict: false,
+          ambiguousCommunity: false,
+          multiCustomerImpact: false,
+        });
+        assert(medium.level === "medium", "medium");
+        const low = assessRisk({
+          row: editableRow,
+          validation: { status: "ok", ok: true, errors: [], warnings: [] },
+          hasSharedDependency: false,
+          hasRealConflict: false,
+          ambiguousCommunity: false,
+          multiCustomerImpact: false,
+        });
+        assert(low.level === "low", "low");
+      },
+    },
+    {
+      name: "legacy snapshot row derives semantics in preview path",
+      fn: () => {
+        const legacyRow = {
+          targetKey: "legacy",
+          targetType: "origin" as const,
+          routePolicyName: "ORIGIN-45-169-160-000-23",
+          node: 10,
+          family: "ipv4" as const,
+          prefixScope: "ORIGIN-45-169-160",
+          affectedPrefixes: ["45.169.160.0/23"],
+          prefixListName: "ORIGIN-45-169-160",
+          modifiable: true,
+          riskLevel: "low" as const,
+          cells: [],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+        };
+        const enriched = enrichMatrixRowSemantics(legacyRow);
+        assert(enriched.targetRole === "origin", "derived role");
+        assert(enriched.targetEditMode === "editable_future", "derived edit mode");
+      },
+    },
+    {
+      name: "set_prepend unsupported_preview",
+      fn: () => {
+        const row = enrichMatrixRowSemantics({
+          targetKey: "t",
+          targetType: "origin",
+          routePolicyName: "ORIGIN-TEST",
+          node: 10,
+          family: "ipv4",
+          prefixScope: "x",
+          affectedPrefixes: [],
+          prefixListName: null,
+          modifiable: true,
+          riskLevel: "low",
+          cells: [],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+        });
+        const validation = validateTargetForPreview(row, "set_prepend", undefined);
+        assert(validation.status === "unsupported_preview", "prepend unsupported");
       },
     },
   ],

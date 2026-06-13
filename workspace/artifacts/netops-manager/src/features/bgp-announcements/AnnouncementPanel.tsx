@@ -10,23 +10,21 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { AnnouncementMatrixTable } from "@/features/bgp-announcements/AnnouncementMatrixTable";
-import { AnnouncementEditModal } from "@/features/bgp-announcements/AnnouncementEditModal";
+import { ChangePreviewModal } from "@/features/bgp-announcements/ChangePreviewModal";
 import { AnnouncementEvidencePanel } from "@/features/bgp-announcements/AnnouncementEvidencePanel";
 import { SnapshotHistoryPanel } from "@/features/bgp-announcements/SnapshotHistoryPanel";
 import { GlobalDependenciesPanel } from "@/features/bgp-announcements/GlobalDependenciesPanel";
 import { ConflictsPanel } from "@/features/bgp-announcements/ConflictsPanel";
 import {
-  createChangePlan,
+  createAnnouncementChangePreview,
   fetchAnnouncementFeature,
   fetchAnnouncementMatrix,
-  fetchChangePlans,
   fetchMatrixSnapshots,
   fetchTargetEvidence,
   fetchUpstreamAudit,
-  previewAnnouncementChange,
   refreshMatrixSnapshot,
 } from "@/features/bgp-announcements/announcement-api";
-import type { MatrixRow, PreviewChangeResponse } from "@/features/bgp-announcements/announcement-types";
+import type { MatrixRow } from "@/features/bgp-announcements/announcement-types";
 
 interface AnnouncementPanelProps {
   device: Device;
@@ -59,7 +57,7 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
   const [family, setFamily] = useState("");
   const [targetType, setTargetType] = useState("");
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<number | null>(null);
-  const [editRow, setEditRow] = useState<MatrixRow | null>(null);
+  const [previewRow, setPreviewRow] = useState<MatrixRow | null>(null);
   const [editCircuitId, setEditCircuitId] = useState<string | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ targetKey: string; circuitId: string } | null>(null);
 
@@ -128,12 +126,6 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
 
   const previewEnabled = featureQuery.data?.previewEnabled !== false;
 
-  const plansQuery = useQuery({
-    queryKey: ["bgp-change-plans", deviceId],
-    queryFn: () => fetchChangePlans(deviceId),
-    enabled: matrixEnabled && previewEnabled,
-  });
-
   const semanticView = matrixQuery.data?.semanticView;
   const editableRows = matrixQuery.data?.rows.filter((row) => {
     if (row.targetEditMode && row.targetEditMode !== "editable_future") return false;
@@ -141,15 +133,14 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
     return row.targetType === "origin" || row.targetType === "customer";
   }) ?? [];
 
-  const upstreamName = matrixQuery.data?.upstreams.find((u) => u.circuitId === editCircuitId)?.displayName ?? null;
   const noSnapshot = matrixQuery.isError && isNoSnapshotError(matrixQuery.error);
   const meta = matrixQuery.data?.meta;
   const counters = meta?.counters;
 
   function handleCellSelect(row: MatrixRow, circuitId: string) {
     setSelectedCell({ targetKey: row.targetKey, circuitId });
-    setEditRow(row);
     setEditCircuitId(circuitId);
+    setPreviewRow(row);
   }
 
   async function handleReloadData() {
@@ -158,7 +149,6 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
       snapshotsQuery.refetch(),
       evidenceQuery.refetch(),
       auditQuery.refetch(),
-      plansQuery.refetch(),
     ]);
     toast({
       title: "Recarregado",
@@ -325,6 +315,8 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
                 <AnnouncementMatrixTable
                   rows={editableRows}
                   upstreams={matrixQuery.data.upstreams}
+                  previewEnabled={previewEnabled}
+                  onPreviewClick={(row) => setPreviewRow(row)}
                   onCellClick={handleCellSelect}
                 />
                 <AnnouncementEvidencePanel
@@ -357,6 +349,12 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
         </TabsContent>
 
         <TabsContent value="audit" className="mt-3 space-y-3">
+          <Alert className="border-amber-500/30 bg-amber-500/10">
+            <AlertTitle>Auditoria somente</AlertTitle>
+            <AlertDescription className="text-[12px]">
+              Upstreams, provider, IX e CDN são audit_only — sem botão de preview editável nesta aba.
+            </AlertDescription>
+          </Alert>
           <p className="text-[11px] text-muted-foreground">
             Upstreams e export policies — somente auditoria read-only; não editável nesta matriz.
           </p>
@@ -400,40 +398,27 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
       </Tabs>
 
       {previewEnabled ? (
-        <AnnouncementEditModal
-          open={Boolean(editRow && editCircuitId)}
+        <ChangePreviewModal
+          open={Boolean(previewRow)}
           onOpenChange={(open) => {
-            if (!open) {
-              setEditRow(null);
-              setEditCircuitId(null);
-            }
+            if (!open) setPreviewRow(null);
           }}
-          row={editRow}
-          circuitId={editCircuitId}
-          upstreamName={upstreamName}
-          onPreview={(newState) =>
-            previewAnnouncementChange({
+          row={previewRow}
+          deviceId={deviceId}
+          snapshotId={activeSnapshotId}
+          upstreams={matrixQuery.data?.upstreams ?? []}
+          defaultCircuitId={editCircuitId}
+          onGenerate={async (payload) =>
+            createAnnouncementChangePreview({
               deviceId,
-              targetPolicyName: editRow!.routePolicyName,
-              node: editRow!.node,
-              family: editRow!.family,
-              upstreamCircuitId: editCircuitId!,
-              newState,
+              snapshotId: activeSnapshotId ?? undefined,
+              targetId: previewRow!.targetKey,
+              actionType: payload.actionType,
+              upstreamCircuitId: payload.upstreamCircuitId,
+              newState: payload.newState,
+              community: payload.community,
             })
           }
-          onSavePlan={async (preview: PreviewChangeResponse, newState: string) => {
-            await createChangePlan({
-              deviceId,
-              preview,
-              upstreamCircuitId: editCircuitId!,
-              upstreamName: upstreamName ?? editCircuitId!,
-              targetType: editRow!.targetType,
-              family: editRow!.family,
-              newState,
-            });
-            toast({ title: "Plano draft salvo", description: "Sem execução no equipamento." });
-            void plansQuery.refetch();
-          }}
         />
       ) : null}
     </div>

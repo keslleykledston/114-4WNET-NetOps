@@ -165,6 +165,26 @@ export const bgpAnnouncementChangePlansTable = pgTable(
   ],
 );
 
+/** Read-only change previews (append-only; no execution). */
+export const bgpAnnouncementChangePreviewsTable = pgTable(
+  "bgp_announcement_change_previews",
+  {
+    id: serial("id").primaryKey(),
+    deviceId: integer("device_id")
+      .notNull()
+      .references(() => devicesTable.id, { onDelete: "cascade" }),
+    snapshotId: integer("snapshot_id"),
+    targetId: varchar("target_id", { length: 256 }).notNull(),
+    previewJson: jsonb("preview_json").notNull(),
+    createdBy: integer("created_by").references(() => usersTable.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("bgp_announcement_change_previews_device_created_idx").on(table.deviceId, table.createdAt),
+    index("bgp_announcement_change_previews_snapshot_target_idx").on(table.snapshotId, table.targetId),
+  ],
+);
+
 /** Point-in-time matrix snapshots for timelapse / copilot history. */
 export const bgpAnnouncementMatrixSnapshotsTable = pgTable(
   "bgp_announcement_matrix_snapshots",
@@ -189,4 +209,5 @@ export type BgpCommunityActionCatalog = typeof bgpCommunityActionCatalogTable.$i
 export type BgpAnnouncementTarget = typeof bgpAnnouncementTargetsTable.$inferSelect;
 export type BgpCommunitySet = typeof bgpCommunitySetsTable.$inferSelect;
 export type BgpAnnouncementChangePlan = typeof bgpAnnouncementChangePlansTable.$inferSelect;
+export type BgpAnnouncementChangePreview = typeof bgpAnnouncementChangePreviewsTable.$inferSelect;
 export type BgpAnnouncementMatrixSnapshot = typeof bgpAnnouncementMatrixSnapshotsTable.$inferSelect;

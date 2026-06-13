@@ -34,6 +34,7 @@ Runtime smoke test concluído em **device 94** (`4WNET-BVA-BRT-RB`), snapshot **
 | Change Plan Review | Workflow documental (submit/reject/approve manual) | ✅ |
 | Change Plan Review Closure | Smoke runtime #28 + doc oficial | ✅ |
 | Snapshot Timelapse Diff | Comparação read-only entre snapshots | ✅ |
+| Snapshot Timelapse Diff Closure | Smoke runtime 192→193 + doc oficial | ✅ |
 | Runtime smoke | API + UI end-to-end device 94 | ✅ |
 
 **Fora de escopo (MVP read-only):** apply, execute, Controlled Execution, SSH/SNMP/connector no fluxo da matriz, edição de upstream/provider/IX/CDN, remoção de globais protegidos.
@@ -145,7 +146,7 @@ Todas aplicadas em lab (`migrate:safe` → `Applied 0 pending`).
 | GET | `/api/bgp/announcements/change-plans?previewId=` | `read` |
 | GET | `/api/bgp/upstreams/audit` | `read` |
 
-Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md), [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md), [Snapshot Timelapse Diff](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md).
+Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md), [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md), [Snapshot Timelapse Diff](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md), [Snapshot Timelapse Diff Closure](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md).
 
 ---
 
@@ -253,7 +254,7 @@ node tools/bgp-announcement-snapshot-timelapse-diff-selftest.mjs
 1. **Change Plan Review Workflow** — ✅ entregue e fechado. Ver [`CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md`](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md).
 2. **Controlled Execution Adapter** — somente após flags explícitas + RBAC `execute`.
 3. **Richer policy compiler** — prepend, export edge cases, large-community.
-4. **Timelapse / diff entre snapshots** — ✅ comparar matrix snapshots no tempo. Ver [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md).
+4. **Timelapse / diff entre snapshots** — ✅ entregue e fechado. Ver [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md) e [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md).
 5. **Integração ticket externo** — Jira/GLPI a partir do ticket markdown.
 
 ---
@@ -336,3 +337,4 @@ docker compose logs api | rg "/api/bgp/announcements" | rg -i "ssh|snmp|connecto
 - [Change Plan Review Workflow](./BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md)
 - [Change Plans Review Workflow Closure](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md)
 - [Snapshot Timelapse Diff](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md)
+- [Snapshot Timelapse Diff Closure](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md)

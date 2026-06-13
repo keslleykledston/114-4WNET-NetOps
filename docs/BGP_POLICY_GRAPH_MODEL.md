@@ -144,7 +144,7 @@ Entrada canônica: `buildPolicyDependencyConfigFromSnapshot()` + raw config text
 - **Conflitos reais:** apenas células `conflict` em rows editáveis; globais compartilhados suprimem finding `PREFIX_LIST_SHARED_BY_MULTIPLE_POLICIES`.
 - **Change preview:** proposta read-only via `announcement-change-preview.service.ts` — somente Cliente/ORIGIN `editable_future`; ticket markdown sem execução.
 
-## Timelapse diff (SNAPSHOT-TIMELAPSE-DIFF)
+## Timelapse diff (SNAPSHOT-TIMELAPSE-DIFF) — ✅ fechado
 
 Comparação read-only entre snapshots materializados da matriz:
 
@@ -154,4 +154,4 @@ Comparação read-only entre snapshots materializados da matriz:
 - Globais protegidos → `protected_global_*`; remoção nunca vira sugestão automática.
 - Não altera grafo, snapshots, preview ou change plan.
 
-Ver [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md).
+Docs: [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md) · Closure: [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md)

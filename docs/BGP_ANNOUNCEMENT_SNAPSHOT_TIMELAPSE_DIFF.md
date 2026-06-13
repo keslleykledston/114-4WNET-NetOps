@@ -2,7 +2,8 @@
 
 **Data:** 2026-06-10  
 **Fase:** `BGP-ANNOUNCEMENTS.SNAPSHOT-TIMELAPSE-DIFF`  
-**Status:** Read-only — comparação entre snapshots append-only
+**Status:** ✅ Fechado — ver [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md)  
+**Commit:** `4cabd2c` — `feat(bgp-announcements): add snapshot timelapse diff`
 
 ---
 
@@ -220,6 +221,7 @@ curl -s -b "netops_session=$TOKEN" \
 
 ## Referências
 
+- [**Closure oficial**](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md)
 - [MVP Read-Only Closure](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)
 - [Integration Map](./BGP_ANNOUNCEMENT_MATRIX_INTEGRATION_MAP.md)
 - [Policy Graph Model](./BGP_POLICY_GRAPH_MODEL.md)

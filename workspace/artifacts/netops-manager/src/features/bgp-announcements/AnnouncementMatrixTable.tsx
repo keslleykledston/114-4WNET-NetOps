@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AnnouncementCell } from "./AnnouncementCell";
+import { SemanticBadges } from "./SemanticBadges";
 import type { MatrixRow } from "./announcement-types";
 
 interface AnnouncementMatrixTableProps {
@@ -16,7 +17,7 @@ export function AnnouncementMatrixTable({ rows, upstreams, onCellClick }: Announ
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card/40 p-8 text-center text-sm text-muted-foreground">
-        Nenhum target de ORIGIN/Import encontrado. Execute discovery com policies BGP no device.
+        Nenhum target Cliente/ORIGIN encontrado. Export policies aparecem apenas em Auditoria Upstreams.
       </div>
     );
   }
@@ -56,7 +57,10 @@ export function AnnouncementMatrixTable({ rows, upstreams, onCellClick }: Announ
                     </button>
                   </td>
                   <td className="px-2 py-2 text-muted-foreground">
-                    {row.targetType === "origin" ? "Origin" : row.targetType === "customer" ? "Import" : "—"}
+                    <div className="space-y-1">
+                      <div>{row.targetType === "origin" ? "Origin" : row.targetType === "customer" ? "Import" : "—"}</div>
+                      <SemanticBadges row={row} />
+                    </div>
                   </td>
                   <td className="px-2 py-2 uppercase text-muted-foreground">{row.family}</td>
                   <td className="px-2 py-2 font-mono text-[11px]">{row.prefixScope}</td>

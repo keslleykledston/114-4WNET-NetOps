@@ -40,6 +40,7 @@ import {
   snapshotSummaryFromMeta,
 } from "./services/announcement-snapshot-refresh.service.js";
 import { parseCircuitPolicyName } from "./parsers/circuit-policy.parser.js";
+import { enrichMatrixResponseSemantics } from "./services/semantic-matrix-view.service.js";
 
 const MATRIX_UPSTREAM_ROLES = new Set(["provider", "cdn", "ix", "pni", "transit"]);
 
@@ -202,7 +203,8 @@ export async function refreshAnnouncementMatrixSnapshot(deviceId: number): Promi
     status,
   };
 
-  const snapshotId = await persistAnnouncementMatrixSnapshot(matrix);
+  const enrichedMatrix = enrichMatrixResponseSemantics(matrix, ctx.parsedConfig);
+  const snapshotId = await persistAnnouncementMatrixSnapshot(enrichedMatrix);
   if (!snapshotId) {
     throw new Error("Failed to persist matrix snapshot");
   }
@@ -239,7 +241,9 @@ export async function getMatrixSnapshotById(snapshotId: number, deviceId?: numbe
   if (deviceId != null && snapshot.deviceId !== deviceId) return "snapshot_not_found" as const;
   const matrix = matrixSnapshotRowToResponse(snapshot);
   if (!matrix) return "snapshot_incompatible" as const;
-  return matrix;
+  const ctx = await loadAnnouncementDeviceContext(matrix.deviceId);
+  const parsedConfig = ctx !== "no_data" ? ctx.parsedConfig : undefined;
+  return enrichMatrixResponseSemantics(matrix, parsedConfig);
 }
 
 export async function getAnnouncementMatrix(deviceId: number, filters?: {
@@ -263,10 +267,15 @@ export async function getAnnouncementMatrix(deviceId: number, filters?: {
     return "no_snapshot";
   }
 
-  return {
+  const ctx = await loadAnnouncementDeviceContext(deviceId);
+  const parsedConfig = ctx !== "no_data" ? ctx.parsedConfig : undefined;
+
+  const enriched = enrichMatrixResponseSemantics({
     ...matrix,
     rows: applyMatrixFilters(matrix.rows, filters),
-  };
+  }, parsedConfig);
+
+  return enriched;
 }
 
 export async function getTargetEvidence(

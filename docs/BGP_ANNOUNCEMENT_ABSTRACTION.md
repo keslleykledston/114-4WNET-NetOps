@@ -186,3 +186,41 @@ cd workspace && pnpm run typecheck
 node tools/bgp-announcement-snapshot-refresh-selftest.mjs
 node tools/bgp-announcement-matrix-selftest.mjs   # regressão
 ```
+
+## Visão semântica (fase MATRIX-SEMANTIC-VIEW)
+
+### Cliente/ORIGIN vs Upstream auditoria
+
+| Papel | targetRole | targetEditMode | Onde na UI |
+|-------|------------|----------------|------------|
+| Import cliente | `customer` | `editable_future` | Aba **Clientes / ORIGIN** |
+| ORIGIN | `origin` | `editable_future` | Aba **Clientes / ORIGIN** |
+| Provider/upstream/IX/CDN | `provider`/`upstream`/`ix`/`cdn` | `audit_only` | Aba **Auditoria Upstreams** |
+| iBGP/malha | `ibgp` | `hidden` | Fora da matriz principal |
+
+### Export vs Import
+
+- **Export policy (Cxx-EXPORT)** não entra na visão principal de edição de community — só auditoria upstream.
+- **Import policy de cliente** e **ORIGIN** são o foco de marcação de community (edição futura via preview).
+
+### Objetos globais protegidos
+
+- Padrões `GLOBAL-*`, community-filters globais, ip-prefix globais → `dependencyScope=global_shared`, `dependencyProtection=protected_global`.
+- Não geram falso positivo de “dependência compartilhada problemática” nem candidatos a remoção.
+- Listados na aba **Dependências Globais** via `semanticView.protectedGlobals`.
+
+### Read model
+
+`GET /bgp/announcements/matrix` inclui `semanticView`:
+
+- `countersByTargetRole`, `countersByDependencyScope`
+- `protectedGlobals`, `realConflicts`
+- `warnings`: operacionais, dados insuficientes, dependência compartilhada, avisos de global protegido
+
+Snapshots antigos sem campos semânticos nas rows são enriquecidos no read model (`enrichMatrixResponseSemantics`).
+
+### Validação
+
+```bash
+node tools/bgp-announcement-semantic-view-selftest.mjs
+```

@@ -11,7 +11,7 @@ import {
   findExactCommunitySetMatch,
   hashCommunitySet,
 } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/resolvers/community-set-matcher.ts";
-import { classifyPolicy } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/resolvers/policy-classifier.ts";
+import { classifyPolicy, shouldIncludeInAnnouncementMatrix } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/resolvers/policy-classifier.ts";
 import { extractCircuitIdFromName } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/resolvers/circuit-id.resolver.ts";
 import {
   collectProtectedGlobalFilterUsage,
@@ -36,6 +36,20 @@ import {
 } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-matrix-snapshot.service.ts";
 import { assertMatrixEnabled } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcement.gate.ts";
 import { checkPermission, getDefaultPermissions } from "../workspace/artifacts/api-server/src/lib/auth.ts";
+import {
+  classifyDependencyScope,
+  classifyTargetEditMode,
+  classifyTargetRoleFromPolicy,
+  enrichMatrixRowSemantics,
+  isEditableMatrixRow,
+  isProtectedGlobalDependency,
+  isRealMatrixConflict,
+  shouldSuppressSharedDependencyFinding,
+} from "../workspace/artifacts/api-server/src/modules/bgp-announcements/resolvers/semantic-dependency-classifier.ts";
+import {
+  buildSemanticMatrixView,
+  enrichMatrixResponseSemantics,
+} from "../workspace/artifacts/api-server/src/modules/bgp-announcements/services/semantic-matrix-view.service.ts";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -367,6 +381,145 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
       fn: () => {
         assert(extractCircuitIdFromName("C01-EXPORT-IPV4") === "01", "policy");
         assert(extractCircuitIdFromName("C01-EXPORT-P2") === "01", "filter");
+      },
+    },
+  ],
+  "semantic-view": [
+    {
+      name: "customer target editable_future",
+      fn: () => {
+        const classification = classifyPolicy("AS269485-NICKNET-Import-V4", parseBgpNetworkStatements(FIXTURE), parseHuaweiPolicyDependencyPipeline(FIXTURE, "ssh_running_config"));
+        const role = classifyTargetRoleFromPolicy(classification.name, classification);
+        assert(role === "customer", "customer role");
+        assert(classifyTargetEditMode(role) === "editable_future", "editable");
+      },
+    },
+    {
+      name: "origin target editable_future",
+      fn: () => {
+        const parsed = parseHuaweiPolicyDependencyPipeline(FIXTURE, "ssh_running_config");
+        const classification = classifyPolicy("ORIGIN-45-169-160-000-23", parseBgpNetworkStatements(FIXTURE), parsed);
+        assert(classifyTargetRoleFromPolicy(classification.name, classification) === "origin", "origin");
+        assert(classifyTargetEditMode("origin") === "editable_future", "editable");
+      },
+    },
+    {
+      name: "upstream/provider audit_only",
+      fn: () => {
+        const parsed = parseHuaweiPolicyDependencyPipeline(FIXTURE, "ssh_running_config");
+        const exportClass = classifyPolicy("C01-EXPORT-IPV4", parseBgpNetworkStatements(FIXTURE), parsed);
+        const role = classifyTargetRoleFromPolicy(exportClass.name, exportClass);
+        assert(role === "provider" || role === "upstream", "provider/upstream");
+        assert(classifyTargetEditMode(role) === "audit_only", "audit only");
+      },
+    },
+    {
+      name: "ix/cdn audit_only",
+      fn: () => {
+        assert(classifyTargetEditMode("ix") === "audit_only", "ix audit");
+        assert(classifyTargetEditMode("cdn") === "audit_only", "cdn audit");
+      },
+    },
+    {
+      name: "ibgp hidden and unknown not editable",
+      fn: () => {
+        assert(classifyTargetEditMode("ibgp") === "hidden", "ibgp hidden");
+        assert(classifyTargetEditMode("unknown") === "unknown", "unknown mode");
+        const parsed = parseHuaweiPolicyDependencyPipeline(FIXTURE, "ssh_running_config");
+        const row = enrichMatrixRowSemantics({
+          targetKey: "x",
+          targetType: "unknown",
+          routePolicyName: "UNKNOWN-POLICY",
+          node: 10,
+          family: "ipv4",
+          prefixScope: "x",
+          affectedPrefixes: [],
+          prefixListName: null,
+          modifiable: false,
+          riskLevel: "high",
+          cells: [],
+          findings: [],
+          lastCollectedAt: null,
+          collectionAgeMinutes: null,
+        }, parsed);
+        assert(!isEditableMatrixRow(row), "unknown not editable");
+      },
+    },
+    {
+      name: "global community-filter protected_global",
+      fn: () => {
+        assert(isProtectedGlobalDependency("GLOBAL-EXPORT-UPSTREAM-P3", "community-filter"), "global cf");
+        const scope = classifyDependencyScope("GLOBAL-EXPORT-UPSTREAM-P3", "community-filter", 3);
+        assert(scope === "global_shared", "global scope");
+      },
+    },
+    {
+      name: "global ip-prefix protected_global",
+      fn: () => {
+        assert(isProtectedGlobalDependency("GLOBAL-ORIGIN-PL", "prefix-list"), "global prefix");
+      },
+    },
+    {
+      name: "shared global does not generate removal conflict finding",
+      fn: () => {
+        assert(shouldSuppressSharedDependencyFinding("PREFIX_LIST_SHARED_BY_MULTIPLE_POLICIES", "GLOBAL-EXPORT-UPSTREAM-P3"), "suppress");
+      },
+    },
+    {
+      name: "export policy excluded from main matrix",
+      fn: () => {
+        const parsed = parseHuaweiPolicyDependencyPipeline(FIXTURE, "ssh_running_config");
+        const exportClass = classifyPolicy("C01-EXPORT-IPV4", parseBgpNetworkStatements(FIXTURE), parsed);
+        assert(!shouldIncludeInAnnouncementMatrix(exportClass), "export excluded");
+        const customerClass = classifyPolicy("AS269485-NICKNET-Import-V4", parseBgpNetworkStatements(FIXTURE), parsed);
+        assert(shouldIncludeInAnnouncementMatrix(customerClass), "customer import included");
+      },
+    },
+    {
+      name: "legacy snapshot rows derive semantics",
+      fn: () => {
+        const parsed = parseHuaweiPolicyDependencyPipeline(FIXTURE, "ssh_running_config");
+        const graph = buildBgpPolicyGraph(parsed, FIXTURE);
+        const { rows } = buildAnnouncementMatrix({
+          deviceId: 1,
+          parsedConfig: parsed,
+          graph,
+          upstreams: [{ circuitId: "01", displayName: "INFORR", role: "provider" }],
+          collectionAgeMinutes: 5,
+          lastCollectedAt: new Date().toISOString(),
+        });
+        const legacy = rows.map((row) => {
+          const { targetRole, targetEditMode, dependencyScope, dependencyProtection, dependencyReason, ...rest } = row;
+          void targetRole; void targetEditMode; void dependencyScope; void dependencyProtection; void dependencyReason;
+          return rest;
+        });
+        const enriched = enrichMatrixResponseSemantics({
+          deviceId: 1,
+          upstreams: [{ circuitId: "01", displayName: "INFORR", role: "provider" }],
+          rows: legacy,
+          findings: [],
+          generatedAt: new Date().toISOString(),
+        }, parsed);
+        assert(enriched.semanticView?.editableRowCount >= 1, "derived editable count");
+        assert(enriched.rows[0]?.targetRole, "derived role");
+      },
+    },
+    {
+      name: "semantic counters and real conflicts",
+      fn: () => {
+        const parsed = parseHuaweiPolicyDependencyPipeline(FIXTURE_CONFLICT, "ssh_running_config");
+        const graph = buildBgpPolicyGraph(parsed, FIXTURE_CONFLICT);
+        const { rows, findings } = buildAnnouncementMatrix({
+          deviceId: 1,
+          parsedConfig: parsed,
+          graph,
+          upstreams: [{ circuitId: "10", displayName: "EBT", role: "provider" }],
+          collectionAgeMinutes: 0,
+          lastCollectedAt: new Date().toISOString(),
+        });
+        const view = buildSemanticMatrixView({ deviceId: 1, upstreams: [], rows, findings, generatedAt: new Date().toISOString() }, parsed);
+        assert(view.countersByTargetRole.origin >= 1, "origin counter");
+        assert(view.realConflicts.length >= 1 || rows.some((row) => isRealMatrixConflict(row)), "conflict");
       },
     },
   ],

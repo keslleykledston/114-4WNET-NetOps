@@ -26,6 +26,74 @@ export interface MatrixRow {
   findings: Array<{ code: string; severity: string; message: string }>;
   lastCollectedAt: string | null;
   collectionAgeMinutes: number | null;
+  targetRole?: TargetRole;
+  targetEditMode?: TargetEditMode;
+  dependencyScope?: DependencyScope;
+  dependencyProtection?: DependencyProtection;
+  dependencyReason?: string;
+}
+
+export type TargetRole =
+  | "customer"
+  | "origin"
+  | "provider"
+  | "upstream"
+  | "ix"
+  | "cdn"
+  | "ibgp"
+  | "unknown";
+
+export type TargetEditMode = "editable_future" | "audit_only" | "hidden" | "unknown";
+
+export type DependencyScope =
+  | "circuit_specific"
+  | "customer_specific"
+  | "global_shared"
+  | "system"
+  | "unknown";
+
+export type DependencyProtection =
+  | "removable_candidate"
+  | "protected_global"
+  | "protected_system"
+  | "shared_requires_review"
+  | "unknown";
+
+export interface ProtectedGlobalDependency {
+  objectName: string;
+  objectKind: string;
+  dependencyScope: DependencyScope;
+  dependencyProtection: DependencyProtection;
+  reason: string;
+  consumerCount: number;
+  consumers: string[];
+}
+
+export interface MatrixConflictItem {
+  targetKey: string;
+  routePolicyName: string;
+  node: number;
+  family: "ipv4" | "ipv6";
+  targetRole: TargetRole;
+  circuitIds: string[];
+  message: string;
+}
+
+export interface MatrixSemanticWarnings {
+  operational: string[];
+  insufficientData: string[];
+  sharedDependency: string[];
+  protectedGlobalNotices: string[];
+}
+
+export interface MatrixSemanticView {
+  countersByTargetRole: Record<TargetRole, number>;
+  countersByDependencyScope: Record<DependencyScope, number>;
+  protectedGlobals: ProtectedGlobalDependency[];
+  realConflicts: MatrixConflictItem[];
+  warnings: MatrixSemanticWarnings;
+  editableRowCount: number;
+  auditOnlyRowCount: number;
 }
 
 export interface MatrixResponse {
@@ -34,6 +102,7 @@ export interface MatrixResponse {
   rows: MatrixRow[];
   findings: Array<{ code: string; severity: string; message: string }>;
   generatedAt: string;
+  semanticView?: MatrixSemanticView;
   meta?: {
     source: string;
     dataSource?: string;

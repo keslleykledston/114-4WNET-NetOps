@@ -18,6 +18,10 @@ import { parseNodeApplies } from "../parsers/apply-community.parser.js";
 import { parseCircuitCommunity } from "../parsers/community-circuit.parser.js";
 import { classifyPolicy, shouldIncludeInAnnouncementMatrix } from "./policy-classifier.js";
 import {
+  resolveRowDependencySemantics,
+  shouldSuppressSharedDependencyFinding,
+} from "./semantic-dependency-classifier.js";
+import {
   expandPrefixList,
   findPrefixListForNode,
   countPoliciesUsingPrefixList,
@@ -174,7 +178,7 @@ export function buildAnnouncementMatrix(input: MatrixBuildInput): { rows: Matrix
           context: { listName },
         });
       }
-      if (prefixListShared) {
+      if (prefixListShared && listName && !shouldSuppressSharedDependencyFinding("PREFIX_LIST_SHARED_BY_MULTIPLE_POLICIES", listName)) {
         findings.push({
           code: "PREFIX_LIST_SHARED_BY_MULTIPLE_POLICIES",
           severity: "medium",
@@ -237,6 +241,22 @@ export function buildAnnouncementMatrix(input: MatrixBuildInput): { rows: Matrix
         findings,
         lastCollectedAt: input.lastCollectedAt,
         collectionAgeMinutes: input.collectionAgeMinutes,
+        ...resolveRowDependencySemantics({
+          targetKey: `${normalizePolicyLookupKey(policy.name)}:${node.sequence}:${family}`,
+          targetType,
+          routePolicyName: policy.name,
+          node: node.sequence ?? 0,
+          family,
+          prefixScope: listName ?? affectedPrefixes[0] ?? policy.name,
+          affectedPrefixes,
+          prefixListName: listName,
+          modifiable: classification.modifiable,
+          riskLevel,
+          cells,
+          findings,
+          lastCollectedAt: input.lastCollectedAt,
+          collectionAgeMinutes: input.collectionAgeMinutes,
+        }, input.parsedConfig),
       });
 
       void matchType;

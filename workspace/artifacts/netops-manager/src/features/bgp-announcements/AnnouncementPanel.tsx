@@ -13,18 +13,18 @@ import { AnnouncementMatrixTable } from "@/features/bgp-announcements/Announceme
 import { AnnouncementEditModal } from "@/features/bgp-announcements/AnnouncementEditModal";
 import { AnnouncementEvidencePanel } from "@/features/bgp-announcements/AnnouncementEvidencePanel";
 import { SnapshotHistoryPanel } from "@/features/bgp-announcements/SnapshotHistoryPanel";
+import { GlobalDependenciesPanel } from "@/features/bgp-announcements/GlobalDependenciesPanel";
+import { ConflictsPanel } from "@/features/bgp-announcements/ConflictsPanel";
 import {
   createChangePlan,
   fetchAnnouncementFeature,
   fetchAnnouncementMatrix,
   fetchChangePlans,
-  fetchCommunitySets,
   fetchMatrixSnapshots,
   fetchTargetEvidence,
   fetchUpstreamAudit,
   previewAnnouncementChange,
   refreshMatrixSnapshot,
-  syncCommunitySets,
 } from "@/features/bgp-announcements/announcement-api";
 import type { MatrixRow, PreviewChangeResponse } from "@/features/bgp-announcements/announcement-types";
 
@@ -126,26 +126,23 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
     enabled: matrixEnabled && featureQuery.data?.upstreamAuditEnabled !== false,
   });
 
-  const setsQuery = useQuery({
-    queryKey: ["bgp-community-sets", deviceId],
-    queryFn: () => fetchCommunitySets(deviceId),
-    enabled: matrixEnabled,
-  });
+  const previewEnabled = featureQuery.data?.previewEnabled !== false;
 
   const plansQuery = useQuery({
     queryKey: ["bgp-change-plans", deviceId],
     queryFn: () => fetchChangePlans(deviceId),
-    enabled: matrixEnabled,
+    enabled: matrixEnabled && previewEnabled,
   });
 
-  const visibleRows = matrixQuery.data?.rows.filter((row) => {
+  const semanticView = matrixQuery.data?.semanticView;
+  const editableRows = matrixQuery.data?.rows.filter((row) => {
+    if (row.targetEditMode && row.targetEditMode !== "editable_future") return false;
     if (/export/i.test(row.routePolicyName)) return false;
     return row.targetType === "origin" || row.targetType === "customer";
   }) ?? [];
 
   const upstreamName = matrixQuery.data?.upstreams.find((u) => u.circuitId === editCircuitId)?.displayName ?? null;
   const noSnapshot = matrixQuery.isError && isNoSnapshotError(matrixQuery.error);
-  const previewEnabled = featureQuery.data?.previewEnabled !== false;
   const meta = matrixQuery.data?.meta;
   const counters = meta?.counters;
 
@@ -161,7 +158,6 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
       snapshotsQuery.refetch(),
       evidenceQuery.refetch(),
       auditQuery.refetch(),
-      setsQuery.refetch(),
       plansQuery.refetch(),
     ]);
     toast({
@@ -268,6 +264,13 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
                   <div>Conflitos: <span className="text-foreground">{counters.conflictCount}</span></div>
                 </>
               ) : null}
+              {semanticView ? (
+                <>
+                  <div>Editáveis (futuro): <span className="text-foreground">{semanticView.editableRowCount}</span></div>
+                  <div>Globais protegidos: <span className="text-foreground">{semanticView.protectedGlobals.length}</span></div>
+                  <div>Conflitos reais: <span className="text-foreground">{semanticView.realConflicts.length}</span></div>
+                </>
+              ) : null}
             </div>
             {(meta.warnings ?? []).length > 0 ? (
               <div className="space-y-1 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-100">
@@ -280,18 +283,19 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
         </Card>
       ) : null}
 
-      <Tabs defaultValue="matrix">
-        <TabsList className="h-8">
-          <TabsTrigger value="matrix" className="text-[12px]">Matriz</TabsTrigger>
-          <TabsTrigger value="history" className="text-[12px]">Histórico</TabsTrigger>
+      <Tabs defaultValue="editable">
+        <TabsList className="h-8 flex-wrap">
+          <TabsTrigger value="editable" className="text-[12px]">Clientes / ORIGIN</TabsTrigger>
           <TabsTrigger value="audit" className="text-[12px]">Auditoria Upstreams</TabsTrigger>
-          <TabsTrigger value="sets" className="text-[12px]">Community Sets</TabsTrigger>
-          {previewEnabled ? (
-            <TabsTrigger value="plans" className="text-[12px]">Change Plans</TabsTrigger>
-          ) : null}
+          <TabsTrigger value="globals" className="text-[12px]">Dependências Globais</TabsTrigger>
+          <TabsTrigger value="conflicts" className="text-[12px]">Conflitos</TabsTrigger>
+          <TabsTrigger value="history" className="text-[12px]">Histórico</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="matrix" className="mt-3 space-y-3">
+        <TabsContent value="editable" className="mt-3 space-y-3">
+          <p className="text-[11px] text-muted-foreground">
+            Foco em import policies de Cliente e ORIGIN — candidatas a edição futura. Export policies não entram aqui.
+          </p>
           {matrixQuery.isLoading ? (
             <div className="text-sm text-muted-foreground">Carregando matriz…</div>
           ) : noSnapshot ? (
@@ -309,17 +313,17 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
               {String(matrixQuery.error)}
             </div>
           ) : matrixQuery.data ? (
-            visibleRows.length === 0 ? (
+            editableRows.length === 0 ? (
               <div className="rounded-md border border-dashed border-border bg-muted/20 p-8 text-center">
-                <p className="text-sm font-medium text-foreground">Matriz vazia</p>
+                <p className="text-sm font-medium text-foreground">Nenhum target Cliente/ORIGIN</p>
                 <p className="mt-2 text-[12px] text-muted-foreground">
-                  Snapshot salvo sem targets origin/cliente. Verifique dados persistidos ou warnings acima.
+                  Upstreams e export policies estão na aba Auditoria. Objetos globais na aba Dependências Globais.
                 </p>
               </div>
             ) : (
               <>
                 <AnnouncementMatrixTable
-                  rows={visibleRows}
+                  rows={editableRows}
                   upstreams={matrixQuery.data.upstreams}
                   onCellClick={handleCellSelect}
                 />
@@ -330,6 +334,14 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
               </>
             )
           ) : null}
+        </TabsContent>
+
+        <TabsContent value="globals" className="mt-3">
+          <GlobalDependenciesPanel semanticView={semanticView} />
+        </TabsContent>
+
+        <TabsContent value="conflicts" className="mt-3">
+          <ConflictsPanel semanticView={semanticView} />
         </TabsContent>
 
         <TabsContent value="history" className="mt-3">
@@ -385,83 +397,6 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
             <div className="text-[12px] text-muted-foreground">Sem dados de auditoria upstream no snapshot.</div>
           )}
         </TabsContent>
-
-        <TabsContent value="sets" className="mt-3 space-y-3">
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void syncCommunitySets(deviceId).then(() => setsQuery.refetch())}
-            >
-              Reindexar do graph persistido
-            </Button>
-          </div>
-          <div className="overflow-auto rounded-lg border border-border">
-            <table className="w-full text-left text-[12px]">
-              <thead className="bg-muted/30 text-[11px] uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2">Nome</th>
-                  <th className="px-3 py-2">Communities</th>
-                  <th className="px-3 py-2">Hash</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(setsQuery.data ?? []).map((set) => (
-                  <tr key={set.id} className="border-t border-border/60">
-                    <td className="px-3 py-2 font-mono">{set.name}</td>
-                    <td className="px-3 py-2 font-mono text-[10px] text-muted-foreground">
-                      {(set.communitiesJson ?? []).join(" ")}
-                    </td>
-                    <td className="px-3 py-2 font-mono text-[10px]">{set.normalizedHash.slice(0, 12)}…</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {(setsQuery.data ?? []).length === 0 ? (
-              <div className="p-4 text-center text-[12px] text-muted-foreground">
-                Nenhum community set indexado para este device.
-              </div>
-            ) : null}
-          </div>
-        </TabsContent>
-
-        {previewEnabled ? (
-          <TabsContent value="plans" className="mt-3">
-            <div className="overflow-auto rounded-lg border border-border">
-              <table className="w-full text-left text-[12px]">
-                <thead className="bg-muted/30 text-[11px] uppercase text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2">ID</th>
-                    <th className="px-3 py-2">Target</th>
-                    <th className="px-3 py-2">Upstream</th>
-                    <th className="px-3 py-2">Mudança</th>
-                    <th className="px-3 py-2">Risco</th>
-                    <th className="px-3 py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(plansQuery.data ?? []).map((plan) => (
-                    <tr key={plan.id} className="border-t border-border/60">
-                      <td className="px-3 py-2">{plan.id}</td>
-                      <td className="px-3 py-2 font-mono text-[11px]">{plan.targetPolicyName} #{plan.node}</td>
-                      <td className="px-3 py-2">{plan.upstreamName ?? plan.upstreamCircuitId}</td>
-                      <td className="px-3 py-2">{plan.oldState ?? "—"} → {plan.newState}</td>
-                      <td className="px-3 py-2 capitalize">{plan.riskLevel}</td>
-                      <td className="px-3 py-2">
-                        <Badge variant="outline">{plan.status}</Badge>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {(plansQuery.data ?? []).length === 0 ? (
-                <div className="p-4 text-center text-[12px] text-muted-foreground">
-                  Nenhum plano draft. Gere preview na matriz e clique em &quot;Criar plano&quot; (sem execução no equipamento).
-                </div>
-              ) : null}
-            </div>
-          </TabsContent>
-        ) : null}
       </Tabs>
 
       {previewEnabled ? (

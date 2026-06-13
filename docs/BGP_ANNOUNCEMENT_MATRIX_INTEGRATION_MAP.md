@@ -48,6 +48,12 @@ Snapshot refresh (fase DATA-SNAPSHOT-REFRESH — 2026-06-10):
 - `GET /bgp/announcements/snapshots/latest|/:id` — leitura de snapshots append-only
 - UI: **Recarregar** = refetch; **Atualizar matriz** = POST refresh; aba **Histórico**
 
+Visão semântica (fase MATRIX-SEMANTIC-VIEW — 2026-06-10):
+
+- `semantic-dependency-classifier.ts` — targetRole, targetEditMode, dependencyScope, dependencyProtection
+- `semantic-matrix-view.service.ts` — `semanticView` no read model da matriz
+- UI tabs: Clientes/ORIGIN · Auditoria Upstreams · Dependências Globais · Conflitos · Histórico
+
 ---
 
 ## 3. Pipeline de coleta existente

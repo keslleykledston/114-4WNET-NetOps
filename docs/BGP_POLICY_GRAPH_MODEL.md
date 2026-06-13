@@ -125,8 +125,17 @@ Para cada `Cxx-EXPORT*`:
 | `parsers/bgp-network.parser.ts` | network route-policy |
 | `graph/bgp-policy-graph.builder.ts` | Monta grafo + índices |
 | `resolvers/policy-classifier.ts` | Classifica policies |
+| `resolvers/semantic-dependency-classifier.ts` | targetRole, editMode, dependencyScope, protected globals |
+| `services/semantic-matrix-view.service.ts` | Read model `semanticView` (counters, conflitos reais, globais) |
 | `resolvers/announcement-matrix.resolver.ts` | Matriz + células |
 | `resolvers/community-set-matcher.ts` | Match exato |
 | `services/announcement-preview.service.ts` | Preview compiler |
 
 Entrada canônica: `buildPolicyDependencyConfigFromSnapshot()` + raw config text.
+
+## Visão semântica (MATRIX-SEMANTIC-VIEW)
+
+- **Matriz principal:** apenas import de cliente + ORIGIN (`editable_future`).
+- **Export Cxx:** excluída da matriz; visível em auditoria upstream (`audit_only`).
+- **Globais protegidos:** `GLOBAL-*`, community-filters compartilhados — `protected_global`, sem falso positivo de remoção.
+- **Conflitos reais:** apenas células `conflict` em rows editáveis; globais compartilhados suprimem finding `PREFIX_LIST_SHARED_BY_MULTIPLE_POLICIES`.

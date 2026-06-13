@@ -29,6 +29,36 @@ export type CellStateLabel = "On" | "P1" | "P2" | "P3" | "P4" | "Off" | "BH" | "
 
 export type TargetType = "origin" | "customer" | "unknown";
 
+export type TargetRole =
+  | "customer"
+  | "origin"
+  | "provider"
+  | "upstream"
+  | "ix"
+  | "cdn"
+  | "ibgp"
+  | "unknown";
+
+export type TargetEditMode =
+  | "editable_future"
+  | "audit_only"
+  | "hidden"
+  | "unknown";
+
+export type DependencyScope =
+  | "circuit_specific"
+  | "customer_specific"
+  | "global_shared"
+  | "system"
+  | "unknown";
+
+export type DependencyProtection =
+  | "removable_candidate"
+  | "protected_global"
+  | "protected_system"
+  | "shared_requires_review"
+  | "unknown";
+
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
 export type FindingSeverity = "critical" | "high" | "medium" | "low" | "info";
@@ -100,6 +130,48 @@ export interface MatrixRow {
   findings: AnnouncementFinding[];
   lastCollectedAt: string | null;
   collectionAgeMinutes: number | null;
+  targetRole?: TargetRole;
+  targetEditMode?: TargetEditMode;
+  dependencyScope?: DependencyScope;
+  dependencyProtection?: DependencyProtection;
+  dependencyReason?: string;
+}
+
+export interface ProtectedGlobalDependency {
+  objectName: string;
+  objectKind: string;
+  dependencyScope: DependencyScope;
+  dependencyProtection: DependencyProtection;
+  reason: string;
+  consumerCount: number;
+  consumers: string[];
+}
+
+export interface MatrixConflictItem {
+  targetKey: string;
+  routePolicyName: string;
+  node: number;
+  family: AnnouncementFamily;
+  targetRole: TargetRole;
+  circuitIds: string[];
+  message: string;
+}
+
+export interface MatrixSemanticWarnings {
+  operational: string[];
+  insufficientData: string[];
+  sharedDependency: string[];
+  protectedGlobalNotices: string[];
+}
+
+export interface MatrixSemanticView {
+  countersByTargetRole: Record<TargetRole, number>;
+  countersByDependencyScope: Record<DependencyScope, number>;
+  protectedGlobals: ProtectedGlobalDependency[];
+  realConflicts: MatrixConflictItem[];
+  warnings: MatrixSemanticWarnings;
+  editableRowCount: number;
+  auditOnlyRowCount: number;
 }
 
 export interface MatrixResponse {
@@ -108,6 +180,7 @@ export interface MatrixResponse {
   rows: MatrixRow[];
   findings: AnnouncementFinding[];
   generatedAt: string;
+  semanticView?: MatrixSemanticView;
   meta?: {
     source: string;
     dataSource?: string;

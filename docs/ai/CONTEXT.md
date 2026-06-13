@@ -20,7 +20,8 @@ Snapshot para agentes. Última revisão estrutural: maio/2026.
 | SNMP_FAST BGP | `modules/operational-bgp` | `/operational/bgp` | `operational_bgp_peers` |
 | BGP drilldown | `modules/bgp-drilldown` | `/bgp/peer-drilldown` | `bgp_peer_drilldown_snapshots` |
 | Compliance | `compliance` + engine | `/compliance` | `compliance_*` |
-| Provisioning | `provisioning` + preview | `/provisioning` | `provisioning_*` |
+| Config Generator (preview) | `modules/config-generator` | `/provisioning`, `/config-generator` | `config_generator_*` |
+| Provisioning legado | `provisioning` (preview v0.4) | — (backend não exposto na UI principal) | `provisioning_*` |
 | Connectors | `modules/connectors` | `/infrastructure/connectors` | `connectors`, `connector_jobs` |
 | Config backup | `config-backup` | `/config-collection` | `collected_configs` |
 | Scheduler | `modules/scheduler` | `/scheduler` | `scheduled_jobs` |

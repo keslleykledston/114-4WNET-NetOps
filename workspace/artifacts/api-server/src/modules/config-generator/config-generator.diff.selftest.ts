@@ -108,6 +108,9 @@ const baseline: ConfigGeneratorDiffBaselineState = {
       ["10.0.0.3", { asn: null, importPolicy: null, exportPolicy: null }],
     ]),
     bgpLocalAsn: 273309,
+    l2vcs: new Map(),
+    vsis: new Map(),
+    subinterfaces: new Map(),
   },
 };
 
@@ -138,6 +141,9 @@ const noBaseline = buildConfigGeneratorDiffFromPreview(preview, {
     vlans: new Map(),
     peers: new Map(),
     bgpLocalAsn: null,
+    l2vcs: new Map(),
+    vsis: new Map(),
+    subinterfaces: new Map(),
   },
 });
 assert.equal(noBaseline.summary.unknown > 0, true);

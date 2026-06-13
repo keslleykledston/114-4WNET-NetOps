@@ -1,10 +1,15 @@
 # Handoff Completo - 114-4WNET-NetOps
 
-Data: 2026-06-04
+Data: 2026-06-10 (atualizado; original: 2026-06-04)
+Versão: v0.9.5 (RC — Release Candidate)
 
 ## 1. Resumo executivo
 
-`114-4WNET-NetOps` e uma plataforma NetOps para inventario, compliance, coleta read-only, circuitos L2, operacao BGP, conectores WireGuard/bastion e preview de provisioning.
+`114-4WNET-NetOps` é uma plataforma NetOps enterprise para inventário, compliance, coleta read-only, circuitos L2, operação BGP, conectores WireGuard/bastion, preview de provisioning, gerenciamento de recursos, topologia inteligente e análise de impacto.
+
+**Estado atual:** RC (Release Candidate) — pronto para testes em produção. RC-HARDENING em andamento com alvo de deploy em 2026-06-30.
+
+**Versão atual:** v0.9.5 — 6 fases de desenvolvimento concluídas (v0.9.0 a v0.9.5), 100+ tabelas, 77+ endpoints, 25+ páginas de UI.
 
 O projeto esta estruturado para operar em modo seguro por padrao:
 
@@ -16,6 +21,18 @@ O projeto esta estruturado para operar em modo seguro por padrao:
 
 O repositório esta organizado como monorepo pnpm em `workspace/`, com infraestrutura em `infra/`, documentacao funcional em `docs/` e evidencias de fase em `reports/`.
 
+## 1b. Fases v0.9.x — Estado por fase
+
+| Fase | Versão | Status | Descrição |
+|------|--------|--------|-----------|
+| Compliance Driven Operations | v0.9.0 | ✅ | Drift detection, 13 templates, compliance scoring, auto-trigger |
+| Compliance Dashboard & Baselines | v0.9.1 | ✅ | Dashboard multi-tab, recharts, hierarquia de baselines, trend 30d |
+| Scheduled Compliance | v0.9.2 | ✅ | Scheduler site/global, CRUD de schedules, histórico |
+| Resource Manager | v0.9.3 | ✅ | Pools/allocations/reservations, collision detection, 12+ APIs |
+| Topology Intelligence | v0.9.4 | ✅ | Nodes/edges/snapshots, 8 tipos nó, 9 tipos aresta, orphan detection |
+| Impact Analysis | v0.9.5 | ✅ | Cascade failure, scenarios workflow, correlação de serviço |
+| RC-HARDENING | - | 🔄 | Em andamento — vendor coverage, failover, backup, security review |
+
 ## 2. Estado atual do produto
 
 ### Entregues e validados
@@ -25,6 +42,7 @@ O repositório esta organizado como monorepo pnpm em `workspace/`, com infraestr
 - Scheduler local com jobs de discovery, compliance e health check
 - Compliance com engine v2, findings sanitizados, export e filtros
 - Provisioning preview engine com templates estruturados e apply bloqueado por padrao
+- **Config Generator MVP (preview-only)** — engine oficial em `/provisioning`: validate/render, runs, diff, ID allocator K3G, change request preview; closure documentado
 - Coleta SSH de configuracao e parsers Huawei VRP para cenarios cobertos
 - Coleta SNMP e armazenamento de snapshots
 - Operacao NetOps com visoes read-only para BGP/L2/operacional
@@ -266,8 +284,10 @@ docker compose config
 - [Modulos](./ai/MODULES.md)
 - [Fluxos](./ai/FLOWS.md)
 - [Testes](./ai/TESTING.md)
+- [Config Generator (MVP closure)](./config-generator/CONFIG_GENERATOR_MVP_CLOSURE.md)
 - [Planos de MVP](./MVP_CLOSURE_PLAN.md)
 - [Provisioning preview](./PROVISIONING_PREVIEW_ENGINE.md)
+- [Provisioning preview-only (política)](./provisioning/PROVISIONING_PREVIEW_ONLY.md)
 - [NetBox read-only](./NETBOX_READONLY_SYNC.md)
 - [Connectors architecture](./connectors/ARCHITECTURE.md)
 - [NOC checklist](./NOC_OPERATIONAL_CHECKLIST.md)

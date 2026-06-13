@@ -39,6 +39,10 @@ import {
   validateRequestedId,
 } from "./config-generator-id-allocator.service.js";
 import { ensureTenantExists } from "./config-generator-id-inventory.service.js";
+import {
+  generateChangeRequestPreview,
+  getChangeRequestPreview,
+} from "./config-generator-change-request-preview.service.js";
 
 const router = Router();
 
@@ -403,6 +407,64 @@ router.post("/config-generator/runs/:id/diff", async (req, res) => {
     return;
   }
   res.json(diff);
+});
+
+router.post("/config-generator/runs/:id/change-request-preview", async (req, res) => {
+  const access = await requireConfigGeneratorAccess(req, "configGenerator.validate");
+  if (!access.ok) {
+    res.status(access.status).json(access.body);
+    return;
+  }
+  if (!env.configGeneratorEnabled) {
+    res.status(404).json(disabledResponse());
+    return;
+  }
+  const runId = parseId(req.params.id);
+  if (!runId) {
+    res.status(400).json(validationFailedResponse("Invalid run id"));
+    return;
+  }
+  try {
+    const result = await generateChangeRequestPreview(runId, access.user.id);
+    await logAuditEvent({
+      actorId: access.user.id,
+      action: "config_generator_change_request_preview_generated",
+      objectType: "config_generation_run",
+      objectId: String(runId),
+      metadata: { runId, previewId: result.preview.id, riskLevel: result.preview.riskLevel, artifactId: result.artifactId },
+      sourceIp: getRequestSourceIp(req),
+    });
+    res.status(201).json(result);
+  } catch (error) {
+    if (error instanceof Error && error.message === "RUN_NOT_FOUND") {
+      res.status(404).json({ code: "RUN_NOT_FOUND", error: "Run not found" });
+      return;
+    }
+    sendConfigGeneratorError(res, error);
+  }
+});
+
+router.get("/config-generator/runs/:id/change-request-preview", async (req, res) => {
+  const access = await requireConfigGeneratorAccess(req, "configGenerator.read");
+  if (!access.ok) {
+    res.status(access.status).json(access.body);
+    return;
+  }
+  if (!env.configGeneratorEnabled) {
+    res.status(404).json(disabledResponse());
+    return;
+  }
+  const runId = parseId(req.params.id);
+  if (!runId) {
+    res.status(400).json(validationFailedResponse("Invalid run id"));
+    return;
+  }
+  const preview = await getChangeRequestPreview(runId);
+  if (!preview) {
+    res.status(404).json({ code: "ARTIFACT_NOT_FOUND", error: "Change request preview not found for this run" });
+    return;
+  }
+  res.json({ preview });
 });
 
 router.post("/config-generator/templates/:id/versions", async (req, res) => {

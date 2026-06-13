@@ -135,12 +135,18 @@ Engine v2: `docs/COMPLIANCE_ENGINE_V2.md`
 
 ---
 
-## 9. Provisioning preview
+## 9. Config Generator (preview-only, MVP)
 
 ```
-POST /api/provisioning/preview → preview engine (dry-run)
-Apply real blocked unless CONFIG_APPLY_ENABLED=true
+GET  /api/config-generator/feature          → gate CONFIG_GENERATOR_ENABLED
+POST /api/config-generator/validate|render  → preview CLI (sem apply)
+POST /api/config-generator/runs             → run + artifacts
+POST /api/config-generator/runs/:id/change-request-preview → pacote NOC
 ```
+
+UI: `/provisioning` (principal) e `/config-generator` (técnica). Backend legado `POST /api/provisioning/preview` permanece separado e **não** alimenta a UI principal.
+
+Apply real bloqueado: `CONFIG_APPLY_ENABLED=false`, `CONFIG_WRITE_ENABLED=false`. Ver [docs/config-generator/README.md](../config-generator/README.md).
 
 ---
 

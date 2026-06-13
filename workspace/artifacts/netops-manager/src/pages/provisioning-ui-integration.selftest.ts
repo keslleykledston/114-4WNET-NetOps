@@ -28,6 +28,15 @@ assert(configGeneratorPage.includes("Secrets não são persistidos no histórico
 assert(configGeneratorPage.includes("Sugestões do inventory"), "inventory suggestion panel missing");
 assert(configGeneratorPage.includes("Sugestões do serviço"), "service suggestion panel missing");
 assert(configGeneratorPage.includes("ConfigGeneratorIdAllocatorPanel"), "id allocator panel missing");
+assert(configGeneratorPage.includes("ConfigGeneratorChangeRequestPreviewPanel"), "change request preview panel missing");
+assert(fs.existsSync(path.join(root, "src/features/config-generator/change-request-preview-panel.tsx")), "change request preview panel file missing");
+
+const closureDocPath = path.join(root, "../../../docs/config-generator/CONFIG_GENERATOR_MVP_CLOSURE.md");
+const closureDoc = fs.readFileSync(closureDocPath, "utf8");
+assert(closureDoc.includes("CONFIG-GENERATOR.MVP-CLOSURE"), "MVP closure doc missing phase id");
+assert(closureDoc.includes("Checklist de segurança"), "MVP closure security checklist missing");
+assert(closureDoc.includes("Smoke test manual"), "MVP closure smoke checklist missing");
+assert(closureDoc.includes("CONFIG_WRITE_ENABLED=false"), "MVP closure must document write flag");
 assert(fs.existsSync(path.join(root, "src/features/config-generator/id-allocator-panel.tsx")), "id allocator panel file missing");
 assert(configGeneratorApi.includes("useConfigGeneratorSuggestionScope"), "config-generator api missing suggestion scope hook");
 assert(configGeneratorApi.includes("useConfigGeneratorSuggestionServiceContext"), "config-generator api missing service-context hook");

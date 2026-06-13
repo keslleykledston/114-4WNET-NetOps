@@ -77,7 +77,11 @@ pnpm run build        # typecheck + recursive build
 | Variável | Default |
 |----------|---------|
 | `CONFIG_APPLY_ENABLED` | false |
+| `CONFIG_WRITE_ENABLED` | false |
+| `CONFIG_GENERATOR_ENABLED` | false |
 | `DRY_RUN_DEFAULT` | true |
+
+Detalhes operacionais: [docs/config-generator/CONFIG_GENERATOR_MVP_CLOSURE.md](../config-generator/CONFIG_GENERATOR_MVP_CLOSURE.md)
 
 ### SNMP / operacional
 

@@ -46,6 +46,31 @@ assert.equal(free.every((id) => !used.has(id)), true);
 assert.equal(ranges.isVlanOutsidePreferredRange(850, "l2vpn_vlan"), true);
 assert.equal(ranges.isVlanOutsidePreferredRange(650, "l2vpn_vlan"), false);
 
+const intraRange = ranges.getVlanRangeForServiceType("intra_site_link");
+assert.equal(intraRange!.rangeStart, 2);
+assert.equal(intraRange!.rangeEnd, 98);
+
+const interRange = ranges.getVlanRangeForServiceType("inter_site_link");
+assert.equal(interRange!.rangeStart, 100);
+assert.equal(interRange!.rangeEnd, 199);
+assert.equal(interRange!.untaggedRequired, true);
+
+assert.equal(allocator.explainSuggestion({ idType: "subinterface", value: 603, serviceType: "l2vpn_vlan" }).includes("603"), true);
+assert.equal(allocator.explainSuggestion({ idType: "l2vc", value: 603, serviceType: "l2vpn_vlan", scope: "tenant" }).includes("tenant"), true);
+
+const engineSource = fs.readFileSync(path.resolve(import.meta.dirname, "config-generator.engine.ts"), "utf8");
+assert(engineSource.includes("isVlanGloballyBlocked"), "engine must block reserved VLANs");
+assert(engineSource.includes("isVlanOutsidePreferredRange"), "engine must warn outside preferred range");
+
+const inventorySource = fs.readFileSync(path.resolve(import.meta.dirname, "config-generator-id-inventory.service.ts"), "utf8");
+assert(inventorySource.includes("collectedConfigsTable"), "inventory reads collected_configs");
+assert(inventorySource.includes("discoverySnapshotsTable"), "inventory reads discovery_snapshots");
+assert(!inventorySource.includes("ssh"), "inventory must not collect via SSH");
+assert(!inventorySource.includes("snmp.createSession"), "inventory must not open SNMP sessions");
+
+const diffSource = fs.readFileSync(path.resolve(import.meta.dirname, "config-generator-diff.service.ts"), "utf8");
+assert(diffSource.includes("loadLatestBaseline"), "diff/precheck baseline preserved");
+
 const catalog = allocator.listConfigGeneratorIdRangesCatalog();
 assert.ok(catalog.ranges.length >= 10);
 assert.equal(catalog.version, "2026.05");

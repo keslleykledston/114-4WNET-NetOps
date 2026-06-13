@@ -13,6 +13,9 @@ description: Update provisioning docs, phase notes, and context summary incremen
 ## Read first
 
 ```
+docs/config-generator/README.md
+docs/config-generator/CONFIG_GENERATOR_MVP_CLOSURE.md
+docs/provisioning/PROVISIONING_PREVIEW_ONLY.md
 docs/provisioning/PROVISIONING_CONTEXT_SUMMARY.md
 reports/provisioning/PHASE_STATUS.md
 docs/provisioning/PROVISIONING_MVP_NEXT_STEPS.md

@@ -70,6 +70,8 @@ Portas típicas lab: API `8080` ou `8085`, Web `3000` ou `3005`, Postgres `5432`
 | Env flags | `workspace/artifacts/api-server/src/lib/env.ts` |
 | L2 circuits | `workspace/artifacts/api-server/src/modules/l2circuits/` |
 | Connectors | `workspace/artifacts/api-server/src/modules/connectors/` |
+| Config Generator | `workspace/artifacts/api-server/src/modules/config-generator/` |
+| Config Generator docs | `docs/config-generator/CONFIG_GENERATOR_MVP_CLOSURE.md` |
 
 ## Regras específicas (obrigatórias)
 
@@ -98,6 +100,8 @@ Portas típicas lab: API `8080` ou `8085`, Web `3000` ou `3005`, Postgres `5432`
 | Flag | Default | Efeito |
 |------|---------|--------|
 | `CONFIG_APPLY_ENABLED` | false | Bloqueia apply real |
+| `CONFIG_GENERATOR_ENABLED` | false | Gate do Config Generator (UI/API) |
+| `CONFIG_WRITE_ENABLED` | false | Bloqueia writes de config em devices |
 | `NETOPS_SNMP_REAL_ENABLED` | false | SNMP real |
 | `SNMP_FAST_PILOT_DEVICE_IDS` | `*` | Allowlist SNMP_FAST |
 | `L2_DISCOVER_SSH_ENABLED` | false | Discovery L2 SSH |

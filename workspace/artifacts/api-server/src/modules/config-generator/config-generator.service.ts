@@ -47,7 +47,7 @@ import {
   validateConfigGeneratorTemplateCompatibility,
   validateDeviceTenantScope,
 } from "./config-generator.engine.js";
-import { validateRequestedId } from "./config-generator-id-allocator.service.js";
+import { validateRequestedId, getUsedIds } from "./config-generator-id-allocator.service.js";
 import { CONFIG_GENERATOR_REASONS, CONFIG_GENERATOR_TEMPLATES } from "./config-generator.catalog.js";
 
 type DeviceScopeRow = ConfigGeneratorDeviceScope;
@@ -453,6 +453,17 @@ async function validateAndRender(input: ConfigGeneratorValidationInput) {
     .where(eq(l2CircuitsTable.deviceId, input.deviceId));
   const existingVlans = [...new Set(existingVlanRows.flatMap((row) => [row.vlan, row.innerVlan]).filter((value): value is number => typeof value === "number"))];
 
+  const [usedL2vcIds, usedVsiIds] = await Promise.all([
+    getUsedIds({ tenantId: input.tenantId, deviceId: null, idType: "l2vc" }),
+    getUsedIds({ tenantId: input.tenantId, deviceId: null, idType: "vsi" }),
+  ]);
+  const existingSubinterfaces = [...new Set(
+    (device.latestConfig ?? "")
+      .split(/\r?\n/)
+      .map((line) => /^(?:interface|int)\s+(.+)$/i.exec(line.trim())?.[1])
+      .filter((value): value is string => Boolean(value)),
+  )];
+
   const compatibility = validateConfigGeneratorTemplateCompatibility({ vendor: template.vendor, platform: template.platform, device });
   const vlan = typeof normalizedInput.vlan === "number" ? normalizedInput.vlan : Number(normalizedInput.vlan);
   const idValidation = await validateRequestedId({
@@ -477,6 +488,9 @@ async function validateAndRender(input: ConfigGeneratorValidationInput) {
       existingRoutePolicies,
       existingVlans,
       existingPeerRemoteIps,
+      existingL2vcIds: usedL2vcIds,
+      existingVsiIds: usedVsiIds,
+      existingSubinterfaces,
     }),
     { status: "passed", warnings: compatibility.filter((item) => item.severity === "warning"), errors: compatibility.filter((item) => item.severity === "error") },
     {

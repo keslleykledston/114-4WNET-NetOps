@@ -1,5 +1,7 @@
 # Config Generator MVP
 
+> **MVP fechado** — ver [CONFIG_GENERATOR_MVP_CLOSURE.md](./CONFIG_GENERATOR_MVP_CLOSURE.md) (checklist de segurança, smoke manual, critérios de aceite).
+
 ## Objetivo
 Gerar preview de configuração Huawei de forma isolada, sem apply em dispositivo.
 
@@ -37,6 +39,12 @@ Gerar preview de configuração Huawei de forma isolada, sem apply em dispositiv
 - `POST /api/config-generator/id-inventory/refresh` (reprocessa DB, sem coleta)
 - `POST /api/config-generator/id-allocator/suggest`
 - `POST /api/config-generator/id-allocator/validate`
+- `POST /api/config-generator/runs/:id/change-request-preview` (pacote preview-only)
+- `GET /api/config-generator/runs/:id/change-request-preview`
+
+Templates L2VPN: `huawei_vrp_l2vpn_vlan`, `huawei_vrp_l2vpn_ptp_l2vc`, `huawei_vrp_l2vpn_ptmp_vsi` — ver [TEMPLATES_L2VPN.md](./TEMPLATES_L2VPN.md).
+
+Ver também: [CHANGE_REQUEST_PREVIEW.md](./CHANGE_REQUEST_PREVIEW.md), [ID_ALLOCATOR.md](./ID_ALLOCATOR.md), [CONFIG_GENERATOR_MVP_CLOSURE.md](./CONFIG_GENERATOR_MVP_CLOSURE.md).
 
 ## Fluxo
 1. Selecionar tenant/device/template.
@@ -64,7 +72,10 @@ Gerar preview de configuração Huawei de forma isolada, sem apply em dispositiv
 - Sem integração com Controlled Execution.
 
 ## Próximos passos
-- Approval/apply controlado.
+
+Ver seção **Próximas fases recomendadas** em [CONFIG_GENERATOR_MVP_CLOSURE.md](./CONFIG_GENERATOR_MVP_CLOSURE.md).
+
+- Approval/apply controlado (Controlled Execution).
 - Mais templates.
 - Mais validações por vendor/platform.
 

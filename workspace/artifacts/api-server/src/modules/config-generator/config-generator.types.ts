@@ -13,7 +13,9 @@ export type ConfigGeneratorBlockClassification = "global" | "circuit";
 export type ConfigGeneratorBlockStatus = "existing" | "missing" | "new" | "conflict" | "manual" | "suggested";
 
 export type ConfigGeneratorValidationSeverity = "warning" | "error";
-export type ConfigGeneratorRiskLevel = "low" | "medium" | "high";
+export type ConfigGeneratorRiskLevel = "low" | "medium" | "high" | "blocked";
+export type ConfigGeneratorChangeRequestPreviewStatus = "draft_preview";
+export type ConfigGeneratorChangeRequestPreviewRiskLevel = ConfigGeneratorRiskLevel;
 export type ConfigGeneratorRunStatus = "previewed" | "saved" | "validated" | "blocked";
 export type ConfigGeneratorArtifactType =
   | "candidate_config"
@@ -22,7 +24,10 @@ export type ConfigGeneratorArtifactType =
   | "ticket_markdown"
   | "diff_notes"
   | "precheck_diff"
-  | "semantic_diff";
+  | "semantic_diff"
+  | "change_request_preview"
+  | "risk_assessment"
+  | "implementation_package";
 export type ConfigGeneratorErrorCode =
   | "CONFIG_GENERATOR_DISABLED"
   | "CONFIG_WRITE_DISABLED"
@@ -357,6 +362,10 @@ export interface ConfigGeneratorDeviceContextResponse {
     vlan: number | null;
     interfaceName: string | null;
     peerIp: string | null;
+    vsiName?: string | null;
+    vsiId?: string | null;
+    vcId?: string | null;
+    description?: string | null;
   }>;
   globalDependencies: ConfigGeneratorDependencySuggestion[];
   conflicts: ConfigGeneratorConflictSuggestion[];
@@ -451,4 +460,100 @@ export interface ConfigGeneratorIdRangesResponse {
     untaggedRequired?: boolean;
     label: string;
   }>;
+}
+
+export interface ConfigGeneratorRiskAssessmentFactor {
+  code: string;
+  severity: ConfigGeneratorChangeRequestPreviewRiskLevel;
+  message: string;
+  context?: Record<string, unknown>;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewSummary {
+  title: string;
+  description: string;
+  customerName?: string | null;
+  circuitId?: string | null;
+  deviceName: string;
+  vendor: string;
+  platform: string;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewScope {
+  tenant: string;
+  site?: string | null;
+  device: string;
+  interfaces: string[];
+  bgpPeers: string[];
+  vlans: number[];
+  l2vcIds: number[];
+  vsiIds: number[];
+}
+
+export interface ConfigGeneratorChangeRequestPreviewInputs {
+  fieldOrigins: ConfigGeneratorFieldOrigins;
+  manualFields: string[];
+  suggestedFields: string[];
+}
+
+export interface ConfigGeneratorChangeRequestPreviewValidations {
+  errors: ConfigGeneratorValidationFinding[];
+  warnings: ConfigGeneratorValidationFinding[];
+  infos: ConfigGeneratorValidationFinding[];
+}
+
+export interface ConfigGeneratorChangeRequestPreviewIdAllocation {
+  suggestions: Record<string, unknown>;
+  usedIdsSummary: Partial<Record<"vlan" | "subinterface" | "l2vc" | "vsi", number[]>>;
+  conflicts: ConfigGeneratorValidationFinding[];
+}
+
+export interface ConfigGeneratorChangeRequestPreviewDiff {
+  baseline: ConfigGeneratorDiffBaseline;
+  summary: ConfigGeneratorDiffSummary;
+  blocking: boolean;
+  candidateChecksum?: string | null;
+  baselineChecksum?: string | null;
+  precheckChecksum?: string | null;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewRollbackPlan {
+  type: "manual_placeholder";
+  notes: string[];
+  content: string;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewRiskAssessment {
+  score: number;
+  factors: ConfigGeneratorRiskAssessmentFactor[];
+}
+
+export interface ConfigGeneratorChangeRequestPreview {
+  id: string;
+  runId: number;
+  tenantId: number;
+  deviceId: number;
+  serviceType: string;
+  templateKey: string;
+  status: ConfigGeneratorChangeRequestPreviewStatus;
+  riskLevel: ConfigGeneratorChangeRequestPreviewRiskLevel;
+  summary: ConfigGeneratorChangeRequestPreviewSummary;
+  scope: ConfigGeneratorChangeRequestPreviewScope;
+  inputs: ConfigGeneratorChangeRequestPreviewInputs;
+  validations: ConfigGeneratorChangeRequestPreviewValidations;
+  idAllocation: ConfigGeneratorChangeRequestPreviewIdAllocation;
+  diff: ConfigGeneratorChangeRequestPreviewDiff;
+  candidateConfig: string;
+  postcheckCommands: string;
+  rollbackPlan: ConfigGeneratorChangeRequestPreviewRollbackPlan;
+  riskAssessment: ConfigGeneratorChangeRequestPreviewRiskAssessment;
+  ticketMarkdown: string;
+  generatedAt: string;
+  generatedBy?: number | null;
+  artifactChecksum?: string | null;
+}
+
+export interface ConfigGeneratorChangeRequestPreviewResponse {
+  preview: ConfigGeneratorChangeRequestPreview;
+  artifactId: number;
 }

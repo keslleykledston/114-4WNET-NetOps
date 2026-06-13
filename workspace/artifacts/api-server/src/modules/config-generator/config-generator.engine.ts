@@ -10,7 +10,7 @@ import type {
   ConfigGeneratorValidationFinding,
   ConfigGeneratorValidationSummary,
 } from "./config-generator.types.js";
-import { CONFIG_GENERATOR_GLOBAL_OBJECTS } from "./config-generator.catalog.js";
+import { CONFIG_GENERATOR_GLOBAL_OBJECTS, L2VPN_PTMP_TEMPLATE_KEY, L2VPN_PTP_TEMPLATE_KEY, L2VPN_PTMP_SERVICE_TYPES, L2VPN_PTP_SERVICE_TYPES } from "./config-generator.catalog.js";
 import { isVlanGloballyBlocked, isVlanOutsidePreferredRange } from "./config-generator-id-ranges.js";
 
 type NormalizedInput = Record<string, unknown>;
@@ -283,6 +283,217 @@ function buildBgpBlocks(input: Record<string, unknown>, device: ConfigGeneratorD
   };
 }
 
+function resolveSubinterfaceName(localInterface: string, vlan: number, explicit?: string): string {
+  const iface = normalizeString(explicit) || normalizeString(localInterface);
+  if (iface.includes(".")) return iface;
+  if (iface) return `${iface}.${vlan}`;
+  return `SubInterface.${vlan}`;
+}
+
+function parseRemotePeersList(value: unknown): string[] {
+  return toArray(value).filter((item) => isValidIpv4(item) || item.length > 0);
+}
+
+function extractMtuFromConfig(rawConfig: string | null, interfaceName: string): number | null {
+  if (!rawConfig || !interfaceName) return null;
+  const lines = rawConfig.split(/\r?\n/);
+  let inInterface = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const ifaceMatch = /^(?:interface|int)\s+(.+)$/i.exec(trimmed);
+    if (ifaceMatch?.[1]) {
+      inInterface = ifaceMatch[1].toLowerCase() === interfaceName.toLowerCase();
+      continue;
+    }
+    if (inInterface && /^mtu\s+(\d+)/i.test(trimmed)) {
+      const mtu = parseInteger(trimmed.match(/^mtu\s+(\d+)/i)?.[1]);
+      if (mtu != null) return mtu;
+    }
+    if (inInterface && trimmed.startsWith("#")) inInterface = false;
+  }
+  return null;
+}
+
+function buildL2vcPtpBlocks(input: Record<string, unknown>, device: ConfigGeneratorDeviceScope): ConfigGeneratorBlockOutput {
+  const circuitId = normalizeCircuitName(input.circuitId);
+  const customerName = normalizeString(input.customerName);
+  const localDeviceName = normalizeString(input.localDeviceName) || device.hostname;
+  const localInterface = normalizeString(input.localInterface) || normalizeString(input.interface).split(".")[0] || "";
+  const vlan = parseInteger(input.vlan) ?? 0;
+  const subinterfaceId = parseInteger(input.subinterfaceId) ?? vlan;
+  const l2vcId = parseInteger(input.l2vcId) ?? vlan;
+  const interfaceName = resolveSubinterfaceName(localInterface, vlan, normalizeString(input.interface));
+  const remotePeerIp = normalizeString(input.remotePeerIp) || normalizeString(input.peerRemoteIpv4);
+  const remoteSite = normalizeString(input.remoteSite) || normalizeString(input.neighborSite);
+  const remoteDeviceName = normalizeString(input.remoteDeviceName);
+  const encapsulation = normalizeString(input.encapsulation) || normalizeString(input.mode) || "dot1q";
+  const description = normalizeString(input.description) || `${customerName} L2VC ${l2vcId}`;
+  const mtu = parseInteger(input.mtu);
+  const controlWord = parseBoolean(input.controlWord);
+  const tunnelPolicy = normalizeString(input.tunnelPolicy);
+  const endpointRole = normalizeString(input.endpointRole);
+  const globalStatus = collectGlobalStatus(device.latestConfig);
+
+  const globalDependencies = [
+    ...globalStatus.map((entry) => renderDependencyLine("GLOBAL", entry.present ? "já existente" : "ausente", entry.name)),
+    renderDependencyLine("GLOBAL", device.latestConfig?.toLowerCase().includes("mpls") ? "já existente" : "ausente", "MPLS baseline"),
+    renderDependencyLine("GLOBAL", localInterface && device.latestConfig?.toLowerCase().includes(localInterface.toLowerCase()) ? "já existente" : "ausente", `trunk baseline ${localInterface}`),
+  ].join("\n");
+
+  const circuitDependencies = [
+    renderDependencyLine("CIRCUIT", "novo", `l2vc circuit ${circuitId}`),
+    renderDependencyLine("CIRCUIT", "novo", `customer ${customerName}`),
+    renderDependencyLine("CIRCUIT", "novo", `device ${localDeviceName}`),
+    renderDependencyLine("CIRCUIT", "novo", `vlan ${vlan}`),
+    renderDependencyLine("CIRCUIT", "novo", `subinterface ${subinterfaceId}`),
+    renderDependencyLine("CIRCUIT", "novo", `l2vc-id ${l2vcId}`),
+    remotePeerIp ? renderDependencyLine("CIRCUIT", "novo", `remote-peer ${remotePeerIp}`) : null,
+    remoteSite ? renderDependencyLine("CIRCUIT", "novo", `remote-site ${remoteSite}`) : null,
+    remoteDeviceName ? renderDependencyLine("CIRCUIT", "novo", `remote-device ${remoteDeviceName}`) : null,
+    endpointRole ? renderDependencyLine("CIRCUIT", "novo", `endpoint-role ${endpointRole}`) : null,
+  ].filter(Boolean).join("\n");
+
+  const interfaceBinding = [
+    `interface ${interfaceName}`,
+    encapsulation === "qinq" ? `  encapsulation qinq ${vlan}` : encapsulation === "untagged" ? "  encapsulation untagged" : `  encapsulation dot1q ${vlan}`,
+    `  description ${description}`,
+    mtu ? `  mtu ${mtu}` : null,
+  ].filter(Boolean).join("\n");
+
+  const l2vcBinding = [
+    `mpls l2vc ${l2vcId} ${l2vcId} remote ${remotePeerIp || "<REMOTE_PEER>"}`,
+    controlWord ? "  control-word enable" : null,
+    tunnelPolicy ? `  tunnel-policy ${tunnelPolicy}` : null,
+  ].filter(Boolean).join("\n");
+
+  const peerBinding = [
+    remotePeerIp ? `  peer ${remotePeerIp} description ${customerName}` : "# remote peer required",
+    remoteSite ? `  # remote-site ${remoteSite}` : null,
+  ].filter(Boolean).join("\n");
+
+  const postcheck = [
+    "display mpls l2vc",
+    `display mpls l2vc interface ${interfaceName}`,
+    `display interface ${interfaceName}`,
+    `display current-configuration interface ${interfaceName}`,
+    `display vlan ${vlan}`,
+    `display mac-address vlan ${vlan}`,
+  ].join("\n");
+
+  const rollbackPlaceholder = [
+    `# rollback placeholder for L2VC ${l2vcId} / circuit ${circuitId}`,
+    "# human review required before removal",
+    "# do not remove global MPLS objects",
+    "# do not remove physical interface or trunk baseline",
+    `# do not remove vlan ${vlan} if reused by other circuits`,
+    `# undo mpls l2vc ${l2vcId} only after peer reuse check`,
+  ].join("\n");
+
+  const anyGlobalMissing = globalStatus.some((entry) => !entry.present);
+  return {
+    blocks: [
+      renderBlock({ key: "global_dependencies", title: "Dependências globais", classification: "global", statusHint: anyGlobalMissing ? "missing" : "existing" }, globalDependencies, anyGlobalMissing ? "missing" : "existing"),
+      renderBlock({ key: "circuit_dependencies", title: "Dependências do circuito", classification: "circuit", statusHint: "new" }, circuitDependencies, "new"),
+      renderBlock({ key: "interface_binding", title: "Interface binding", classification: "circuit", statusHint: "new" }, interfaceBinding, "new"),
+      renderBlock({ key: "l2vc_binding", title: "L2VC binding", classification: "circuit", statusHint: "new" }, l2vcBinding, "new"),
+      renderBlock({ key: "peer_binding", title: "Peer binding", classification: "circuit", statusHint: "suggested" }, peerBinding, remotePeerIp ? "suggested" : "missing"),
+      renderBlock({ key: "postcheck", title: "Postcheck", classification: "circuit", statusHint: "manual" }, postcheck, "manual"),
+      renderBlock({ key: "rollback_placeholder", title: "Rollback placeholder", classification: "circuit", statusHint: "manual" }, rollbackPlaceholder, "manual"),
+    ],
+    renderedConfig: "",
+    postcheckCommands: postcheck,
+    rollbackPlaceholder,
+  };
+}
+
+function buildVsiPtmpBlocks(input: Record<string, unknown>, device: ConfigGeneratorDeviceScope): ConfigGeneratorBlockOutput {
+  const circuitId = normalizeCircuitName(input.circuitId);
+  const customerName = normalizeString(input.customerName);
+  const vsiName = normalizeString(input.vsiName) || `VSI_${circuitId}`;
+  const vsiId = parseInteger(input.vsiId) ?? parseInteger(input.vlan) ?? 0;
+  const vlan = parseInteger(input.vlan) ?? vsiId;
+  const subinterfaceId = parseInteger(input.subinterfaceId) ?? vlan;
+  const accessInterface = normalizeString(input.accessInterface) || resolveSubinterfaceName("", vlan, normalizeString(input.interface));
+  const remotePeers = parseRemotePeersList(input.remotePeers);
+  const neighborSites = toArray(input.neighborSites);
+  const siteRole = normalizeString(input.siteRole) || normalizeString(input.endpointRole) || "access";
+  const encapsulation = normalizeString(input.encapsulation) || normalizeString(input.mode) || "dot1q";
+  const description = normalizeString(input.description) || `${customerName} VSI ${vsiName}`;
+  const mtu = parseInteger(input.mtu);
+  const neighborSite = normalizeString(input.neighborSite);
+  const globalStatus = collectGlobalStatus(device.latestConfig);
+
+  const globalDependencies = [
+    ...globalStatus.map((entry) => renderDependencyLine("GLOBAL", entry.present ? "já existente" : "ausente", entry.name)),
+    renderDependencyLine("GLOBAL", device.latestConfig?.toLowerCase().includes("mpls") ? "já existente" : "ausente", "MPLS baseline"),
+  ].join("\n");
+
+  const circuitDependencies = [
+    renderDependencyLine("CIRCUIT", "novo", `vsi circuit ${circuitId}`),
+    renderDependencyLine("CIRCUIT", "novo", `customer ${customerName}`),
+    renderDependencyLine("CIRCUIT", "novo", `vsi-name ${vsiName}`),
+    renderDependencyLine("CIRCUIT", "novo", `vsi-id ${vsiId}`),
+    renderDependencyLine("CIRCUIT", "novo", `vlan ${vlan}`),
+    renderDependencyLine("CIRCUIT", "novo", `subinterface ${subinterfaceId}`),
+    renderDependencyLine("CIRCUIT", "novo", `site-role ${siteRole}`),
+    neighborSite ? renderDependencyLine("CIRCUIT", "novo", `neighbor-site ${neighborSite}`) : null,
+    neighborSites.length > 0 ? renderDependencyLine("CIRCUIT", "novo", `neighbor-sites ${neighborSites.join(", ")}`) : null,
+  ].filter(Boolean).join("\n");
+
+  const vsiDefinition = [
+    `vsi ${vsiName} ${vsiId}`,
+    "  pwsignal ldp",
+    `  vsi-id ${vsiId}`,
+    ...remotePeers.map((peer) => `  peer ${peer}`),
+    description ? `  description ${description}` : null,
+  ].filter(Boolean).join("\n");
+
+  const peerBinding = remotePeers.length > 0
+    ? remotePeers.map((peer) => `  peer ${peer} description ${customerName}`).join("\n")
+    : "# remote peers required";
+
+  const accessBinding = [
+    `interface ${accessInterface}`,
+    encapsulation === "qinq" ? `  encapsulation qinq ${vlan}` : encapsulation === "untagged" ? "  encapsulation untagged" : `  encapsulation dot1q ${vlan}`,
+    `  l2 binding vsi ${vsiName}`,
+    mtu ? `  mtu ${mtu}` : null,
+    `  description ${description}`,
+  ].filter(Boolean).join("\n");
+
+  const postcheck = [
+    `display vsi name ${vsiName}`,
+    "display vsi services all",
+    "display mpls l2vpn vsi",
+    `display current-configuration | include ${vsiName}`,
+    `display interface ${accessInterface}`,
+    `display vlan ${vlan}`,
+  ].join("\n");
+
+  const rollbackPlaceholder = [
+    `# rollback placeholder for VSI ${vsiName} (${vsiId}) / circuit ${circuitId}`,
+    "# human review required before removal",
+    "# do not remove global MPLS objects",
+    "# do not remove VSI if other peers remain attached",
+    `# do not remove vlan ${vlan} if reused by other circuits`,
+  ].join("\n");
+
+  const anyGlobalMissing = globalStatus.some((entry) => !entry.present);
+  return {
+    blocks: [
+      renderBlock({ key: "global_dependencies", title: "Dependências globais", classification: "global", statusHint: anyGlobalMissing ? "missing" : "existing" }, globalDependencies, anyGlobalMissing ? "missing" : "existing"),
+      renderBlock({ key: "circuit_dependencies", title: "Dependências do circuito", classification: "circuit", statusHint: "new" }, circuitDependencies, "new"),
+      renderBlock({ key: "vsi_definition", title: "VSI definition", classification: "circuit", statusHint: "new" }, vsiDefinition, "new"),
+      renderBlock({ key: "peer_binding", title: "Peer binding", classification: "circuit", statusHint: "suggested" }, peerBinding, remotePeers.length > 0 ? "suggested" : "missing"),
+      renderBlock({ key: "access_binding", title: "Access binding", classification: "circuit", statusHint: "new" }, accessBinding, "new"),
+      renderBlock({ key: "postcheck", title: "Postcheck", classification: "circuit", statusHint: "manual" }, postcheck, "manual"),
+      renderBlock({ key: "rollback_placeholder", title: "Rollback placeholder", classification: "circuit", statusHint: "manual" }, rollbackPlaceholder, "manual"),
+    ],
+    renderedConfig: "",
+    postcheckCommands: postcheck,
+    rollbackPlaceholder,
+  };
+}
+
 function buildL2Blocks(input: Record<string, unknown>, device: ConfigGeneratorDeviceScope): ConfigGeneratorBlockOutput {
   const circuitId = normalizeCircuitName(input.circuitId);
   const customerName = normalizeString(input.customerName);
@@ -396,6 +607,25 @@ export function normalizeConfigGeneratorInput(input: Record<string, unknown>): N
     exportPolicyName: normalizeString(input.exportPolicyName),
     communityBase: normalizeString(input.communityBase),
     prependProfile: normalizeString(input.prependProfile),
+    localDeviceName: normalizeString(input.localDeviceName),
+    localInterface: normalizeString(input.localInterface),
+    remotePeerIp: normalizeString(input.remotePeerIp) || normalizeString(input.peerRemoteIpv4),
+    remoteSite: normalizeString(input.remoteSite),
+    remoteDeviceName: normalizeString(input.remoteDeviceName),
+    encapsulation: normalizeString(input.encapsulation),
+    controlWord: parseBoolean(input.controlWord),
+    tunnelPolicy: normalizeString(input.tunnelPolicy),
+    allocationScope: normalizeString(input.allocationScope),
+    allocationRangeKey: normalizeString(input.allocationRangeKey),
+    allocationReason: normalizeString(input.allocationReason),
+    l2vcId: parseInteger(input.l2vcId),
+    vsiId: parseInteger(input.vsiId),
+    vsiName: normalizeString(input.vsiName),
+    subinterfaceId: parseInteger(input.subinterfaceId),
+    accessInterface: normalizeString(input.accessInterface),
+    remotePeers: parseRemotePeersList(input.remotePeers),
+    siteRole: normalizeString(input.siteRole),
+    neighborSites: toArray(input.neighborSites),
     dryRun: parseBoolean(input.dryRun),
   };
 }
@@ -460,19 +690,36 @@ export function validateConfigGeneratorInput(input: {
   existingRoutePolicies?: string[];
   existingVlans?: number[];
   existingPeerRemoteIps?: string[];
+  existingL2vcIds?: number[];
+  existingVsiIds?: number[];
+  existingSubinterfaces?: string[];
 }): ConfigGeneratorValidationSummary {
   const warnings: ConfigGeneratorValidationFinding[] = [];
   const errors: ConfigGeneratorValidationFinding[] = [];
   const normalized = input.normalizedInput;
+  const isPtpL2vc = input.templateKey === L2VPN_PTP_TEMPLATE_KEY || L2VPN_PTP_SERVICE_TYPES.has(input.serviceType);
+  const isPtmpVsi = input.templateKey === L2VPN_PTMP_TEMPLATE_KEY || L2VPN_PTMP_SERVICE_TYPES.has(input.serviceType);
 
-  const requiredKeys = ["circuitId", "customerName", "interface", "vlan"];
+  const requiredKeys = ["circuitId", "customerName", "vlan"];
   if (input.templateKey === "huawei_vrp_bgp_customer_community") {
-    requiredKeys.push("localAsn", "remoteAsn", "peerLocalIpv4", "peerRemoteIpv4", "ipv4Prefixes");
+    requiredKeys.push("localAsn", "remoteAsn", "peerLocalIpv4", "peerRemoteIpv4", "ipv4Prefixes", "interface");
+  } else if (isPtpL2vc) {
+    requiredKeys.push("l2vcId", "remotePeerIp");
+  } else if (isPtmpVsi) {
+    requiredKeys.push("vsiName", "vsiId", "accessInterface", "remotePeers");
+  } else {
+    requiredKeys.push("interface");
   }
   for (const key of requiredKeys) {
     if (normalized[key] == null || normalized[key] === "" || (Array.isArray(normalized[key]) && (normalized[key] as unknown[]).length === 0)) {
       errors.push({ severity: "error", code: "missing_required_field", message: `Campo obrigatório ausente: ${key}.`, context: { field: key } });
     }
+  }
+  if (isPtpL2vc && !normalizeString(normalized.localInterface) && !normalizeString(normalized.interface)) {
+    errors.push({ severity: "error", code: "missing_required_field", message: "Campo obrigatório ausente: localInterface ou interface.", context: { field: "localInterface" } });
+  }
+  if (isPtmpVsi && !normalizeString(normalized.accessInterface) && !normalizeString(normalized.interface)) {
+    errors.push({ severity: "error", code: "missing_required_field", message: "Campo obrigatório ausente: accessInterface.", context: { field: "accessInterface" } });
   }
 
   const vlan = parseInteger(normalized.vlan);
@@ -528,21 +775,35 @@ export function validateConfigGeneratorInput(input: {
     }
   }
 
-  if (normalized.interface && !input.device.interfaceNames.some((name) => name.toLowerCase() === String(normalized.interface).toLowerCase())) {
-    errors.push({
-      severity: "error",
-      code: "interface_not_found",
-      message: `Interface ${normalized.interface} não existe no device.`,
-      context: { interface: normalized.interface, available: input.device.interfaceNames.slice(0, 24) },
-    });
+  const interfaceToCheck = isPtpL2vc || isPtmpVsi
+    ? (normalizeString(normalized.accessInterface) || normalizeString(normalized.interface) || normalizeString(normalized.localInterface))
+    : normalizeString(normalized.interface);
+  if (interfaceToCheck) {
+    const target = interfaceToCheck.toLowerCase();
+    const exactMatch = input.device.interfaceNames.some((name) => name.toLowerCase() === target);
+    const parent = target.split(".")[0];
+    const parentExists = Boolean(parent) && input.device.interfaceNames.some((name) => name.toLowerCase() === parent);
+    const allowedNewSubif = (isPtpL2vc || isPtmpVsi) && parentExists && target.includes(".");
+    if (!exactMatch && !allowedNewSubif) {
+      errors.push({
+        severity: "error",
+        code: "interface_not_found",
+        message: `Interface ${interfaceToCheck} não existe no device.`,
+        context: { interface: interfaceToCheck, available: input.device.interfaceNames.slice(0, 24) },
+      });
+    }
   }
-  const interfaceState = input.device.interfaceStates.find((item) => item.name.toLowerCase() === String(normalized.interface).toLowerCase());
+  const interfaceState = input.device.interfaceStates.find((item) => {
+    const target = interfaceToCheck?.toLowerCase();
+    if (!target) return false;
+    return item.name.toLowerCase() === target || item.name.toLowerCase() === target.split(".")[0];
+  });
   if (interfaceState && (interfaceState.adminStatus === "down" || interfaceState.operStatus === "down")) {
     warnings.push({
       severity: "warning",
       code: "interface_down",
-      message: `Interface ${normalized.interface} está down no inventário.`,
-      context: { interface: normalized.interface, adminStatus: interfaceState.adminStatus, operStatus: interfaceState.operStatus },
+      message: `Interface ${interfaceToCheck} está down no inventário.`,
+      context: { interface: interfaceToCheck, adminStatus: interfaceState.adminStatus, operStatus: interfaceState.operStatus },
     });
   }
 
@@ -583,6 +844,97 @@ export function validateConfigGeneratorInput(input: {
       message: `VLAN já usada no device: ${vlan}.`,
       context: { vlan },
     });
+  }
+
+  if (isPtpL2vc || isPtmpVsi) {
+    const subifId = parseInteger(normalized.subinterfaceId) ?? vlan;
+    const subifName = resolveSubinterfaceName(
+      normalizeString(normalized.localInterface) || normalizeString(normalized.interface).split(".")[0] || "",
+      vlan ?? 0,
+      normalizeString(normalized.interface) || normalizeString(normalized.accessInterface),
+    );
+    if (input.existingVlans?.includes(vlan ?? 0)) {
+      errors.push({
+        severity: "error",
+        code: "vlan_conflict",
+        message: `VLAN ${vlan} já usada no device/site.`,
+        context: { vlan, serviceType: input.serviceType },
+      });
+    }
+    if (subifName && (input.existingSubinterfaces ?? []).some((item) => item.toLowerCase() === subifName.toLowerCase())) {
+      errors.push({
+        severity: "error",
+        code: "subinterface_conflict",
+        message: `Subinterface ${subifName} já existe no device.`,
+        context: { subinterface: subifName, subinterfaceId: subifId },
+      });
+    }
+    const l2vcId = parseInteger(normalized.l2vcId);
+    if (l2vcId != null && (input.existingL2vcIds ?? []).includes(l2vcId)) {
+      errors.push({
+        severity: "error",
+        code: "l2vc_conflict",
+        message: `L2VC ID ${l2vcId} já ocupado no tenant.`,
+        context: { l2vcId },
+      });
+    }
+    const vsiId = parseInteger(normalized.vsiId);
+    if (vsiId != null && (input.existingVsiIds ?? []).includes(vsiId)) {
+      errors.push({
+        severity: "error",
+        code: "vsi_conflict",
+        message: `VSI ID ${vsiId} já ocupado no tenant.`,
+        context: { vsiId },
+      });
+    }
+    const baselineMtu = extractMtuFromConfig(input.device.latestConfig, subifName);
+    const requestedMtu = parseInteger(normalized.mtu);
+    if (baselineMtu != null && requestedMtu != null && baselineMtu !== requestedMtu) {
+      warnings.push({
+        severity: "warning",
+        code: "mtu_divergent",
+        message: `MTU ${requestedMtu} diverge do baseline ${baselineMtu} em ${subifName}.`,
+        context: { requestedMtu, baselineMtu, interface: subifName },
+      });
+    }
+  }
+
+  if (isPtpL2vc) {
+    const remotePeerIp = normalizeString(normalized.remotePeerIp);
+    if (!remotePeerIp) {
+      errors.push({ severity: "error", code: "missing_remote_peer", message: "Remote peer IP ausente para L2VC.", context: { field: "remotePeerIp" } });
+    } else if (!isValidIpv4(remotePeerIp)) {
+      errors.push({ severity: "error", code: "invalid_remote_peer", message: "Remote peer IP inválido.", context: { remotePeerIp } });
+    }
+    const remotePeers = parseRemotePeersList(normalized.remotePeers);
+    if (remotePeers.length > 1) {
+      warnings.push({
+        severity: "warning",
+        code: "ptp_multiple_peers",
+        message: "Múltiplos peers detectados — considere template L2VPN PTMP/VSI.",
+        context: { peerCount: remotePeers.length },
+      });
+    }
+  }
+
+  if (isPtmpVsi) {
+    const remotePeers = parseRemotePeersList(normalized.remotePeers);
+    if (remotePeers.length === 0) {
+      errors.push({ severity: "error", code: "missing_remote_peers", message: "VSI requer ao menos um remote peer.", context: { field: "remotePeers" } });
+    }
+    if (remotePeers.length === 1) {
+      warnings.push({
+        severity: "warning",
+        code: "ptmp_single_peer",
+        message: "Apenas um peer — considere template L2VPN PTP/L2VC.",
+        context: { peerCount: 1 },
+      });
+    }
+    for (const peer of remotePeers) {
+      if (!isValidIpv4(peer)) {
+        errors.push({ severity: "error", code: "invalid_remote_peer", message: `Remote peer inválido: ${peer}.`, context: { peer } });
+      }
+    }
   }
 
   const candidateCommunity = buildCandidateCommunity(localAsn ?? 0, normalizedCircuitId, vlan ?? 0);
@@ -708,9 +1060,13 @@ export function renderConfigGeneratorBlocks(input: {
   device: ConfigGeneratorDeviceScope;
 }): ConfigGeneratorBlockOutput {
   const { templateKey, templateContent, normalizedInput, device } = input;
-  const result = templateKey === "huawei_vrp_l2vpn_vlan"
-    ? buildL2Blocks(normalizedInput, device)
-    : buildBgpBlocks(normalizedInput, device);
+  const result = templateKey === L2VPN_PTP_TEMPLATE_KEY
+    ? buildL2vcPtpBlocks(normalizedInput, device)
+    : templateKey === L2VPN_PTMP_TEMPLATE_KEY
+      ? buildVsiPtmpBlocks(normalizedInput, device)
+      : templateKey === "huawei_vrp_l2vpn_vlan"
+        ? buildL2Blocks(normalizedInput, device)
+        : buildBgpBlocks(normalizedInput, device);
 
   const renderValues = sanitizeConfigGeneratorInputForStorage(normalizedInput);
   const renderedConfig = renderTemplateString(templateContent, {

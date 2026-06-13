@@ -27,7 +27,12 @@ import {
   useRenderConfigGenerator,
   useSaveConfigGeneratorRun,
   useValidateConfigGenerator,
+  useGetConfigGeneratorChangeRequestPreview,
+  useGenerateConfigGeneratorChangeRequestPreview,
   validateConfigGenerator as validateConfigGeneratorRequest,
+  type ConfigGeneratorChangeRequestPreview,
+  type ConfigGeneratorChangeRequestPreviewEnvelope,
+  type ConfigGeneratorChangeRequestPreviewResponse,
   type ConfigGeneratorArtifactResponse,
   type ConfigGeneratorBlockSchema,
   type ConfigGeneratorChangeRequest,
@@ -92,6 +97,9 @@ export type {
   ConfigGeneratorWriteDisabledResponse,
   ListConfigGeneratorRunsParams,
   ValidateConfigGenerator200,
+  ConfigGeneratorChangeRequestPreview,
+  ConfigGeneratorChangeRequestPreviewEnvelope,
+  ConfigGeneratorChangeRequestPreviewResponse,
 } from "@workspace/api-client-react";
 
 export function useConfigGeneratorFeature(): UseQueryResult<boolean, ConfigGeneratorApiError> {
@@ -190,3 +198,15 @@ export const useConfigGeneratorDiffRun = useDiffConfigGeneratorRun;
 export const useValidateConfigGeneratorMutation = useValidateConfigGenerator;
 export const useRenderConfigGeneratorMutation = useRenderConfigGenerator;
 export const useSaveConfigGeneratorRunMutation = useSaveConfigGeneratorRun;
+
+export function useConfigGeneratorChangeRequestPreview(runId: number | null, enabled = true) {
+  return useGetConfigGeneratorChangeRequestPreview(runId ?? 0, {
+    query: {
+      enabled: enabled && runId != null,
+      queryKey: ["config-generator", "change-request-preview", runId],
+      retry: false,
+    },
+  });
+}
+
+export const useGenerateConfigGeneratorChangeRequestPreviewMutation = useGenerateConfigGeneratorChangeRequestPreview;

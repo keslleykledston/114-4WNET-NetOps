@@ -1,5 +1,7 @@
 # Config Generator — ID Allocator (preview-only)
 
+> MVP fechado: [CONFIG_GENERATOR_MVP_CLOSURE.md](./CONFIG_GENERATOR_MVP_CLOSURE.md)
+
 Fase `CONFIG-GENERATOR.ID-ALLOCATOR`: análise e sugestão de IDs livres (VLAN, subinterface, L2VC, VSI) sem execução em device.
 
 ## Padrão VLAN K3G (rev. 2026.05)

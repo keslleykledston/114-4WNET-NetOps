@@ -1,9 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import {
-  bgpAnnouncementMatrixSnapshotsTable,
-  bgpAnnouncementTargetsTable,
-  bgpCommunitySetsTable,
   collectedConfigsTable,
+  communitySetsTable,
   configGeneratorArtifactsTable,
   configGeneratorTemplateVersionsTable,
   configGeneratorTemplatesTable,
@@ -45,9 +43,24 @@ type BaselineSemantic = {
   vlans: Map<number, string>;
   peers: Map<string, { asn: number | null; importPolicy: string | null; exportPolicy: string | null }>;
   bgpLocalAsn: number | null;
+  l2vcs: Map<number, { peerIp: string | null; interfaceName: string | null }>;
+  vsis: Map<string, { vsiId: number | null; peers: string[] }>;
+  subinterfaces: Map<string, string>;
 };
 
-const BGP_BLOCK_KEYS = new Set(["global_dependencies", "circuit_dependencies", "route_policy_import", "route_policy_export", "peer_binding", "postcheck", "rollback_placeholder"]);
+const DIFF_BLOCK_KEYS = new Set([
+  "global_dependencies",
+  "circuit_dependencies",
+  "route_policy_import",
+  "route_policy_export",
+  "peer_binding",
+  "interface_binding",
+  "l2vc_binding",
+  "vsi_definition",
+  "access_binding",
+  "postcheck",
+  "rollback_placeholder",
+]);
 
 function sha(text: string) {
   return checksumJson({ text });
@@ -75,7 +88,12 @@ function semanticBaselineFromRaw(rawConfig: string | null): BaselineSemantic {
   const interfaces = new Map<string, string>();
   const vlans = new Map<number, string>();
   const peers = new Map<string, { asn: number | null; importPolicy: string | null; exportPolicy: string | null }>();
+  const l2vcs = new Map<number, { peerIp: string | null; interfaceName: string | null }>();
+  const vsis = new Map<string, { vsiId: number | null; peers: string[] }>();
+  const subinterfaces = new Map<string, string>();
   let bgpLocalAsn: number | null = null;
+  let currentInterface: string | null = null;
+  let currentVsi: string | null = null;
 
   for (const line of (rawConfig ?? "").split(/\r?\n/)) {
     const trimmed = line.trim();
@@ -88,9 +106,31 @@ function semanticBaselineFromRaw(rawConfig: string | null): BaselineSemantic {
     const asPathFilter = /^ip\s+as-path-filter\s+(\S+)/i.exec(trimmed) || /^as-path-filter\s+(\S+)/i.exec(trimmed);
     if (asPathFilter?.[1]) asPathFilters.add(asPathFilter[1].toLowerCase());
     const interfaceMatch = /^(?:interface|int)\s+(.+)$/i.exec(trimmed);
-    if (interfaceMatch?.[1]) interfaces.set(interfaceMatch[1].toLowerCase(), interfaceMatch[1]);
+    if (interfaceMatch?.[1]) {
+      currentInterface = interfaceMatch[1];
+      interfaces.set(interfaceMatch[1].toLowerCase(), interfaceMatch[1]);
+      if (interfaceMatch[1].includes(".")) subinterfaces.set(interfaceMatch[1].toLowerCase(), interfaceMatch[1]);
+      currentVsi = null;
+    }
     const vlanMatch = /^vlan\s+(\d+)/i.exec(trimmed);
     if (vlanMatch?.[1]) vlans.set(Number(vlanMatch[1]), vlanMatch[1]);
+    const l2vcMatch = /^mpls\s+l2vc\s+(\d+)/i.exec(trimmed);
+    if (l2vcMatch?.[1]) {
+      const id = Number(l2vcMatch[1]);
+      const remoteMatch = /remote\s+(\S+)/i.exec(trimmed);
+      l2vcs.set(id, { peerIp: remoteMatch?.[1] ?? null, interfaceName: currentInterface });
+    }
+    const vsiMatch = /^vsi\s+(\S+)(?:\s+(\d+))?/i.exec(trimmed);
+    if (vsiMatch?.[1]) {
+      currentVsi = vsiMatch[1];
+      vsis.set(vsiMatch[1].toLowerCase(), { vsiId: vsiMatch[2] ? Number(vsiMatch[2]) : null, peers: [] });
+    }
+    const vsiPeerMatch = currentVsi ? /^\s*peer\s+(\S+)/i.exec(trimmed) : null;
+    if (vsiPeerMatch?.[1] && currentVsi) {
+      const entry = vsis.get(currentVsi.toLowerCase()) ?? { vsiId: null, peers: [] };
+      entry.peers.push(vsiPeerMatch[1]);
+      vsis.set(currentVsi.toLowerCase(), entry);
+    }
     const bgpMatch = /^bgp\s+(\d+)/i.exec(trimmed);
     if (bgpMatch?.[1]) bgpLocalAsn = Number(bgpMatch[1]);
     const peerMatch = /^peer\s+(\S+)\s+as-number\s+(\d+)/i.exec(trimmed);
@@ -109,7 +149,7 @@ function semanticBaselineFromRaw(rawConfig: string | null): BaselineSemantic {
     }
   }
 
-  return { routePolicies, prefixLists, communityFilters, asPathFilters, interfaces, vlans, peers, bgpLocalAsn };
+  return { routePolicies, prefixLists, communityFilters, asPathFilters, interfaces, vlans, peers, bgpLocalAsn, l2vcs, vsis, subinterfaces };
 }
 
 async function loadLatestBaseline(deviceId: number): Promise<BaselineText> {
@@ -121,29 +161,11 @@ async function loadLatestBaseline(deviceId: number): Promise<BaselineText> {
     .limit(1);
   if (collected?.rawConfig) {
     const semantic = semanticBaselineFromRaw(collected.rawConfig);
-    const [announcementRows] = await Promise.all([
-      db.select({ routePolicyName: bgpAnnouncementTargetsTable.routePolicyName }).from(bgpAnnouncementTargetsTable).where(eq(bgpAnnouncementTargetsTable.deviceId, deviceId)).limit(200),
-    ]);
-    for (const row of announcementRows) {
-      if (row.routePolicyName) semantic.routePolicies.set(row.routePolicyName.toLowerCase(), row.routePolicyName);
-    }
     const [communitySetRows] = await Promise.all([
-      db.select({ name: bgpCommunitySetsTable.name }).from(bgpCommunitySetsTable).where(eq(bgpCommunitySetsTable.deviceId, deviceId)).limit(200),
+      db.select({ name: communitySetsTable.name }).from(communitySetsTable).where(eq(communitySetsTable.deviceId, deviceId)).limit(200),
     ]);
     for (const row of communitySetRows) {
       if (row.name) semantic.communityFilters.set(row.name.toLowerCase(), row.name);
-    }
-    const [matrixRows] = await Promise.all([
-      db.select().from(bgpAnnouncementMatrixSnapshotsTable).where(eq(bgpAnnouncementMatrixSnapshotsTable.deviceId, deviceId)).orderBy(desc(bgpAnnouncementMatrixSnapshotsTable.createdAt)).limit(1),
-    ]);
-    const matrixRow = matrixRows[0];
-    if (matrixRow?.rowsJson && typeof matrixRow.rowsJson === "object") {
-      const rows = matrixRow.rowsJson as Array<{ routePolicyName?: string; peerIp?: string; vlan?: number }>;
-      for (const row of rows) {
-        if (row.routePolicyName) semantic.routePolicies.set(row.routePolicyName.toLowerCase(), row.routePolicyName);
-        if (row.peerIp) semantic.peers.set(row.peerIp, { asn: null, importPolicy: null, exportPolicy: null });
-        if (typeof row.vlan === "number") semantic.vlans.set(row.vlan, String(row.vlan));
-      }
     }
     const [l2Rows] = await Promise.all([
       db.select({ outerVlan: l2CircuitsTable.outerVlan, innerVlan: l2CircuitsTable.innerVlan }).from(l2CircuitsTable).where(eq(l2CircuitsTable.deviceId, deviceId)).limit(200),
@@ -189,16 +211,15 @@ async function loadLatestBaseline(deviceId: number): Promise<BaselineText> {
       vlans: new Map(),
       peers: new Map(),
       bgpLocalAsn: null,
+      l2vcs: new Map(),
+      vsis: new Map(),
+      subinterfaces: new Map(),
     };
     for (const item of ((snapshot.communities as Array<{ name?: string }> | undefined) ?? [])) if (item.name) semantic.communityFilters.set(item.name.toLowerCase(), item.name);
     for (const item of ((snapshot.communityLists as Array<{ name?: string }> | undefined) ?? [])) if (item.name) semantic.communityFilters.set(item.name.toLowerCase(), item.name);
     for (const item of ((snapshot.prefixLists as Array<{ name?: string }> | undefined) ?? [])) if (item.name) semantic.prefixLists.set(item.name.toLowerCase(), item.name);
     for (const item of ((snapshot.asPathFilters as Array<{ name?: string }> | undefined) ?? [])) if (item.name) semantic.asPathFilters.add(item.name.toLowerCase());
     for (const item of ((snapshot.interfaces as Array<{ name?: string }> | undefined) ?? [])) if (item.name) semantic.interfaces.set(item.name.toLowerCase(), item.name);
-    const [targetRows] = await Promise.all([
-      db.select({ routePolicyName: bgpAnnouncementTargetsTable.routePolicyName }).from(bgpAnnouncementTargetsTable).where(eq(bgpAnnouncementTargetsTable.deviceId, deviceId)).limit(200),
-    ]);
-    for (const row of targetRows) if (row.routePolicyName) semantic.routePolicies.set(row.routePolicyName.toLowerCase(), row.routePolicyName);
     return {
       source: "discovery_snapshots",
       rawConfig: null,
@@ -227,6 +248,9 @@ async function loadLatestBaseline(deviceId: number): Promise<BaselineText> {
       vlans: new Map(),
       peers: new Map(peers.filter((item) => item?.peerIp).map((item) => [String(item.peerIp), { asn: null, importPolicy: null, exportPolicy: null }])),
       bgpLocalAsn: null,
+      l2vcs: new Map(),
+      vsis: new Map(),
+      subinterfaces: new Map(),
     };
     return {
       source: "snmp_snapshots",
@@ -238,10 +262,8 @@ async function loadLatestBaseline(deviceId: number): Promise<BaselineText> {
     };
   }
 
-  const [policyTargets, communitySets, matrixSnapshot, l2Rows] = await Promise.all([
-    db.select({ routePolicyName: bgpAnnouncementTargetsTable.routePolicyName }).from(bgpAnnouncementTargetsTable).where(eq(bgpAnnouncementTargetsTable.deviceId, deviceId)).limit(200),
-    db.select({ name: bgpCommunitySetsTable.name }).from(bgpCommunitySetsTable).where(eq(bgpCommunitySetsTable.deviceId, deviceId)).limit(200),
-    db.select().from(bgpAnnouncementMatrixSnapshotsTable).where(eq(bgpAnnouncementMatrixSnapshotsTable.deviceId, deviceId)).orderBy(desc(bgpAnnouncementMatrixSnapshotsTable.createdAt)).limit(1),
+  const [communitySets, l2Rows] = await Promise.all([
+    db.select({ name: communitySetsTable.name }).from(communitySetsTable).where(eq(communitySetsTable.deviceId, deviceId)).limit(200),
     db.select({ outerVlan: l2CircuitsTable.outerVlan, innerVlan: l2CircuitsTable.innerVlan }).from(l2CircuitsTable).where(eq(l2CircuitsTable.deviceId, deviceId)).limit(200),
   ]);
   const semantic: BaselineSemantic = {
@@ -253,21 +275,12 @@ async function loadLatestBaseline(deviceId: number): Promise<BaselineText> {
     vlans: new Map(),
     peers: new Map(),
     bgpLocalAsn: null,
+    l2vcs: new Map(),
+    vsis: new Map(),
+    subinterfaces: new Map(),
   };
-  for (const row of policyTargets) {
-    if (row.routePolicyName) semantic.routePolicies.set(row.routePolicyName.toLowerCase(), row.routePolicyName);
-  }
   for (const row of communitySets) {
     if (row.name) semantic.communityFilters.set(row.name.toLowerCase(), row.name);
-  }
-  const matrixRow = matrixSnapshot[0];
-  if (matrixRow?.rowsJson && typeof matrixRow.rowsJson === "object") {
-    const rows = matrixRow.rowsJson as Array<{ routePolicyName?: string; peerIp?: string; vlan?: number }>;
-    for (const row of rows) {
-      if (row.routePolicyName) semantic.routePolicies.set(row.routePolicyName.toLowerCase(), row.routePolicyName);
-      if (row.peerIp) semantic.peers.set(row.peerIp, { asn: null, importPolicy: null, exportPolicy: null });
-      if (typeof row.vlan === "number") semantic.vlans.set(row.vlan, String(row.vlan));
-    }
   }
   for (const row of l2Rows) {
     if (typeof row.outerVlan === "number") semantic.vlans.set(row.outerVlan, String(row.outerVlan));
@@ -286,12 +299,10 @@ async function loadLatestBaseline(deviceId: number): Promise<BaselineText> {
     return {
       source: "policy_catalog",
       rawConfig: null,
-      collectedAt: matrixRow?.createdAt?.toISOString?.() ?? null,
+      collectedAt: null,
       lines: [],
       checksum: sha(JSON.stringify({
-        policyTargets,
         communitySets,
-        matrixRow,
         l2Rows,
       })),
       semantic,
@@ -313,6 +324,9 @@ async function loadLatestBaseline(deviceId: number): Promise<BaselineText> {
       vlans: new Map(),
       peers: new Map(),
       bgpLocalAsn: null,
+      l2vcs: new Map(),
+      vsis: new Map(),
+      subinterfaces: new Map(),
     },
   };
 }
@@ -344,13 +358,42 @@ function classifySemanticLine(line: string, baseline: BaselineText): { status: C
     const match = /route-policy\s+(\S+)/i.exec(normalized)?.[1];
     if (match && baseline.semantic.routePolicies.has(match.toLowerCase())) return { status: "partial_match", details: "route-policy exists" };
   }
+  if (lower.includes("mpls l2vc") || lower.startsWith("mpls l2vc")) {
+    const match = /mpls\s+l2vc\s+(\d+)/i.exec(normalized);
+    if (match?.[1]) {
+      const id = Number(match[1]);
+      const existing = baseline.semantic.l2vcs.get(id);
+      const remoteMatch = /remote\s+(\S+)/i.exec(normalized);
+      const candidatePeer = remoteMatch?.[1] ?? null;
+      if (existing?.peerIp && candidatePeer && existing.peerIp !== candidatePeer) {
+        return { status: "conflict", details: "L2VC peer differs" };
+      }
+      if (existing) return { status: "partial_match", details: "L2VC exists" };
+    }
+  }
+  if (lower.includes("vsi ") || lower.startsWith("vsi ")) {
+    const match = /^vsi\s+(\S+)/i.exec(normalized);
+    if (match?.[1]) {
+      const existing = baseline.semantic.vsis.get(match[1].toLowerCase());
+      if (existing) return { status: "partial_match", details: "VSI exists with different content" };
+    }
+  }
+  if (lower.includes("l2 binding vsi")) {
+    const match = /l2 binding vsi\s+(\S+)/i.exec(normalized);
+    if (match?.[1] && baseline.semantic.vsis.has(match[1].toLowerCase())) {
+      return { status: "already_present", details: "VSI access binding exists" };
+    }
+  }
   if (lower.includes("interface ")) {
     const match = /interface\s+(.+)$/i.exec(normalized)?.[1];
-    if (match && baseline.semantic.interfaces.has(match.toLowerCase())) return { status: "partial_match", details: "interface exists" };
-  }
-  if (lower.includes("vlan ")) {
-    const match = /vlan\s+(\d+)/i.exec(normalized)?.[1];
-    if (match && baseline.semantic.vlans.has(Number(match))) return { status: "partial_match", details: "vlan exists" };
+    if (match) {
+      if (baseline.semantic.subinterfaces.has(match.toLowerCase())) {
+        return { status: "partial_match", details: "subinterface exists" };
+      }
+      if (baseline.semantic.interfaces.has(match.toLowerCase())) {
+        return { status: "partial_match", details: "interface exists" };
+      }
+    }
   }
   if (lower.includes("peer ")) {
     const match = /peer\s+(\S+)\s+as-number\s+(\d+)/i.exec(normalized);
@@ -360,6 +403,10 @@ function classifySemanticLine(line: string, baseline: BaselineText): { status: C
       if (current?.asn != null && current.asn !== Number(match[2])) return { status: "conflict", details: "peer ASN differs" };
       if (baseline.semantic.peers.has(match[1])) return { status: "manual_review", details: "peer exists in other context" };
     }
+  }
+  if (lower.includes("vlan ")) {
+    const match = /vlan\s+(\d+)/i.exec(normalized)?.[1];
+    if (match && baseline.semantic.vlans.has(Number(match))) return { status: "partial_match", details: "vlan exists" };
   }
   if (lower.includes("ip-prefix") || lower.includes("prefix-list")) {
     const match = /(ip-prefix|prefix-list)\s+(\S+)/i.exec(normalized)?.[2];
@@ -436,7 +483,7 @@ function buildBlockDiff(block: ConfigGeneratorBlockOutput["blocks"][number], bas
 
 function blocksToDiff(blocks: ConfigGeneratorBlockOutput["blocks"], baseline: BaselineText) {
   const summary = initialSummary();
-  const diffBlocks = blocks.filter((block) => BGP_BLOCK_KEYS.has(block.key) || block.key === "global_dependencies" || block.key === "circuit_dependencies").map((block) => buildBlockDiff(block, baseline));
+  const diffBlocks = blocks.filter((block) => DIFF_BLOCK_KEYS.has(block.key)).map((block) => buildBlockDiff(block, baseline));
   for (const block of diffBlocks) for (const item of block.items) summarizeStatus(item.status, summary);
   const warnings: ConfigGeneratorDiffLine[] = [];
   if (baseline.source === "none") {

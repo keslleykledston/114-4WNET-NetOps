@@ -42,10 +42,31 @@ import {
   type ConfigGeneratorValidationSummary,
 } from "@/features/config-generator/config-generator-api";
 import { ConfigGeneratorIdAllocatorPanel } from "@/features/config-generator/id-allocator-panel";
+import { ConfigGeneratorChangeRequestPreviewPanel } from "@/features/config-generator/change-request-preview-panel";
 import { AlertTriangle, Download, Eye, Loader2, Copy, ShieldAlert, FileText } from "lucide-react";
 
 type FormState = Record<string, string>;
 type OriginState = ConfigGeneratorFieldOrigins;
+
+function inferL2vpnTemplateServiceType(circuitType: string | null | undefined, peerCount = 0): string | null {
+  const type = (circuitType ?? "").toLowerCase();
+  if (type.includes("vsi") || type.includes("vpls") || peerCount > 1) return "l2vpn_ptmp";
+  if (type.includes("l2vc") || type.includes("vpws") || type.includes("ptp")) return "l2vpn_ptp";
+  if (type.includes("vlan") || type.includes("dot1q")) return "l2vpn_vlan";
+  if (peerCount > 1) return "l2vpn_ptmp";
+  if (peerCount === 1) return "l2vpn_ptp";
+  return null;
+}
+
+function matchesL2vpnServiceType(templateServiceType: string, requested: string): boolean {
+  if (templateServiceType === requested) return true;
+  const ptp = new Set(["l2vpn_ptp", "vpws", "l2vc"]);
+  const ptmp = new Set(["l2vpn_ptmp", "vpls", "vsi"]);
+  if (ptp.has(requested) && ptp.has(templateServiceType)) return true;
+  if (ptmp.has(requested) && ptmp.has(templateServiceType)) return true;
+  return false;
+}
+
 type ConfigGeneratorRequest = {
   tenantId: number;
   deviceId: number;
@@ -425,7 +446,11 @@ export default function ConfigGeneratorPage() {
 
   useEffect(() => {
     if (!deviceContextQuery.data) return;
-    const suggestedTemplate = (suggestionTemplatesQuery.data?.templates ?? templatesQuery.data ?? []).find((template) => template.serviceType === deviceContextQuery.data?.l2Circuits[0]?.circuitType);
+    const firstCircuit = deviceContextQuery.data.l2Circuits[0];
+    const inferredService = inferL2vpnTemplateServiceType(firstCircuit?.circuitType, firstCircuit?.peerIp ? 1 : 0) ?? firstCircuit?.circuitType ?? null;
+    const suggestedTemplate = (suggestionTemplatesQuery.data?.templates ?? templatesQuery.data ?? []).find((template) => (
+      inferredService ? matchesL2vpnServiceType(template.serviceType, inferredService) : template.serviceType === firstCircuit?.circuitType
+    ));
     if (suggestedTemplate && String(suggestedTemplate.id) !== templateId) {
       setTemplateId(String(suggestedTemplate.id));
     }
@@ -540,6 +565,7 @@ export default function ConfigGeneratorPage() {
   const currentFieldOrigins = fieldOrigins;
   const hasBlockingValidation = Boolean(validation?.errors.length);
   const hasBlockingDiff = Boolean(diff?.blocking);
+  const activeRunId = preview?.runPreviewId ?? selectedRun?.id ?? null;
 
   if (featureQuery.isLoading) {
     return <div className="p-6"><Skeleton className="h-80 w-full" /></div>;
@@ -939,6 +965,16 @@ export default function ConfigGeneratorPage() {
               )}
             </CardContent>
           </Card>
+
+          <ConfigGeneratorChangeRequestPreviewPanel
+            runId={activeRunId}
+            canGenerate={Boolean(activeRunId)}
+            onCopy={(text) => {
+              copyText(text);
+              toast({ title: "Markdown copiado", description: "Ticket markdown copiado para a área de transferência." });
+            }}
+            onDownload={downloadText}
+          />
 
           <Card>
             <CardHeader>

@@ -1,7 +1,5 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import {
-  bgpAnnouncementTargetsTable,
-  bgpCommunitySetsTable,
   collectedConfigsTable,
   configGeneratorTemplatesTable,
   configGeneratorTemplateVersionsTable,
@@ -19,7 +17,7 @@ import {
 } from "@workspace/db";
 import type { DeviceDiscoverySnapshot, InterfaceSummary as DiscoveryInterfaceSummary, BgpPeerSummary, L2vpnSummary } from "../netops/device-discovery/discovery.types.js";
 import { snapshotToNetopsData } from "../netops/adapters/snapshot-adapter.js";
-import { CONFIG_GENERATOR_GLOBAL_OBJECTS } from "./config-generator.catalog.js";
+import { CONFIG_GENERATOR_GLOBAL_OBJECTS, L2VPN_PTMP_SERVICE_TYPES, L2VPN_PTP_SERVICE_TYPES } from "./config-generator.catalog.js";
 import { listConfigGeneratorTemplates } from "./config-generator.service.js";
 import type {
   ConfigGeneratorBgpPeerSuggestion,
@@ -192,6 +190,23 @@ function buildConflict(code: string, message: string, field?: string): ConfigGen
   return { code, severity: "warning", message, ...(field ? { field } : {}) };
 }
 
+function matchesTemplateServiceType(templateServiceType: string, requested: string | null | undefined): boolean {
+  if (!requested) return true;
+  if (templateServiceType === requested) return true;
+  if (L2VPN_PTP_SERVICE_TYPES.has(requested) && L2VPN_PTP_SERVICE_TYPES.has(templateServiceType)) return true;
+  if (L2VPN_PTMP_SERVICE_TYPES.has(requested) && L2VPN_PTMP_SERVICE_TYPES.has(templateServiceType)) return true;
+  return false;
+}
+
+function inferL2vpnServiceType(circuitType: string | null | undefined, peerCount: number): "l2vpn_ptp" | "l2vpn_ptmp" | "l2vpn_vlan" {
+  const type = (circuitType ?? "").toLowerCase();
+  if (type.includes("vsi") || type.includes("vpls") || peerCount > 1) return "l2vpn_ptmp";
+  if (type.includes("l2vc") || type.includes("vpws") || type.includes("ptp")) return "l2vpn_ptp";
+  if (peerCount > 1) return "l2vpn_ptmp";
+  if (peerCount === 1) return "l2vpn_ptp";
+  return "l2vpn_vlan";
+}
+
 async function loadLatestDiscoverySnapshot(deviceId: number) {
   const [row] = await db
     .select()
@@ -261,7 +276,7 @@ export async function listConfigGeneratorSuggestionTemplates(input: { tenantId?:
   const templates = await listConfigGeneratorTemplates();
   const device = input.deviceId != null ? await loadDeviceTenantDevice(input.deviceId) : null;
   const filtered = templates.filter((template) => {
-    if (input.serviceType && template.serviceType !== input.serviceType) return false;
+    if (input.serviceType && !matchesTemplateServiceType(template.serviceType, input.serviceType)) return false;
     if (!device) return true;
     return template.vendor.toLowerCase() === device.vendor.toLowerCase() && template.platform.toLowerCase() === device.platform.toLowerCase();
   });
@@ -305,8 +320,12 @@ export async function getConfigGeneratorDeviceContext(input: { tenantId: number;
     circuitType: row.circuitType,
     name: row.name,
     vlan: row.outerVlan ?? row.innerVlan ?? null,
-    interfaceName: row.localInterface ?? null,
+    interfaceName: row.localInterface ?? row.parentInterface ?? null,
     peerIp: row.peerIp ?? null,
+    vsiName: row.vsiName ?? null,
+    vsiId: row.vsiId ?? null,
+    vcId: row.vcId ?? null,
+    description: row.description ?? null,
   }));
 
   const serviceCatalog = await db.select().from(serviceCatalogTable).where(eq(serviceCatalogTable.status, "ACTIVE"));
@@ -335,7 +354,7 @@ export async function getConfigGeneratorDeviceContext(input: { tenantId: number;
   if (!first(interfaces)) {
     conflicts.push(buildConflict("INTERFACE_NOT_FOUND", "Nenhuma interface descoberta no device", "interface"));
   }
-  if (serviceCatalog.some((item) => item.serviceType === "bgp_customer_community" || item.serviceType === "l2vpn_vlan")) {
+  if (serviceCatalog.some((item) => item.serviceType === "bgp_customer_community" || item.serviceType === "l2vpn_vlan" || L2VPN_PTP_SERVICE_TYPES.has(item.serviceType) || L2VPN_PTMP_SERVICE_TYPES.has(item.serviceType))) {
     // no-op, only here to keep data in context payload
   }
 
@@ -402,7 +421,10 @@ export async function getConfigGeneratorServiceContext(input: { tenantId: number
   const compatibleTemplates = templateRows.filter((template) => template.vendor.toLowerCase() === deviceContext.vendor.toLowerCase() && template.platform.toLowerCase() === deviceContext.platform.toLowerCase() && template.serviceType === input.serviceType);
   const ref = input.ref?.trim() || null;
   const serviceCatalogItem = ref ? serviceCatalogRows.find((item) => item.name.toLowerCase().includes(ref.toLowerCase())) ?? first(serviceCatalogRows) ?? null : first(serviceCatalogRows) ?? null;
-  const circuit = first(deviceContext.l2Circuits);
+  const circuit = ref
+    ? deviceContext.l2Circuits.find((item) => String(item.circuitId ?? "").includes(ref) || String(item.name ?? "").toLowerCase().includes(ref.toLowerCase())) ?? first(deviceContext.l2Circuits)
+    : first(deviceContext.l2Circuits);
+  const inferredService = inferL2vpnServiceType(circuit?.circuitType, circuit?.peerIp ? 1 : 0);
 
   const suggestedInput: Record<string, unknown> = { ...deviceContext.suggestedInput };
   const notes: string[] = [];
@@ -434,9 +456,58 @@ export async function getConfigGeneratorServiceContext(input: { tenantId: number
     suggestedInput.description = serviceCatalogItem?.description ?? circuit?.name ?? null;
     suggestedInput.mtu = 1500;
     suggestedInput.peerLocalIpv4 = deviceContext.bgp.peers[0]?.localIp ?? null;
-    suggestedInput.peerRemoteIpv4 = deviceContext.bgp.peers[0]?.remoteIp ?? null;
+    suggestedInput.peerRemoteIpv4 = deviceContext.bgp.peers[0]?.remoteIp ?? circuit?.peerIp ?? null;
     suggestedInput.ipv4Prefixes = [];
     notes.push(compatibleTemplates.length > 0 ? `Template sugerido: ${compatibleTemplates[0].name}` : "Sem template compatível encontrado");
+  } else if (L2VPN_PTP_SERVICE_TYPES.has(input.serviceType)) {
+    suggestedInput.customerName = serviceCatalogItem?.name ?? circuit?.name ?? deviceContext.deviceName;
+    suggestedInput.circuitId = circuit?.circuitId ?? ref ?? String(input.deviceId);
+    suggestedInput.localDeviceName = deviceContext.deviceName;
+    suggestedInput.localInterface = circuit?.interfaceName?.split(".")[0] ?? deviceContext.interfaces[0]?.name?.split(".")[0] ?? "";
+    suggestedInput.interface = circuit?.interfaceName ?? (suggestedInput.localInterface && circuit?.vlan ? `${suggestedInput.localInterface}.${circuit.vlan}` : deviceContext.interfaces[0]?.name ?? "");
+    suggestedInput.vlan = circuit?.vlan ?? null;
+    suggestedInput.l2vcId = num(circuit?.vcId) ?? circuit?.vlan ?? null;
+    suggestedInput.remotePeerIp = circuit?.peerIp ?? deviceContext.bgp.peers[0]?.remoteIp ?? null;
+    suggestedInput.remoteSite = serviceCatalogItem?.description ?? null;
+    suggestedInput.remoteDeviceName = null;
+    suggestedInput.encapsulation = circuit?.circuitType?.toLowerCase().includes("qinq") ? "qinq" : "dot1q";
+    suggestedInput.description = circuit?.description ?? `${suggestedInput.customerName} L2VC`;
+    suggestedInput.mtu = 1500;
+    suggestedInput.serviceType = input.serviceType;
+    suggestedInput.endpointRole = "access";
+    suggestedInput.neighborSite = suggestedInput.remoteSite;
+    suggestedInput.allocationScope = "tenant";
+    suggestedInput.allocationRangeKey = "l2vpn";
+    if (inferredService === "l2vpn_ptmp") {
+      notes.push("Circuito local parece multiponto — considere template L2VPN PTMP/VSI.");
+    }
+    notes.push(compatibleTemplates.length > 0 ? `Template sugerido: ${compatibleTemplates[0].name}` : "Sem template compatível encontrado");
+  } else if (L2VPN_PTMP_SERVICE_TYPES.has(input.serviceType)) {
+    suggestedInput.customerName = serviceCatalogItem?.name ?? circuit?.name ?? deviceContext.deviceName;
+    suggestedInput.circuitId = circuit?.circuitId ?? ref ?? String(input.deviceId);
+    suggestedInput.vsiName = circuit?.vsiName ?? `VSI_${String(suggestedInput.circuitId).replace(/\W+/g, "_")}`;
+    suggestedInput.vsiId = num(circuit?.vsiId) ?? circuit?.vlan ?? null;
+    suggestedInput.vlan = circuit?.vlan ?? null;
+    suggestedInput.accessInterface = circuit?.interfaceName ?? deviceContext.interfaces[0]?.name ?? "";
+    suggestedInput.interface = suggestedInput.accessInterface;
+    suggestedInput.remotePeers = circuit?.peerIp ? [circuit.peerIp] : deviceContext.bgp.peers.map((item) => item.remoteIp).filter(Boolean);
+    suggestedInput.siteRole = "access";
+    suggestedInput.neighborSite = serviceCatalogItem?.description ?? null;
+    suggestedInput.neighborSites = suggestedInput.neighborSite ? [suggestedInput.neighborSite] : [];
+    suggestedInput.encapsulation = "dot1q";
+    suggestedInput.description = circuit?.description ?? `${suggestedInput.customerName} VSI`;
+    suggestedInput.mtu = 1500;
+    suggestedInput.serviceType = input.serviceType;
+    suggestedInput.endpointRole = "access";
+    suggestedInput.allocationScope = "tenant";
+    suggestedInput.allocationRangeKey = "l2vpn";
+    if (inferredService === "l2vpn_ptp") {
+      notes.push("Circuito local parece ponto-a-ponto — considere template L2VPN PTP/L2VC.");
+    }
+    notes.push(compatibleTemplates.length > 0 ? `Template sugerido: ${compatibleTemplates[0].name}` : "Sem template compatível encontrado");
+  } else if (!input.serviceType && circuit) {
+    const autoType = inferL2vpnServiceType(circuit.circuitType, circuit.peerIp ? 1 : 0);
+    notes.push(`Serviço L2 inferido: ${autoType}`);
   }
 
   const fieldOrigins = buildFieldOriginsFromSuggestions(suggestedInput);
@@ -449,6 +520,22 @@ export async function getConfigGeneratorServiceContext(input: { tenantId: number
   if (suggestedInput.serviceType) fieldOrigins.serviceType = "service_catalog";
   if (suggestedInput.description) fieldOrigins.description = "service_catalog";
   if (suggestedInput.mtu != null) fieldOrigins.mtu = "manual";
+  if (suggestedInput.localDeviceName) fieldOrigins.localDeviceName = "inventory";
+  if (suggestedInput.localInterface) fieldOrigins.localInterface = circuit ? "l2_circuit" : "inventory";
+  if (suggestedInput.remotePeerIp) fieldOrigins.remotePeerIp = circuit?.peerIp ? "l2_circuit" : "bgp_peer";
+  if (suggestedInput.remoteSite) fieldOrigins.remoteSite = "service_catalog";
+  if (suggestedInput.remoteDeviceName) fieldOrigins.remoteDeviceName = "manual";
+  if (suggestedInput.l2vcId != null) fieldOrigins.l2vcId = circuit?.vcId ? "l2_circuit" : "manual";
+  if (suggestedInput.vsiId != null) fieldOrigins.vsiId = circuit?.vsiId ? "l2_circuit" : "manual";
+  if (suggestedInput.vsiName) fieldOrigins.vsiName = circuit?.vsiName ? "l2_circuit" : "manual";
+  if (suggestedInput.accessInterface) fieldOrigins.accessInterface = circuit ? "l2_circuit" : "inventory";
+  if (suggestedInput.remotePeers) fieldOrigins.remotePeers = circuit?.peerIp ? "l2_circuit" : "bgp_peer";
+  if (suggestedInput.siteRole) fieldOrigins.siteRole = "manual";
+  if (suggestedInput.neighborSites) fieldOrigins.neighborSites = "service_catalog";
+  if (suggestedInput.encapsulation) fieldOrigins.encapsulation = circuit ? "l2_circuit" : "manual";
+  if (suggestedInput.subinterfaceId != null) fieldOrigins.subinterfaceId = "manual";
+  if (suggestedInput.endpointRole) fieldOrigins.endpointRole = "manual";
+  if (suggestedInput.neighborSite) fieldOrigins.neighborSite = "service_catalog";
   if (suggestedInput.remoteAsn != null) fieldOrigins.remoteAsn = "bgp_peer";
   if (suggestedInput.peerLocalIpv4 != null) fieldOrigins.peerLocalIpv4 = "bgp_peer";
   if (suggestedInput.peerRemoteIpv4 != null) fieldOrigins.peerRemoteIpv4 = "bgp_peer";

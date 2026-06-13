@@ -99,4 +99,9 @@ Aba **Dependências Globais**: proteção documentada, sem ação de remoção.
 ```bash
 cd workspace && pnpm run typecheck
 node tools/bgp-announcement-change-preview-selftest.mjs
+node tools/bgp-announcement-change-plan-link-selftest.mjs
 ```
+
+## Change Plan Link
+
+Ver [`BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md`](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md).

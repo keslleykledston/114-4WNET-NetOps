@@ -312,3 +312,21 @@ export interface AnnouncementChangePreview {
   createdAt?: string;
   createdBy: number | null;
 }
+
+export interface BgpPreviewChangePlanLinkSummary {
+  changePlanId: number;
+  previewId: number;
+  deviceId: number;
+  snapshotId: number | null;
+  targetId: string;
+  title: string;
+  description: string;
+  status: string;
+  workflowStatus: "draft" | "ready_for_review" | "rejected" | "archived";
+  riskLevel: string;
+  ticketMarkdown: string;
+  logicalDiff: string[];
+  warnings: string[];
+  createdAt: string;
+  createdBy: string | null;
+}

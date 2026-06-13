@@ -176,12 +176,14 @@ export const bgpAnnouncementChangePreviewsTable = pgTable(
     snapshotId: integer("snapshot_id"),
     targetId: varchar("target_id", { length: 256 }).notNull(),
     previewJson: jsonb("preview_json").notNull(),
+    changePlanId: integer("change_plan_id"),
     createdBy: integer("created_by").references(() => usersTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("bgp_announcement_change_previews_device_created_idx").on(table.deviceId, table.createdAt),
     index("bgp_announcement_change_previews_snapshot_target_idx").on(table.snapshotId, table.targetId),
+    index("bgp_announcement_change_previews_change_plan_id_idx").on(table.changePlanId),
   ],
 );
 

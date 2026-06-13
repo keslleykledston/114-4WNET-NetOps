@@ -3,7 +3,7 @@ import { requirePermission } from "../../lib/auth.js";
 import {
   getAnnouncementFeature,
   getChangePlan,
-  getChangePlans,
+  getChangePlanForPreview,
   getChangePreview,
   getChangePreviewById,
   getCommunitySets,
@@ -14,9 +14,11 @@ import {
   getPolicyDependencies,
   getSnapshotById,
   getUpstreamAudit,
+  listBgpAnnouncementChangePlansHandler,
   listSnapshots,
   postChangePlan,
   postChangePreview,
+  postCreatePlanFromPreview,
   postCommunitySetFindMatch,
   postCommunitySetResolve,
   postPreviewChange,
@@ -37,8 +39,10 @@ router.get("/bgp/announcements/expanded-prefixes", requirePermission("bgp.announ
 router.post("/bgp/announcements/preview-change", requirePermission("bgp.announcements.preview"), postPreviewChange);
 router.get("/bgp/announcements/change-preview", requirePermission("bgp.announcements.read"), getChangePreview);
 router.post("/bgp/announcements/change-preview", requirePermission("bgp.announcements.preview"), postChangePreview);
+router.get("/bgp/announcements/change-preview/:id/plan", requirePermission("bgp.announcements.read"), getChangePlanForPreview);
+router.post("/bgp/announcements/change-preview/:id/create-plan", requirePermission("bgp.announcements.plan"), postCreatePlanFromPreview);
 router.get("/bgp/announcements/change-preview/:id", requirePermission("bgp.announcements.read"), getChangePreviewById);
-router.get("/bgp/announcements/change-plans", requirePermission("bgp.announcements.read"), getChangePlans);
+router.get("/bgp/announcements/change-plans", requirePermission("bgp.announcements.read"), listBgpAnnouncementChangePlansHandler);
 router.post("/bgp/announcements/change-plans", requirePermission("bgp.announcements.plan"), postChangePlan);
 router.get("/bgp/announcements/change-plans/:id", requirePermission("bgp.announcements.read"), getChangePlan);
 

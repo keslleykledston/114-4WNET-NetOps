@@ -59,9 +59,40 @@ import {
   validateGlobalCommunityRemoval,
   validateTargetForPreview,
 } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-change-preview.service.ts";
+import {
+  buildChangePlanInputFromBgpPreview,
+  isPreviewEligibleForChangePlan,
+} from "../workspace/artifacts/api-server/src/modules/change-plans/adapters/bgp-announcement-preview.adapter.ts";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+function sampleAnnouncementPreview(overrides: Record<string, unknown> = {}) {
+  const base = {
+    id: 1,
+    snapshotId: 192,
+    tenantId: null,
+    deviceId: 94,
+    targetId: "ORIGIN-TEST:10:ipv4",
+    targetName: "ORIGIN-TEST",
+    targetRole: "origin",
+    targetEditMode: "editable_future",
+    actionType: "block_announcement",
+    upstreamCircuitId: "01",
+    currentState: { communities: ["64777:51001"], cellStates: { "01": "On" }, prependCounts: {}, announcementAllowed: true, notes: [] },
+    proposedState: { communities: [], cellStates: { "01": "Off" }, prependCounts: {}, announcementAllowed: false, notes: [] },
+    logicalDiff: ["C01 estado: On → Off"],
+    affectedPolicies: ["ORIGIN-TEST"],
+    affectedCommunities: [],
+    protectedGlobals: [],
+    upstreamAuditImpact: [],
+    validation: { status: "ok", ok: true, errors: [], warnings: [] },
+    riskAssessment: { level: "low", blocked: false, reasons: [], summary: "ok" },
+    ticketMarkdown: "# Preview\n\nNenhum comando foi executado.",
+    createdBy: null,
+  };
+  return { ...base, ...overrides } as import("../workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcement.types.ts").AnnouncementChangePreview;
+}
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -1035,6 +1066,133 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
         });
         const validation = validateTargetForPreview(row, "set_prepend", undefined);
         assert(validation.status === "unsupported_preview", "prepend unsupported");
+      },
+    },
+  ],
+  "change-plan-link": [
+    {
+      name: "creates draft plan input from low preview",
+      fn: () => {
+        const preview = sampleAnnouncementPreview({ riskAssessment: { level: "low", blocked: false, reasons: [], summary: "ok" } });
+        assert(isPreviewEligibleForChangePlan(preview).ok, "eligible");
+        const input = buildChangePlanInputFromBgpPreview({ preview, previewId: 1, hostname: "lab" });
+        assert(input.module === "bgp_announcements", "module");
+        assert(input.statusOverride === undefined, "override set later");
+        assert(input.sourceObjectType === "bgp_announcement_change_preview", "source type");
+        assert(String(input.metadata?.logicalDiff).includes("C01"), "logical diff preserved");
+        assert(String(input.metadata?.ticketMarkdown).includes("Nenhum comando foi executado"), "ticket preserved");
+      },
+    },
+    {
+      name: "medium preview eligible with warnings",
+      fn: () => {
+        const preview = sampleAnnouncementPreview({
+          validation: { status: "warning", ok: true, errors: [], warnings: ["partial data"] },
+          riskAssessment: { level: "medium", blocked: false, reasons: ["partial"], summary: "medium" },
+        });
+        const eligibility = isPreviewEligibleForChangePlan(preview);
+        assert(eligibility.ok, "medium ok");
+        assert(eligibility.warnings.length > 0, "warnings");
+      },
+    },
+    {
+      name: "high preview eligible with ack path",
+      fn: () => {
+        const preview = sampleAnnouncementPreview({
+          riskAssessment: { level: "high", blocked: false, reasons: ["conflict"], summary: "high" },
+        });
+        assert(isPreviewEligibleForChangePlan(preview).ok, "high still eligible for draft");
+      },
+    },
+    {
+      name: "blocked preview does not create plan",
+      fn: () => {
+        const preview = sampleAnnouncementPreview({
+          validation: { status: "blocked", ok: false, errors: ["blocked"], warnings: [] },
+          riskAssessment: { level: "blocked", blocked: true, reasons: ["blocked"], summary: "blocked" },
+        });
+        assert(!isPreviewEligibleForChangePlan(preview).ok, "blocked");
+      },
+    },
+    {
+      name: "upstream/provider/ix/cdn blocked",
+      fn: () => {
+        for (const role of ["upstream", "provider", "ix", "cdn"] as const) {
+          const preview = sampleAnnouncementPreview({ targetRole: role, targetEditMode: "audit_only" });
+          assert(!isPreviewEligibleForChangePlan(preview).ok, `${role} blocked`);
+        }
+      },
+    },
+    {
+      name: "unknown blocked",
+      fn: () => {
+        const preview = sampleAnnouncementPreview({ targetRole: "unknown", targetEditMode: "unknown" });
+        assert(!isPreviewEligibleForChangePlan(preview).ok, "unknown blocked");
+      },
+    },
+    {
+      name: "protected global target blocked",
+      fn: () => {
+        const preview = sampleAnnouncementPreview({
+          protectedGlobals: [{
+            objectName: "GLOBAL-ROUTE-V4",
+            objectKind: "prefix-list",
+            dependencyScope: "global_shared",
+            dependencyProtection: "protected_global",
+            reason: "protected",
+            consumerCount: 3,
+            consumers: ["GLOBAL-ROUTE-V4"],
+          }],
+          affectedPolicies: ["GLOBAL-ROUTE-V4"],
+        });
+        assert(!isPreviewEligibleForChangePlan(preview).ok, "global blocked");
+      },
+    },
+    {
+      name: "viewer vs operator rbac",
+      fn: () => {
+        const viewer = { role: "viewer" as const, permissionsJson: null };
+        const operator = { role: "operator" as const, permissionsJson: null };
+        assert(!checkPermission(viewer, "bgp.announcements.plan"), "viewer no plan");
+        assert(checkPermission(operator, "bgp.announcements.plan"), "operator plan");
+      },
+    },
+    {
+      name: "plan preserves ticket and diff in metadata",
+      fn: () => {
+        const preview = sampleAnnouncementPreview();
+        const input = buildChangePlanInputFromBgpPreview({ preview, previewId: 7 });
+        assert(Array.isArray(input.metadata?.logicalDiff), "diff array");
+        assert(String(input.metadata?.ticketMarkdown).includes("Nenhum comando foi executado"), "ticket");
+      },
+    },
+    {
+      name: "no execution statuses in adapter",
+      fn: () => {
+        const input = buildChangePlanInputFromBgpPreview({ preview: sampleAnnouncementPreview(), previewId: 1 });
+        const statusText = JSON.stringify(input.metadata ?? {});
+        for (const forbidden of ["executing", "executed", "applied", "approved_for_execution", "rollback_executed"]) {
+          assert(!statusText.includes(forbidden), `forbidden ${forbidden}`);
+        }
+        assert(input.metadata?.workflowStatus === "draft", "draft workflow");
+      },
+    },
+    {
+      name: "link service avoids ssh snmp connector controlled execution",
+      fn: () => {
+        const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+        const file = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-change-plan-link.service.ts"), "utf8");
+        for (const token of ["connector", "net-snmp", "ssh2", "controlledExecution", "controlled-execution", "CONFIG_APPLY"]) {
+          assert(!file.toLowerCase().includes(token.toLowerCase()), `must not reference ${token}`);
+        }
+      },
+    },
+    {
+      name: "source preview id mapping",
+      fn: () => {
+        const input = buildChangePlanInputFromBgpPreview({ preview: sampleAnnouncementPreview(), previewId: 42 });
+        assert(input.sourceObjectId === "42", "preview id");
+        assert(input.metadata?.sourcePreviewId === 42, "metadata preview id");
       },
     },
   ],

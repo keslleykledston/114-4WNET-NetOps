@@ -34,6 +34,11 @@ import {
   getAnnouncementChangePreviewById,
   listAnnouncementChangePreviews,
 } from "./announcement-change-preview.service.js";
+import {
+  createChangePlanFromPreview,
+  getChangePlanLinkForPreview,
+  listBgpAnnouncementChangePlans,
+} from "./announcement-change-plan-link.service.js";
 import type { ChangePreviewActionType } from "./bgp-announcement.types.js";
 import { logAuditEvent } from "../../lib/audit.js";
 import { getRequestContext } from "../../lib/request-context.js";
@@ -388,6 +393,97 @@ export async function getChangePreview(req: Request, res: Response) {
   });
 
   res.json({ previews });
+}
+
+export async function postCreatePlanFromPreview(req: Request, res: Response) {
+  const gate = assertPreviewEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const previewId = Number(req.params.id);
+  if (!Number.isFinite(previewId)) {
+    res.status(400).json({ error: "Invalid preview id" });
+    return;
+  }
+
+  const user = getRequestContext()?.user;
+  const body = req.body ?? {};
+  const result = await createChangePlanFromPreview({
+    previewId,
+    createdBy: user?.id ?? null,
+    createdByLabel: user?.email ?? user?.name ?? null,
+    acknowledgeHighRisk: body.acknowledgeHighRisk === true,
+  });
+
+  if (result === "preview_not_found") {
+    res.status(404).json({ error: "Change preview not found" });
+    return;
+  }
+  if (result === "plan_already_exists") {
+    res.status(409).json({ error: "Change plan already exists for this preview", code: "PLAN_ALREADY_EXISTS" });
+    return;
+  }
+  if (result === "blocked") {
+    res.status(422).json({ error: "Preview blocked — cannot create change plan", code: "PREVIEW_BLOCKED" });
+    return;
+  }
+  if (result === "high_risk_ack_required") {
+    res.status(422).json({
+      error: "High risk preview requires manual acknowledgment",
+      code: "HIGH_RISK_ACK_REQUIRED",
+      message: "Estou ciente que este plano exige revisão manual.",
+    });
+    return;
+  }
+
+  res.status(201).json(result);
+}
+
+export async function getChangePlanForPreview(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const previewId = Number(req.params.id);
+  if (!Number.isFinite(previewId)) {
+    res.status(400).json({ error: "Invalid preview id" });
+    return;
+  }
+
+  const link = await getChangePlanLinkForPreview(previewId);
+  if (!link) {
+    res.status(404).json({ error: "No change plan linked to this preview" });
+    return;
+  }
+
+  res.json(link);
+}
+
+export async function listBgpAnnouncementChangePlansHandler(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const previewId = req.query.previewId != null ? Number(req.query.previewId) : undefined;
+  const snapshotId = req.query.snapshotId != null ? Number(req.query.snapshotId) : undefined;
+  const deviceId = req.query.deviceId != null ? Number(req.query.deviceId) : undefined;
+  const targetId = typeof req.query.targetId === "string" ? req.query.targetId : undefined;
+
+  const result = await listBgpAnnouncementChangePlans({
+    previewId: Number.isFinite(previewId) ? previewId : undefined,
+    snapshotId: Number.isFinite(snapshotId) ? snapshotId : undefined,
+    deviceId: Number.isFinite(deviceId) ? deviceId : undefined,
+    targetId,
+    limit: Number(req.query.limit ?? 50),
+  });
+
+  res.json(result);
 }
 
 export async function postChangePlan(req: Request, res: Response) {

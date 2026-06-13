@@ -151,6 +151,22 @@ export function fetchAnnouncementChangePreviews(params: {
   return apiFetch(`/api/bgp/announcements/change-preview?${query}`);
 }
 
+export function createChangePlanFromPreview(
+  previewId: number,
+  body?: { acknowledgeHighRisk?: boolean },
+): Promise<import("./announcement-types").BgpPreviewChangePlanLinkSummary> {
+  return apiFetch(`/api/bgp/announcements/change-preview/${previewId}/create-plan`, {
+    method: "POST",
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+export function fetchChangePlanForPreview(
+  previewId: number,
+): Promise<import("./announcement-types").BgpPreviewChangePlanLinkSummary> {
+  return apiFetch(`/api/bgp/announcements/change-preview/${previewId}/plan`);
+}
+
 export function syncCommunitySets(deviceId: number): Promise<{ synced: number }> {
   return apiFetch("/api/bgp/community-sets/sync", {
     method: "POST",

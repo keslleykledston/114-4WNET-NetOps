@@ -18,8 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { Download } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import type {
   AnnouncementChangePreview,
+  BgpPreviewChangePlanLinkSummary,
   ChangePreviewActionType,
   MatrixRow,
 } from "./announcement-types";
@@ -60,6 +62,9 @@ interface ChangePreviewModalProps {
     newState?: string;
     community?: string;
   }) => Promise<AnnouncementChangePreview>;
+  planEnabled?: boolean;
+  onCreatePlan?: (previewId: number, options: { acknowledgeHighRisk: boolean }) => Promise<BgpPreviewChangePlanLinkSummary>;
+  existingPlan?: BgpPreviewChangePlanLinkSummary | null;
 }
 
 export function ChangePreviewModal({
@@ -71,13 +76,19 @@ export function ChangePreviewModal({
   upstreams,
   defaultCircuitId,
   onGenerate,
+  planEnabled = false,
+  onCreatePlan,
+  existingPlan = null,
 }: ChangePreviewModalProps) {
   const [actionType, setActionType] = useState<ChangePreviewActionType>("set_community");
   const [upstreamCircuitId, setUpstreamCircuitId] = useState(defaultCircuitId ?? upstreams[0]?.circuitId ?? "01");
   const [newState, setNewState] = useState("p2");
   const [community, setCommunity] = useState("");
   const [preview, setPreview] = useState<AnnouncementChangePreview | null>(null);
+  const [planLink, setPlanLink] = useState<BgpPreviewChangePlanLinkSummary | null>(existingPlan);
+  const [highRiskAck, setHighRiskAck] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [planLoading, setPlanLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!row) return null;
@@ -85,10 +96,20 @@ export function ChangePreviewModal({
   const needsUpstream = ["set_community", "block_announcement", "allow_announcement"].includes(actionType);
   const needsCommunity = actionType === "add_community" || actionType === "remove_community";
   const needsNewState = actionType === "set_community";
+  const canCreatePlan = Boolean(
+    planEnabled
+    && onCreatePlan
+    && preview?.id
+    && !preview.riskAssessment.blocked
+    && preview.targetEditMode === "editable_future"
+    && !planLink,
+  );
+  const requiresHighRiskAck = preview?.riskAssessment.level === "high";
 
   async function handleGenerate() {
     setLoading(true);
     setError(null);
+    setPlanLink(null);
     try {
       const result = await onGenerate({
         actionType,
@@ -114,6 +135,24 @@ export function ChangePreviewModal({
     anchor.download = `bgp-change-preview-${preview.id ?? deviceId}-${preview.targetId}.md`;
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function handleCreatePlan() {
+    if (!preview?.id || !onCreatePlan) return;
+    if (requiresHighRiskAck && !highRiskAck) {
+      setError("Confirme que está ciente de que este plano exige revisão manual.");
+      return;
+    }
+    setPlanLoading(true);
+    setError(null);
+    try {
+      const link = await onCreatePlan(preview.id, { acknowledgeHighRisk: highRiskAck });
+      setPlanLink(link);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao criar plano");
+    } finally {
+      setPlanLoading(false);
+    }
   }
 
   return (
@@ -210,7 +249,28 @@ export function ChangePreviewModal({
                 </Badge>
                 <Badge variant="secondary">{preview.validation.status}</Badge>
                 {preview.id ? <Badge variant="outline">Preview #{preview.id}</Badge> : null}
+                {planLink ? <Badge variant="secondary">Plano #{planLink.changePlanId} (draft)</Badge> : null}
               </div>
+
+              {requiresHighRiskAck && canCreatePlan ? (
+                <label className="flex items-start gap-2 text-[11px] text-amber-200/90">
+                  <Checkbox checked={highRiskAck} onCheckedChange={(value) => setHighRiskAck(value === true)} />
+                  <span>Estou ciente que este plano exige revisão manual.</span>
+                </label>
+              ) : null}
+
+              {planLink ? (
+                <div className="rounded-md border border-sky-500/30 bg-sky-500/10 p-3 text-[11px]">
+                  <div className="font-medium text-foreground">Plano de mudança draft #{planLink.changePlanId}</div>
+                  <div className="mt-1 text-muted-foreground">Status: {planLink.workflowStatus} — sem execução automática.</div>
+                  <a
+                    href={`/change-plans?highlight=${planLink.changePlanId}`}
+                    className="mt-2 inline-block text-sky-300 underline"
+                  >
+                    Ver plano
+                  </a>
+                </div>
+              ) : null}
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
@@ -277,6 +337,16 @@ export function ChangePreviewModal({
           <Button size="sm" disabled={loading} onClick={() => void handleGenerate()}>
             {loading ? "Gerando…" : "Gerar preview de alteração"}
           </Button>
+          {canCreatePlan ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={planLoading || (requiresHighRiskAck && !highRiskAck)}
+              onClick={() => void handleCreatePlan()}
+            >
+              {planLoading ? "Criando plano…" : "Criar plano de mudança"}
+            </Button>
+          ) : null}
         </DialogFooter>
       </DialogContent>
     </Dialog>

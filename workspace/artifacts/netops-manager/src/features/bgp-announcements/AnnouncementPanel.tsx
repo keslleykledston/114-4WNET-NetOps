@@ -17,6 +17,7 @@ import { GlobalDependenciesPanel } from "@/features/bgp-announcements/GlobalDepe
 import { ConflictsPanel } from "@/features/bgp-announcements/ConflictsPanel";
 import {
   createAnnouncementChangePreview,
+  createChangePlanFromPreview,
   fetchAnnouncementFeature,
   fetchAnnouncementMatrix,
   fetchMatrixSnapshots,
@@ -418,6 +419,10 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
               newState: payload.newState,
               community: payload.community,
             })
+          }
+          planEnabled={previewEnabled}
+          onCreatePlan={async (previewId, options) =>
+            createChangePlanFromPreview(previewId, options)
           }
         />
       ) : null}

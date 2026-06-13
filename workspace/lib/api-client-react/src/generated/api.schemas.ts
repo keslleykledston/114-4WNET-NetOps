@@ -900,8 +900,13 @@ export interface Device {
   role?: string | null;
   /** @nullable */
   groupId?: number | null;
-  /** @nullable */
+  /**
+     * Always redacted in API responses. Use snmpConfigured to know whether a value is stored.
+     * @nullable
+     */
   snmpCommunity?: string | null;
+  /** True when an SNMP community is stored for this device. */
+  snmpConfigured?: boolean;
   /**
      * Future Netbox integration ID
      * @nullable
@@ -2716,6 +2721,691 @@ export interface EffectivePermissionsResponse {
   effectivePermissions: UserPermissions;
 }
 
+export type ConfigGeneratorErrorCode = typeof ConfigGeneratorErrorCode[keyof typeof ConfigGeneratorErrorCode];
+
+
+export const ConfigGeneratorErrorCode = {
+  CONFIG_GENERATOR_DISABLED: 'CONFIG_GENERATOR_DISABLED',
+  CONFIG_WRITE_DISABLED: 'CONFIG_WRITE_DISABLED',
+  RBAC_FORBIDDEN: 'RBAC_FORBIDDEN',
+  TENANT_DEVICE_MISMATCH: 'TENANT_DEVICE_MISMATCH',
+  TEMPLATE_VENDOR_MISMATCH: 'TEMPLATE_VENDOR_MISMATCH',
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+  SECRET_NOT_PERSISTED: 'SECRET_NOT_PERSISTED',
+  RUN_NOT_FOUND: 'RUN_NOT_FOUND',
+  ARTIFACT_NOT_FOUND: 'ARTIFACT_NOT_FOUND',
+} as const;
+
+export type ConfigGeneratorErrorResponseDetails = { [key: string]: unknown };
+
+export interface ConfigGeneratorErrorResponse {
+  code: ConfigGeneratorErrorCode;
+  error: string;
+  details?: ConfigGeneratorErrorResponseDetails;
+}
+
+export interface ConfigGeneratorWriteDisabledResponse {
+  allowed: false;
+  code: ConfigGeneratorErrorCode;
+  reason: string;
+}
+
+export type ConfigGeneratorFieldType = typeof ConfigGeneratorFieldType[keyof typeof ConfigGeneratorFieldType];
+
+
+export const ConfigGeneratorFieldType = {
+  string: 'string',
+  number: 'number',
+  ipv4: 'ipv4',
+  ipv6: 'ipv6',
+  cidr: 'cidr',
+  array: 'array',
+  secret: 'secret',
+  boolean: 'boolean',
+  select: 'select',
+} as const;
+
+export type ConfigGeneratorBlockClassification = typeof ConfigGeneratorBlockClassification[keyof typeof ConfigGeneratorBlockClassification];
+
+
+export const ConfigGeneratorBlockClassification = {
+  global: 'global',
+  circuit: 'circuit',
+} as const;
+
+export type ConfigGeneratorBlockStatus = typeof ConfigGeneratorBlockStatus[keyof typeof ConfigGeneratorBlockStatus];
+
+
+export const ConfigGeneratorBlockStatus = {
+  existing: 'existing',
+  missing: 'missing',
+  new: 'new',
+  conflict: 'conflict',
+  manual: 'manual',
+  suggested: 'suggested',
+} as const;
+
+export type ConfigGeneratorValidationSeverity = typeof ConfigGeneratorValidationSeverity[keyof typeof ConfigGeneratorValidationSeverity];
+
+
+export const ConfigGeneratorValidationSeverity = {
+  warning: 'warning',
+  error: 'error',
+} as const;
+
+export type ConfigGeneratorRiskLevel = typeof ConfigGeneratorRiskLevel[keyof typeof ConfigGeneratorRiskLevel];
+
+
+export const ConfigGeneratorRiskLevel = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+} as const;
+
+export type ConfigGeneratorRunStatus = typeof ConfigGeneratorRunStatus[keyof typeof ConfigGeneratorRunStatus];
+
+
+export const ConfigGeneratorRunStatus = {
+  previewed: 'previewed',
+  saved: 'saved',
+  validated: 'validated',
+  blocked: 'blocked',
+} as const;
+
+export type ConfigGeneratorArtifactType = typeof ConfigGeneratorArtifactType[keyof typeof ConfigGeneratorArtifactType];
+
+
+export const ConfigGeneratorArtifactType = {
+  candidate_config: 'candidate_config',
+  postcheck_commands: 'postcheck_commands',
+  rollback_placeholder: 'rollback_placeholder',
+  ticket_markdown: 'ticket_markdown',
+  diff_notes: 'diff_notes',
+  precheck_diff: 'precheck_diff',
+  semantic_diff: 'semantic_diff',
+} as const;
+
+export interface ConfigGeneratorFieldSchema {
+  key: string;
+  label: string;
+  type: ConfigGeneratorFieldType;
+  required?: boolean;
+  description?: string;
+  placeholder?: string;
+  defaultValue?: string | number | boolean | string[] | null;
+  options?: string[];
+}
+
+export interface ConfigGeneratorBlockSchema {
+  key: string;
+  title: string;
+  classification: ConfigGeneratorBlockClassification;
+  description?: string;
+  statusHint?: ConfigGeneratorBlockStatus;
+}
+
+export interface ConfigGeneratorTemplateSchemaJson {
+  fields: ConfigGeneratorFieldSchema[];
+  blocks: ConfigGeneratorBlockSchema[];
+  notes?: string[];
+}
+
+export interface ConfigGeneratorTemplateSummary {
+  id: number;
+  name: string;
+  serviceType: string;
+  vendor: string;
+  platform: string;
+  templateKey: string;
+  isActive: boolean;
+  /** @nullable */
+  latestVersion: string | null;
+  /** @nullable */
+  latestVersionId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConfigGeneratorTemplateVersionResponse {
+  id: number;
+  version: string;
+  renderer: string;
+  checksum: string;
+  content: string;
+  schemaJson: ConfigGeneratorTemplateSchemaJson;
+  createdAt: string;
+}
+
+export interface ConfigGeneratorTemplateSchemaResponse {
+  template: ConfigGeneratorTemplateSummary;
+  version: ConfigGeneratorTemplateVersionResponse;
+}
+
+export type ConfigGeneratorValidationFindingContext = { [key: string]: unknown };
+
+export interface ConfigGeneratorValidationFinding {
+  severity: ConfigGeneratorValidationSeverity;
+  code: string;
+  message: string;
+  context?: ConfigGeneratorValidationFindingContext;
+}
+
+export type ConfigGeneratorValidationSummaryStatus = typeof ConfigGeneratorValidationSummaryStatus[keyof typeof ConfigGeneratorValidationSummaryStatus];
+
+
+export const ConfigGeneratorValidationSummaryStatus = {
+  passed: 'passed',
+  warning: 'warning',
+  failed: 'failed',
+} as const;
+
+export interface ConfigGeneratorValidationSummary {
+  status: ConfigGeneratorValidationSummaryStatus;
+  warnings: ConfigGeneratorValidationFinding[];
+  errors: ConfigGeneratorValidationFinding[];
+}
+
+export interface ConfigGeneratorRenderedBlock {
+  key: string;
+  title: string;
+  classification: ConfigGeneratorBlockClassification;
+  status: ConfigGeneratorBlockStatus;
+  content: string;
+}
+
+export interface ConfigGeneratorRenderResponse {
+  ok: true;
+  runPreviewId: number;
+  validation: ConfigGeneratorValidationSummary;
+  blocks: ConfigGeneratorRenderedBlock[];
+  renderedConfig: string;
+  postcheckCommands: string;
+  rollbackPlaceholder: string;
+}
+
+export interface ConfigGeneratorRunSaveResponse {
+  ok: true;
+  runId: number;
+  validation: ConfigGeneratorValidationSummary;
+  blocks: ConfigGeneratorRenderedBlock[];
+  renderedConfig: string;
+  postcheckCommands: string;
+  rollbackPlaceholder: string;
+}
+
+export type ConfigGeneratorDiffLineStatus = typeof ConfigGeneratorDiffLineStatus[keyof typeof ConfigGeneratorDiffLineStatus];
+
+
+export const ConfigGeneratorDiffLineStatus = {
+  already_present: 'already_present',
+  new_candidate: 'new_candidate',
+  partial_match: 'partial_match',
+  conflict: 'conflict',
+  missing_dependency: 'missing_dependency',
+  global_existing: 'global_existing',
+  global_missing: 'global_missing',
+  manual_review: 'manual_review',
+  unknown_no_baseline: 'unknown_no_baseline',
+} as const;
+
+export interface ConfigGeneratorDiffLine {
+  line: string;
+  status: ConfigGeneratorDiffLineStatus;
+  /** @nullable */
+  details?: string | null;
+}
+
+export interface ConfigGeneratorDiffBlock {
+  key: string;
+  title: string;
+  classification: ConfigGeneratorBlockClassification;
+  status: ConfigGeneratorDiffLineStatus;
+  items: ConfigGeneratorDiffLine[];
+}
+
+export type ConfigGeneratorDiffBaselineSource = typeof ConfigGeneratorDiffBaselineSource[keyof typeof ConfigGeneratorDiffBaselineSource];
+
+
+export const ConfigGeneratorDiffBaselineSource = {
+  collected_configs: 'collected_configs',
+  discovery_snapshots: 'discovery_snapshots',
+  snmp_snapshots: 'snmp_snapshots',
+  policy_catalog: 'policy_catalog',
+  none: 'none',
+} as const;
+
+export interface ConfigGeneratorDiffBaseline {
+  source: ConfigGeneratorDiffBaselineSource;
+  /** @nullable */
+  collectedAt?: string | null;
+  deviceId: number;
+  /** @nullable */
+  checksum?: string | null;
+}
+
+export interface ConfigGeneratorDiffSummary {
+  alreadyPresent: number;
+  newCandidate: number;
+  conflicts: number;
+  manualReview: number;
+  unknown: number;
+  missingDependencies: number;
+  globalExisting: number;
+  globalMissing: number;
+}
+
+export type ConfigGeneratorDiffResponseStatus = typeof ConfigGeneratorDiffResponseStatus[keyof typeof ConfigGeneratorDiffResponseStatus];
+
+
+export const ConfigGeneratorDiffResponseStatus = {
+  ok: 'ok',
+} as const;
+
+export interface ConfigGeneratorDiffResponse {
+  status: ConfigGeneratorDiffResponseStatus;
+  baseline: ConfigGeneratorDiffBaseline;
+  summary: ConfigGeneratorDiffSummary;
+  blocks: ConfigGeneratorDiffBlock[];
+  blocking: boolean;
+  warnings: ConfigGeneratorValidationFinding[];
+  errors: ConfigGeneratorValidationFinding[];
+  renderedConfig: string;
+  candidateChecksum: string;
+  /** @nullable */
+  baselineChecksum: string | null;
+}
+
+export interface ConfigGeneratorFieldOrigins {[key: string]: 'device_context' | 'inventory' | 'bgp_peer' | 'l2_circuit' | 'service_catalog' | 'announcement_matrix' | 'discovery' | 'id_allocator' | 'manual'}
+
+export interface ConfigGeneratorScopeTenant {
+  tenantId: number;
+  tenantName: string;
+  deviceCount: number;
+}
+
+export interface ConfigGeneratorScopeResponse {
+  tenants: ConfigGeneratorScopeTenant[];
+}
+
+export interface ConfigGeneratorScopeDevice {
+  tenantId: number;
+  tenantName: string;
+  deviceId: number;
+  deviceName: string;
+  vendor: string;
+  platform: string;
+  status: string;
+}
+
+export interface ConfigGeneratorDevicesResponse {
+  tenantId: number;
+  devices: ConfigGeneratorScopeDevice[];
+}
+
+export type ConfigGeneratorInterfaceSuggestionStatus = typeof ConfigGeneratorInterfaceSuggestionStatus[keyof typeof ConfigGeneratorInterfaceSuggestionStatus];
+
+
+export const ConfigGeneratorInterfaceSuggestionStatus = {
+  up: 'up',
+  down: 'down',
+  unknown: 'unknown',
+} as const;
+
+export type ConfigGeneratorInterfaceSuggestionSource = typeof ConfigGeneratorInterfaceSuggestionSource[keyof typeof ConfigGeneratorInterfaceSuggestionSource];
+
+
+export const ConfigGeneratorInterfaceSuggestionSource = {
+  inventory: 'inventory',
+  discovery: 'discovery',
+  snmp: 'snmp',
+} as const;
+
+export interface ConfigGeneratorInterfaceSuggestion {
+  name: string;
+  /** @nullable */
+  description: string | null;
+  status: ConfigGeneratorInterfaceSuggestionStatus;
+  kind: string;
+  source: ConfigGeneratorInterfaceSuggestionSource;
+}
+
+export interface ConfigGeneratorBgpPeerSuggestion {
+  /** @nullable */
+  remoteAsn: number | null;
+  /** @nullable */
+  remoteIp: string | null;
+  /** @nullable */
+  localIp: string | null;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  state: string | null;
+}
+
+export type ConfigGeneratorDependencySuggestionStatus = typeof ConfigGeneratorDependencySuggestionStatus[keyof typeof ConfigGeneratorDependencySuggestionStatus];
+
+
+export const ConfigGeneratorDependencySuggestionStatus = {
+  present: 'present',
+  missing: 'missing',
+  conflict: 'conflict',
+} as const;
+
+export type ConfigGeneratorDependencySuggestionClassification = typeof ConfigGeneratorDependencySuggestionClassification[keyof typeof ConfigGeneratorDependencySuggestionClassification];
+
+
+export const ConfigGeneratorDependencySuggestionClassification = {
+  global: 'global',
+  circuit: 'circuit',
+} as const;
+
+export interface ConfigGeneratorDependencySuggestion {
+  type: string;
+  name: string;
+  status: ConfigGeneratorDependencySuggestionStatus;
+  classification: ConfigGeneratorDependencySuggestionClassification;
+  /** @nullable */
+  reason?: string | null;
+}
+
+export type ConfigGeneratorConflictSuggestionSeverity = typeof ConfigGeneratorConflictSuggestionSeverity[keyof typeof ConfigGeneratorConflictSuggestionSeverity];
+
+
+export const ConfigGeneratorConflictSuggestionSeverity = {
+  warning: 'warning',
+  error: 'error',
+} as const;
+
+export interface ConfigGeneratorConflictSuggestion {
+  code: string;
+  severity: ConfigGeneratorConflictSuggestionSeverity;
+  message: string;
+  /** @nullable */
+  field?: string | null;
+}
+
+export type ConfigGeneratorDeviceContextResponseBgp = {
+  /** @nullable */
+  localAsn: number | null;
+  peers: ConfigGeneratorBgpPeerSuggestion[];
+};
+
+export type ConfigGeneratorDeviceContextResponseL2CircuitsItem = {
+  /** @nullable */
+  circuitId: string | null;
+  /** @nullable */
+  serviceId: string | null;
+  circuitType: string;
+  name: string;
+  /** @nullable */
+  vlan: number | null;
+  /** @nullable */
+  interfaceName: string | null;
+  /** @nullable */
+  peerIp: string | null;
+};
+
+export type ConfigGeneratorDeviceContextResponseSuggestedInput = { [key: string]: unknown };
+
+export interface ConfigGeneratorDeviceContextResponse {
+  tenantId: number;
+  tenantName: string;
+  deviceId: number;
+  deviceName: string;
+  vendor: string;
+  platform: string;
+  interfaces: ConfigGeneratorInterfaceSuggestion[];
+  bgp: ConfigGeneratorDeviceContextResponseBgp;
+  l2Circuits: ConfigGeneratorDeviceContextResponseL2CircuitsItem[];
+  globalDependencies: ConfigGeneratorDependencySuggestion[];
+  conflicts: ConfigGeneratorConflictSuggestion[];
+  suggestedInput: ConfigGeneratorDeviceContextResponseSuggestedInput;
+  fieldOrigins: ConfigGeneratorFieldOrigins;
+}
+
+export interface ConfigGeneratorTemplatesResponse {
+  /** @nullable */
+  tenantId: number | null;
+  /** @nullable */
+  deviceId: number | null;
+  /** @nullable */
+  serviceType: string | null;
+  templates: ConfigGeneratorTemplateSummary[];
+}
+
+export type ConfigGeneratorServiceContextResponseSuggestedInput = { [key: string]: unknown };
+
+export interface ConfigGeneratorServiceContextResponse {
+  tenantId: number;
+  deviceId: number;
+  serviceType: string;
+  /** @nullable */
+  ref: string | null;
+  suggestedInput: ConfigGeneratorServiceContextResponseSuggestedInput;
+  fieldOrigins: ConfigGeneratorFieldOrigins;
+  conflicts: ConfigGeneratorConflictSuggestion[];
+  globalDependencies: ConfigGeneratorDependencySuggestion[];
+  notes: string[];
+}
+
+export type ConfigGeneratorRunRequestInput = { [key: string]: unknown };
+
+export interface ConfigGeneratorRunRequest {
+  tenantId: number;
+  deviceId: number;
+  templateId: number;
+  /** @nullable */
+  templateVersionId?: number | null;
+  input: ConfigGeneratorRunRequestInput;
+  fieldOrigins?: ConfigGeneratorFieldOrigins;
+}
+
+export interface ConfigGeneratorRunListItem {
+  id: number;
+  tenantId: number;
+  /** @nullable */
+  tenantName: string | null;
+  deviceId: number;
+  /** @nullable */
+  deviceHostname: string | null;
+  serviceType: string;
+  templateVersionId: number;
+  /** @nullable */
+  templateName: string | null;
+  /** @nullable */
+  templateVersion: string | null;
+  status: string;
+  riskLevel: ConfigGeneratorRiskLevel;
+  /** @nullable */
+  createdBy: number | null;
+  createdAt: string;
+}
+
+export type ConfigGeneratorRunDetailInputJson = { [key: string]: unknown };
+
+export type ConfigGeneratorRunDetail = ConfigGeneratorRunListItem & {
+  inputJson: ConfigGeneratorRunDetailInputJson;
+  renderedConfig: string;
+  validationSummary: ConfigGeneratorValidationSummary;
+  fieldOrigins: ConfigGeneratorFieldOrigins;
+};
+
+export interface ConfigGeneratorArtifactResponse {
+  id: number;
+  runId: number;
+  artifactType: ConfigGeneratorArtifactType;
+  content: string;
+  checksum: string;
+  createdAt: string;
+}
+
+export type ConfigGeneratorChangeRequestExecutionPlanJson = { [key: string]: unknown };
+
+export type ConfigGeneratorChangeRequestRollbackPlanJson = { [key: string]: unknown };
+
+export interface ConfigGeneratorChangeRequest {
+  id: number;
+  generationRunId: number;
+  approvalStatus: string;
+  /** @nullable */
+  approvedBy?: number | null;
+  /** @nullable */
+  approvedAt?: string | null;
+  executionStatus: string;
+  executionPlanJson: ConfigGeneratorChangeRequestExecutionPlanJson;
+  rollbackPlanJson: ConfigGeneratorChangeRequestRollbackPlanJson;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConfigGeneratorFeatureResponse {
+  enabled: boolean;
+}
+
+export interface ConfigGeneratorIdRangeItem {
+  key: string;
+  type: string;
+  rangeStart: number;
+  rangeEnd: number;
+  serviceTypes: string[];
+  reserved?: boolean;
+  blocking?: boolean;
+  untaggedRequired?: boolean;
+  label: string;
+}
+
+export interface ConfigGeneratorIdRangesResponse {
+  version: string;
+  ranges: ConfigGeneratorIdRangeItem[];
+}
+
+export interface ConfigGeneratorIdInventoryItem {
+  id?: number;
+  tenantId?: number;
+  siteCode?: string | null;
+  deviceId?: number | null;
+  idType?: string;
+  idValue?: number;
+  parentInterface?: string | null;
+  interfaceName?: string | null;
+  serviceType?: string | null;
+  serviceName?: string | null;
+  status?: string;
+  source?: string;
+  confidence?: string;
+  lastSeenAt?: string;
+}
+
+export type ConfigGeneratorIdInventoryResponseSummary = {[key: string]: number[]};
+
+export interface ConfigGeneratorIdInventoryResponse {
+  tenantId: number;
+  siteCode?: string | null;
+  deviceId?: number | null;
+  idType?: string | null;
+  items: ConfigGeneratorIdInventoryItem[];
+  summary: ConfigGeneratorIdInventoryResponseSummary;
+}
+
+export interface ConfigGeneratorIdInventoryRefreshRequest {
+  tenantId: number;
+  deviceId?: number;
+  siteCode?: string;
+}
+
+export interface ConfigGeneratorIdInventoryRefreshResponse {
+  ok: boolean;
+  inserted: number;
+  updated: number;
+  total: number;
+  message: string;
+}
+
+export type ConfigGeneratorIdSuggestionItemConfidence = typeof ConfigGeneratorIdSuggestionItemConfidence[keyof typeof ConfigGeneratorIdSuggestionItemConfidence];
+
+
+export const ConfigGeneratorIdSuggestionItemConfidence = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export type ConfigGeneratorIdSuggestionItemOrigin = typeof ConfigGeneratorIdSuggestionItemOrigin[keyof typeof ConfigGeneratorIdSuggestionItemOrigin];
+
+
+export const ConfigGeneratorIdSuggestionItemOrigin = {
+  id_allocator: 'id_allocator',
+} as const;
+
+export type ConfigGeneratorIdSuggestionItemScope = typeof ConfigGeneratorIdSuggestionItemScope[keyof typeof ConfigGeneratorIdSuggestionItemScope];
+
+
+export const ConfigGeneratorIdSuggestionItemScope = {
+  tenant: 'tenant',
+  device: 'device',
+  site: 'site',
+} as const;
+
+export interface ConfigGeneratorIdSuggestionItem {
+  value: number;
+  range?: string;
+  rangeKey?: string;
+  reason: string;
+  confidence: ConfigGeneratorIdSuggestionItemConfidence;
+  origin: ConfigGeneratorIdSuggestionItemOrigin;
+  scope?: ConfigGeneratorIdSuggestionItemScope;
+  alternatives?: number[];
+}
+
+export interface ConfigGeneratorIdSuggestRequest {
+  tenantId: number;
+  deviceId?: number;
+  serviceType: string;
+  siteCode?: string;
+  parentInterface?: string;
+}
+
+export type ConfigGeneratorIdSuggestResponseSuggestions = {
+  vlan?: ConfigGeneratorIdSuggestionItem;
+  subinterfaceId?: ConfigGeneratorIdSuggestionItem;
+  l2vcId?: ConfigGeneratorIdSuggestionItem;
+  vsiId?: ConfigGeneratorIdSuggestionItem;
+};
+
+export type ConfigGeneratorIdSuggestResponseUsedIdsSummary = {[key: string]: number[]};
+
+export interface ConfigGeneratorIdSuggestResponse {
+  tenantId: number;
+  siteCode?: string | null;
+  deviceId?: number | null;
+  serviceType: string;
+  suggestions: ConfigGeneratorIdSuggestResponseSuggestions;
+  usedIdsSummary: ConfigGeneratorIdSuggestResponseUsedIdsSummary;
+  warnings: ConfigGeneratorValidationFinding[];
+  blockingConflicts: ConfigGeneratorValidationFinding[];
+}
+
+export interface ConfigGeneratorIdValidateRequest {
+  tenantId: number;
+  deviceId?: number;
+  siteCode?: string;
+  serviceType: string;
+  parentInterface?: string;
+  vlan?: number;
+  subinterfaceId?: number;
+  l2vcId?: number;
+  vsiId?: number;
+}
+
+export type ConfigGeneratorIdValidateResponseFieldOrigins = {[key: string]: 'id_allocator' | 'manual'};
+
+export interface ConfigGeneratorIdValidateResponse {
+  ok: boolean;
+  warnings: ConfigGeneratorValidationFinding[];
+  blockingConflicts: ConfigGeneratorValidationFinding[];
+  fieldOrigins: ConfigGeneratorIdValidateResponseFieldOrigins;
+}
+
 export type DisableUser200 = {
   message?: string;
 };
@@ -2727,6 +3417,59 @@ export type ResetUserPassword200 = {
 export type ListScheduledJobRunsParams = {
 scheduledJobId?: number;
 };
+
+export type ListConfigGeneratorSuggestionDevicesParams = {
+tenantId: number;
+};
+
+export type GetConfigGeneratorSuggestionDeviceContextParams = {
+tenantId: number;
+deviceId: number;
+};
+
+export type ListConfigGeneratorSuggestionTemplatesParams = {
+tenantId?: number;
+deviceId?: number;
+serviceType?: string;
+};
+
+export type GetConfigGeneratorSuggestionServiceContextParams = {
+tenantId: number;
+deviceId: number;
+serviceType: string;
+ref?: string;
+};
+
+export type ValidateConfigGenerator200NormalizedInput = { [key: string]: unknown };
+
+export type ValidateConfigGenerator200 = {
+  validation: ConfigGeneratorValidationSummary;
+  normalizedInput: ValidateConfigGenerator200NormalizedInput;
+  template: ConfigGeneratorTemplateSummary;
+};
+
+export type ListConfigGeneratorRunsParams = {
+tenantId?: number;
+deviceId?: number;
+limit?: number;
+};
+
+export type ListConfigGeneratorIdInventoryParams = {
+tenantId: number;
+deviceId?: number;
+siteCode?: string;
+idType?: ListConfigGeneratorIdInventoryIdType;
+};
+
+export type ListConfigGeneratorIdInventoryIdType = typeof ListConfigGeneratorIdInventoryIdType[keyof typeof ListConfigGeneratorIdInventoryIdType];
+
+
+export const ListConfigGeneratorIdInventoryIdType = {
+  vlan: 'vlan',
+  subinterface: 'subinterface',
+  l2vc: 'l2vc',
+  vsi: 'vsi',
+} as const;
 
 export type ListDevicesParams = {
 status?: string;

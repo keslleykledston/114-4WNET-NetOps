@@ -35,6 +35,7 @@ import ConnectorDashboardPage from "@/pages/connector-dashboard";
 import ConnectorGroupsPage from "@/pages/connector-groups";
 import CredentialVaultPage from "@/pages/credential-vault";
 import NotificationsPage from "@/pages/notifications";
+import ConfigGeneratorPage from "@/pages/config-generator";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -78,6 +79,7 @@ function Router() {
         <Route path="/devices" component={Devices} />
         <Route path="/devices/:id" component={DeviceDetail} />
         <Route path="/compliance" component={Compliance} />
+        {/* Provisioning MVP uses Config Generator preview-only flow. Keep legacy apply/execute out of main route. */}
         <Route path="/provisioning" component={Provisioning} />
         <Route path="/provisioning/templates" component={ProvisioningTemplatesPage} />
         <Route path="/provisioning/templates/:id" component={ProvisioningTemplateDetailPage} />
@@ -93,6 +95,7 @@ function Router() {
         <Route path="/infrastructure/connectors" component={ConnectorsPage} />
         <Route path="/security/credentials" component={CredentialVaultPage} />
         <Route path="/tenants/notifications" component={NotificationsPage} />
+        <Route path="/config-generator" component={ConfigGeneratorPage} />
         <Route path="/scheduler" component={Scheduler} />
         <Route path="/policies" component={Policies} />
         <Route path="/config-collection" component={ConfigCollection} />

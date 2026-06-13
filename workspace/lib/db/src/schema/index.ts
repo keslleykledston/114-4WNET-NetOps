@@ -27,3 +27,5 @@ export * from "./notifications";
 export * from "./resource-manager";
 export * from "./topology";
 export * from "./impact";
+export * from "./config_generator";
+export * from "./config_generator_ids";

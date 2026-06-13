@@ -14,6 +14,7 @@ export type UserPermissions = {
   users?: { read?: boolean; write?: boolean };
   audit?: { read?: boolean };
   provisioning?: { read?: boolean; write?: boolean; export?: boolean };
+  configGenerator?: { read?: boolean; validate?: boolean; render?: boolean; write?: boolean; admin?: boolean };
   bgp?: { read?: boolean; cleanup?: { plan?: boolean } };
 };
 
@@ -312,6 +313,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       users: { read: true, write: true },
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
+      configGenerator: { read: true, validate: true, render: true, write: true, admin: true },
       bgp: { read: true, cleanup: { plan: true } },
     };
   }
@@ -324,6 +326,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       users: { read: true, write: false },
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
+      configGenerator: { read: true, validate: true, render: true, write: true, admin: false },
       bgp: { read: true, cleanup: { plan: true } },
     };
   }
@@ -336,6 +339,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
     users: { read: true, write: false },
     audit: { read: true },
     provisioning: { read: true, write: false, export: true },
+    configGenerator: { read: true, validate: false, render: false, write: false, admin: false },
     bgp: { read: false, cleanup: { plan: false } },
   };
 }

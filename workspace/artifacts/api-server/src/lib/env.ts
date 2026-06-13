@@ -9,6 +9,8 @@ function parseBoolean(value: string | undefined, defaultValue: boolean): boolean
 export const env = {
   sessionSecret: process.env["SESSION_SECRET"]?.trim() || "netops-default-secret-key-32bytes",
   configApplyEnabled: parseBoolean(process.env["CONFIG_APPLY_ENABLED"], false),
+  configGeneratorEnabled: parseBoolean(process.env["CONFIG_GENERATOR_ENABLED"], false),
+  configWriteEnabled: parseBoolean(process.env["CONFIG_WRITE_ENABLED"], false),
   provisioningExecuteEnabled: parseBoolean(process.env["PROVISIONING_EXECUTE_ENABLED"], false),
   provisioningPreviewEnabled: parseBoolean(process.env["PROVISIONING_PREVIEW_ENABLED"], true),
   provisioningApplyEnabled: parseBoolean(process.env["PROVISIONING_APPLY_ENABLED"], false),

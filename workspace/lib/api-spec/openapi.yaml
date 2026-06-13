@@ -43,6 +43,8 @@ tags:
     description: Connector management and execution
   - name: bgp-cleanup
     description: BGP cleanup planning and analysis
+  - name: config-generator
+    description: Config Generator preview-only module
 
 paths:
   /healthz:
@@ -494,6 +496,815 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ScheduledJobRunItem"
+
+  /config-generator/feature:
+    get:
+      operationId: getConfigGeneratorFeature
+      tags: [config-generator]
+      summary: Get Config Generator feature flag
+      responses:
+        "200":
+          description: Feature flag
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorFeatureResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/suggestions/scope:
+    get:
+      operationId: listConfigGeneratorSuggestionScope
+      tags: [config-generator]
+      summary: List scope suggestions
+      responses:
+        "200":
+          description: Scope suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorScopeResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/suggestions/devices:
+    get:
+      operationId: listConfigGeneratorSuggestionDevices
+      tags: [config-generator]
+      summary: List device suggestions
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Device suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorDevicesResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/suggestions/device-context:
+    get:
+      operationId: getConfigGeneratorSuggestionDeviceContext
+      tags: [config-generator]
+      summary: Get device context suggestions
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: deviceId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Device context suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorDeviceContextResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Missing device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/suggestions/templates:
+    get:
+      operationId: listConfigGeneratorSuggestionTemplates
+      tags: [config-generator]
+      summary: List template suggestions
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: deviceId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: serviceType
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Template suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorTemplatesResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/suggestions/service-context:
+    get:
+      operationId: getConfigGeneratorSuggestionServiceContext
+      tags: [config-generator]
+      summary: Get service context suggestions
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: deviceId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: serviceType
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: ref
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Service context suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorServiceContextResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Missing device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/templates:
+    get:
+      operationId: listConfigGeneratorTemplates
+      tags: [config-generator]
+      summary: List config generator templates
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConfigGeneratorTemplateSummary"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/templates/{id}/schema:
+    get:
+      operationId: getConfigGeneratorTemplateSchema
+      tags: [config-generator]
+      summary: Get template schema
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Template schema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorTemplateSchemaResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Missing template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/validate:
+    post:
+      operationId: validateConfigGenerator
+      tags: [config-generator]
+      summary: Validate config generator input
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigGeneratorRunRequest"
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [validation, normalizedInput, template]
+                properties:
+                  validation:
+                    $ref: "#/components/schemas/ConfigGeneratorValidationSummary"
+                  normalizedInput:
+                    type: object
+                    additionalProperties: true
+                  template:
+                    $ref: "#/components/schemas/ConfigGeneratorTemplateSummary"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/render:
+    post:
+      operationId: renderConfigGenerator
+      tags: [config-generator]
+      summary: Render config generator preview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigGeneratorRunRequest"
+      responses:
+        "200":
+          description: Render result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorRenderResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/diff:
+    post:
+      operationId: diffConfigGenerator
+      tags: [config-generator]
+      summary: Diff generated config against current baseline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigGeneratorRunRequest"
+      responses:
+        "200":
+          description: Diff result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorDiffResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/runs:
+    get:
+      operationId: listConfigGeneratorRuns
+      tags: [config-generator]
+      summary: List config generator runs
+      parameters:
+        - name: tenantId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: deviceId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConfigGeneratorRunListItem"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+    post:
+      operationId: saveConfigGeneratorRun
+      tags: [config-generator]
+      summary: Save config generator run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigGeneratorRunRequest"
+      responses:
+        "200":
+          description: Saved run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorRunSaveResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/runs/{id}:
+    get:
+      operationId: getConfigGeneratorRun
+      tags: [config-generator]
+      summary: Get config generator run
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Run detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorRunDetail"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Run not found or disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/runs/{id}/artifacts:
+    get:
+      operationId: getConfigGeneratorRunArtifacts
+      tags: [config-generator]
+      summary: Get run artifacts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Artifacts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConfigGeneratorArtifactResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Run not found or disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/runs/{id}/diff:
+    post:
+      operationId: diffConfigGeneratorRun
+      tags: [config-generator]
+      summary: Diff saved config generator run against current baseline
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Diff result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorDiffResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Run not found or disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/runs/{id}/request-approval:
+    post:
+      operationId: requestConfigGeneratorApproval
+      tags: [config-generator]
+      summary: Request config generator approval
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "409":
+          description: Write disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorWriteDisabledResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/change-requests/{id}/approve:
+    post:
+      operationId: approveConfigGeneratorChangeRequest
+      tags: [config-generator]
+      summary: Approve config generator change request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "409":
+          description: Write disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorWriteDisabledResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/change-requests/{id}/execute:
+    post:
+      operationId: executeConfigGeneratorChangeRequest
+      tags: [config-generator]
+      summary: Execute config generator change request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "409":
+          description: Write disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorWriteDisabledResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/change-requests/{id}:
+    get:
+      operationId: getConfigGeneratorChangeRequest
+      tags: [config-generator]
+      summary: Get config generator change request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Change request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorChangeRequest"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+        "404":
+          description: Change request not found or disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorErrorResponse"
+
+  /config-generator/id-ranges:
+    get:
+      operationId: listConfigGeneratorIdRanges
+      tags: [config-generator]
+      summary: List builtin VLAN/ID ranges (K3G)
+      responses:
+        "200":
+          description: ID range catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorIdRangesResponse"
+        "403":
+          description: Forbidden
+        "404":
+          description: Disabled
+
+  /config-generator/id-inventory:
+    get:
+      operationId: listConfigGeneratorIdInventory
+      tags: [config-generator]
+      summary: List discovered IDs for tenant/device
+      parameters:
+        - name: tenantId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+        - name: siteCode
+          in: query
+          schema:
+            type: string
+        - name: idType
+          in: query
+          schema:
+            type: string
+            enum: [vlan, subinterface, l2vc, vsi]
+      responses:
+        "200":
+          description: ID inventory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorIdInventoryResponse"
+
+  /config-generator/id-inventory/refresh:
+    post:
+      operationId: refreshConfigGeneratorIdInventory
+      tags: [config-generator]
+      summary: Reprocess existing DB data into ID inventory (no device collect)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigGeneratorIdInventoryRefreshRequest"
+      responses:
+        "200":
+          description: Refresh summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorIdInventoryRefreshResponse"
+
+  /config-generator/id-allocator/suggest:
+    post:
+      operationId: suggestConfigGeneratorIds
+      tags: [config-generator]
+      summary: Suggest next free VLAN/L2VC/VSI IDs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigGeneratorIdSuggestRequest"
+      responses:
+        "200":
+          description: ID suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorIdSuggestResponse"
+
+  /config-generator/id-allocator/validate:
+    post:
+      operationId: validateConfigGeneratorIds
+      tags: [config-generator]
+      summary: Validate manually chosen IDs against inventory and ranges
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigGeneratorIdValidateRequest"
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigGeneratorIdValidateResponse"
 
   # ── DEVICES ──────────────────────────────────────────────────────────────────
   /devices:
@@ -4071,6 +4882,10 @@ components:
           type: ["integer", "null"]
         snmpCommunity:
           type: ["string", "null"]
+          description: "Always redacted in API responses. Use snmpConfigured to know whether a value is stored."
+        snmpConfigured:
+          type: boolean
+          description: "True when an SNMP community is stored for this device."
         netboxDeviceId:
           type: ["integer", "null"]
           description: "Future Netbox integration ID"
@@ -6306,3 +7121,986 @@ components:
       properties:
         effectivePermissions:
           $ref: "#/components/schemas/UserPermissions"
+
+    ConfigGeneratorErrorCode:
+      type: string
+      enum:
+        - CONFIG_GENERATOR_DISABLED
+        - CONFIG_WRITE_DISABLED
+        - RBAC_FORBIDDEN
+        - TENANT_DEVICE_MISMATCH
+        - TEMPLATE_VENDOR_MISMATCH
+        - VALIDATION_FAILED
+        - SECRET_NOT_PERSISTED
+        - RUN_NOT_FOUND
+        - ARTIFACT_NOT_FOUND
+
+    ConfigGeneratorErrorResponse:
+      type: object
+      required: [code, error]
+      properties:
+        code:
+          $ref: "#/components/schemas/ConfigGeneratorErrorCode"
+        error:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    ConfigGeneratorWriteDisabledResponse:
+      type: object
+      required: [allowed, code, reason]
+      properties:
+        allowed:
+          type: boolean
+          enum: [false]
+        code:
+          $ref: "#/components/schemas/ConfigGeneratorErrorCode"
+        reason:
+          type: string
+
+    ConfigGeneratorFieldType:
+      type: string
+      enum: [string, number, ipv4, ipv6, cidr, array, secret, boolean, select]
+
+    ConfigGeneratorBlockClassification:
+      type: string
+      enum: [global, circuit]
+
+    ConfigGeneratorBlockStatus:
+      type: string
+      enum: [existing, missing, new, conflict, manual, suggested]
+
+    ConfigGeneratorValidationSeverity:
+      type: string
+      enum: [warning, error]
+
+    ConfigGeneratorRiskLevel:
+      type: string
+      enum: [low, medium, high]
+
+    ConfigGeneratorRunStatus:
+      type: string
+      enum: [previewed, saved, validated, blocked]
+
+    ConfigGeneratorArtifactType:
+      type: string
+      enum: [candidate_config, postcheck_commands, rollback_placeholder, ticket_markdown, diff_notes, precheck_diff, semantic_diff]
+
+    ConfigGeneratorFieldSchema:
+      type: object
+      required: [key, label, type]
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        type:
+          $ref: "#/components/schemas/ConfigGeneratorFieldType"
+        required:
+          type: boolean
+        description:
+          type: string
+        placeholder:
+          type: string
+        defaultValue:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: array
+              items:
+                type: string
+            - type: "null"
+        options:
+          type: array
+          items:
+            type: string
+
+    ConfigGeneratorBlockSchema:
+      type: object
+      required: [key, title, classification]
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        classification:
+          $ref: "#/components/schemas/ConfigGeneratorBlockClassification"
+        description:
+          type: string
+        statusHint:
+          $ref: "#/components/schemas/ConfigGeneratorBlockStatus"
+
+    ConfigGeneratorTemplateSchemaJson:
+      type: object
+      required: [fields, blocks]
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorFieldSchema"
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorBlockSchema"
+        notes:
+          type: array
+          items:
+            type: string
+
+    ConfigGeneratorTemplateSummary:
+      type: object
+      required: [id, name, serviceType, vendor, platform, templateKey, isActive, latestVersion, latestVersionId, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        serviceType:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+        templateKey:
+          type: string
+        isActive:
+          type: boolean
+        latestVersion:
+          type: ["string", "null"]
+        latestVersionId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConfigGeneratorTemplateVersionResponse:
+      type: object
+      required: [id, version, renderer, checksum, content, schemaJson, createdAt]
+      properties:
+        id:
+          type: integer
+        version:
+          type: string
+        renderer:
+          type: string
+        checksum:
+          type: string
+        content:
+          type: string
+        schemaJson:
+          $ref: "#/components/schemas/ConfigGeneratorTemplateSchemaJson"
+        createdAt:
+          type: string
+          format: date-time
+
+    ConfigGeneratorTemplateSchemaResponse:
+      type: object
+      required: [template, version]
+      properties:
+        template:
+          $ref: "#/components/schemas/ConfigGeneratorTemplateSummary"
+        version:
+          $ref: "#/components/schemas/ConfigGeneratorTemplateVersionResponse"
+
+    ConfigGeneratorValidationFinding:
+      type: object
+      required: [severity, code, message]
+      properties:
+        severity:
+          $ref: "#/components/schemas/ConfigGeneratorValidationSeverity"
+        code:
+          type: string
+        message:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+
+    ConfigGeneratorValidationSummary:
+      type: object
+      required: [status, warnings, errors]
+      properties:
+        status:
+          type: string
+          enum: [passed, warning, failed]
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+
+    ConfigGeneratorRenderedBlock:
+      type: object
+      required: [key, title, classification, status, content]
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        classification:
+          $ref: "#/components/schemas/ConfigGeneratorBlockClassification"
+        status:
+          $ref: "#/components/schemas/ConfigGeneratorBlockStatus"
+        content:
+          type: string
+
+    ConfigGeneratorRenderResponse:
+      type: object
+      required: [ok, runPreviewId, validation, blocks, renderedConfig, postcheckCommands, rollbackPlaceholder]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        runPreviewId:
+          type: integer
+        validation:
+          $ref: "#/components/schemas/ConfigGeneratorValidationSummary"
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorRenderedBlock"
+        renderedConfig:
+          type: string
+        postcheckCommands:
+          type: string
+        rollbackPlaceholder:
+          type: string
+
+    ConfigGeneratorRunSaveResponse:
+      type: object
+      required: [ok, runId, validation, blocks, renderedConfig, postcheckCommands, rollbackPlaceholder]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        runId:
+          type: integer
+        validation:
+          $ref: "#/components/schemas/ConfigGeneratorValidationSummary"
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorRenderedBlock"
+        renderedConfig:
+          type: string
+        postcheckCommands:
+          type: string
+        rollbackPlaceholder:
+          type: string
+
+    ConfigGeneratorDiffLineStatus:
+      type: string
+      enum: [already_present, new_candidate, partial_match, conflict, missing_dependency, global_existing, global_missing, manual_review, unknown_no_baseline]
+
+    ConfigGeneratorDiffLine:
+      type: object
+      required: [line, status]
+      properties:
+        line:
+          type: string
+        status:
+          $ref: "#/components/schemas/ConfigGeneratorDiffLineStatus"
+        details:
+          type: ["string", "null"]
+
+    ConfigGeneratorDiffBlock:
+      type: object
+      required: [key, title, classification, status, items]
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        classification:
+          $ref: "#/components/schemas/ConfigGeneratorBlockClassification"
+        status:
+          $ref: "#/components/schemas/ConfigGeneratorDiffLineStatus"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorDiffLine"
+
+    ConfigGeneratorDiffBaseline:
+      type: object
+      required: [source, deviceId]
+      properties:
+        source:
+          type: string
+          enum: [collected_configs, discovery_snapshots, snmp_snapshots, policy_catalog, none]
+        collectedAt:
+          type: ["string", "null"]
+          format: date-time
+        deviceId:
+          type: integer
+        checksum:
+          type: ["string", "null"]
+
+    ConfigGeneratorDiffSummary:
+      type: object
+      required: [alreadyPresent, newCandidate, conflicts, manualReview, unknown, missingDependencies, globalExisting, globalMissing]
+      properties:
+        alreadyPresent:
+          type: integer
+        newCandidate:
+          type: integer
+        conflicts:
+          type: integer
+        manualReview:
+          type: integer
+        unknown:
+          type: integer
+        missingDependencies:
+          type: integer
+        globalExisting:
+          type: integer
+        globalMissing:
+          type: integer
+
+    ConfigGeneratorDiffResponse:
+      type: object
+      required: [status, baseline, summary, blocks, blocking, warnings, errors, renderedConfig, candidateChecksum, baselineChecksum]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        baseline:
+          $ref: "#/components/schemas/ConfigGeneratorDiffBaseline"
+        summary:
+          $ref: "#/components/schemas/ConfigGeneratorDiffSummary"
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorDiffBlock"
+        blocking:
+          type: boolean
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+        renderedConfig:
+          type: string
+        candidateChecksum:
+          type: string
+        baselineChecksum:
+          type: ["string", "null"]
+
+    ConfigGeneratorFieldOrigins:
+      type: object
+      additionalProperties:
+        type: string
+        enum:
+          - device_context
+          - inventory
+          - bgp_peer
+          - l2_circuit
+          - service_catalog
+          - announcement_matrix
+          - discovery
+          - id_allocator
+          - manual
+
+    ConfigGeneratorScopeTenant:
+      type: object
+      required: [tenantId, tenantName, deviceCount]
+      properties:
+        tenantId:
+          type: integer
+        tenantName:
+          type: string
+        deviceCount:
+          type: integer
+
+    ConfigGeneratorScopeResponse:
+      type: object
+      required: [tenants]
+      properties:
+        tenants:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorScopeTenant"
+
+    ConfigGeneratorScopeDevice:
+      type: object
+      required: [tenantId, tenantName, deviceId, deviceName, vendor, platform, status]
+      properties:
+        tenantId:
+          type: integer
+        tenantName:
+          type: string
+        deviceId:
+          type: integer
+        deviceName:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+        status:
+          type: string
+
+    ConfigGeneratorDevicesResponse:
+      type: object
+      required: [tenantId, devices]
+      properties:
+        tenantId:
+          type: integer
+        devices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorScopeDevice"
+
+    ConfigGeneratorInterfaceSuggestion:
+      type: object
+      required: [name, description, status, kind, source]
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [up, down, unknown]
+        kind:
+          type: string
+        source:
+          type: string
+          enum: [inventory, discovery, snmp]
+
+    ConfigGeneratorBgpPeerSuggestion:
+      type: object
+      required: [remoteAsn, remoteIp, localIp, description, state]
+      properties:
+        remoteAsn:
+          type: ["integer", "null"]
+        remoteIp:
+          type: ["string", "null"]
+        localIp:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+
+    ConfigGeneratorDependencySuggestion:
+      type: object
+      required: [type, name, status, classification]
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum: [present, missing, conflict]
+        classification:
+          type: string
+          enum: [global, circuit]
+        reason:
+          type: ["string", "null"]
+
+    ConfigGeneratorConflictSuggestion:
+      type: object
+      required: [code, severity, message]
+      properties:
+        code:
+          type: string
+        severity:
+          type: string
+          enum: [warning, error]
+        message:
+          type: string
+        field:
+          type: ["string", "null"]
+
+    ConfigGeneratorDeviceContextResponse:
+      type: object
+      required: [tenantId, tenantName, deviceId, deviceName, vendor, platform, interfaces, bgp, l2Circuits, globalDependencies, conflicts, suggestedInput, fieldOrigins]
+      properties:
+        tenantId:
+          type: integer
+        tenantName:
+          type: string
+        deviceId:
+          type: integer
+        deviceName:
+          type: string
+        vendor:
+          type: string
+        platform:
+          type: string
+        interfaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorInterfaceSuggestion"
+        bgp:
+          type: object
+          required: [localAsn, peers]
+          properties:
+            localAsn:
+              type: ["integer", "null"]
+            peers:
+              type: array
+              items:
+                $ref: "#/components/schemas/ConfigGeneratorBgpPeerSuggestion"
+        l2Circuits:
+          type: array
+          items:
+            type: object
+            required: [circuitId, serviceId, circuitType, name, vlan, interfaceName, peerIp]
+            properties:
+              circuitId:
+                type: ["string", "null"]
+              serviceId:
+                type: ["string", "null"]
+              circuitType:
+                type: string
+              name:
+                type: string
+              vlan:
+                type: ["integer", "null"]
+              interfaceName:
+                type: ["string", "null"]
+              peerIp:
+                type: ["string", "null"]
+        globalDependencies:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorDependencySuggestion"
+        conflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorConflictSuggestion"
+        suggestedInput:
+          type: object
+          additionalProperties: true
+        fieldOrigins:
+          $ref: "#/components/schemas/ConfigGeneratorFieldOrigins"
+
+    ConfigGeneratorTemplatesResponse:
+      type: object
+      required: [tenantId, deviceId, serviceType, templates]
+      properties:
+        tenantId:
+          type: ["integer", "null"]
+        deviceId:
+          type: ["integer", "null"]
+        serviceType:
+          type: ["string", "null"]
+        templates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorTemplateSummary"
+
+    ConfigGeneratorServiceContextResponse:
+      type: object
+      required: [tenantId, deviceId, serviceType, ref, suggestedInput, fieldOrigins, conflicts, globalDependencies, notes]
+      properties:
+        tenantId:
+          type: integer
+        deviceId:
+          type: integer
+        serviceType:
+          type: string
+        ref:
+          type: ["string", "null"]
+        suggestedInput:
+          type: object
+          additionalProperties: true
+        fieldOrigins:
+          $ref: "#/components/schemas/ConfigGeneratorFieldOrigins"
+        conflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorConflictSuggestion"
+        globalDependencies:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorDependencySuggestion"
+        notes:
+          type: array
+          items:
+            type: string
+
+    ConfigGeneratorRunRequest:
+      type: object
+      required: [tenantId, deviceId, templateId, input]
+      properties:
+        tenantId:
+          type: integer
+        deviceId:
+          type: integer
+        templateId:
+          type: integer
+        templateVersionId:
+          type: ["integer", "null"]
+        input:
+          type: object
+          additionalProperties: true
+        fieldOrigins:
+          $ref: "#/components/schemas/ConfigGeneratorFieldOrigins"
+
+    ConfigGeneratorRunListItem:
+      type: object
+      required: [id, tenantId, tenantName, deviceId, deviceHostname, serviceType, templateVersionId, templateName, templateVersion, status, riskLevel, createdBy, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        tenantName:
+          type: ["string", "null"]
+        deviceId:
+          type: integer
+        deviceHostname:
+          type: ["string", "null"]
+        serviceType:
+          type: string
+        templateVersionId:
+          type: integer
+        templateName:
+          type: ["string", "null"]
+        templateVersion:
+          type: ["string", "null"]
+        status:
+          type: string
+        riskLevel:
+          $ref: "#/components/schemas/ConfigGeneratorRiskLevel"
+        createdBy:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ConfigGeneratorRunDetail:
+      allOf:
+        - $ref: "#/components/schemas/ConfigGeneratorRunListItem"
+        - type: object
+          required: [inputJson, renderedConfig, validationSummary, fieldOrigins]
+          properties:
+            inputJson:
+              type: object
+              additionalProperties: true
+            renderedConfig:
+              type: string
+            validationSummary:
+              $ref: "#/components/schemas/ConfigGeneratorValidationSummary"
+            fieldOrigins:
+              $ref: "#/components/schemas/ConfigGeneratorFieldOrigins"
+
+    ConfigGeneratorArtifactResponse:
+      type: object
+      required: [id, runId, artifactType, content, checksum, createdAt]
+      properties:
+        id:
+          type: integer
+        runId:
+          type: integer
+        artifactType:
+          $ref: "#/components/schemas/ConfigGeneratorArtifactType"
+        content:
+          type: string
+        checksum:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ConfigGeneratorChangeRequest:
+      type: object
+      required: [id, generationRunId, approvalStatus, executionStatus, executionPlanJson, rollbackPlanJson, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        generationRunId:
+          type: integer
+        approvalStatus:
+          type: string
+        approvedBy:
+          type: ["integer", "null"]
+        approvedAt:
+          type: ["string", "null"]
+          format: date-time
+        executionStatus:
+          type: string
+        executionPlanJson:
+          type: object
+          additionalProperties: true
+        rollbackPlanJson:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConfigGeneratorFeatureResponse:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+
+    ConfigGeneratorIdRangeItem:
+      type: object
+      required: [key, type, rangeStart, rangeEnd, serviceTypes, label]
+      properties:
+        key:
+          type: string
+        type:
+          type: string
+        rangeStart:
+          type: integer
+        rangeEnd:
+          type: integer
+        serviceTypes:
+          type: array
+          items:
+            type: string
+        reserved:
+          type: boolean
+        blocking:
+          type: boolean
+        untaggedRequired:
+          type: boolean
+        label:
+          type: string
+
+    ConfigGeneratorIdRangesResponse:
+      type: object
+      required: [version, ranges]
+      properties:
+        version:
+          type: string
+        ranges:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorIdRangeItem"
+
+    ConfigGeneratorIdInventoryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        siteCode:
+          type: string
+          nullable: true
+        deviceId:
+          type: integer
+          nullable: true
+        idType:
+          type: string
+        idValue:
+          type: integer
+        parentInterface:
+          type: string
+          nullable: true
+        interfaceName:
+          type: string
+          nullable: true
+        serviceType:
+          type: string
+          nullable: true
+        serviceName:
+          type: string
+          nullable: true
+        status:
+          type: string
+        source:
+          type: string
+        confidence:
+          type: string
+        lastSeenAt:
+          type: string
+          format: date-time
+
+    ConfigGeneratorIdInventoryResponse:
+      type: object
+      required: [tenantId, items, summary]
+      properties:
+        tenantId:
+          type: integer
+        siteCode:
+          type: string
+          nullable: true
+        deviceId:
+          type: integer
+          nullable: true
+        idType:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorIdInventoryItem"
+        summary:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: integer
+
+    ConfigGeneratorIdInventoryRefreshRequest:
+      type: object
+      required: [tenantId]
+      properties:
+        tenantId:
+          type: integer
+        deviceId:
+          type: integer
+        siteCode:
+          type: string
+
+    ConfigGeneratorIdInventoryRefreshResponse:
+      type: object
+      required: [ok, inserted, updated, total, message]
+      properties:
+        ok:
+          type: boolean
+        inserted:
+          type: integer
+        updated:
+          type: integer
+        total:
+          type: integer
+        message:
+          type: string
+
+    ConfigGeneratorIdSuggestionItem:
+      type: object
+      required: [value, reason, confidence, origin]
+      properties:
+        value:
+          type: integer
+        range:
+          type: string
+        rangeKey:
+          type: string
+        reason:
+          type: string
+        confidence:
+          type: string
+          enum: [high, medium, low]
+        origin:
+          type: string
+          enum: [id_allocator]
+        scope:
+          type: string
+          enum: [tenant, device, site]
+        alternatives:
+          type: array
+          items:
+            type: integer
+
+    ConfigGeneratorIdSuggestRequest:
+      type: object
+      required: [tenantId, serviceType]
+      properties:
+        tenantId:
+          type: integer
+        deviceId:
+          type: integer
+        serviceType:
+          type: string
+        siteCode:
+          type: string
+        parentInterface:
+          type: string
+
+    ConfigGeneratorIdSuggestResponse:
+      type: object
+      required: [tenantId, serviceType, suggestions, usedIdsSummary, warnings, blockingConflicts]
+      properties:
+        tenantId:
+          type: integer
+        siteCode:
+          type: string
+          nullable: true
+        deviceId:
+          type: integer
+          nullable: true
+        serviceType:
+          type: string
+        suggestions:
+          type: object
+          properties:
+            vlan:
+              $ref: "#/components/schemas/ConfigGeneratorIdSuggestionItem"
+            subinterfaceId:
+              $ref: "#/components/schemas/ConfigGeneratorIdSuggestionItem"
+            l2vcId:
+              $ref: "#/components/schemas/ConfigGeneratorIdSuggestionItem"
+            vsiId:
+              $ref: "#/components/schemas/ConfigGeneratorIdSuggestionItem"
+        usedIdsSummary:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: integer
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+        blockingConflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+
+    ConfigGeneratorIdValidateRequest:
+      type: object
+      required: [tenantId, serviceType]
+      properties:
+        tenantId:
+          type: integer
+        deviceId:
+          type: integer
+        siteCode:
+          type: string
+        serviceType:
+          type: string
+        parentInterface:
+          type: string
+        vlan:
+          type: integer
+        subinterfaceId:
+          type: integer
+        l2vcId:
+          type: integer
+        vsiId:
+          type: integer
+
+    ConfigGeneratorIdValidateResponse:
+      type: object
+      required: [ok, warnings, blockingConflicts, fieldOrigins]
+      properties:
+        ok:
+          type: boolean
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+        blockingConflicts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigGeneratorValidationFinding"
+        fieldOrigins:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [id_allocator, manual]

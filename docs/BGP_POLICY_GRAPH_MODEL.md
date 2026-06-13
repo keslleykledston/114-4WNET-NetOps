@@ -143,3 +143,15 @@ Entrada canônica: `buildPolicyDependencyConfigFromSnapshot()` + raw config text
 - **Globais protegidos:** `GLOBAL-*`, community-filters compartilhados — `protected_global`, sem falso positivo de remoção.
 - **Conflitos reais:** apenas células `conflict` em rows editáveis; globais compartilhados suprimem finding `PREFIX_LIST_SHARED_BY_MULTIPLE_POLICIES`.
 - **Change preview:** proposta read-only via `announcement-change-preview.service.ts` — somente Cliente/ORIGIN `editable_future`; ticket markdown sem execução.
+
+## Timelapse diff (SNAPSHOT-TIMELAPSE-DIFF)
+
+Comparação read-only entre snapshots materializados da matriz:
+
+- Entrada: dois `MatrixResponse` enriquecidos (`getMatrixSnapshotById`).
+- Diff semântico por target, community, policy, global protegido, conflito e metadados.
+- Upstreams (`audit_only`) → `upstream_audit_changed`; Cliente/ORIGIN → `target_changed` / `community_*`.
+- Globais protegidos → `protected_global_*`; remoção nunca vira sugestão automática.
+- Não altera grafo, snapshots, preview ou change plan.
+
+Ver [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md).

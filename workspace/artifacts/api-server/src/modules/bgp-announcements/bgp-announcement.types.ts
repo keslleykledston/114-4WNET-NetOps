@@ -386,3 +386,82 @@ export const ACTION_CODE_TO_STATE: Record<string, CellState> = {
   "66": "bh",
   "67": "off",
 };
+
+export type SnapshotDiffChangeType =
+  | "target_added"
+  | "target_removed"
+  | "target_changed"
+  | "community_added"
+  | "community_removed"
+  | "community_changed"
+  | "policy_added"
+  | "policy_removed"
+  | "policy_changed"
+  | "protected_global_added"
+  | "protected_global_removed"
+  | "protected_global_changed"
+  | "conflict_added"
+  | "conflict_resolved"
+  | "conflict_changed"
+  | "upstream_audit_changed"
+  | "metadata_changed";
+
+export type SnapshotDiffSeverity = "info" | "warning" | "critical";
+
+export interface SnapshotDiffChange {
+  type: SnapshotDiffChangeType;
+  severity: SnapshotDiffSeverity;
+  targetId: string | null;
+  targetName: string | null;
+  targetRole: TargetRole | null;
+  targetEditMode: TargetEditMode | null;
+  before: unknown;
+  after: unknown;
+  explanation: string;
+  isEditableTarget: boolean;
+  isProtectedGlobal: boolean;
+  isAuditOnly: boolean;
+}
+
+export interface SnapshotDiffSummary {
+  addedTargets: number;
+  removedTargets: number;
+  changedTargets: number;
+  addedCommunities: number;
+  removedCommunities: number;
+  newConflicts: number;
+  resolvedConflicts: number;
+  protectedGlobalChanges: number;
+  upstreamAuditChanges: number;
+}
+
+export interface SnapshotDiffSnapshotRef {
+  id: number;
+  deviceId: number;
+  createdAt: string;
+  rowCount: number;
+  status: SnapshotRefreshStatus;
+  conflictCount: number;
+}
+
+export interface AnnouncementSnapshotDiffResponse {
+  baseSnapshot: SnapshotDiffSnapshotRef;
+  compareSnapshot: SnapshotDiffSnapshotRef;
+  summary: SnapshotDiffSummary;
+  changes: SnapshotDiffChange[];
+  byTargetRole: Partial<Record<TargetRole, number>>;
+  byDependencyScope: Partial<Record<DependencyScope, number>>;
+  riskHints: string[];
+  readOnly: true;
+}
+
+export interface SnapshotTimelineEntry extends SnapshotSummary {
+  isLatest: boolean;
+  previousSnapshotId: number | null;
+}
+
+export interface SnapshotTimelineResponse {
+  deviceId: number;
+  snapshots: SnapshotTimelineEntry[];
+  readOnly: true;
+}

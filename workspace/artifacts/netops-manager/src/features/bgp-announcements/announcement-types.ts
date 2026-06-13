@@ -150,6 +150,73 @@ export interface SnapshotSummary {
   warnings: string[];
 }
 
+export type SnapshotDiffChangeType =
+  | "target_added"
+  | "target_removed"
+  | "target_changed"
+  | "community_added"
+  | "community_removed"
+  | "community_changed"
+  | "policy_added"
+  | "policy_removed"
+  | "policy_changed"
+  | "protected_global_added"
+  | "protected_global_removed"
+  | "protected_global_changed"
+  | "conflict_added"
+  | "conflict_resolved"
+  | "conflict_changed"
+  | "upstream_audit_changed"
+  | "metadata_changed";
+
+export type SnapshotDiffSeverity = "info" | "warning" | "critical";
+
+export interface SnapshotDiffChange {
+  type: SnapshotDiffChangeType;
+  severity: SnapshotDiffSeverity;
+  targetId: string | null;
+  targetName: string | null;
+  targetRole: TargetRole | null;
+  targetEditMode: TargetEditMode | null;
+  before: unknown;
+  after: unknown;
+  explanation: string;
+  isEditableTarget: boolean;
+  isProtectedGlobal: boolean;
+  isAuditOnly: boolean;
+}
+
+export interface SnapshotDiffSummary {
+  addedTargets: number;
+  removedTargets: number;
+  changedTargets: number;
+  addedCommunities: number;
+  removedCommunities: number;
+  newConflicts: number;
+  resolvedConflicts: number;
+  protectedGlobalChanges: number;
+  upstreamAuditChanges: number;
+}
+
+export interface SnapshotDiffResponse {
+  baseSnapshot: { id: number; deviceId: number; createdAt: string; rowCount: number; status: SnapshotRefreshStatus; conflictCount: number };
+  compareSnapshot: { id: number; deviceId: number; createdAt: string; rowCount: number; status: SnapshotRefreshStatus; conflictCount: number };
+  summary: SnapshotDiffSummary;
+  changes: SnapshotDiffChange[];
+  byTargetRole: Partial<Record<TargetRole, number>>;
+  byDependencyScope: Partial<Record<DependencyScope, number>>;
+  riskHints: string[];
+  readOnly: true;
+}
+
+export type SnapshotDiffFilter =
+  | "all"
+  | "editable"
+  | "audit"
+  | "protected_global"
+  | "conflicts"
+  | "metadata";
+
 export interface TargetEvidence {
   deviceId: number;
   targetKey: string;

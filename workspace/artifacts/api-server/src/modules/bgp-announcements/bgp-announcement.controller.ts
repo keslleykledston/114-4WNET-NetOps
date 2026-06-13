@@ -7,6 +7,11 @@ import {
   isBgpUpstreamAuditEnabled,
 } from "./bgp-announcement.gate.js";
 import {
+  diffAnnouncementSnapshots,
+  diffSnapshotToLatest,
+  getAnnouncementSnapshotTimeline,
+} from "./announcement-snapshot-diff.service.js";
+import {
   findExactCommunitySetMatch,
   getAnnouncementMatrix,
   getExpandedPrefixes,
@@ -692,4 +697,83 @@ export async function getPolicyDependencies(req: Request, res: Response) {
   );
 
   res.json({ policyName, dependencies: deps, bindings });
+}
+
+export async function getSnapshotDiff(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const baseSnapshotId = Number(req.query.baseSnapshotId);
+  const compareSnapshotId = Number(req.query.compareSnapshotId);
+  if (!Number.isFinite(baseSnapshotId) || !Number.isFinite(compareSnapshotId)) {
+    res.status(400).json({ error: "baseSnapshotId and compareSnapshotId required" });
+    return;
+  }
+
+  const result = await diffAnnouncementSnapshots(baseSnapshotId, compareSnapshotId);
+  if (result === "base_not_found" || result === "compare_not_found") {
+    res.status(404).json({ error: "Snapshot not found", code: result });
+    return;
+  }
+  if (result === "cross_device") {
+    res.status(422).json({ error: "Snapshots belong to different devices", code: "CROSS_DEVICE" });
+    return;
+  }
+  if (result === "incompatible") {
+    res.status(409).json({ error: "Snapshot format incompatible; refresh required", code: "INCOMPATIBLE" });
+    return;
+  }
+
+  res.json(result);
+}
+
+export async function getSnapshotDiffLatest(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const snapshotId = Number(req.params.id);
+  if (!Number.isFinite(snapshotId)) {
+    res.status(400).json({ error: "Invalid snapshot id" });
+    return;
+  }
+
+  const result = await diffSnapshotToLatest(snapshotId);
+  if (result === "base_not_found") {
+    res.status(404).json({ error: "Snapshot not found" });
+    return;
+  }
+  if (result === "no_latest") {
+    res.status(404).json({ error: "No latest snapshot for device" });
+    return;
+  }
+  if (result === "incompatible" || result === "cross_device") {
+    res.status(409).json({ error: "Snapshot incompatible", code: result });
+    return;
+  }
+
+  res.json(result);
+}
+
+export async function getSnapshotTimeline(req: Request, res: Response) {
+  const gate = assertMatrixEnabled();
+  if (!gate.ok) {
+    res.status(gate.status).json({ error: gate.message });
+    return;
+  }
+
+  const deviceId = Number(req.query.deviceId);
+  if (!Number.isFinite(deviceId)) {
+    res.status(400).json({ error: "deviceId required" });
+    return;
+  }
+
+  const limit = Number(req.query.limit ?? 20);
+  const timeline = await getAnnouncementSnapshotTimeline(deviceId, Number.isFinite(limit) ? limit : 20);
+  res.json(timeline);
 }

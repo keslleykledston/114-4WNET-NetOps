@@ -33,6 +33,7 @@ Runtime smoke test concluído em **device 94** (`4WNET-BVA-BRT-RB`), snapshot **
 | Change Plan Link | Preview → draft `change_plans` | ✅ |
 | Change Plan Review | Workflow documental (submit/reject/approve manual) | ✅ |
 | Change Plan Review Closure | Smoke runtime #28 + doc oficial | ✅ |
+| Snapshot Timelapse Diff | Comparação read-only entre snapshots | ✅ |
 | Runtime smoke | API + UI end-to-end device 94 | ✅ |
 
 **Fora de escopo (MVP read-only):** apply, execute, Controlled Execution, SSH/SNMP/connector no fluxo da matriz, edição de upstream/provider/IX/CDN, remoção de globais protegidos.
@@ -64,6 +65,9 @@ createChangePlanFromPreview()  ── draft only
         │
         ▼
 change_plans (+ snapshots, diffs, items)
+
+        ▼ (read-only, paralelo)
+computeAnnouncementSnapshotDiff()  ── timelapse entre matrix snapshots
 ```
 
 ### Componentes
@@ -129,6 +133,9 @@ Todas aplicadas em lab (`migrate:safe` → `Applied 0 pending`).
 | GET | `/api/bgp/announcements/feature` | `read` |
 | GET | `/api/bgp/announcements/snapshots/latest` | `read` |
 | GET | `/api/bgp/announcements/snapshots` | `read` |
+| GET | `/api/bgp/announcements/snapshots/diff` | `read` |
+| GET | `/api/bgp/announcements/snapshots/timeline` | `read` |
+| GET | `/api/bgp/announcements/snapshots/:id/diff-latest` | `read` |
 | POST | `/api/bgp/announcements/snapshots/refresh` | `refresh` |
 | GET | `/api/bgp/announcements/matrix` | `read` |
 | POST | `/api/bgp/announcements/change-preview` | `preview` |
@@ -138,7 +145,7 @@ Todas aplicadas em lab (`migrate:safe` → `Applied 0 pending`).
 | GET | `/api/bgp/announcements/change-plans?previewId=` | `read` |
 | GET | `/api/bgp/upstreams/audit` | `read` |
 
-Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md), [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md).
+Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md), [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md), [Snapshot Timelapse Diff](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md).
 
 ---
 
@@ -150,7 +157,7 @@ Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 | **Auditoria Upstreams** | Read-only; sem preview editável |
 | **Dependências Globais** | Lista `protected_global` |
 | **Conflitos** | Apenas conflitos reais (não globais compartilhados) |
-| **Histórico** | Snapshots append-only |
+| **Histórico** | Snapshots append-only; comparação timelapse read-only |
 | **Change Preview Modal** | Ticket markdown, diff lógico, copiar/baixar |
 | **Draft Change Plan** | Badge + link `/change-plans?highlight=`; workflow de revisão; sem execute |
 
@@ -207,6 +214,7 @@ node tools/bgp-announcement-semantic-view-selftest.mjs
 node tools/bgp-announcement-snapshot-refresh-selftest.mjs
 node tools/bgp-announcement-change-preview-selftest.mjs      # 14/14
 node tools/bgp-announcement-change-plan-link-selftest.mjs    # 12/12
+node tools/bgp-announcement-snapshot-timelapse-diff-selftest.mjs
 ```
 
 ---
@@ -245,7 +253,7 @@ node tools/bgp-announcement-change-plan-link-selftest.mjs    # 12/12
 1. **Change Plan Review Workflow** — ✅ entregue e fechado. Ver [`CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md`](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md).
 2. **Controlled Execution Adapter** — somente após flags explícitas + RBAC `execute`.
 3. **Richer policy compiler** — prepend, export edge cases, large-community.
-4. **Timelapse / diff entre snapshots** — comparar matrix snapshots no tempo.
+4. **Timelapse / diff entre snapshots** — ✅ comparar matrix snapshots no tempo. Ver [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md).
 5. **Integração ticket externo** — Jira/GLPI a partir do ticket markdown.
 
 ---
@@ -327,3 +335,4 @@ docker compose logs api | rg "/api/bgp/announcements" | rg -i "ssh|snmp|connecto
 - [Change Plan Link](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md)
 - [Change Plan Review Workflow](./BGP_ANNOUNCEMENT_CHANGE_PLAN_REVIEW_WORKFLOW.md)
 - [Change Plans Review Workflow Closure](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md)
+- [Snapshot Timelapse Diff](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md)

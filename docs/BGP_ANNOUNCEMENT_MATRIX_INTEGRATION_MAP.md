@@ -56,6 +56,15 @@ Visão semântica (fase MATRIX-SEMANTIC-VIEW — 2026-06-10):
 - `semantic-matrix-view.service.ts` — `semanticView` no read model da matriz
 - UI tabs: Clientes/ORIGIN · Auditoria Upstreams · Dependências Globais · Conflitos · Histórico
 
+Snapshot timelapse diff (fase SNAPSHOT-TIMELAPSE-DIFF — 2026-06-10):
+
+- `announcement-snapshot-diff.service.ts` — diff semântico read-only entre snapshots
+- `GET /bgp/announcements/snapshots/diff` — `baseSnapshotId` + `compareSnapshotId`
+- `GET /bgp/announcements/snapshots/:id/diff-latest` — vs. último snapshot do device
+- `GET /bgp/announcements/snapshots/timeline?deviceId=` — linha do tempo append-only
+- UI Histórico: selecionar dois snapshots, **Comparar snapshots**, filtros e badges
+- Doc: [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md)
+
 ---
 
 ## 3. Pipeline de coleta existente

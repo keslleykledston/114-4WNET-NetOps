@@ -13,6 +13,9 @@ import {
   getMatrix,
   getPolicyDependencies,
   getSnapshotById,
+  getSnapshotDiff,
+  getSnapshotDiffLatest,
+  getSnapshotTimeline,
   getUpstreamAudit,
   listBgpAnnouncementChangePlansHandler,
   listSnapshots,
@@ -29,8 +32,11 @@ import {
 const router = Router();
 
 router.get("/bgp/announcements/feature", requirePermission("bgp.announcements.read"), getAnnouncementFeature);
+router.get("/bgp/announcements/snapshots/diff", requirePermission("bgp.announcements.read"), getSnapshotDiff);
+router.get("/bgp/announcements/snapshots/timeline", requirePermission("bgp.announcements.read"), getSnapshotTimeline);
 router.get("/bgp/announcements/snapshots/latest", requirePermission("bgp.announcements.read"), getLatestSnapshot);
 router.get("/bgp/announcements/snapshots", requirePermission("bgp.announcements.read"), listSnapshots);
+router.get("/bgp/announcements/snapshots/:id/diff-latest", requirePermission("bgp.announcements.read"), getSnapshotDiffLatest);
 router.get("/bgp/announcements/snapshots/:id", requirePermission("bgp.announcements.read"), getSnapshotById);
 router.post("/bgp/announcements/snapshots/refresh", requirePermission("bgp.announcements.refresh"), postRefreshSnapshot);
 router.get("/bgp/announcements/matrix", requirePermission("bgp.announcements.read"), getMatrix);

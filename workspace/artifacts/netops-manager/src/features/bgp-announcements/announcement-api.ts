@@ -62,6 +62,18 @@ export function fetchMatrixSnapshots(deviceId: number, limit = 20): Promise<{ de
   return apiFetch(`/api/bgp/announcements/snapshots?deviceId=${deviceId}&limit=${limit}`);
 }
 
+export function fetchSnapshotDiff(baseSnapshotId: number, compareSnapshotId: number): Promise<import("./announcement-types").SnapshotDiffResponse> {
+  const query = new URLSearchParams({
+    baseSnapshotId: String(baseSnapshotId),
+    compareSnapshotId: String(compareSnapshotId),
+  });
+  return apiFetch(`/api/bgp/announcements/snapshots/diff?${query}`);
+}
+
+export function fetchSnapshotDiffLatest(snapshotId: number): Promise<import("./announcement-types").SnapshotDiffResponse> {
+  return apiFetch(`/api/bgp/announcements/snapshots/${snapshotId}/diff-latest`);
+}
+
 export function refreshMatrixSnapshot(deviceId: number): Promise<SnapshotRefreshResult> {
   return apiFetch("/api/bgp/announcements/snapshots/refresh", {
     method: "POST",

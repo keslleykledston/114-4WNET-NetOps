@@ -13,6 +13,7 @@ import { AnnouncementMatrixTable } from "@/features/bgp-announcements/Announceme
 import { ChangePreviewModal } from "@/features/bgp-announcements/ChangePreviewModal";
 import { AnnouncementEvidencePanel } from "@/features/bgp-announcements/AnnouncementEvidencePanel";
 import { SnapshotHistoryPanel } from "@/features/bgp-announcements/SnapshotHistoryPanel";
+import { SnapshotDiffSummaryCard } from "@/features/bgp-announcements/SnapshotDiffPanel";
 import { GlobalDependenciesPanel } from "@/features/bgp-announcements/GlobalDependenciesPanel";
 import { ConflictsPanel } from "@/features/bgp-announcements/ConflictsPanel";
 import {
@@ -21,11 +22,12 @@ import {
   fetchAnnouncementFeature,
   fetchAnnouncementMatrix,
   fetchMatrixSnapshots,
+  fetchSnapshotDiff,
   fetchTargetEvidence,
   fetchUpstreamAudit,
   refreshMatrixSnapshot,
 } from "@/features/bgp-announcements/announcement-api";
-import type { MatrixRow } from "@/features/bgp-announcements/announcement-types";
+import type { MatrixRow, SnapshotDiffFilter } from "@/features/bgp-announcements/announcement-types";
 
 interface AnnouncementPanelProps {
   device: Device;
@@ -61,6 +63,10 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
   const [previewRow, setPreviewRow] = useState<MatrixRow | null>(null);
   const [editCircuitId, setEditCircuitId] = useState<string | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ targetKey: string; circuitId: string } | null>(null);
+  const [diffFilter, setDiffFilter] = useState<SnapshotDiffFilter>("all");
+  const [compareBaseId, setCompareBaseId] = useState<number | null>(null);
+  const [compareTargetId, setCompareTargetId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState("editable");
 
   const featureQuery = useQuery({
     queryKey: ["bgp-announcement-feature"],
@@ -76,6 +82,22 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
   });
 
   const activeSnapshotId = selectedSnapshotId ?? snapshotsQuery.data?.snapshots[0]?.id ?? null;
+
+  const snapshotList = snapshotsQuery.data?.snapshots ?? [];
+  const latestPairBase = snapshotList.length >= 2 ? snapshotList[1]?.id : null;
+  const latestPairCompare = snapshotList.length >= 2 ? snapshotList[0]?.id : null;
+
+  const latestDiffQuery = useQuery({
+    queryKey: ["bgp-announcement-snapshot-diff-latest-pair", latestPairBase, latestPairCompare],
+    queryFn: () => fetchSnapshotDiff(latestPairBase!, latestPairCompare!),
+    enabled: matrixEnabled && latestPairBase != null && latestPairCompare != null,
+  });
+
+  const manualDiffQuery = useQuery({
+    queryKey: ["bgp-announcement-snapshot-diff", compareBaseId, compareTargetId],
+    queryFn: () => fetchSnapshotDiff(compareBaseId!, compareTargetId!),
+    enabled: matrixEnabled && compareBaseId != null && compareTargetId != null,
+  });
 
   const matrixQuery = useQuery({
     queryKey: ["bgp-announcement-matrix", deviceId, search, family, targetType, activeSnapshotId],
@@ -274,7 +296,14 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
         </Card>
       ) : null}
 
-      <Tabs defaultValue="editable">
+      {latestDiffQuery.data && latestDiffQuery.data.changes.length > 0 ? (
+        <SnapshotDiffSummaryCard
+          diff={latestDiffQuery.data}
+          onOpenHistory={() => setActiveTab("history")}
+        />
+      ) : null}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="h-8 flex-wrap">
           <TabsTrigger value="editable" className="text-[12px]">Clientes / ORIGIN</TabsTrigger>
           <TabsTrigger value="audit" className="text-[12px]">Auditoria Upstreams</TabsTrigger>
@@ -339,9 +368,22 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
 
         <TabsContent value="history" className="mt-3">
           <SnapshotHistoryPanel
-            snapshots={snapshotsQuery.data?.snapshots ?? []}
+            snapshots={snapshotList}
             activeSnapshotId={activeSnapshotId}
             loading={snapshotsQuery.isLoading}
+            diff={manualDiffQuery.data ?? null}
+            diffLoading={manualDiffQuery.isFetching}
+            diffError={manualDiffQuery.error instanceof Error ? manualDiffQuery.error.message : null}
+            diffFilter={diffFilter}
+            onDiffFilterChange={setDiffFilter}
+            onCompare={(baseId, compareId) => {
+              setCompareBaseId(baseId);
+              setCompareTargetId(compareId);
+            }}
+            onCloseDiff={() => {
+              setCompareBaseId(null);
+              setCompareTargetId(null);
+            }}
             onOpenSnapshot={(snapshotId) => {
               setSelectedSnapshotId(snapshotId);
               void matrixQuery.refetch();

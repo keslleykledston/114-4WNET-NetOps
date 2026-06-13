@@ -63,6 +63,11 @@ import {
   buildChangePlanInputFromBgpPreview,
   isPreviewEligibleForChangePlan,
 } from "../workspace/artifacts/api-server/src/modules/change-plans/adapters/bgp-announcement-preview.adapter.ts";
+import {
+  computeAnnouncementSnapshotDiff,
+  snapshotDiffSafetyTokens,
+} from "../workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-snapshot-diff.service.ts";
+import type { MatrixResponse } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcement.types.ts";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -96,6 +101,55 @@ function sampleAnnouncementPreview(overrides: Record<string, unknown> = {}) {
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
+}
+
+function buildTestMatrixResponse(
+  deviceId: number,
+  snapshotId: number,
+  fixture = FIXTURE,
+  mutate?: (matrix: MatrixResponse) => MatrixResponse,
+): MatrixResponse {
+  const parsed = parseHuaweiPolicyDependencyPipeline(fixture, "ssh_running_config");
+  const graph = buildBgpPolicyGraph(parsed, fixture);
+  const upstreams = [
+    { circuitId: "01", displayName: "INFORR", role: "provider" },
+    { circuitId: "10", displayName: "EBT", role: "provider" },
+  ];
+  const { rows, findings } = buildAnnouncementMatrix({
+    deviceId,
+    parsedConfig: parsed,
+    graph,
+    upstreams,
+    collectionAgeMinutes: 5,
+    lastCollectedAt: new Date().toISOString(),
+  });
+  const counters = computeSnapshotCounters({
+    deviceId,
+    upstreams,
+    rows,
+    findings,
+    generatedAt: new Date().toISOString(),
+  }, upstreams.length);
+  const matrix = enrichMatrixResponseSemantics({
+    deviceId,
+    upstreams,
+    rows,
+    findings,
+    generatedAt: new Date().toISOString(),
+    meta: {
+      source: "database_only",
+      collectionAgeMinutes: 5,
+      lastCollectedAt: new Date().toISOString(),
+      readOnly: true,
+      refreshMode: "database_only",
+      snapshotId,
+      snapshotCreatedAt: new Date().toISOString(),
+      counters,
+      warnings: [],
+      status: determineSnapshotStatus({ deviceId, upstreams, rows, findings, generatedAt: new Date().toISOString() }),
+    },
+  }, parsed);
+  return mutate ? mutate(matrix) : matrix;
 }
 
 const FIXTURE = `
@@ -1193,6 +1247,263 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
         const input = buildChangePlanInputFromBgpPreview({ preview: sampleAnnouncementPreview(), previewId: 42 });
         assert(input.sourceObjectId === "42", "preview id");
         assert(input.metadata?.sourcePreviewId === 42, "metadata preview id");
+      },
+    },
+  ],
+  "snapshot-timelapse-diff": [
+    {
+      name: "same device diff returns readOnly",
+      fn: () => {
+        const base = buildTestMatrixResponse(94, 192);
+        const compare = buildTestMatrixResponse(94, 193);
+        const diff = computeAnnouncementSnapshotDiff(base, compare);
+        assert(diff.readOnly === true, "readOnly");
+        assert(diff.baseSnapshot.deviceId === 94 && diff.compareSnapshot.deviceId === 94, "same device");
+      },
+    },
+    {
+      name: "cross device comparison invalid",
+      fn: () => {
+        const baseDeviceId = 94;
+        const compareDeviceId = 95;
+        assert(baseDeviceId !== compareDeviceId, "cross device ids differ");
+      },
+    },
+    {
+      name: "target_added",
+      fn: () => {
+        const base = buildTestMatrixResponse(94, 1);
+        const compare = buildTestMatrixResponse(94, 2, FIXTURE, (matrix) => ({
+          ...matrix,
+          rows: [
+            ...matrix.rows,
+            enrichMatrixRowSemantics({
+              targetKey: "added:10:ipv4",
+              targetType: "customer",
+              routePolicyName: "AS999999-TEST-Import-V4",
+              node: 10,
+              family: "ipv4",
+              prefixScope: "AS999999-TEST",
+              affectedPrefixes: ["10.0.0.0/24"],
+              prefixListName: "AS999999-TEST",
+              modifiable: true,
+              riskLevel: "low",
+              cells: [{ circuitId: "01", upstreamName: "INFORR", state: "on", label: "On", community: "64777:51001", actionCode: "01", prependCount: null, confidence: "high" }],
+              findings: [],
+              lastCollectedAt: null,
+              collectionAgeMinutes: null,
+            }),
+          ],
+        }));
+        const diff = computeAnnouncementSnapshotDiff(base, compare);
+        assert(diff.changes.some((c) => c.type === "target_added"), "target_added");
+      },
+    },
+    {
+      name: "target_removed",
+      fn: () => {
+        const full = buildTestMatrixResponse(94, 1);
+        const compare = { ...full, rows: full.rows.slice(1) };
+        const diff = computeAnnouncementSnapshotDiff(full, compare);
+        assert(diff.changes.some((c) => c.type === "target_removed"), "target_removed");
+      },
+    },
+    {
+      name: "community_added",
+      fn: () => {
+        const base = buildTestMatrixResponse(94, 1);
+        const compare = buildTestMatrixResponse(94, 2, FIXTURE, (matrix) => ({
+          ...matrix,
+          rows: matrix.rows.map((row, index) => {
+            if (index !== 0) return row;
+            return {
+              ...row,
+              cells: [
+                ...row.cells,
+                { circuitId: "10", upstreamName: "EBT", state: "on", label: "On", community: "64777:51003", actionCode: "03", prependCount: null, confidence: "high" },
+              ],
+            };
+          }),
+        }));
+        const diff = computeAnnouncementSnapshotDiff(base, compare);
+        assert(diff.changes.some((c) => c.type === "community_added"), "community_added");
+      },
+    },
+    {
+      name: "community_removed",
+      fn: () => {
+        const full = buildTestMatrixResponse(94, 1);
+        const compare = buildTestMatrixResponse(94, 2, FIXTURE, (matrix) => ({
+          ...matrix,
+          rows: matrix.rows.map((row, index) => {
+            if (index !== 0 || row.cells.length === 0) return row;
+            return { ...row, cells: row.cells.slice(1) };
+          }),
+        }));
+        const diff = computeAnnouncementSnapshotDiff(full, compare);
+        assert(diff.changes.some((c) => c.type === "community_removed"), "community_removed");
+      },
+    },
+    {
+      name: "conflict_added",
+      fn: () => {
+        const base = buildTestMatrixResponse(94, 1);
+        const compare = buildTestMatrixResponse(94, 2, FIXTURE, (matrix) => ({
+          ...matrix,
+          semanticView: matrix.semanticView
+            ? {
+                ...matrix.semanticView,
+                realConflicts: [{
+                  targetKey: matrix.rows[0]?.targetKey ?? "x",
+                  routePolicyName: matrix.rows[0]?.routePolicyName ?? "ORIGIN-TEST",
+                  circuitIds: ["10"],
+                  message: "Conflito simulado",
+                }],
+              }
+            : matrix.semanticView,
+        }));
+        const diff = computeAnnouncementSnapshotDiff(base, compare);
+        assert(diff.changes.some((c) => c.type === "conflict_added"), "conflict_added");
+      },
+    },
+    {
+      name: "conflict_resolved",
+      fn: () => {
+        const withConflict = buildTestMatrixResponse(94, 1, FIXTURE, (matrix) => ({
+          ...matrix,
+          semanticView: matrix.semanticView
+            ? {
+                ...matrix.semanticView,
+                realConflicts: [{
+                  targetKey: matrix.rows[0]?.targetKey ?? "x",
+                  routePolicyName: matrix.rows[0]?.routePolicyName ?? "ORIGIN-TEST",
+                  circuitIds: ["10"],
+                  message: "Conflito",
+                }],
+              }
+            : matrix.semanticView,
+        }));
+        const resolved = buildTestMatrixResponse(94, 2, FIXTURE, (matrix) => ({
+          ...matrix,
+          semanticView: matrix.semanticView
+            ? { ...matrix.semanticView, realConflicts: [] }
+            : matrix.semanticView,
+        }));
+        const diff = computeAnnouncementSnapshotDiff(withConflict, resolved);
+        assert(diff.changes.some((c) => c.type === "conflict_resolved"), "conflict_resolved");
+      },
+    },
+    {
+      name: "protected_global_changed",
+      fn: () => {
+        const base = buildTestMatrixResponse(94, 1);
+        const compare = buildTestMatrixResponse(94, 2, FIXTURE, (matrix) => {
+          const globals = matrix.semanticView?.protectedGlobals ?? [];
+          if (globals.length === 0) return matrix;
+          const updated = { ...globals[0]!, consumerCount: (globals[0]!.consumerCount ?? 1) + 1 };
+          return {
+            ...matrix,
+            semanticView: matrix.semanticView
+              ? { ...matrix.semanticView, protectedGlobals: [updated, ...globals.slice(1)] }
+              : matrix.semanticView,
+          };
+        });
+        const diff = computeAnnouncementSnapshotDiff(base, compare);
+        assert(diff.changes.some((c) => c.type === "protected_global_changed"), "protected_global_changed");
+      },
+    },
+    {
+      name: "upstream_audit_changed",
+      fn: () => {
+        const base = buildTestMatrixResponse(94, 1);
+        const auditRow = {
+          ...base.rows[0]!,
+          targetKey: "audit:10:ipv4",
+          routePolicyName: "C01-EXPORT-IPV4",
+          targetRole: "provider" as const,
+          targetEditMode: "audit_only" as const,
+        };
+        const compare = {
+          ...base,
+          rows: [
+            auditRow,
+            ...base.rows.slice(1),
+          ],
+        };
+        const compareChanged = {
+          ...compare,
+          rows: compare.rows.map((row) => {
+            if (row.targetKey !== "audit:10:ipv4") return row;
+            return {
+              ...row,
+              cells: row.cells.map((cell) => ({ ...cell, community: "64777:59999", label: "P9" })),
+            };
+          }),
+        };
+        const diff = computeAnnouncementSnapshotDiff({ ...base, rows: [auditRow, ...base.rows.slice(1)] }, compareChanged);
+        assert(diff.changes.some((c) => c.type === "upstream_audit_changed"), "upstream_audit_changed");
+        assert(diff.changes.some((c) => c.isAuditOnly), "audit flag");
+      },
+    },
+    {
+      name: "legacy snapshot without semanticView still works",
+      fn: () => {
+        const base = buildTestMatrixResponse(94, 1);
+        const compare = buildTestMatrixResponse(94, 2);
+        const legacyBase = {
+          ...base,
+          semanticView: undefined,
+          rows: base.rows.map(({ targetRole, targetEditMode, dependencyScope, dependencyProtection, dependencyReason, ...rest }) => rest),
+        };
+        const legacyCompare = {
+          ...compare,
+          semanticView: undefined,
+          rows: compare.rows.map(({ targetRole, targetEditMode, dependencyScope, dependencyProtection, dependencyReason, ...rest }) => rest),
+        };
+        const diff = computeAnnouncementSnapshotDiff(legacyBase, legacyCompare);
+        assert(diff.readOnly === true, "legacy diff ok");
+        assert(Array.isArray(diff.changes), "changes array");
+      },
+    },
+    {
+      name: "viewer can read diff rbac",
+      fn: () => {
+        const viewer = { role: "viewer" as const, permissionsJson: null };
+        assert(checkPermission(viewer, "bgp.announcements.read"), "viewer read");
+      },
+    },
+    {
+      name: "feature flag off blocks matrix endpoints",
+      fn: () => {
+        const previous = process.env.BGP_ANNOUNCEMENT_MATRIX_ENABLED;
+        process.env.BGP_ANNOUNCEMENT_MATRIX_ENABLED = "false";
+        const gate = assertMatrixEnabled();
+        assert(!gate.ok && gate.status === 503, "503 when disabled");
+        if (previous === undefined) delete process.env.BGP_ANNOUNCEMENT_MATRIX_ENABLED;
+        else process.env.BGP_ANNOUNCEMENT_MATRIX_ENABLED = previous;
+      },
+    },
+    {
+      name: "diff does not create preview or change plan",
+      fn: () => {
+        const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+        const file = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-snapshot-diff.service.ts"), "utf8");
+        for (const token of ["from \"./announcement-change-preview", "from \"./announcement-change-plan", "createAnnouncementChangePreview(", "createChangePlanFromPreview("]) {
+          assert(!file.includes(token), `must not reference ${token}`);
+        }
+      },
+    },
+    {
+      name: "diff avoids ssh snmp connector controlled execution",
+      fn: () => {
+        const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+        const file = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-snapshot-diff.service.ts"), "utf8");
+        assert(!/from\s+['"]ssh2['"]/.test(file), "no ssh2 import");
+        assert(!/from\s+['"].*net-snmp/.test(file), "no net-snmp import");
+        assert(!file.includes("connector-snmp"), "no connector-snmp import");
+        assert(!file.includes("runDiscovery("), "no runDiscovery call");
+        assert(!file.includes("collectSnmp("), "no collectSnmp call");
+        assert(snapshotDiffSafetyTokens().includes("ssh2"), "safety tokens document forbidden integrations");
       },
     },
   ],

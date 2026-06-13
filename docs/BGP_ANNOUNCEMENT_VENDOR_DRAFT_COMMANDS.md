@@ -2,7 +2,7 @@
 
 Fase documental para gerar `proposedCommands[]` no preview e no Change Plan de BGP Announcements.
 
-**Status:** documentação apenas, sem execução.
+**Status:** fechado — ver [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md)
 
 ## Objetivo
 
@@ -79,3 +79,4 @@ Produzir comandos propostos para revisão humana:
 - [`BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md`](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 - [`BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md`](./BGP_ANNOUNCEMENT_CHANGE_PLAN_LINK.md)
 - [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md)
+- [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md)

@@ -38,6 +38,7 @@ Runtime smoke test concluído em **device 94** (`4WNET-BVA-BRT-RB`), snapshot **
 | Prepend Action Preview | set_prepend/clear_prepend preview lógico | ✅ |
 | Prepend Action Preview Closure | Smoke runtime previews #10–11, plan #29 | ✅ |
 | Vendor Draft Commands | `proposedCommands[]` documental / não executado | ✅ |
+| Vendor Draft Commands Closure | Docs, smoke, guarantees, limitations | ✅ |
 | Runtime smoke | API + UI end-to-end device 94 | ✅ |
 
 **Fora de escopo (MVP read-only):** apply, execute, Controlled Execution, SSH/SNMP/connector no fluxo da matriz, edição de upstream/provider/IX/CDN, remoção de globais protegidos.
@@ -166,6 +167,7 @@ Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 | **Change Preview Modal** | Ticket markdown, diff lógico, copiar/baixar |
 | **Draft Change Plan** | Badge + link `/change-plans?highlight=`; workflow de revisão; sem execute |
 | **Vendor Draft Commands** | Seção `Comandos Propostos / Não Executados`; badge `Documental only`; cópia com confirmação textual |
+| **Vendor Draft Commands Closure** | Fechamento documental da fase vendor draft |
 
 Banner: *"Read-only — origin/cliente para edição futura; upstreams só em auditoria. Sem SSH/SNMP neste painel."*
 
@@ -249,6 +251,7 @@ node tools/bgp-announcement-snapshot-timelapse-diff-selftest.mjs
 - **Idade da coleta** — warning quando discovery > `BGP_ANNOUNCEMENT_MAX_COLLECTION_AGE_MINUTES` (default 30 min).
 - **Upstreams** — apenas auditoria; rows `audit_only` podem ser 0 quando export está na aba separada.
 - **`set_prepend` / `clear_prepend`** — ✅ preview lógico/documental entregue e fechado. Ver [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md).
+- **Vendor draft commands** — ✅ proposta documental entregue e fechada. Ver [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md).
 - **Rollback** — documental em metadata; apply/rollback automático é fase futura.
 - **Device sem discovery** — refresh retorna `422 NO_PERSISTED_DATA`.
 

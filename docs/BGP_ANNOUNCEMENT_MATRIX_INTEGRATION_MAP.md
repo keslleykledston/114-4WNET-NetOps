@@ -78,6 +78,7 @@ Vendor draft commands (fase ACTION-COMPILER-VENDOR-DRAFT — 2026-06-13):
 - `announcement-vendor-draft.service.ts` — gera `proposedCommands[]` apenas como documentação revisável
 - UI/markdown — seção `Comandos Propostos / Não Executados` com confirmação textual antes da cópia
 - Doc spec: [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md)
+- Closure: [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md)
 
 ---
 

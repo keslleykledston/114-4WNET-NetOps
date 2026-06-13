@@ -20,7 +20,7 @@ Inclui `set_prepend` e `clear_prepend` quando preview validation `ok` ou `warnin
 | Ticket | Markdown operacional | Preservado em `metadata.ticketMarkdown` |
 | Comandos propostos | `proposedCommands[]` documental | Preservado em `snapshot` e `metadata` |
 
-Detalhes: [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md)
+Detalhes: [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md) · [`closure`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md)
 
 ## Quem pode criar
 
@@ -110,4 +110,8 @@ node tools/bgp-announcement-change-plan-link-selftest.mjs
 node tools/bgp-announcement-change-preview-selftest.mjs
 node tools/change-plans-review-workflow-selftest.mjs
 ```
+
+## Vendor Draft
+
+Ver [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md) e [`closure`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md).
 ```

@@ -118,6 +118,7 @@ Seção obrigatória **## Prepend / AS-PATH** com:
 - Export/upstream permanecem `audit_only`
 - Vendor Command Compiler = fase futura explícita
 - Quando houver draft documental vendor, o comando continua não executável e deve aparecer apenas como `proposedCommands[]` revisável
+- Ver [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md) e [`closure`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md)
 
 ---
 

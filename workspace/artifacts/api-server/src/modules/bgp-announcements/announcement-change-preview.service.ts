@@ -38,9 +38,20 @@ import { enrichMatrixResponseSemantics } from "./services/semantic-matrix-view.s
 import { loadAnnouncementDeviceContext } from "./services/announcement-context.service.js";
 import { compileAnnouncementPreview } from "./services/announcement-preview.service.js";
 import { ensureUpstreamCircuitsInDb } from "./services/upstream-circuit-discovery.service.js";
+import {
+  buildClearPrependProposedState,
+  buildClearPrependRiskHints,
+  buildPrependLogicalDiff,
+  buildPrependStructuredDiff,
+  buildPrependTicketSection,
+  buildSetPrependProposedState,
+  buildSetPrependRiskHints,
+  detectPrependForUpstream,
+  validatePrependCount,
+} from "./announcement-prepend-preview.service.js";
+import type { ChangePreviewLogicalDiffItem, ChangePreviewPrependDiffEntry } from "./bgp-announcement.types.js";
 
 const AUDIT_ONLY_ROLES = new Set(["provider", "upstream", "ix", "cdn"]);
-const UNSUPPORTED_ACTIONS = new Set<ChangePreviewActionType>(["set_prepend", "clear_prepend"]);
 
 function normalizeCircuitId(value: string | undefined): string | null {
   if (!value) return null;
@@ -275,7 +286,31 @@ function rowRiskIsHigh(row: MatrixRow): boolean {
   return row.riskLevel === "high" || row.riskLevel === "critical";
 }
 
-export function generateChangePreviewTicketMarkdown(preview: AnnouncementChangePreview): string {
+export function generateChangePreviewTicketMarkdown(
+  preview: AnnouncementChangePreview & { riskHints?: string[] },
+): string {
+  const riskHints = preview.riskHints ?? [];
+  const prependSection = preview.actionType === "set_prepend" || preview.actionType === "clear_prepend"
+    ? buildPrependTicketSection({
+        actionType: preview.actionType,
+        targetName: preview.targetName,
+        targetRole: preview.targetRole,
+        upstreamCircuitId: preview.upstreamCircuitId,
+        currentState: preview.currentState,
+        proposedState: preview.proposedState,
+        structured: preview.logicalDiff.find(
+          (item): item is ChangePreviewPrependDiffEntry =>
+            typeof item !== "string" && item.operation === preview.actionType,
+        ) ?? null,
+        riskHints,
+      })
+    : [];
+
+  const diffLines = preview.logicalDiff.map((item) => {
+    if (typeof item === "string") return `- ${item}`;
+    return `- ${item.explanation} (prepend: ${item.before.prepend} → ${item.after.prepend})`;
+  });
+
   const lines: string[] = [
     `# BGP Announcement Change Preview`,
     "",
@@ -297,12 +332,16 @@ export function generateChangePreviewTicketMarkdown(preview: AnnouncementChangeP
     ...Object.entries(preview.proposedState.cellStates).map(([cid, label]) => `- C${cid}: ${label}`),
     "",
     "## Diff lógico",
-    ...preview.logicalDiff.map((line) => `- ${line}`),
+    ...diffLines,
     "",
+    ...(prependSection.length > 0 ? prependSection : []),
     "## Riscos",
     `- Nível: **${preview.riskAssessment.level}**`,
     `- ${preview.riskAssessment.summary}`,
     ...preview.riskAssessment.reasons.map((reason) => `- ${reason}`),
+    ...(riskHints.length > 0
+      ? ["", "### Risk hints (prepend)", ...riskHints.map((hint) => `- ${hint}`)]
+      : []),
     "",
     "## Validações",
     `- Status: ${preview.validation.status}`,
@@ -345,13 +384,14 @@ function validateTargetForPreview(
     return { status: "blocked", ok: false, errors, warnings };
   }
 
-  if (UNSUPPORTED_ACTIONS.has(actionType)) {
-    return {
-      status: "unsupported_preview",
-      ok: false,
-      errors: [`Ação ${actionType} ainda não possui compilador seguro nesta fase.`],
-      warnings,
-    };
+  if (actionType === "set_prepend" || actionType === "clear_prepend") {
+    if (row.targetRole !== "customer" && row.targetRole !== "origin") {
+      errors.push(`set_prepend/clear_prepend permitido apenas para customer/origin (atual: ${row.targetRole ?? "unknown"}).`);
+    }
+    const allowedScopes = new Set(["customer_specific", "circuit_specific", "local", "unknown"]);
+    if (row.dependencyScope && !allowedScopes.has(row.dependencyScope)) {
+      warnings.push(`dependencyScope=${row.dependencyScope} — revisar impacto antes de prepend manual.`);
+    }
   }
 
   if (row.targetEditMode !== "editable_future") {
@@ -446,11 +486,18 @@ export async function createAnnouncementChangePreview(
 
   let validation = validateTargetForPreview(row, request.actionType, request.community);
   let proposedState = currentState;
-  let logicalDiff: string[] = [];
+  let logicalDiff: ChangePreviewLogicalDiffItem[] = [];
+  let riskHints: string[] = [];
   let affectedCommunities: string[] = [];
   let compiledPreview: PreviewChangeResponse | null = null;
 
-  const needsUpstream = ["set_community", "block_announcement", "allow_announcement"].includes(request.actionType);
+  const needsUpstream = [
+    "set_community",
+    "block_announcement",
+    "allow_announcement",
+    "set_prepend",
+    "clear_prepend",
+  ].includes(request.actionType);
   if (needsUpstream && !upstreamCircuitId) {
     validation = {
       status: "blocked",
@@ -460,7 +507,68 @@ export async function createAnnouncementChangePreview(
     };
   }
 
-  if (validation.ok && needsUpstream && upstreamCircuitId) {
+  if (validation.ok && (request.actionType === "set_prepend" || request.actionType === "clear_prepend") && upstreamCircuitId) {
+    if (request.actionType === "set_prepend") {
+      const prependValidation = validatePrependCount(request.prependCount);
+      if (!prependValidation.ok) {
+        validation = { ...prependValidation, warnings: [...validation.warnings, ...prependValidation.warnings] };
+      } else {
+        const beforePrepend = detectPrependForUpstream(row, upstreamCircuitId);
+        proposedState = buildSetPrependProposedState(currentState, upstreamCircuitId, request.prependCount!);
+        const structured = buildPrependStructuredDiff({
+          operation: "set_prepend",
+          row,
+          upstreamCircuitId,
+          beforePrepend,
+          afterPrepend: request.prependCount!,
+        });
+        logicalDiff = buildPrependLogicalDiff(structured);
+        riskHints = buildSetPrependRiskHints({
+          row,
+          upstreamCircuitId,
+          prependCount: request.prependCount!,
+          upstreamCount: matrix.upstreams.length,
+        });
+        if (beforePrepend !== null && beforePrepend !== "unknown" && beforePrepend !== request.prependCount) {
+          validation = {
+            status: "warning",
+            ok: true,
+            errors: [],
+            warnings: [
+              ...validation.warnings,
+              `Prepend detectado (${beforePrepend}) será substituído por ${request.prependCount}.`,
+            ],
+          };
+        }
+      }
+    } else {
+      const beforePrepend = detectPrependForUpstream(row, upstreamCircuitId);
+      const hadPrepend = typeof beforePrepend === "number" && beforePrepend > 0;
+      proposedState = buildClearPrependProposedState(currentState, upstreamCircuitId);
+      const structured = buildPrependStructuredDiff({
+        operation: "clear_prepend",
+        row,
+        upstreamCircuitId,
+        beforePrepend,
+        afterPrepend: null,
+      });
+      logicalDiff = buildPrependLogicalDiff(structured);
+      riskHints = buildClearPrependRiskHints({ row, hadPrepend });
+      if (!hadPrepend) {
+        validation = {
+          status: "warning",
+          ok: true,
+          errors: [],
+          warnings: [
+            ...validation.warnings,
+            "Nenhum prepend detectável no snapshot — clear_prepend documental/no-op.",
+          ],
+        };
+      }
+    }
+  }
+
+  if (validation.ok && needsUpstream && upstreamCircuitId && !["set_prepend", "clear_prepend"].includes(request.actionType)) {
     if (request.actionType === "set_community" && !request.newState) {
       validation = {
         status: "blocked",
@@ -588,6 +696,14 @@ export async function createAnnouncementChangePreview(
     multiCustomerImpact: row.dependencyScope === "global_shared" && row.targetRole === "customer",
   });
 
+  if (validation.ok && riskHints.length > 0) {
+    riskAssessment.reasons.push(...riskHints);
+    if (request.actionType === "set_prepend" && riskAssessment.level === "low") {
+      riskAssessment.level = "medium";
+      riskAssessment.summary = "Prepend altera preferência de caminho — revisão manual recomendada.";
+    }
+  }
+
   if (riskAssessment.level === "high" && isRealMatrixConflict(row)) {
     riskAssessment.level = "high";
     riskAssessment.summary = "Conflito real impeditivo ou alto impacto — revisão obrigatória.";
@@ -606,6 +722,7 @@ export async function createAnnouncementChangePreview(
     currentState,
     proposedState,
     logicalDiff,
+    riskHints,
     affectedPolicies: [row.routePolicyName],
     affectedCommunities,
     protectedGlobals,
@@ -758,3 +875,13 @@ export {
   assessRisk,
   isValidActionType,
 };
+export {
+  validatePrependCount,
+  detectPrependForUpstream,
+  buildPrependStructuredDiff,
+  buildPrependLogicalDiff,
+  buildSetPrependRiskHints,
+  buildClearPrependRiskHints,
+  buildPrependTicketSection,
+  logicalDiffItemsToStrings,
+} from "./announcement-prepend-preview.service.js";

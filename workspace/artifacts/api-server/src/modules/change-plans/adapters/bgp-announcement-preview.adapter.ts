@@ -1,4 +1,5 @@
 import type { AnnouncementChangePreview } from "../../bgp-announcements/bgp-announcement.types.js";
+import { logicalDiffItemsToStrings } from "../../bgp-announcements/announcement-prepend-preview.service.js";
 import type {
   ChangePlanCreateInput,
   ChangePlanItemRecord,
@@ -92,7 +93,7 @@ export function buildChangePlanInputFromBgpPreview(input: {
       riskLevel: preview.riskAssessment.level,
       workflowStatus: "draft",
       ticketMarkdown: preview.ticketMarkdown,
-      logicalDiff: preview.logicalDiff,
+      logicalDiff: logicalDiffItemsToStrings(preview.logicalDiff),
       title: buildBgpAnnouncementPreviewTitle(preview),
       description: buildBgpAnnouncementPreviewDescription(preview),
     },
@@ -117,7 +118,7 @@ export function buildChangePlanInputFromBgpPreview(input: {
       suggestedRollback: rollback,
       validations: {
         before: [`Preview validation: ${preview.validation.status}`],
-        after: preview.logicalDiff,
+        after: logicalDiffItemsToStrings(preview.logicalDiff),
       },
       findings,
       impact: {

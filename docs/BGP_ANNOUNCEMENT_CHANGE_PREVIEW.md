@@ -43,7 +43,7 @@ Read-only flow to propose logical changes on **Cliente/ORIGIN** targets from the
 | `set_community` | Sim (via compilador + diff lógico) |
 | `add_community` / `remove_community` | Sim (diff lógico; remove global bloqueado) |
 | `block_announcement` / `allow_announcement` | Sim |
-| `set_prepend` / `clear_prepend` | `unsupported_preview` |
+| `set_prepend` / `clear_prepend` | Sim (preview lógico/documental — ver [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md)) |
 | `audit_only_note` | Apenas auditoria (bloqueado em target editável) |
 
 ## Risk assessment

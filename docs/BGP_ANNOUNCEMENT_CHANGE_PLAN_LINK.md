@@ -5,6 +5,10 @@ Vínculo seguro entre **Change Preview** (read-only) e **Change Plan** formal (d
 > **MVP read-only fechado:** [`BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md`](./BGP_ANNOUNCEMENT_MVP_READONLY_CLOSURE.md)  
 > **Review workflow fechado:** [`CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md`](./CHANGE_PLANS_REVIEW_WORKFLOW_CLOSURE.md)
 
+## actionTypes elegíveis
+
+Inclui `set_prepend` e `clear_prepend` quando preview validation `ok` ou `warning` (não `blocked` / `unsupported_preview`). Ver [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md).
+
 ## Preview vs Change Plan
 
 | Aspecto | Change Preview | Change Plan (draft) |

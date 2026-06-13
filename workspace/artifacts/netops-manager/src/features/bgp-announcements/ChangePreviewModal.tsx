@@ -24,6 +24,7 @@ import type {
   AnnouncementChangePreview,
   BgpPreviewChangePlanLinkSummary,
   ChangePreviewActionType,
+  ChangePreviewLogicalDiffItem,
   MatrixRow,
 } from "./announcement-types";
 
@@ -33,9 +34,14 @@ const ACTION_OPTIONS: Array<{ value: ChangePreviewActionType; label: string }> =
   { value: "remove_community", label: "Remover community" },
   { value: "block_announcement", label: "Bloquear anúncio" },
   { value: "allow_announcement", label: "Permitir anúncio" },
-  { value: "set_prepend", label: "Definir prepend (limitado)" },
-  { value: "clear_prepend", label: "Limpar prepend (limitado)" },
+  { value: "set_prepend", label: "Definir prepend (preview lógico)" },
+  { value: "clear_prepend", label: "Limpar prepend (preview lógico)" },
 ];
+
+function formatLogicalDiffLine(item: ChangePreviewLogicalDiffItem): string {
+  if (typeof item === "string") return item;
+  return `${item.explanation} [${item.before.prepend} → ${item.after.prepend}]`;
+}
 
 const CELL_STATES = [
   { value: "on", label: "On" },
@@ -62,6 +68,7 @@ interface ChangePreviewModalProps {
     upstreamCircuitId?: string;
     newState?: string;
     community?: string;
+    prependCount?: number;
   }) => Promise<AnnouncementChangePreview>;
   planEnabled?: boolean;
   onCreatePlan?: (previewId: number, options: { acknowledgeHighRisk: boolean }) => Promise<BgpPreviewChangePlanLinkSummary>;
@@ -85,6 +92,7 @@ export function ChangePreviewModal({
   const [upstreamCircuitId, setUpstreamCircuitId] = useState(defaultCircuitId ?? upstreams[0]?.circuitId ?? "01");
   const [newState, setNewState] = useState("p2");
   const [community, setCommunity] = useState("");
+  const [prependCount, setPrependCount] = useState("3");
   const [preview, setPreview] = useState<AnnouncementChangePreview | null>(null);
   const [planLink, setPlanLink] = useState<BgpPreviewChangePlanLinkSummary | null>(existingPlan);
   const [highRiskAck, setHighRiskAck] = useState(false);
@@ -94,9 +102,17 @@ export function ChangePreviewModal({
 
   if (!row) return null;
 
-  const needsUpstream = ["set_community", "block_announcement", "allow_announcement"].includes(actionType);
+  const needsUpstream = [
+    "set_community",
+    "block_announcement",
+    "allow_announcement",
+    "set_prepend",
+    "clear_prepend",
+  ].includes(actionType);
   const needsCommunity = actionType === "add_community" || actionType === "remove_community";
   const needsNewState = actionType === "set_community";
+  const needsPrependCount = actionType === "set_prepend";
+  const isPrependAction = actionType === "set_prepend" || actionType === "clear_prepend";
   const canCreatePlan = Boolean(
     planEnabled
     && onCreatePlan
@@ -112,11 +128,18 @@ export function ChangePreviewModal({
     setError(null);
     setPlanLink(null);
     try {
+      if (needsPrependCount) {
+        const parsed = Number(prependCount);
+        if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10) {
+          throw new Error("prependCount deve ser inteiro entre 1 e 10.");
+        }
+      }
       const result = await onGenerate({
         actionType,
         upstreamCircuitId: needsUpstream ? upstreamCircuitId : undefined,
         newState: needsNewState ? newState : undefined,
         community: needsCommunity ? community : undefined,
+        prependCount: needsPrependCount ? Number(prependCount) : undefined,
       });
       setPreview(result);
     } catch (err) {
@@ -236,7 +259,27 @@ export function ChangePreviewModal({
                 />
               </div>
             ) : null}
+
+            {needsPrependCount ? (
+              <div className="space-y-1">
+                <Label className="text-[11px]">Prepend count (1–10)</Label>
+                <Input
+                  className="h-8 font-mono text-[12px]"
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={prependCount}
+                  onChange={(event) => setPrependCount(event.target.value)}
+                />
+              </div>
+            ) : null}
           </div>
+
+          {isPrependAction ? (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-100">
+              Preview lógico/documental de prepend — nenhum comando vendor real será gerado ou executado.
+            </div>
+          ) : null}
 
           {error ? (
             <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-red-200">{error}</div>
@@ -304,11 +347,22 @@ export function ChangePreviewModal({
               <div>
                 <div className="mb-1 font-medium text-foreground">Diff lógico</div>
                 <ul className="list-inside list-disc space-y-0.5 font-mono text-[10px] text-muted-foreground">
-                  {preview.logicalDiff.map((line) => (
-                    <li key={line}>{line}</li>
+                  {preview.logicalDiff.map((line, index) => (
+                    <li key={`${index}:${formatLogicalDiffLine(line)}`}>{formatLogicalDiffLine(line)}</li>
                   ))}
                 </ul>
               </div>
+
+              {preview.riskHints && preview.riskHints.length > 0 ? (
+                <div>
+                  <div className="mb-1 font-medium text-foreground">Risk hints</div>
+                  <ul className="list-inside list-disc text-[11px] text-sky-200/90">
+                    {preview.riskHints.map((hint) => (
+                      <li key={hint}>{hint}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               {preview.riskAssessment.reasons.length > 0 ? (
                 <div>

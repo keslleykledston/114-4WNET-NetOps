@@ -35,6 +35,7 @@ Runtime smoke test concluído em **device 94** (`4WNET-BVA-BRT-RB`), snapshot **
 | Change Plan Review Closure | Smoke runtime #28 + doc oficial | ✅ |
 | Snapshot Timelapse Diff | Comparação read-only entre snapshots | ✅ |
 | Snapshot Timelapse Diff Closure | Smoke runtime 192→193 + doc oficial | ✅ |
+| Prepend Action Preview | set_prepend/clear_prepend preview lógico | ✅ |
 | Runtime smoke | API + UI end-to-end device 94 | ✅ |
 
 **Fora de escopo (MVP read-only):** apply, execute, Controlled Execution, SSH/SNMP/connector no fluxo da matriz, edição de upstream/provider/IX/CDN, remoção de globais protegidos.
@@ -243,7 +244,7 @@ node tools/bgp-announcement-snapshot-timelapse-diff-selftest.mjs
 - **Não altera config** — depende 100% de dados já persistidos no DB.
 - **Idade da coleta** — warning quando discovery > `BGP_ANNOUNCEMENT_MAX_COLLECTION_AGE_MINUTES` (default 30 min).
 - **Upstreams** — apenas auditoria; rows `audit_only` podem ser 0 quando export está na aba separada.
-- **`set_prepend` / `clear_prepend`** — `unsupported_preview` nesta fase.
+- **`set_prepend` / `clear_prepend`** — preview lógico/documental (fase ACTION-COMPILER-PREPEND); sem script vendor.
 - **Rollback** — documental em metadata; apply/rollback automático é fase futura.
 - **Device sem discovery** — refresh retorna `422 NO_PERSISTED_DATA`.
 

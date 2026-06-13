@@ -66,6 +66,12 @@ Snapshot timelapse diff (fase SNAPSHOT-TIMELAPSE-DIFF — 2026-06-10) — **✅ 
 - Doc spec: [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md)
 - Closure: [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md) — commit `4cabd2c`, smoke device 94 snapshots 192→193
 
+Prepend preview (fase ACTION-COMPILER-PREPEND — 2026-06-10):
+
+- `announcement-prepend-preview.service.ts` — logicalDiff/riskHints/ticket para set_prepend/clear_prepend
+- UI Change Preview: input prependCount 1–10, banner read-only
+- Doc: [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md)
+
 ---
 
 ## 3. Pipeline de coleta existente

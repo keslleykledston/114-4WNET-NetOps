@@ -14,6 +14,15 @@ import {
 import { createChangePlan, getChangePlanById } from "../change-plans/change-plans.service.js";
 import type { BgpPreviewChangePlanLinkSummary } from "../change-plans/change-plans.types.js";
 import { getAnnouncementChangePreviewById } from "./announcement-change-preview.service.js";
+import { logicalDiffItemsToStrings } from "./announcement-prepend-preview.service.js";
+import type { ChangePreviewLogicalDiffItem } from "./bgp-announcement.types.js";
+
+function normalizeLinkedLogicalDiff(metadataDiff: unknown, previewDiff: ChangePreviewLogicalDiffItem[]): string[] {
+  if (Array.isArray(metadataDiff)) {
+    return metadataDiff.map((item) => (typeof item === "string" ? item : JSON.stringify(item)));
+  }
+  return logicalDiffItemsToStrings(previewDiff);
+}
 
 export type CreatePlanFromPreviewResult =
   | BgpPreviewChangePlanLinkSummary
@@ -78,9 +87,7 @@ export async function getChangePlanLinkForPreview(previewId: number): Promise<Bg
     ticketMarkdown: typeof metadata.ticketMarkdown === "string"
       ? metadata.ticketMarkdown
       : preview.ticketMarkdown,
-    logicalDiff: Array.isArray(metadata.logicalDiff)
-      ? metadata.logicalDiff.map(String)
-      : preview.logicalDiff,
+    logicalDiff: normalizeLinkedLogicalDiff(metadata.logicalDiff, preview.logicalDiff),
     warnings: preview.validation.warnings,
     createdAt: plan.createdAt,
     createdBy: plan.createdBy,
@@ -184,9 +191,7 @@ export async function createChangePlanFromPreview(input: {
     workflowStatus: "draft",
     riskLevel: preview.riskAssessment.level,
     ticketMarkdown: String(planInput.metadata?.ticketMarkdown ?? preview.ticketMarkdown),
-    logicalDiff: Array.isArray(planInput.metadata?.logicalDiff)
-      ? planInput.metadata.logicalDiff.map(String)
-      : preview.logicalDiff,
+    logicalDiff: normalizeLinkedLogicalDiff(planInput.metadata?.logicalDiff, preview.logicalDiff),
     warnings: eligibility.warnings,
     createdAt: detail.createdAt,
     createdBy: detail.createdBy,

@@ -460,6 +460,7 @@ export function AnnouncementPanel({ device }: AnnouncementPanelProps) {
               upstreamCircuitId: payload.upstreamCircuitId,
               newState: payload.newState,
               community: payload.community,
+              prependCount: payload.prependCount,
             })
           }
           planEnabled={previewEnabled}

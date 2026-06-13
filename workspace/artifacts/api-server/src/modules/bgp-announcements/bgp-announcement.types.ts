@@ -284,6 +284,21 @@ export interface ChangePreviewRiskAssessment {
   summary: string;
 }
 
+export interface ChangePreviewPrependDiffEntry {
+  operation: "set_prepend" | "clear_prepend";
+  targetId: string;
+  targetName: string;
+  upstreamCircuitId: string;
+  before: { prepend: number | null | "unknown" };
+  after: { prepend: number | null };
+  explanation: string;
+}
+
+export type ChangePreviewLogicalDiffItem = string | ChangePreviewPrependDiffEntry;
+
+export const PREPEND_COUNT_MIN = 1;
+export const PREPEND_COUNT_MAX = 10;
+
 export interface ChangePreviewState {
   communities: string[];
   cellStates: Record<string, string>;
@@ -313,7 +328,8 @@ export interface AnnouncementChangePreview {
   upstreamCircuitId: string | null;
   currentState: ChangePreviewState;
   proposedState: ChangePreviewState;
-  logicalDiff: string[];
+  logicalDiff: ChangePreviewLogicalDiffItem[];
+  riskHints?: string[];
   affectedPolicies: string[];
   affectedCommunities: string[];
   protectedGlobals: ProtectedGlobalDependency[];

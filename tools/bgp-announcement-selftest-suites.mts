@@ -68,9 +68,93 @@ import {
   snapshotDiffSafetyTokens,
 } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-snapshot-diff.service.ts";
 import type { MatrixResponse } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcement.types.ts";
+import {
+  validatePrependCount,
+  buildPrependStructuredDiff,
+  buildPrependLogicalDiff,
+  buildSetPrependRiskHints,
+  buildClearPrependRiskHints,
+  buildPrependTicketSection,
+  detectPrependForUpstream,
+  buildSetPrependProposedState,
+  buildClearPrependProposedState,
+  logicalDiffItemsToStrings,
+} from "../workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-prepend-preview.service.ts";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+function sampleEditableOriginRow(overrides: Partial<import("../workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcement.types.ts").MatrixRow> = {}) {
+  const base = {
+    targetKey: "origin:10:ipv4",
+    targetType: "origin" as const,
+    routePolicyName: "ORIGIN-TEST",
+    node: 10,
+    family: "ipv4" as const,
+    prefixScope: "ORIGIN-TEST",
+    affectedPrefixes: ["10.0.0.0/24"],
+    prefixListName: "ORIGIN-TEST",
+    modifiable: true,
+    riskLevel: "low" as const,
+    cells: [{
+      circuitId: "01",
+      upstreamName: "INFORR",
+      state: "on" as const,
+      label: "On",
+      community: "64777:51001",
+      actionCode: "01",
+      prependCount: 2,
+      confidence: "high" as const,
+    }],
+    findings: [],
+    lastCollectedAt: null,
+    collectionAgeMinutes: null,
+    dependencyScope: "customer_specific" as const,
+  };
+  return { ...enrichMatrixRowSemantics(base), ...overrides };
+}
+
+function samplePrependPreview(overrides: Record<string, unknown> = {}) {
+  const row = sampleEditableOriginRow();
+  const current = buildCurrentState(row);
+  const proposed = buildSetPrependProposedState(current, "01", 3);
+  const structured = buildPrependStructuredDiff({
+    operation: "set_prepend",
+    row,
+    upstreamCircuitId: "01",
+    beforePrepend: 2,
+    afterPrepend: 3,
+  });
+  const logicalDiff = buildPrependLogicalDiff(structured);
+  const riskHints = buildSetPrependRiskHints({ row, upstreamCircuitId: "01", prependCount: 3, upstreamCount: 2 });
+  const base = {
+    id: 99,
+    snapshotId: 193,
+    tenantId: null,
+    deviceId: 94,
+    targetId: row.targetKey,
+    targetName: row.routePolicyName,
+    targetRole: "origin" as const,
+    targetEditMode: "editable_future" as const,
+    actionType: "set_prepend" as const,
+    upstreamCircuitId: "01",
+    currentState: current,
+    proposedState: proposed,
+    logicalDiff,
+    riskHints,
+    affectedPolicies: [row.routePolicyName],
+    affectedCommunities: [],
+    protectedGlobals: [],
+    upstreamAuditImpact: [],
+    validation: { status: "ok" as const, ok: true, errors: [], warnings: [] },
+    riskAssessment: { level: "medium" as const, blocked: false, reasons: riskHints, summary: "prepend preview" },
+    ticketMarkdown: "",
+    createdBy: null,
+  };
+  const preview = { ...base, ...overrides } as import("../workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcement.types.ts").AnnouncementChangePreview;
+  preview.ticketMarkdown = generateChangePreviewTicketMarkdown({ ...preview, createdAt: new Date().toISOString() });
+  return preview;
+}
 
 function sampleAnnouncementPreview(overrides: Record<string, unknown> = {}) {
   const base = {
@@ -1100,26 +1184,164 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
       },
     },
     {
-      name: "set_prepend unsupported_preview",
+      name: "set_prepend allowed for origin editable_future",
       fn: () => {
-        const row = enrichMatrixRowSemantics({
-          targetKey: "t",
-          targetType: "origin",
-          routePolicyName: "ORIGIN-TEST",
-          node: 10,
-          family: "ipv4",
-          prefixScope: "x",
-          affectedPrefixes: [],
-          prefixListName: null,
-          modifiable: true,
-          riskLevel: "low",
-          cells: [],
-          findings: [],
-          lastCollectedAt: null,
-          collectionAgeMinutes: null,
-        });
+        const row = sampleEditableOriginRow();
         const validation = validateTargetForPreview(row, "set_prepend", undefined);
-        assert(validation.status === "unsupported_preview", "prepend unsupported");
+        assert(validation.ok, "set_prepend allowed");
+        assert(validation.status !== "unsupported_preview", "not unsupported");
+      },
+    },
+    {
+      name: "clear_prepend allowed for customer editable_future",
+      fn: () => {
+        const row = sampleEditableOriginRow({
+          targetType: "customer",
+          targetRole: "customer",
+          routePolicyName: "AS269485-NICKNET-Import-V4",
+        });
+        const validation = validateTargetForPreview(row, "clear_prepend", undefined);
+        assert(validation.ok, "clear_prepend allowed");
+      },
+    },
+  ],
+  "prepend-preview": [
+    {
+      name: "set_prepend permitted origin editable_future",
+      fn: () => {
+        assert(validateTargetForPreview(sampleEditableOriginRow(), "set_prepend", undefined).ok, "origin ok");
+      },
+    },
+    {
+      name: "clear_prepend permitted customer editable_future",
+      fn: () => {
+        const row = sampleEditableOriginRow({ targetType: "customer", targetRole: "customer" });
+        assert(validateTargetForPreview(row, "clear_prepend", undefined).ok, "customer ok");
+      },
+    },
+    {
+      name: "prependCount invalid blocked",
+      fn: () => {
+        assert(!validatePrependCount(undefined).ok, "missing blocked");
+        assert(!validatePrependCount(0).ok, "zero blocked");
+        assert(!validatePrependCount(-1).ok, "negative blocked");
+      },
+    },
+    {
+      name: "prependCount too high blocked",
+      fn: () => {
+        assert(!validatePrependCount(11).ok, "11 blocked");
+        assert(validatePrependCount(10).ok, "10 ok");
+      },
+    },
+    {
+      name: "provider upstream IX CDN blocked",
+      fn: () => {
+        for (const role of ["provider", "upstream", "ix", "cdn"] as const) {
+          const row = {
+            ...sampleEditableOriginRow(),
+            targetRole: role,
+            targetEditMode: "audit_only" as const,
+            modifiable: false,
+          };
+          const validation = validateTargetForPreview(row, "set_prepend", undefined);
+          assert(validation.status === "blocked", `${role} blocked`);
+        }
+      },
+    },
+    {
+      name: "protected_global blocked",
+      fn: () => {
+        const row = {
+          ...sampleEditableOriginRow(),
+          dependencyProtection: "protected_global" as const,
+        };
+        assert(validateTargetForPreview(row, "set_prepend", undefined).status === "blocked", "global blocked");
+      },
+    },
+    {
+      name: "set_prepend generates structured logicalDiff",
+      fn: () => {
+        const preview = samplePrependPreview();
+        const structured = preview.logicalDiff.find((item) => typeof item !== "string");
+        assert(Boolean(structured && typeof structured !== "string" && structured.operation === "set_prepend"), "structured diff");
+        assert(preview.proposedState.prependCounts["01"] === 3, "proposed prepend");
+      },
+    },
+    {
+      name: "clear_prepend generates logicalDiff",
+      fn: () => {
+        const row = sampleEditableOriginRow();
+        const current = buildCurrentState(row);
+        const proposed = buildClearPrependProposedState(current, "01");
+        const structured = buildPrependStructuredDiff({
+          operation: "clear_prepend",
+          row,
+          upstreamCircuitId: "01",
+          beforePrepend: detectPrependForUpstream(row, "01"),
+          afterPrepend: null,
+        });
+        const diff = buildPrependLogicalDiff(structured);
+        assert(diff.some((item) => typeof item !== "string" && item.operation === "clear_prepend"), "clear diff");
+        assert(proposed.prependCounts["01"] == null, "cleared");
+      },
+    },
+    {
+      name: "ticketMarkdown includes Prepend section",
+      fn: () => {
+        const preview = samplePrependPreview();
+        assert(preview.ticketMarkdown.includes("## Prepend / AS-PATH"), "prepend section");
+        assert(preview.ticketMarkdown.includes("Nenhum comando foi executado"), "no command notice");
+        assert(preview.ticketMarkdown.includes("Preview lógico/documental"), "documental notice");
+      },
+    },
+    {
+      name: "riskHints specific for set_prepend",
+      fn: () => {
+        const preview = samplePrependPreview();
+        assert((preview.riskHints?.length ?? 0) >= 3, "risk hints");
+        assert(preview.riskHints?.some((hint) => hint.includes("prepend")), "prepend hint");
+      },
+    },
+    {
+      name: "preview can create Draft Change Plan",
+      fn: () => {
+        const preview = samplePrependPreview();
+        assert(isPreviewEligibleForChangePlan(preview).ok, "eligible for plan");
+        const input = buildChangePlanInputFromBgpPreview({ preview, previewId: 55 });
+        assert(input.metadata?.actionType === "set_prepend", "action preserved");
+        assert(Array.isArray(input.metadata?.logicalDiff), "logical diff preserved");
+      },
+    },
+    {
+      name: "review workflow preserves prepend logicalDiff strings",
+      fn: () => {
+        const preview = samplePrependPreview();
+        const strings = logicalDiffItemsToStrings(preview.logicalDiff);
+        assert(strings.some((line) => line.includes("set_prepend")), "serialized diff");
+      },
+    },
+    {
+      name: "no vendor command generated",
+      fn: () => {
+        const preview = samplePrependPreview();
+        assert(!preview.ticketMarkdown.includes("route-policy"), "no route-policy command");
+        assert(!preview.ticketMarkdown.toLowerCase().includes("apply as-path"), "no apply as-path");
+      },
+    },
+    {
+      name: "prepend service avoids ssh snmp connector controlled execution",
+      fn: () => {
+        const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+        const prependFile = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-prepend-preview.service.ts"), "utf8");
+        const previewFile = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-change-preview.service.ts"), "utf8");
+        for (const file of [prependFile, previewFile]) {
+          assert(!/from\s+['"]ssh2['"]/.test(file), "no ssh2 import");
+          assert(!file.includes("connector-snmp"), "no connector-snmp");
+          assert(!file.includes("controlledExecution"), "no controlledExecution");
+        }
+        assert(!prependFile.includes("compileAnnouncementPreview"), "prepend file no vendor compiler");
+        assert(!prependFile.includes("route-policy"), "prepend file no vendor script");
       },
     },
   ],

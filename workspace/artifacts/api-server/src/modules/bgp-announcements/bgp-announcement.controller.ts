@@ -1,5 +1,11 @@
 import type { Request, Response } from "express";
-import { assertMatrixEnabled, assertPreviewEnabled } from "./bgp-announcement.gate.js";
+import {
+  assertMatrixEnabled,
+  assertPreviewEnabled,
+  isBgpAnnouncementMatrixEnabled,
+  isBgpAnnouncementPreviewEnabled,
+  isBgpUpstreamAuditEnabled,
+} from "./bgp-announcement.gate.js";
 import {
   findExactCommunitySetMatch,
   getAnnouncementMatrix,
@@ -21,6 +27,14 @@ import type { ParsedPolicyDependencyConfig } from "../netops/huawei-vrp/parsers/
 import { ensureUpstreamCircuitsInDb } from "./services/upstream-circuit-discovery.service.js";
 import { logAuditEvent } from "../../lib/audit.js";
 import { getRequestContext } from "../../lib/request-context.js";
+
+export async function getAnnouncementFeature(_req: Request, res: Response) {
+  res.json({
+    enabled: isBgpAnnouncementMatrixEnabled(),
+    previewEnabled: isBgpAnnouncementPreviewEnabled(),
+    upstreamAuditEnabled: isBgpUpstreamAuditEnabled(),
+  });
+}
 
 export async function getMatrix(req: Request, res: Response) {
   const gate = assertMatrixEnabled();

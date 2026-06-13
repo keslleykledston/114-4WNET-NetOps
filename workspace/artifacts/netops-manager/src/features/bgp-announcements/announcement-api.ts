@@ -30,6 +30,14 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export function fetchAnnouncementFeature(): Promise<{
+  enabled: boolean;
+  previewEnabled: boolean;
+  upstreamAuditEnabled: boolean;
+}> {
+  return apiFetch("/api/bgp/announcements/feature");
+}
+
 export function fetchAnnouncementMatrix(deviceId: number, params?: {
   family?: string;
   targetType?: string;

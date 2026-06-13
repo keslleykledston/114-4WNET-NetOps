@@ -36,6 +36,7 @@ import ConnectorGroupsPage from "@/pages/connector-groups";
 import CredentialVaultPage from "@/pages/credential-vault";
 import NotificationsPage from "@/pages/notifications";
 import ConfigGeneratorPage from "@/pages/config-generator";
+import BgpAnnouncementsPage from "@/pages/bgp-announcements";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -101,6 +102,7 @@ function Router() {
         <Route path="/config-collection" component={ConfigCollection} />
         <Route path="/snmp-history" component={SnmpHistory} />
         <Route path="/netops-operations" component={NetopsOperations} />
+        <Route path="/bgp-announcements" component={BgpAnnouncementsPage} />
         <Route path="/l2-circuits" component={L2Circuits} />
         <Route path="/bgp/peer-drilldown" component={BgpPeerDrilldownPage} />
         <Route path="/operational/bgp" component={OperationalBgpPage} />

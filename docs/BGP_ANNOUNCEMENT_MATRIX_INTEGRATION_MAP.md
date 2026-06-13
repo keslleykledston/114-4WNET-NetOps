@@ -35,10 +35,12 @@ workspace/artifacts/netops-manager/src/features/bgp-announcements/
 workspace/artifacts/netops-manager/src/pages/bgp-announcements.tsx
 ```
 
-Registro de rotas:
+Registro de rotas (fase wiring — 2026-06-10):
 
-- API: `workspace/artifacts/api-server/src/routes/index.ts`
-- UI: `workspace/artifacts/netops-manager/src/App.tsx` → `/bgp/announcements`
+- API: `workspace/artifacts/api-server/src/routes/index.ts` → `bgpAnnouncementRouter`
+- Feature flag: `GET /bgp/announcements/feature` + `BGP_ANNOUNCEMENT_MATRIX_ENABLED` (default true)
+- UI: `App.tsx` → `/bgp-announcements` (redirect para NetOps Operations com `view=bgp-announcements`)
+- Menu: `layout.tsx` → BGP Announcements
 
 ---
 

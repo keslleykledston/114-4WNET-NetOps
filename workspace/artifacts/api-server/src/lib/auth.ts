@@ -15,7 +15,17 @@ export type UserPermissions = {
   audit?: { read?: boolean };
   provisioning?: { read?: boolean; write?: boolean; export?: boolean };
   configGenerator?: { read?: boolean; validate?: boolean; render?: boolean; write?: boolean; admin?: boolean };
-  bgp?: { read?: boolean; cleanup?: { plan?: boolean } };
+  bgp?: {
+    read?: boolean;
+    cleanup?: { plan?: boolean };
+    announcements?: {
+      read?: boolean;
+      preview?: boolean;
+      plan?: boolean;
+      approve?: boolean;
+      execute?: boolean;
+    };
+  };
 };
 
 export const AUTH_COOKIE_NAME = "netops_session";
@@ -314,7 +324,11 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
       configGenerator: { read: true, validate: true, render: true, write: true, admin: true },
-      bgp: { read: true, cleanup: { plan: true } },
+      bgp: {
+        read: true,
+        cleanup: { plan: true },
+        announcements: { read: true, preview: true, plan: true, approve: true, execute: true },
+      },
     };
   }
   if (role === "operator") {
@@ -327,7 +341,11 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
       configGenerator: { read: true, validate: true, render: true, write: true, admin: false },
-      bgp: { read: true, cleanup: { plan: true } },
+      bgp: {
+        read: true,
+        cleanup: { plan: true },
+        announcements: { read: true, preview: true, plan: true, approve: false, execute: false },
+      },
     };
   }
   // viewer
@@ -340,7 +358,11 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
     audit: { read: true },
     provisioning: { read: true, write: false, export: true },
     configGenerator: { read: true, validate: false, render: false, write: false, admin: false },
-    bgp: { read: false, cleanup: { plan: false } },
+    bgp: {
+      read: false,
+      cleanup: { plan: false },
+      announcements: { read: true, preview: false, plan: false, approve: false, execute: false },
+    },
   };
 }
 

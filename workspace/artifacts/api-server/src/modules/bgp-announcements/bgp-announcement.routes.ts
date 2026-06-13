@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requirePermission } from "../../lib/auth.js";
 import {
+  getAnnouncementFeature,
   getChangePlan,
   getChangePlans,
   getCommunitySets,
@@ -18,6 +19,7 @@ import {
 
 const router = Router();
 
+router.get("/bgp/announcements/feature", requirePermission("bgp.announcements.read"), getAnnouncementFeature);
 router.get("/bgp/announcements/matrix", requirePermission("bgp.announcements.read"), getMatrix);
 router.get("/bgp/announcements/evidence", requirePermission("bgp.announcements.read"), getEvidence);
 router.get("/bgp/announcements/expanded-prefixes", requirePermission("bgp.announcements.read"), getExpandedPrefixesHandler);

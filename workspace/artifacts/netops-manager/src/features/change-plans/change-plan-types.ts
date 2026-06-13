@@ -90,6 +90,8 @@ export interface ChangePlanSnapshotPayload {
   extcommunityFilters: Array<{ name: string }>;
   globalPreserved: Array<{ type: string; name: string; reason?: string | null }>;
   suggestedScript: string[];
+  proposedCommands?: Array<Record<string, unknown>>;
+  proposedCommandsWarnings?: string[];
   suggestedRollback: ChangePlanRollbackDocument;
   validations: { before: string[]; after: string[] };
   findings: string[];
@@ -123,6 +125,8 @@ export interface ChangePlanSummary {
   riskLevel?: string | null;
   ticketMarkdown?: string | null;
   logicalDiff?: string[];
+  proposedCommands?: Array<Record<string, unknown>>;
+  proposedCommandsWarnings?: string[];
   reviewedBy?: string | null;
   reviewedAt?: string | null;
 }

@@ -88,6 +88,9 @@ export async function getChangePlanLinkForPreview(previewId: number): Promise<Bg
       ? metadata.ticketMarkdown
       : preview.ticketMarkdown,
     logicalDiff: normalizeLinkedLogicalDiff(metadata.logicalDiff, preview.logicalDiff),
+    proposedCommands: Array.isArray(metadata["proposedCommands"])
+      ? metadata["proposedCommands"] as NonNullable<BgpPreviewChangePlanLinkSummary["proposedCommands"]>
+      : preview.proposedCommands,
     warnings: preview.validation.warnings,
     createdAt: plan.createdAt,
     createdBy: plan.createdBy,
@@ -192,6 +195,9 @@ export async function createChangePlanFromPreview(input: {
     riskLevel: preview.riskAssessment.level,
     ticketMarkdown: String(planInput.metadata?.ticketMarkdown ?? preview.ticketMarkdown),
     logicalDiff: normalizeLinkedLogicalDiff(planInput.metadata?.logicalDiff, preview.logicalDiff),
+    proposedCommands: Array.isArray(planInput.metadata?.["proposedCommands"])
+      ? planInput.metadata["proposedCommands"] as NonNullable<BgpPreviewChangePlanLinkSummary["proposedCommands"]>
+      : preview.proposedCommands,
     warnings: eligibility.warnings,
     createdAt: detail.createdAt,
     createdBy: detail.createdBy,

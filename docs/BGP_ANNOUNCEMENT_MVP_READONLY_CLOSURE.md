@@ -37,6 +37,7 @@ Runtime smoke test concluído em **device 94** (`4WNET-BVA-BRT-RB`), snapshot **
 | Snapshot Timelapse Diff Closure | Smoke runtime 192→193 + doc oficial | ✅ |
 | Prepend Action Preview | set_prepend/clear_prepend preview lógico | ✅ |
 | Prepend Action Preview Closure | Smoke runtime previews #10–11, plan #29 | ✅ |
+| Vendor Draft Commands | `proposedCommands[]` documental / não executado | ✅ |
 | Runtime smoke | API + UI end-to-end device 94 | ✅ |
 
 **Fora de escopo (MVP read-only):** apply, execute, Controlled Execution, SSH/SNMP/connector no fluxo da matriz, edição de upstream/provider/IX/CDN, remoção de globais protegidos.
@@ -82,6 +83,7 @@ computeAnnouncementSnapshotDiff()  ── timelapse entre matrix snapshots
 | Semantic View | `semantic-matrix-view.service.ts`, `semantic-dependency-classifier.ts` |
 | Change Preview | `announcement-change-preview.service.ts` |
 | Draft Change Plan | `announcement-change-plan-link.service.ts` + adapter `bgp-announcement-preview.adapter.ts` |
+| Vendor Draft Commands | `announcement-vendor-draft.service.ts` + helpers de UI/markdown |
 | UI | `AnnouncementPanel`, `AnnouncementMatrixTable`, `ChangePreviewModal`, tabs semânticas |
 | Audit | `logAuditEvent`: `announcement_matrix_snapshot_refresh`, `announcement_change_preview_created`, `announcement_change_plan_draft_created` |
 | RBAC | `bgp.announcements.read` / `.refresh` / `.preview` / `.plan` |
@@ -163,6 +165,7 @@ Documentação detalhada: [Change Preview](./BGP_ANNOUNCEMENT_CHANGE_PREVIEW.md)
 | **Histórico** | Snapshots append-only; comparação timelapse read-only |
 | **Change Preview Modal** | Ticket markdown, diff lógico, copiar/baixar |
 | **Draft Change Plan** | Badge + link `/change-plans?highlight=`; workflow de revisão; sem execute |
+| **Vendor Draft Commands** | Seção `Comandos Propostos / Não Executados`; badge `Documental only`; cópia com confirmação textual |
 
 Banner: *"Read-only — origin/cliente para edição futura; upstreams só em auditoria. Sem SSH/SNMP neste painel."*
 

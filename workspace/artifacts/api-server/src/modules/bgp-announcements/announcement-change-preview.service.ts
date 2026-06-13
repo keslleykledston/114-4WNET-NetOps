@@ -49,6 +49,10 @@ import {
   detectPrependForUpstream,
   validatePrependCount,
 } from "./announcement-prepend-preview.service.js";
+import {
+  buildVendorDraftProposedCommands,
+  formatProposedCommandsMarkdown,
+} from "./announcement-vendor-draft.service.js";
 import type { ChangePreviewLogicalDiffItem, ChangePreviewPrependDiffEntry } from "./bgp-announcement.types.js";
 
 const AUDIT_ONLY_ROLES = new Set(["provider", "upstream", "ix", "cdn"]);
@@ -290,6 +294,10 @@ export function generateChangePreviewTicketMarkdown(
   preview: AnnouncementChangePreview & { riskHints?: string[] },
 ): string {
   const riskHints = preview.riskHints ?? [];
+  const proposedCommandsSection = formatProposedCommandsMarkdown({
+    proposedCommands: preview.proposedCommands ?? [],
+    warnings: preview.proposedCommandsWarnings ?? [],
+  });
   const prependSection = preview.actionType === "set_prepend" || preview.actionType === "clear_prepend"
     ? buildPrependTicketSection({
         actionType: preview.actionType,
@@ -347,6 +355,8 @@ export function generateChangePreviewTicketMarkdown(
     `- Status: ${preview.validation.status}`,
     ...preview.validation.errors.map((error) => `- ERRO: ${error}`),
     ...preview.validation.warnings.map((warning) => `- AVISO: ${warning}`),
+    "",
+    ...proposedCommandsSection,
     "",
     "## Dependências globais protegidas",
     ...(preview.protectedGlobals.length > 0
@@ -727,12 +737,23 @@ export async function createAnnouncementChangePreview(
     affectedCommunities,
     protectedGlobals,
     upstreamAuditImpact,
+    proposedCommands: [],
+    proposedCommandsWarnings: [],
+    dependencyScope: row.dependencyScope,
+    dependencyProtection: row.dependencyProtection,
+    dependencyReason: row.dependencyReason,
     validation,
     riskAssessment,
     ticketMarkdown: "",
     createdBy,
   };
 
+  const vendorDraft = buildVendorDraftProposedCommands({
+    preview: previewBody,
+    parsedConfig,
+  });
+  previewBody.proposedCommands = vendorDraft.proposedCommands;
+  previewBody.proposedCommandsWarnings = vendorDraft.warnings;
   previewBody.ticketMarkdown = generateChangePreviewTicketMarkdown({
     ...previewBody,
     createdAt: new Date().toISOString(),

@@ -9,6 +9,7 @@ Read-only flow to propose logical changes on **Cliente/ORIGIN** targets from the
 - Proposta de alteração (`announcementChangePreview`) com estado atual/proposto, diff lógico, riscos e ticket Markdown.
 - Persistência append-only em `bgp_announcement_change_previews`.
 - Compilação a partir de **snapshot persistido** + config parseada já no banco (quando disponível).
+- `proposedCommands[]` pode ser gerado apenas como documentação para revisão humana, com vendor draft explícito.
 - **Nenhum comando** é gerado para execução nesta fase como apply — o ticket é documentação operacional.
 
 ## O que não é
@@ -73,11 +74,14 @@ Inclui obrigatoriamente:
 - Estado atual / proposto / diff lógico
 - Riscos e validações
 - Globais protegidos e impacto upstream (auditoria)
+- Seção **Comandos Propostos / Não Executados** quando houver `proposedCommands[]`
 - Observações:
   - **Nenhum comando foi executado.**
   - Preview gerado a partir de snapshot persistido.
   - Objetos globais não devem ser removidos.
   - Upstreams são auditoria, não alvo de edição nesta fase.
+
+Ver formato: [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md)
 
 ## UI
 

@@ -73,6 +73,12 @@ Prepend preview (fase ACTION-COMPILER-PREPEND — 2026-06-10) — **✅ fechado*
 - Doc spec: [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND.md)
 - Closure: [`BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md`](./BGP_ANNOUNCEMENT_ACTION_COMPILER_PREPEND_CLOSURE.md) — commit `6b37e77`, smoke device 94 previews #10–11, plan #29
 
+Vendor draft commands (fase ACTION-COMPILER-VENDOR-DRAFT — 2026-06-13):
+
+- `announcement-vendor-draft.service.ts` — gera `proposedCommands[]` apenas como documentação revisável
+- UI/markdown — seção `Comandos Propostos / Não Executados` com confirmação textual antes da cópia
+- Doc spec: [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md)
+
 ---
 
 ## 3. Pipeline de coleta existente
@@ -242,6 +248,18 @@ buildBgpPolicyBindingsFromPeerModel(bgpModel, routePolicies, …)
 | Preview engine | `modules/provisioning/provisioning-preview.service.ts` |
 
 **Encaixe MVP 3:** `bgp_announcement_change_plans` espelha status draft → approved → executed; execução via **Connector** (não SSH direto da API).
+
+---
+
+### 6.5 Vendor draft commands
+
+| Serviço | Path | Reuso |
+|---------|------|-------|
+| Vendor draft compiler | `modules/bgp-announcements/announcement-vendor-draft.service.ts` | Geração documental de `proposedCommands[]` |
+| Markdown helper | `modules/bgp-announcements/announcement-vendor-draft.service.ts` | Seção `Comandos Propostos / Não Executados` |
+| UI helper | `features/bgp-announcements/proposed-commands.ts` | Copiar texto com aviso e confirmação textual |
+
+**Regra:** commands draft nunca entram em executor, queue ou Controlled Execution.
 
 ---
 

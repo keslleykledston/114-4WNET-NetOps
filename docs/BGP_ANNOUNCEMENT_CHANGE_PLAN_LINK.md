@@ -18,6 +18,9 @@ Inclui `set_prepend` e `clear_prepend` quando preview validation `ok` ou `warnin
 | Aprovação | N/A | Não — `draft` ≠ aprovado |
 | Persistência | `bgp_announcement_change_previews` | `change_plans` (+ snapshots/diffs) |
 | Ticket | Markdown operacional | Preservado em `metadata.ticketMarkdown` |
+| Comandos propostos | `proposedCommands[]` documental | Preservado em `snapshot` e `metadata` |
+
+Detalhes: [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md)
 
 ## Quem pode criar
 
@@ -76,6 +79,13 @@ Permite com warning:
 - risk high (com ack)
 - dados incompletos
 - `shared_requires_review`
+
+## Comandos propostos
+
+- `proposedCommands[]` é documental only.
+- O Change Plan preserva `proposedCommands` e `proposedCommandsWarnings`.
+- O ticket deve conter a seção **Comandos Propostos / Não Executados**.
+- O texto do ticket deve lembrar: **Nenhum comando foi executado.**
 
 ## Audit
 

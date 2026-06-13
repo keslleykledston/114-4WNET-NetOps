@@ -60,6 +60,12 @@ import {
   validateTargetForPreview,
 } from "../workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-change-preview.service.ts";
 import {
+  buildVendorDraftProposedCommands,
+  flattenProposedCommands,
+  formatProposedCommandsClipboardText,
+  formatProposedCommandsMarkdown,
+} from "../workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-vendor-draft.service.ts";
+import {
   buildChangePlanInputFromBgpPreview,
   isPreviewEligibleForChangePlan,
 } from "../workspace/artifacts/api-server/src/modules/change-plans/adapters/bgp-announcement-preview.adapter.ts";
@@ -146,12 +152,17 @@ function samplePrependPreview(overrides: Record<string, unknown> = {}) {
     affectedCommunities: [],
     protectedGlobals: [],
     upstreamAuditImpact: [],
+    proposedCommands: [],
+    proposedCommandsWarnings: [],
     validation: { status: "ok" as const, ok: true, errors: [], warnings: [] },
     riskAssessment: { level: "medium" as const, blocked: false, reasons: riskHints, summary: "prepend preview" },
     ticketMarkdown: "",
     createdBy: null,
   };
   const preview = { ...base, ...overrides } as import("../workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcement.types.ts").AnnouncementChangePreview;
+  const vendorDraft = buildVendorDraftProposedCommands({ preview, parsedConfig: {} as never });
+  preview.proposedCommands = vendorDraft.proposedCommands;
+  preview.proposedCommandsWarnings = vendorDraft.warnings;
   preview.ticketMarkdown = generateChangePreviewTicketMarkdown({ ...preview, createdAt: new Date().toISOString() });
   return preview;
 }
@@ -175,6 +186,8 @@ function sampleAnnouncementPreview(overrides: Record<string, unknown> = {}) {
     affectedCommunities: [],
     protectedGlobals: [],
     upstreamAuditImpact: [],
+    proposedCommands: [],
+    proposedCommandsWarnings: [],
     validation: { status: "ok", ok: true, errors: [], warnings: [] },
     riskAssessment: { level: "low", blocked: false, reasons: [], summary: "ok" },
     ticketMarkdown: "# Preview\n\nNenhum comando foi executado.",
@@ -1337,11 +1350,14 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
       },
     },
     {
-      name: "no vendor command generated",
+      name: "vendor draft commands are documented only",
       fn: () => {
         const preview = samplePrependPreview();
-        assert(!preview.ticketMarkdown.includes("route-policy"), "no route-policy command");
-        assert(!preview.ticketMarkdown.toLowerCase().includes("apply as-path"), "no apply as-path");
+        assert(preview.proposedCommands.length > 0, "preview commands");
+        assert(preview.ticketMarkdown.includes("## Comandos Propostos / Não Executados"), "commands section");
+        assert(preview.ticketMarkdown.includes("# PROPOSTO - NAO EXECUTADO - REVISAR MANUALMENTE"), "documental header");
+        assert(preview.ticketMarkdown.includes("route-policy"), "documental pseudo command");
+        assert(preview.ticketMarkdown.includes("Nenhum comando foi executado"), "no exec notice");
       },
     },
     {
@@ -1357,6 +1373,170 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
         }
         assert(!prependFile.includes("compileAnnouncementPreview"), "prepend file no vendor compiler");
         assert(!prependFile.includes("route-policy"), "prepend file no vendor script");
+      },
+    },
+  ],
+  "vendor-draft": [
+    {
+      name: "huawei vendor draft emits documented prepend commands",
+      fn: () => {
+        const preview = samplePrependPreview();
+        const result = buildVendorDraftProposedCommands({ preview, parsedConfig: {} as never });
+        assert(result.vendor === "huawei_vrp", "vendor");
+        assert(result.proposedCommands.length > 0, "commands");
+        assert(result.proposedCommands[0].scope === "documental_only", "scope");
+        assert(result.proposedCommands[0].safety === "not_executable", "safety");
+        assert(result.proposedCommands[0].commands.some((command) => command.line.includes("route-policy")), "pseudo command");
+        assert(result.warnings.some((warning) => warning.includes("revisão humana")), "warnings");
+      },
+    },
+    {
+      name: "unsupported vendor returns empty proposedCommands",
+      fn: () => {
+        const preview = samplePrependPreview();
+        const result = buildVendorDraftProposedCommands({ preview, parsedConfig: null });
+        assert(result.vendor === "unsupported_vendor", "unsupported vendor");
+        assert(result.proposedCommands.length === 0, "no commands");
+        assert(result.warnings.some((warning) => warning.includes("unsupported_vendor")), "unsupported warning");
+      },
+    },
+    {
+      name: "add/remove/block actions generate documented commands",
+      fn: () => {
+        const scenarios = [
+          {
+            actionType: "add_community" as const,
+            dependencyScope: "customer_specific" as const,
+            currentCommunities: ["64777:51001"],
+            proposedCommunities: ["64777:51001", "64777:51003"],
+          },
+          {
+            actionType: "remove_community" as const,
+            dependencyScope: "circuit_specific" as const,
+            currentCommunities: ["64777:51001", "64777:51003"],
+            proposedCommunities: ["64777:51001"],
+          },
+          {
+            actionType: "block_announcement" as const,
+            dependencyScope: "customer_specific" as const,
+            currentCommunities: ["64777:51001"],
+            proposedCommunities: ["64777:51001"],
+          },
+        ];
+
+        for (const scenario of scenarios) {
+          const preview = sampleAnnouncementPreview({
+            actionType: scenario.actionType,
+            dependencyScope: scenario.dependencyScope,
+            currentState: {
+              communities: scenario.currentCommunities,
+              cellStates: { "01": "On" },
+              prependCounts: { "01": null },
+              announcementAllowed: true,
+              notes: [],
+            },
+            proposedState: {
+              communities: scenario.proposedCommunities,
+              cellStates: { "01": "On" },
+              prependCounts: { "01": null },
+              announcementAllowed: scenario.actionType !== "block_announcement",
+              notes: [],
+            },
+            validation: { status: "ok", ok: true, errors: [], warnings: [] },
+            riskAssessment: { level: "low", blocked: false, reasons: [], summary: "ok" },
+          });
+          const result = buildVendorDraftProposedCommands({ preview, parsedConfig: {} as never });
+          assert(result.proposedCommands.length > 0, `${scenario.actionType} commands`);
+          assert(result.proposedCommands[0].commands.some((command) => command.line.includes("Huawei VRP")), `${scenario.actionType} documented`);
+        }
+      },
+    },
+    {
+      name: "blocked preview returns empty proposedCommands",
+      fn: () => {
+        const preview = samplePrependPreview({
+          targetRole: "provider",
+          targetEditMode: "audit_only",
+          validation: { status: "blocked", ok: false, errors: ["blocked"], warnings: [] },
+          riskAssessment: { level: "blocked", blocked: true, reasons: ["blocked"], summary: "blocked" },
+        });
+        const result = buildVendorDraftProposedCommands({ preview, parsedConfig: {} as never });
+        assert(result.proposedCommands.length === 0, "blocked preview no commands");
+      },
+    },
+    {
+      name: "protected_global removal returns empty proposedCommands",
+      fn: () => {
+        const preview = samplePrependPreview({
+          actionType: "remove_community",
+          dependencyProtection: "protected_global",
+        });
+        const result = buildVendorDraftProposedCommands({ preview, parsedConfig: {} as never });
+        assert(result.proposedCommands.length === 0, "protected global no commands");
+      },
+    },
+    {
+      name: "clear_prepend unknown before stays empty",
+      fn: () => {
+        const preview = samplePrependPreview({
+          actionType: "clear_prepend",
+          upstreamCircuitId: "99",
+          currentState: {
+            ...samplePrependPreview().currentState,
+            prependCounts: { "99": null },
+          },
+          proposedState: {
+            ...samplePrependPreview().proposedState,
+            prependCounts: { "99": null },
+          },
+        });
+        const result = buildVendorDraftProposedCommands({ preview, parsedConfig: {} as never });
+        assert(result.proposedCommands.length === 0, "unknown before no command");
+        assert(result.warnings.some((warning) => warning.includes("before")), "before warning");
+      },
+    },
+    {
+      name: "ticket and change plan preserve proposedCommands",
+      fn: () => {
+        const preview = samplePrependPreview();
+        const planInput = buildChangePlanInputFromBgpPreview({ preview, previewId: 11 });
+        assert(Array.isArray(planInput.metadata?.proposedCommands), "metadata commands");
+        assert(Array.isArray(planInput.snapshot.proposedCommands), "snapshot commands");
+        assert(String(planInput.metadata?.ticketMarkdown).includes("Comandos Propostos / Não Executados"), "ticket section");
+      },
+    },
+    {
+      name: "proposedCommands formatter stays documental",
+      fn: () => {
+        const preview = samplePrependPreview();
+        const text = formatProposedCommandsClipboardText({
+          proposedCommands: preview.proposedCommands,
+          warnings: preview.proposedCommandsWarnings,
+        });
+        assert(text.includes("PROPOSTO - NAO EXECUTADO"), "header");
+        assert(text.includes("Nenhum comando foi executado"), "no exec");
+        assert(flattenProposedCommands(preview.proposedCommands).some((line) => line.includes("route-policy")), "flattened command");
+        assert(formatProposedCommandsMarkdown({ proposedCommands: preview.proposedCommands }).includes("## Comandos Propostos / Não Executados"), "markdown section");
+      },
+    },
+    {
+      name: "vendor draft service avoids ssh snmp connector controlled execution",
+      fn: () => {
+        const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+        const file = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/announcement-vendor-draft.service.ts"), "utf8");
+        for (const token of ["ssh2", "net-snmp", "connector", "controlledExecution", "SNMP", "SSH"]) {
+          assert(!file.toLowerCase().includes(token.toLowerCase()), `must not reference ${token}`);
+        }
+      },
+    },
+    {
+      name: "routes stay execute-free",
+      fn: () => {
+        const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+        const file = readFileSync(path.join(root, "workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcement.routes.ts"), "utf8");
+        for (const token of ["execute", "apply", "controlledExecution"]) {
+          assert(!file.toLowerCase().includes(token.toLowerCase()), `must not reference ${token}`);
+        }
       },
     },
   ],
@@ -1455,6 +1635,7 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
         const input = buildChangePlanInputFromBgpPreview({ preview, previewId: 7 });
         assert(Array.isArray(input.metadata?.logicalDiff), "diff array");
         assert(String(input.metadata?.ticketMarkdown).includes("Nenhum comando foi executado"), "ticket");
+        assert(Array.isArray(input.metadata?.proposedCommands), "proposedCommands array");
       },
     },
     {

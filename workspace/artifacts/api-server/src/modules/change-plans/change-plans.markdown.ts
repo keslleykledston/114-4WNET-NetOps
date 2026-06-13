@@ -1,5 +1,7 @@
 import type { ChangePlanDetail, ChangePlanSnapshotPayload } from "./change-plans.types.js";
 import { summarizeDiffForMarkdown } from "./change-plans.diff-engine.js";
+import { formatProposedCommandsMarkdown } from "../bgp-announcements/announcement-vendor-draft.service.js";
+import type { ProposedCommandSet } from "../bgp-announcements/bgp-announcement.types.js";
 
 export function buildChangePlanMarkdown(plan: ChangePlanDetail): string {
   const snapshot = plan.snapshot;
@@ -33,6 +35,19 @@ export function buildChangePlanMarkdown(plan: ChangePlanDetail): string {
     lines.push("");
     lines.push("### Warnings");
     for (const warning of snapshot.impact.warnings) lines.push(`- ${warning}`);
+  }
+  const proposedCommands = snapshot.proposedCommands ?? (Array.isArray(plan.metadata["proposedCommands"])
+    ? plan.metadata["proposedCommands"] as ProposedCommandSet[]
+    : []);
+  const proposedCommandWarnings = snapshot.proposedCommandsWarnings ?? (Array.isArray(plan.metadata["proposedCommandsWarnings"])
+    ? plan.metadata["proposedCommandsWarnings"] as string[]
+    : []);
+  if (plan.module === "bgp_announcements" || (proposedCommands?.length ?? 0) > 0 || proposedCommandWarnings.length > 0) {
+    lines.push("");
+    lines.push(...formatProposedCommandsMarkdown({
+      proposedCommands: proposedCommands ?? [],
+      warnings: proposedCommandWarnings,
+    }));
   }
   lines.push("");
   lines.push("## Dependências exclusivas");

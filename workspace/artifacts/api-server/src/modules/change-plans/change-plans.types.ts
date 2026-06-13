@@ -79,6 +79,8 @@ export interface ChangeDiffResult {
   };
 }
 
+import type { ProposedCommandSet } from "../bgp-announcements/bgp-announcement.types.js";
+
 export interface ChangePlanSnapshotPayload {
   deviceId: number;
   hostname: string | null;
@@ -96,6 +98,8 @@ export interface ChangePlanSnapshotPayload {
   extcommunityFilters: Array<{ name: string }>;
   globalPreserved: Array<{ type: string; name: string; reason?: string | null }>;
   suggestedScript: string[];
+  proposedCommands?: ProposedCommandSet[];
+  proposedCommandsWarnings?: string[];
   suggestedRollback: ChangePlanRollbackDocument;
   validations: {
     before: string[];
@@ -158,6 +162,8 @@ export interface BgpPreviewChangePlanLinkSummary {
   riskLevel: string;
   ticketMarkdown: string;
   logicalDiff: string[];
+  proposedCommands?: ProposedCommandSet[];
+  proposedCommandsWarnings?: string[];
   warnings: string[];
   createdAt: string;
   createdBy: string | null;

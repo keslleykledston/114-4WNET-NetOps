@@ -27,6 +27,10 @@ import type {
   ChangePreviewLogicalDiffItem,
   MatrixRow,
 } from "./announcement-types";
+import {
+  formatProposedCommandsClipboardText,
+  proposedCommandConfidenceLabel,
+} from "./proposed-commands";
 
 const ACTION_OPTIONS: Array<{ value: ChangePreviewActionType; label: string }> = [
   { value: "set_community", label: "Definir community (estado)" },
@@ -113,6 +117,9 @@ export function ChangePreviewModal({
   const needsNewState = actionType === "set_community";
   const needsPrependCount = actionType === "set_prepend";
   const isPrependAction = actionType === "set_prepend" || actionType === "clear_prepend";
+  const proposedCommands = preview?.proposedCommands ?? [];
+  const proposedCommandWarnings = preview?.proposedCommandsWarnings ?? [];
+  const primaryProposedCommand = proposedCommands[0] ?? null;
   const canCreatePlan = Boolean(
     planEnabled
     && onCreatePlan
@@ -159,6 +166,21 @@ export function ChangePreviewModal({
     anchor.download = `bgp-change-preview-${preview.id ?? deviceId}-${preview.targetId}.md`;
     anchor.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function handleCopyProposedCommands() {
+    if (!preview) return;
+    const confirmed = window.confirm("Entendo que estes comandos não foram executados e exigem revisão humana.");
+    if (!confirmed) return;
+    try {
+      const text = formatProposedCommandsClipboardText({
+        proposedCommands,
+        warnings: proposedCommandWarnings,
+      });
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao copiar comandos");
+    }
   }
 
   async function handleCreatePlan() {
@@ -292,6 +314,13 @@ export function ChangePreviewModal({
                   Risco: {preview.riskAssessment.level}
                 </Badge>
                 <Badge variant="secondary">{preview.validation.status}</Badge>
+                <Badge variant="outline">Documental only</Badge>
+                {primaryProposedCommand ? (
+                  <>
+                    <Badge variant="outline">{primaryProposedCommand.vendor}</Badge>
+                    <Badge variant="outline">Confidence: {proposedCommandConfidenceLabel(primaryProposedCommand.confidence)}</Badge>
+                  </>
+                ) : null}
                 {preview.id ? <Badge variant="outline">Preview #{preview.id}</Badge> : null}
                 {planLink ? (
                   <Badge variant="secondary">
@@ -381,6 +410,58 @@ export function ChangePreviewModal({
                   {preview.ticketMarkdown}
                 </pre>
               </div>
+
+              <div>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="font-medium text-foreground">Comandos Propostos / Não Executados</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">Documental only</Badge>
+                    {primaryProposedCommand ? (
+                      <Badge variant="secondary">Confidence: {proposedCommandConfidenceLabel(primaryProposedCommand.confidence)}</Badge>
+                    ) : null}
+                  </div>
+                </div>
+                {proposedCommandWarnings.length > 0 ? (
+                  <ul className="mb-2 list-inside list-disc text-[11px] text-amber-200/90">
+                    {proposedCommandWarnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {proposedCommands.length > 0 ? (
+                  <div className="space-y-3">
+                    {proposedCommands.map((set, index) => (
+                      <div key={`${set.commandSetName}:${index}`} className="rounded-md border border-border bg-muted/20 p-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">{set.vendor}</Badge>
+                          <Badge variant="outline">{set.scope}</Badge>
+                          <Badge variant="outline">{set.safety}</Badge>
+                          <Badge variant="secondary">Confidence: {proposedCommandConfidenceLabel(set.confidence)}</Badge>
+                          <span className="text-[11px] text-muted-foreground">{set.commandSetName}</span>
+                        </div>
+                        <div className="mt-2 space-y-1 font-mono text-[11px] text-foreground">
+                          {set.commands.map((command) => (
+                            <pre key={command.line} className="whitespace-pre-wrap rounded bg-black/30 p-2">
+                              {command.line}
+                            </pre>
+                          ))}
+                        </div>
+                        {set.warnings.length > 0 ? (
+                          <ul className="mt-2 list-inside list-disc text-[11px] text-amber-200/90">
+                            {set.warnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-dashed border-border bg-muted/10 p-3 text-[11px] text-muted-foreground">
+                    (nenhum comando proposto)
+                  </div>
+                )}
+              </div>
             </div>
           ) : null}
         </div>
@@ -399,6 +480,14 @@ export function ChangePreviewModal({
               <Button variant="outline" size="sm" onClick={handleDownloadMarkdown}>
                 <Download className="mr-2 h-3.5 w-3.5" />
                 Baixar markdown
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void handleCopyProposedCommands()}
+                disabled={(preview?.proposedCommands?.length ?? 0) === 0}
+              >
+                Copiar comandos
               </Button>
             </>
           ) : null}

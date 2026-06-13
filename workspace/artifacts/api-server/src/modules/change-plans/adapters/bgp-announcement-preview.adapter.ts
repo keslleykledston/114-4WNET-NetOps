@@ -1,5 +1,6 @@
 import type { AnnouncementChangePreview } from "../../bgp-announcements/bgp-announcement.types.js";
 import { logicalDiffItemsToStrings } from "../../bgp-announcements/announcement-prepend-preview.service.js";
+import { flattenProposedCommands } from "../../bgp-announcements/announcement-vendor-draft.service.js";
 import type {
   ChangePlanCreateInput,
   ChangePlanItemRecord,
@@ -94,6 +95,8 @@ export function buildChangePlanInputFromBgpPreview(input: {
       workflowStatus: "draft",
       ticketMarkdown: preview.ticketMarkdown,
       logicalDiff: logicalDiffItemsToStrings(preview.logicalDiff),
+      proposedCommands: preview.proposedCommands as ChangePlanCreateInput["snapshot"]["proposedCommands"],
+      proposedCommandsWarnings: preview.proposedCommandsWarnings,
       title: buildBgpAnnouncementPreviewTitle(preview),
       description: buildBgpAnnouncementPreviewDescription(preview),
     },
@@ -114,7 +117,9 @@ export function buildChangePlanInputFromBgpPreview(input: {
         name: item.objectName,
         reason: item.reason,
       })),
-      suggestedScript: [],
+      suggestedScript: flattenProposedCommands(preview.proposedCommands),
+      proposedCommands: preview.proposedCommands as ChangePlanCreateInput["snapshot"]["proposedCommands"],
+      proposedCommandsWarnings: preview.proposedCommandsWarnings,
       suggestedRollback: rollback,
       validations: {
         before: [`Preview validation: ${preview.validation.status}`],

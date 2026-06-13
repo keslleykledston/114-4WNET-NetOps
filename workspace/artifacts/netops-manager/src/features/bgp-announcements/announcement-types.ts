@@ -324,6 +324,30 @@ export type ChangePreviewActionType =
   | "audit_only_note";
 
 export type ChangePreviewRiskLevel = "blocked" | "high" | "medium" | "low";
+export type ProposedCommandConfidence = "low" | "medium" | "high";
+export type ProposedCommandVendor = "huawei_vrp";
+export type ProposedCommandScope = "documental_only";
+export type ProposedCommandSafety = "not_executable";
+export type ProposedCommandKind = "candidate" | "comment";
+
+export interface ProposedCommandLine {
+  line: string;
+  kind: ProposedCommandKind;
+  confidence: ProposedCommandConfidence;
+  requiresHumanReview: true;
+  notes: string[];
+}
+
+export interface ProposedCommandSet {
+  vendor: ProposedCommandVendor;
+  scope: ProposedCommandScope;
+  safety: ProposedCommandSafety;
+  commandSetName: string;
+  confidence: ProposedCommandConfidence;
+  actionType: ChangePreviewActionType;
+  commands: ProposedCommandLine[];
+  warnings: string[];
+}
 
 export interface ChangePreviewValidation {
   status: "ok" | "blocked" | "unsupported_preview" | "warning";
@@ -382,10 +406,15 @@ export interface AnnouncementChangePreview {
   proposedState: ChangePreviewState;
   logicalDiff: ChangePreviewLogicalDiffItem[];
   riskHints?: string[];
+  dependencyScope?: DependencyScope;
+  dependencyProtection?: DependencyProtection;
+  dependencyReason?: string;
   affectedPolicies: string[];
   affectedCommunities: string[];
   protectedGlobals: ProtectedGlobalDependency[];
   upstreamAuditImpact: UpstreamAuditImpactItem[];
+  proposedCommands: ProposedCommandSet[];
+  proposedCommandsWarnings?: string[];
   validation: ChangePreviewValidation;
   riskAssessment: ChangePreviewRiskAssessment;
   ticketMarkdown: string;
@@ -412,6 +441,7 @@ export interface BgpPreviewChangePlanLinkSummary {
   riskLevel: string;
   ticketMarkdown: string;
   logicalDiff: string[];
+  proposedCommands?: ProposedCommandSet[];
   warnings: string[];
   createdAt: string;
   createdBy: string | null;

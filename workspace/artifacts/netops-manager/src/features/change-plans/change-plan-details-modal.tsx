@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { AuthRole } from "@/components/auth-provider";
 import { applyReviewAction, getChangePlan } from "./change-plan-api";
 import type { ChangePlanDetail, ChangePlanItemRecord, ChangePlanWorkflowStatus, ReviewAction } from "./change-plan-types";
+import type { ProposedCommandSet } from "../bgp-announcements/announcement-types";
 import {
   REVIEW_ACTION_LABELS,
   WORKFLOW_STATUS_LABELS,
@@ -16,6 +17,10 @@ import {
   workflowStatusTone,
 } from "./change-plan-workflow-utils";
 import { cn } from "@/lib/utils";
+import {
+  formatProposedCommandsClipboardText,
+  proposedCommandConfidenceLabel,
+} from "../bgp-announcements/proposed-commands";
 
 interface ChangePlanDetailsModalProps {
   changePlanId: number | null;
@@ -156,6 +161,24 @@ export function ChangePlanDetailsModal({
 
   const logicalDiffLines = plan?.logicalDiff ?? (Array.isArray(plan?.metadata?.logicalDiff) ? plan.metadata.logicalDiff as string[] : []);
   const ticketMarkdown = plan?.ticketMarkdown ?? (typeof plan?.metadata?.ticketMarkdown === "string" ? plan.metadata.ticketMarkdown : null);
+  const proposedCommands = (plan?.snapshot?.proposedCommands as ProposedCommandSet[] | undefined)
+    ?? (Array.isArray(plan?.metadata?.["proposedCommands"]) ? plan.metadata["proposedCommands"] as ProposedCommandSet[] : []);
+  const proposedCommandWarnings = plan?.snapshot?.proposedCommandsWarnings
+    ?? (Array.isArray(plan?.metadata?.["proposedCommandsWarnings"]) ? plan.metadata["proposedCommandsWarnings"] as string[] : []);
+  const showProposedCommandsSection = (plan?.module === "bgp_announcements" || proposedCommands.length > 0 || proposedCommandWarnings.length > 0);
+
+  async function handleCopyProposedCommands() {
+    const confirmed = window.confirm("Entendo que estes comandos não foram executados e exigem revisão humana.");
+    if (!confirmed) return;
+    try {
+      await navigator.clipboard.writeText(formatProposedCommandsClipboardText({
+        proposedCommands,
+        warnings: proposedCommandWarnings,
+      }));
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Falha ao copiar comandos");
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -229,6 +252,72 @@ export function ChangePlanDetailsModal({
                   <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-slate-800 bg-[#0f111a] p-3 text-xs text-emerald-100">
                     {ticketMarkdown}
                   </pre>
+                </section>
+              ) : null}
+
+              {showProposedCommandsSection ? (
+                <section className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-300">Comandos Propostos / Não Executados</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="text-[10px] uppercase">Documental only</Badge>
+                      {proposedCommands[0] ? (
+                        <Badge variant="secondary" className="text-[10px]">
+                          Confidence: {proposedCommandConfidenceLabel(proposedCommands[0].confidence)}
+                        </Badge>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void handleCopyProposedCommands()}
+                        disabled={proposedCommands.length === 0}
+                      >
+                        Copiar comandos
+                      </Button>
+                    </div>
+                  </div>
+                  {proposedCommandWarnings.length > 0 ? (
+                    <ul className="list-inside list-disc rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100">
+                      {proposedCommandWarnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {proposedCommands.length > 0 ? (
+                    <div className="space-y-3">
+                      {proposedCommands.map((set, index) => (
+                        <div key={`${set.commandSetName}:${index}`} className="rounded-md border border-slate-800 bg-[#0f111a] p-3 text-xs">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="text-[10px]">{set.vendor}</Badge>
+                            <Badge variant="outline" className="text-[10px]">{set.scope}</Badge>
+                            <Badge variant="outline" className="text-[10px]">{set.safety}</Badge>
+                            <Badge variant="secondary" className="text-[10px]">
+                              Confidence: {proposedCommandConfidenceLabel(set.confidence)}
+                            </Badge>
+                            <span className="text-slate-400">{set.commandSetName}</span>
+                          </div>
+                          <div className="mt-2 space-y-2">
+                            {set.commands.map((command) => (
+                              <pre key={command.line} className="whitespace-pre-wrap rounded-md border border-slate-800 bg-slate-950/60 p-2 font-mono text-[11px] text-slate-200">
+                                {command.line}
+                              </pre>
+                            ))}
+                          </div>
+                          {set.warnings.length > 0 ? (
+                            <ul className="mt-2 list-inside list-disc text-xs text-amber-200">
+                              {set.warnings.map((warning) => (
+                                <li key={warning}>{warning}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-3 text-xs text-slate-400">
+                      (nenhum comando proposto)
+                    </div>
+                  )}
                 </section>
               ) : null}
 

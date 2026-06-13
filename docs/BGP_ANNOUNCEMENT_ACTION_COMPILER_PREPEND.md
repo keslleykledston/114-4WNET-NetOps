@@ -117,6 +117,7 @@ Seção obrigatória **## Prepend / AS-PATH** com:
 - Prepend detectado apenas quando `cell.prependCount` existe no snapshot
 - Export/upstream permanecem `audit_only`
 - Vendor Command Compiler = fase futura explícita
+- Quando houver draft documental vendor, o comando continua não executável e deve aparecer apenas como `proposedCommands[]` revisável
 
 ---
 

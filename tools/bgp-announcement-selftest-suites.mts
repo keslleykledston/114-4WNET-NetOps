@@ -1235,18 +1235,33 @@ const suites: Record<string, Array<{ name: string; fn: () => void }>> = {
       },
     },
     {
-      name: "provider upstream IX CDN blocked",
+      name: "provider upstream IX CDN blocked for set/clear prepend",
       fn: () => {
-        for (const role of ["provider", "upstream", "ix", "cdn"] as const) {
-          const row = {
-            ...sampleEditableOriginRow(),
-            targetRole: role,
-            targetEditMode: "audit_only" as const,
-            modifiable: false,
-          };
-          const validation = validateTargetForPreview(row, "set_prepend", undefined);
-          assert(validation.status === "blocked", `${role} blocked`);
+        for (const actionType of ["set_prepend", "clear_prepend"] as const) {
+          for (const role of ["provider", "upstream", "ix", "cdn"] as const) {
+            const row = {
+              ...sampleEditableOriginRow(),
+              targetRole: role,
+              targetEditMode: "audit_only" as const,
+              modifiable: false,
+            };
+            const validation = validateTargetForPreview(row, actionType, undefined);
+            assert(!validation.ok && validation.status === "blocked", `${role} ${actionType} blocked`);
+          }
         }
+      },
+    },
+    {
+      name: "blocked prepend preview does not create plan",
+      fn: () => {
+        const preview = samplePrependPreview({
+          actionType: "clear_prepend",
+          targetRole: "provider",
+          targetEditMode: "audit_only",
+          validation: { status: "blocked", ok: false, errors: ["blocked"], warnings: [] },
+          riskAssessment: { level: "blocked", blocked: true, reasons: ["blocked"], summary: "blocked" },
+        });
+        assert(!isPreviewEligibleForChangePlan(preview).ok, "blocked prepend preview");
       },
     },
     {

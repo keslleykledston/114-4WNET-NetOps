@@ -4,6 +4,8 @@
 **Branch:** `codex/bgp-peer-dedupe`  
 **Status:** ✅ MVP read-only fechado — validado em runtime (device 94)
 
+> Operational demo closure: [`BGP_ANNOUNCEMENTS_OPERATIONAL_DEMO_CLOSURE.md`](./BGP_ANNOUNCEMENTS_OPERATIONAL_DEMO_CLOSURE.md)
+
 Documento oficial de encerramento da fase read-only da BGP Announcement Matrix. Nenhuma execução em device, apply ou Controlled Execution faz parte deste MVP.
 
 ---

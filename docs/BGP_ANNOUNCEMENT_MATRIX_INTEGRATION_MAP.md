@@ -80,6 +80,10 @@ Vendor draft commands (fase ACTION-COMPILER-VENDOR-DRAFT — 2026-06-13):
 - Doc spec: [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md)
 - Closure: [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md)
 
+Operational demo closure:
+
+- [`BGP_ANNOUNCEMENTS_OPERATIONAL_DEMO_CLOSURE.md`](./BGP_ANNOUNCEMENTS_OPERATIONAL_DEMO_CLOSURE.md) — consolida trilha completa, smoke manual e garantias finais
+
 ---
 
 ## 3. Pipeline de coleta existente

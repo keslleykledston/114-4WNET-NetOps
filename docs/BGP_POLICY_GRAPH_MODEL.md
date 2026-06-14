@@ -155,3 +155,9 @@ Comparação read-only entre snapshots materializados da matriz:
 - Não altera grafo, snapshots, preview ou change plan.
 
 Docs: [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF.md) · Closure: [`BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md`](./BGP_ANNOUNCEMENT_SNAPSHOT_TIMELAPSE_DIFF_CLOSURE.md)
+
+## Operational demo closure
+
+Consolidado fim-a-fim da trilha:
+
+- [`BGP_ANNOUNCEMENTS_OPERATIONAL_DEMO_CLOSURE.md`](./BGP_ANNOUNCEMENTS_OPERATIONAL_DEMO_CLOSURE.md)

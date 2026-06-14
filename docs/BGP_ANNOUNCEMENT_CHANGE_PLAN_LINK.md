@@ -114,4 +114,8 @@ node tools/change-plans-review-workflow-selftest.mjs
 ## Vendor Draft
 
 Ver [`BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS.md) e [`closure`](./BGP_ANNOUNCEMENT_VENDOR_DRAFT_COMMANDS_CLOSURE.md).
+
+## Operational Demo
+
+Ver [`BGP_ANNOUNCEMENTS_OPERATIONAL_DEMO_CLOSURE.md`](./BGP_ANNOUNCEMENTS_OPERATIONAL_DEMO_CLOSURE.md) para a trilha fim-a-fim e demo operacional.
 ```

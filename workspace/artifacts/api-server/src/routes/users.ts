@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
-import { hashPassword, serializeUser } from "../lib/auth.js";
+import { findUserByEmail, hashPassword, serializeUser } from "../lib/auth.js";
 
 const router = Router();
 
@@ -26,6 +26,12 @@ router.post("/users", async (req, res) => {
 
   if (!name || !email || !password) {
     res.status(400).json({ error: "Name, email and password are required" });
+    return;
+  }
+
+  const existing = await findUserByEmail(email);
+  if (existing) {
+    res.status(409).json({ error: "Email already in use" });
     return;
   }
 
@@ -59,7 +65,19 @@ router.patch("/users/:id", async (req, res) => {
   const body = req.body && typeof req.body === "object" ? req.body as Record<string, unknown> : {};
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof body.name === "string") updateData.name = body.name.trim();
-  if (typeof body.email === "string") updateData.email = body.email.trim().toLowerCase();
+  if (typeof body.email === "string") {
+    const email = body.email.trim().toLowerCase();
+    if (!email) {
+      res.status(400).json({ error: "Email is required" });
+      return;
+    }
+    const existing = await findUserByEmail(email);
+    if (existing && existing.id !== id) {
+      res.status(409).json({ error: "Email already in use" });
+      return;
+    }
+    updateData.email = email;
+  }
   if (typeof body.password === "string" && body.password.trim()) updateData.passwordHash = hashPassword(body.password);
   if (body.role === "admin" || body.role === "operator" || body.role === "viewer") updateData.role = body.role;
   if (typeof body.enabled === "boolean") updateData.enabled = body.enabled;

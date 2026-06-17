@@ -6,6 +6,8 @@ export interface ParserContext {
   globalVlans?: Set<number>;
   hasGlobalVlanEvidence?: boolean;
   switchingVlans?: Set<number>;
+  /** Distinct physical/logical interfaces carrying each VLAN via trunk/hybrid. */
+  switchingVlanPortCounts?: Map<number, number>;
   macVlans?: Set<number>;
   l2vcClientInterfaces?: Set<string>;
   vsiInterfaces?: Set<string>;
@@ -54,19 +56,65 @@ export function parseGlobalVlans(configOutput?: string, vlanOutput?: string): {
 }
 
 export function parseSwitchingVlans(configOutput?: string): Set<number> {
-  const vlans = new Set<number>();
-  if (!configOutput) return vlans;
+  const counts = parseSwitchingVlanPortCounts(configOutput);
+  return new Set(counts.keys());
+}
+
+/** Count how many interface blocks carry each VLAN (trunk/hybrid/default). */
+export function parseSwitchingVlanPortCounts(configOutput?: string): Map<number, number> {
+  const ifaceByVlan = new Map<number, Set<string>>();
+  if (!configOutput) return new Map();
+
+  let currentInterface: string | null = null;
   for (const line of configOutput.split(/\r?\n/)) {
-    const content = line.trim();
-    const trunk = content.match(/^port\s+trunk\s+allow-pass\s+vlan\s+(.+)$/i);
-    if (trunk) {
-      addVlanList(vlans, trunk[1]);
+    const trimmed = line.trim();
+    const ifaceMatch = trimmed.match(/^interface\s+(\S+)/i);
+    if (ifaceMatch) {
+      currentInterface = ifaceMatch[1];
       continue;
     }
-    const def = content.match(/^port\s+default\s+vlan\s+(\d{1,4})$/i);
-    if (def) addVlan(vlans, def[1]);
+    if (trimmed === "#") {
+      currentInterface = null;
+      continue;
+    }
+    if (!currentInterface) continue;
+
+    const vlanListMatch =
+      trimmed.match(/^port\s+hybrid\s+tagged\s+vlan\s+(.+)$/i) ??
+      trimmed.match(/^port\s+hybrid\s+untagged\s+vlan\s+(.+)$/i) ??
+      trimmed.match(/^port\s+trunk\s+allow-pass\s+vlan\s+(.+)$/i);
+    if (vlanListMatch) {
+      const vlanIds = expandVlanTokens(vlanListMatch[1]);
+      for (const vlan of vlanIds) {
+        const set = ifaceByVlan.get(vlan) ?? new Set<string>();
+        set.add(currentInterface);
+        ifaceByVlan.set(vlan, set);
+      }
+      continue;
+    }
+
+    const defVlan = trimmed.match(/^port\s+default\s+vlan\s+(\d{1,4})$/i);
+    if (defVlan) {
+      const vlan = normalizeServiceVlanId(defVlan[1]);
+      if (vlan !== null) {
+        const set = ifaceByVlan.get(vlan) ?? new Set<string>();
+        set.add(currentInterface);
+        ifaceByVlan.set(vlan, set);
+      }
+    }
   }
-  return vlans;
+
+  const counts = new Map<number, number>();
+  for (const [vlan, ifaces] of ifaceByVlan) {
+    counts.set(vlan, ifaces.size);
+  }
+  return counts;
+}
+
+function expandVlanTokens(value: string): number[] {
+  const out = new Set<number>();
+  addVlanList(out, value);
+  return [...out];
 }
 
 export function parseMacVlans(output?: string): Set<number> {

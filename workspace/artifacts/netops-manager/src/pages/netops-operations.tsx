@@ -25,11 +25,11 @@ import { BgpPanel } from "@/features/bgp/bgp-panel";
 import { FiltersPanel } from "@/features/bgp/filters-panel";
 import { CommunitiesPanel } from "@/features/communities/communities-placeholder-panel";
 import { InterfacesPanel } from "@/features/device-inventory/interfaces-panel";
-import { OperationalLogsPanel } from "@/features/device-inventory/operational-logs-panel";
 import { OperationalSummary } from "@/features/device-inventory/operational-summary";
 import { DeviceImportModal } from "@/features/devices/device-import-modal";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
-import { NetopsTree, type NetopsTreeSelection, viewLabel } from "@/features/netops-tree";
+import { NetopsTree, type NetopsTreeSelection, viewLabel, isNetopsTreeView } from "@/features/netops-tree";
+import { AnnouncementPanel } from "@/features/bgp-announcements/AnnouncementPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -115,12 +115,23 @@ export default function NetopsOperations() {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
   }, []);
 
+  const initialView = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get("view");
+    if (view && isNetopsTreeView(view)) return view;
+    return "device" as const;
+  }, []);
+
   useEffect(() => {
     if (!initialDeviceId || sortedDevices.length === 0) return;
     const device = sortedDevices.find((item) => item.id === initialDeviceId);
     if (!device) return;
-    setSelection((current) => (current?.device.id === device.id ? current : { device, view: "device" as const }));
-  }, [initialDeviceId, sortedDevices]);
+    setSelection((current) =>
+      current?.device.id === device.id && current?.view === initialView
+        ? current
+        : { device, view: initialView },
+    );
+  }, [initialDeviceId, initialView, sortedDevices]);
 
   const invalidateOperationalQueries = (deviceId: number) => {
     void queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
@@ -205,8 +216,11 @@ export default function NetopsOperations() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || "",
-      snmpCommunity: values.snmpCommunity,
     };
+
+    if (values.snmpCommunity.trim().length > 0) {
+      payload.snmpCommunity = values.snmpCommunity.trim();
+    }
 
     if (values.password.trim().length > 0) {
       payload.password = values.password;
@@ -458,6 +472,10 @@ export default function NetopsOperations() {
                 <InterfacesPanel device={selectedDevice} />
               )}
 
+              {activeSelection.view === "bgp-announcements" && (
+                <AnnouncementPanel device={selectedDevice} />
+              )}
+
               {activeSelection.view === "bgp" && (
                 <BgpPanel device={selectedDevice} title="BGP" />
               )}
@@ -493,8 +511,6 @@ export default function NetopsOperations() {
               {activeSelection.view === "communities" && (
                 <CommunitiesPanel device={selectedDevice} />
               )}
-
-              <OperationalLogsPanel device={selectedDevice} />
             </>
           )}
         </div>

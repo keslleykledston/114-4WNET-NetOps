@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  collectNetopsDeviceReadOnly,
   getGetDeviceDiscoverySnapshotQueryKey,
   getListDeviceBgpPeersQueryKey,
   getGetNetopsDeviceSummaryQueryKey,
@@ -22,7 +23,13 @@ interface CollectSnmpButtonProps {
 export function CollectSnmpButton({ device, variant = "outline", size = "sm" }: CollectSnmpButtonProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const collect = useCollectNetopsDeviceReadOnly();
+  const collect = useCollectNetopsDeviceReadOnly({
+    mutation: {
+      mutationFn: async ({ id }) => collectNetopsDeviceReadOnly(id, {
+        signal: AbortSignal.timeout(300_000),
+      }),
+    },
+  });
 
   const handleCollect = () => {
     collect.mutate(
@@ -50,10 +57,14 @@ export function CollectSnmpButton({ device, variant = "outline", size = "sm" }: 
             variant: "destructive",
           });
         },
-        onError: () => {
+        onError: (error) => {
+          const message = error instanceof Error ? error.message : "Nao foi possivel efetuar a coleta read-only.";
+          const isTimeout = /timeout|aborted/i.test(message);
           toast({
             title: "Falha na coleta SNMP",
-            description: "Nao foi possivel iniciar a coleta read-only.",
+            description: isTimeout
+              ? "A coleta excedeu 5 minutos (walks SNMP via connector). Tente novamente ou aguarde o poller automatico."
+              : message,
             variant: "destructive",
           });
         },

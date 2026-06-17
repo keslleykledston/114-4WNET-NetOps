@@ -30,11 +30,14 @@ import {
   ChevronRight,
   LogOut,
   Bot,
+  IdCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "./auth-provider";
+import { useUserModules } from "@/features/user-profiles/user-profiles-api";
+import { isNavHrefEnabled } from "@/features/user-profiles/nav-modules";
 
 type NavChildItem = {
   href: string;
@@ -106,6 +109,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { data: modulesData } = useUserModules(Boolean(user));
+  const isAdmin = user?.role === "admin";
+  const navModules = modulesData?.modules ?? null;
+  const visibleNavItems = navItems.filter((item) => isNavHrefEnabled(item.href, navModules, isAdmin));
   const connectorSummaryQuery = useQuery({
     queryKey: ["connector-health-summary"],
     queryFn: getConnectorHealthSummary,
@@ -138,7 +145,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
         
         <nav className={["flex-1 overflow-y-auto py-3 space-y-0.5 scrollbar-thin scrollbar-track-sidebar scrollbar-thumb-sidebar-accent", sidebarCollapsed ? "px-1" : "px-2"].join(" ")}>
-          {navItems
+          {visibleNavItems
             .map((item) => {
             const isActive = isNavItemActive(location, item);
             const Icon = item.icon;
@@ -165,7 +172,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <span className="truncate">{label}</span>
                     </div>
                   </Link>
-                  {item.children.map((child) => {
+                  {item.children
+                    .filter((child) => isNavHrefEnabled(child.href, navModules, isAdmin))
+                    .map((child) => {
                     const childActive = isNavChildActive(location, child, item.href);
                     const ChildIcon = child.icon;
                     return (
@@ -216,6 +225,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {!sidebarCollapsed ? (
                 <div className="text-[11px] font-semibold tracking-[0.18em] text-sidebar-foreground/60 px-3 py-2 mb-1">ADMINISTRATION</div>
               ) : null}
+              {isNavHrefEnabled("/users", navModules, isAdmin) && (
               <Link href="/users">
                 <div
                   className={cn(
@@ -225,13 +235,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       ? "bg-[#1e2a45] text-primary"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
-                  title={sidebarCollapsed ? "Users" : undefined}
+                  title={sidebarCollapsed ? "Usuários" : undefined}
                 >
                   {location === "/users" ? <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" /> : null}
                   <Users className="h-4 w-4 shrink-0" />
-                  {!sidebarCollapsed ? <span className="truncate">Users</span> : null}
+                  {!sidebarCollapsed ? <span className="truncate">Usuários</span> : null}
                 </div>
               </Link>
+              )}
+              {isNavHrefEnabled("/user-profiles", navModules, isAdmin) && (
+              <Link href="/user-profiles">
+                <div
+                  className={cn(
+                    "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
+                    sidebarCollapsed ? "justify-center px-2 gap-0" : "gap-2.5 px-3 py-2",
+                    location === "/user-profiles"
+                      ? "bg-[#1e2a45] text-primary"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                  title={sidebarCollapsed ? "Perfis" : undefined}
+                >
+                  {location === "/user-profiles" ? <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" /> : null}
+                  <IdCard className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed ? <span className="truncate">Perfis</span> : null}
+                </div>
+              </Link>
+              )}
             </div>
           )}
         </nav>

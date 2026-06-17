@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
-import os
+import re
 import socket
 import time
 from typing import Any
+
+import paramiko
 
 from .config import Config
 from .security import SecurityPolicyError, validate_ssh_command
@@ -192,19 +194,169 @@ def run_snmp_walk(target_ip: str, payload: dict[str, Any], config: Config) -> di
     }
 
 
-def run_ssh_command(target_ip: str, payload: dict[str, Any], config: Config) -> dict[str, Any]:
-    start = time.time()
-    command = str(payload.get("command", "")).strip()
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+PASSWORD_CHANGE_RE = re.compile(r"Change now\?\s*\[Y/N\]:", re.IGNORECASE)
+MORE_RE = re.compile(r"(?:----\s*More\s*----|More:)", re.IGNORECASE)
+SHELL_PROMPT_RE = re.compile(r"^(?:<[^>\r\n]+>|\[[^\]\r\n]+\])\s*$")
+
+
+def _normalize_shell_text(value: str) -> str:
+    return ANSI_ESCAPE_RE.sub("", value).replace("\r", "")
+
+
+def _has_shell_prompt(buffer: str) -> bool:
+    lines = [line.strip() for line in _normalize_shell_text(buffer).split("\n") if line.strip()]
+    return bool(lines and SHELL_PROMPT_RE.match(lines[-1]))
+
+
+def _parse_shell_command_output(buffer: str, command: str) -> str:
+    output: list[str] = []
+    seen_command = False
+
+    for line in _normalize_shell_text(buffer).split("\n"):
+        trimmed = line.rstrip()
+        compact = trimmed.strip()
+        if not compact:
+            continue
+        if PASSWORD_CHANGE_RE.search(compact):
+            continue
+        if SHELL_PROMPT_RE.match(compact):
+            continue
+
+        inline_prompt = re.match(r"^<[^>\n]+>(.*)$", compact)
+        command_text = inline_prompt.group(1).strip() if inline_prompt else compact
+
+        if not seen_command:
+            if command_text == command:
+                seen_command = True
+            continue
+
+        output.append(trimmed)
+
+    return "\n".join(output).strip()
+
+
+def _wait_for_shell_prompt(
+    channel: paramiko.Channel,
+    timeout: int,
+    *,
+    decline_password_change: bool = False,
+) -> str:
+    deadline = time.time() + timeout
+    buffer = ""
+    declined_password_change = False
+
+    while time.time() < deadline:
+        if channel.recv_ready():
+            chunk = channel.recv(65535).decode(errors="replace")
+            buffer += chunk
+
+            if decline_password_change and not declined_password_change and PASSWORD_CHANGE_RE.search(buffer):
+                channel.send("N\n")
+                declined_password_change = True
+
+            if MORE_RE.search(buffer):
+                channel.send(" ")
+                buffer = MORE_RE.sub("", buffer)
+
+            if _has_shell_prompt(buffer):
+                return buffer
+        else:
+            time.sleep(0.05)
+
+    raise TimeoutError(f"SSH shell timed out after {timeout}s waiting for device prompt")
+
+
+def _open_ssh_shell(target_ip: str, payload: dict[str, Any], config: Config) -> tuple[paramiko.SSHClient, paramiko.Channel]:
     username = str(payload.get("username", "")).strip()
     password = str(payload.get("password", ""))
     port = int(payload.get("port", 22))
     if not username:
         raise ValueError("SSH payload requires username")
+
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(
+        target_ip,
+        port=port,
+        username=username,
+        password=password,
+        timeout=config.ssh_connect_timeout,
+        banner_timeout=config.ssh_connect_timeout,
+        auth_timeout=config.ssh_connect_timeout,
+        look_for_keys=False,
+        allow_agent=False,
+    )
+    channel = client.invoke_shell(term="vt100", width=240, height=120)
+    channel.settimeout(0.0)
+    _wait_for_shell_prompt(channel, config.ssh_connect_timeout, decline_password_change=True)
+    return client, channel
+
+
+def _run_ssh_commands_interactive(target_ip: str, payload: dict[str, Any], config: Config, commands: list[str]) -> list[dict[str, str]]:
+    for command in commands:
+        validate_ssh_command(command)
+
+    client, channel = _open_ssh_shell(target_ip, payload, config)
+    try:
+        setup_command = "screen-length 0 temporary"
+        try:
+            validate_ssh_command(setup_command)
+            channel.send(f"{setup_command}\n")
+            _wait_for_shell_prompt(channel, config.ssh_connect_timeout)
+        except Exception as exc:
+            logger.warning("failed to configure terminal paging: %s", exc)
+
+        results: list[dict[str, str]] = []
+        for command in commands:
+            channel.send(f"{command}\n")
+            raw = _wait_for_shell_prompt(channel, config.ssh_command_timeout)
+            results.append({"command": command, "output": _parse_shell_command_output(raw, command), "error": ""})
+        return results
+    finally:
+        try:
+            channel.close()
+        finally:
+            client.close()
+
+
+def run_ssh_command(target_ip: str, payload: dict[str, Any], config: Config) -> dict[str, Any]:
+    start = time.time()
+    command = str(payload.get("command", "")).strip()
     if not command:
         raise ValueError("SSH payload requires command")
 
     try:
-        validate_ssh_command(command)
+        results = _run_ssh_commands_interactive(target_ip, payload, config, [command])
+    except SecurityPolicyError as exc:
+        return {
+            "success": False,
+            "stdout": "",
+            "stderr": str(exc),
+            "exit_code": exc.exit_code,
+            "result_json": {"duration_ms": _duration_ms(start), "blocked": True},
+        }
+    result = results[0]
+    return {
+        "success": not result["error"],
+        "stdout": result["output"],
+        "stderr": result["error"],
+        "exit_code": 0 if not result["error"] else 1,
+        "result_json": {"duration_ms": _duration_ms(start), "executor": "netops-connector-agent"},
+    }
+
+
+def run_ssh_config_bundle(target_ip: str, payload: dict[str, Any], config: Config) -> dict[str, Any]:
+    start = time.time()
+    raw_commands = payload.get("commands")
+    if not isinstance(raw_commands, list):
+        raise ValueError("SSH_CONFIG_BUNDLE requires commands")
+    commands = [str(command).strip() for command in raw_commands if str(command).strip()]
+    if not commands:
+        raise ValueError("SSH_CONFIG_BUNDLE requires commands")
+
+    try:
+        results = _run_ssh_commands_interactive(target_ip, payload, config, commands)
     except SecurityPolicyError as exc:
         return {
             "success": False,
@@ -214,32 +366,17 @@ def run_ssh_command(target_ip: str, payload: dict[str, Any], config: Config) -> 
             "result_json": {"duration_ms": _duration_ms(start), "blocked": True},
         }
 
-    env = os.environ.copy()
-    env["SSHPASS"] = password
-    proc = run_command(
-        [
-            "sshpass",
-            "-e",
-            "ssh",
-            "-n",
-            "-o",
-            "StrictHostKeyChecking=no",
-            "-o",
-            f"ConnectTimeout={config.ssh_connect_timeout}",
-            "-o",
-            "UserKnownHostsFile=/dev/null",
-            "-p",
-            str(port),
-            f"{username}@{target_ip}",
-            command,
-        ],
-        timeout=config.ssh_command_timeout + config.ssh_connect_timeout,
-        env=env,
-    )
+    sections = [f"! === {item['command']} ===\n{item['output']}".rstrip() for item in results]
+    errors = [f"{item['command']}: {item['error']}" for item in results if item["error"]]
     return {
-        "success": proc.returncode == 0,
-        "stdout": proc.stdout,
-        "stderr": proc.stderr,
-        "exit_code": proc.returncode,
-        "result_json": {"duration_ms": _duration_ms(start), "executor": "netops-connector-agent"},
+        "success": len(errors) == 0,
+        "stdout": "\n".join(sections).strip(),
+        "stderr": "\n".join(errors),
+        "exit_code": 0 if len(errors) == 0 else 1,
+        "result_json": {
+            "duration_ms": _duration_ms(start),
+            "executor": "netops-connector-agent",
+            "command_count": len(commands),
+            "interactive_shell": True,
+        },
     }

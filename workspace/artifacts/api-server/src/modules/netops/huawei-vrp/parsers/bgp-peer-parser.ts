@@ -7,8 +7,16 @@ function numberValue(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function normalizeCompactUptime(value: string | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.includes("*")) return null;
+  return trimmed;
+}
+
 // Regex for extracting peer info from compact peer list
-const peerListLineRegex = /^([0-9a-fA-F:.]+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+([0-9A-Za-z:]+)\s+([A-Za-z()]+|-)/;
+// Huawei compact peer table can show uptime as "0404h17m" or "****h20m".
+const peerListLineRegex = /^([0-9a-fA-F:.]+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+([0-9A-Za-z:*]+)\s+([A-Za-z()]+|-)/;
 
 // Regex for extracting verbose peer info - in sections like "BGP Peer is 189.23.156.121"
 const peerHeaderRegex = /^BGP Peer is ([0-9a-fA-F:.]+),\s*remote AS (\d+)/i;
@@ -178,7 +186,7 @@ export function parseHuaweiBgpPeers(output: string, options?: ParseHuaweiBgpPeer
       peerIp,
       remoteAs: numberValue(remoteAs),
       state: validStates[stateStr],
-      uptime,
+      uptime: normalizeCompactUptime(uptime) ?? verboseData?.uptime ?? null,
       vrf: vrfName,
       source: "ssh",
     };

@@ -13,6 +13,11 @@ function formatSeconds(totalSeconds: number): string {
   return `${pad(days)} ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
 }
 
+function normalizeSeconds(value: number): number | null {
+  if (!Number.isFinite(value) || value < 0) return null;
+  return Math.floor(value);
+}
+
 function parseHuaweiDuration(value: string): number | null {
   const compact = value.trim();
   if (!compact) return null;
@@ -59,4 +64,11 @@ export function formatBgpUptime(value: string | null | undefined): string {
   }
 
   return formatSeconds(parsed);
+}
+
+export function formatBgpUptimeSeconds(value: number | null | undefined): string {
+  if (value == null) return "—";
+  const normalized = normalizeSeconds(value);
+  if (normalized == null) return "—";
+  return formatSeconds(normalized);
 }

@@ -389,6 +389,35 @@ export async function executeSshCommand(
   });
 }
 
+export async function executeSshConfigBundle(
+  input: BaseExecutionInput & {
+    username?: string;
+    password?: string;
+    credentialId?: string;
+    commands: string[];
+    vendor?: string;
+    port?: number;
+  },
+): Promise<ConnectorExecutionResult> {
+  for (const command of input.commands) {
+    assertReadOnlySshCommand(command);
+  }
+  return executeViaConnector({
+    ...input,
+    jobType: "SSH_CONFIG_BUNDLE",
+    targetPort: input.port ?? 22,
+    timeoutSeconds: input.timeoutSeconds ?? CONNECTOR_JOB_TIMEOUT_DEFAULTS.SSH_CONFIG_BUNDLE,
+    payload: {
+      ...(input.credentialId ? { credential_id: input.credentialId } : { username: input.username, password: input.password }),
+      commands: input.commands,
+      vendor: input.vendor ?? "generic",
+      port: input.port ?? 22,
+    },
+    auditAction: "connector_device_ssh_config_bundle",
+    auditMetadata: { command_count: input.commands.length, vendor: input.vendor ?? "generic" },
+  });
+}
+
 export async function resolveDeviceConnectorContext(deviceId: number): Promise<{
   device: Device;
   connectorId: number | null;
@@ -446,6 +475,34 @@ export async function executeSshCommandForDevice(
       ? { credentialId: credentials.sshCredentialId }
       : { username: credentials.username, password: credentials.password }),
     command,
+    vendor: device.vendor,
+    port: device.sshPort,
+    timeoutSeconds: options?.timeoutSeconds,
+    createdBy: options?.createdBy,
+  });
+}
+
+export async function executeSshConfigBundleForDevice(
+  device: Device,
+  commands: string[],
+  options?: { timeoutSeconds?: number; createdBy?: number | null },
+): Promise<ConnectorExecutionResult> {
+  if (!deviceUsesConnector(device)) {
+    throw new Error("Device is not associated with a connector");
+  }
+  const credentials = await resolveLegacyDeviceCredentialContext(device);
+  const connectorTarget = device.connectorGroupId
+    ? await resolveAvailableConnectorForGroup(device.connectorGroupId)
+    : { connectorId: device.connectorId, connectorGroupId: null };
+  return executeSshConfigBundle({
+    deviceId: device.id,
+    connectorId: connectorTarget.connectorId,
+    connectorGroupId: device.connectorGroupId ?? null,
+    targetIp: device.ipAddress,
+    ...(credentials.sshCredentialId
+      ? { credentialId: credentials.sshCredentialId }
+      : { username: credentials.username, password: credentials.password }),
+    commands,
     vendor: device.vendor,
     port: device.sshPort,
     timeoutSeconds: options?.timeoutSeconds,

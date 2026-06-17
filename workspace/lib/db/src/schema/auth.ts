@@ -10,7 +10,25 @@ export type UserPermissions = {
   integrations?: { read?: boolean; write?: boolean };
   users?: { read?: boolean; write?: boolean };
   audit?: { read?: boolean };
+  configGenerator?: { read?: boolean; validate?: boolean; render?: boolean; write?: boolean; admin?: boolean };
 };
+
+/** Module visibility map for sidebar navigation (module id -> enabled). */
+export type NavModulesMap = Record<string, boolean>;
+
+export const userProfilesTable = pgTable("user_profiles", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  description: text("description"),
+  modulesJson: json("modules_json").$type<NavModulesMap>().notNull().default({}),
+  isSystem: boolean("is_system").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  slugUq: uniqueIndex("user_profiles_slug_uq").on(table.slug),
+  nameUq: uniqueIndex("user_profiles_name_uq").on(table.name),
+}));
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -19,6 +37,7 @@ export const usersTable = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: text("role").notNull().default("viewer"),
   enabled: boolean("enabled").notNull().default(true),
+  profileId: integer("profile_id").references(() => userProfilesTable.id, { onDelete: "set null" }),
   permissionsJson: json("permissions_json").$type<UserPermissions>(),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -26,6 +45,7 @@ export const usersTable = pgTable("users", {
 }, (table) => ({
   emailUq: uniqueIndex("users_email_uq").on(table.email),
   roleIdx: index("users_role_idx").on(table.role),
+  profileIdx: index("users_profile_id_idx").on(table.profileId),
 }));
 
 export const userSessionsTable = pgTable("user_sessions", {

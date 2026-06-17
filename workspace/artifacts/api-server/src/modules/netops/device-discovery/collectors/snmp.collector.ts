@@ -80,6 +80,7 @@ export async function collectDiscoverySnmp(device: Device): Promise<CollectorOut
       peerIp: item.peerIp,
       remoteAs: item.remoteAs,
       state: item.state,
+      vrf: item.vrf ?? null,
       receivedPrefixes: null,
       advertisedPrefixes: null,
       uptime: item.uptimeSecs != null ? String(item.uptimeSecs) : null,

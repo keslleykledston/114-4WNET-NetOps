@@ -137,6 +137,7 @@ function publicDevice<T extends {
     connectorId: device.connectorId ?? null,
     connectorGroupId: device.connectorGroupId ?? null,
     snmpCommunity: null,
+    snmpConfigured: Boolean(device.snmpCommunity?.trim()),
     id: (device as T & { id: number }).id,
     hostname: (device as T & { hostname: string }).hostname,
     ipAddress: (device as T & { ipAddress: string }).ipAddress,
@@ -254,6 +255,7 @@ router.get("/devices", async (req, res) => {
     groupId: devicesTable.groupId,
     connectorId: devicesTable.connectorId,
     connectorGroupId: devicesTable.connectorGroupId,
+    snmpCommunity: devicesTable.snmpCommunity,
     netboxDeviceId: devicesTable.netboxDeviceId,
     lastSeen: devicesTable.lastSeen,
     status: devicesTable.status,
@@ -337,6 +339,7 @@ router.get("/devices/:id", async (req, res) => {
     groupId: devicesTable.groupId,
     connectorId: devicesTable.connectorId,
     connectorGroupId: devicesTable.connectorGroupId,
+    snmpCommunity: devicesTable.snmpCommunity,
     netboxDeviceId: devicesTable.netboxDeviceId,
     lastSeen: devicesTable.lastSeen,
     status: devicesTable.status,
@@ -355,7 +358,7 @@ router.patch("/devices/:id", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: "Invalid body" }); return; }
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() };
-  const { password, ...rest } = parsed.data as { password?: string; [key: string]: unknown };
+  const { password, snmpCommunity, ...rest } = parsed.data as { password?: string; snmpCommunity?: unknown; [key: string]: unknown };
   Object.assign(updateData, rest);
   const connectorId = parseConnectorId(req.body as Record<string, unknown>);
   if (connectorId !== undefined) {
@@ -365,10 +368,8 @@ router.patch("/devices/:id", async (req, res) => {
   if (connectorGroupId !== undefined) {
     updateData.connectorGroupId = connectorGroupId;
   }
-  if ("snmpCommunity" in rest) {
-    updateData.snmpCommunity = typeof rest.snmpCommunity === "string" && rest.snmpCommunity.trim().length > 0
-      ? rest.snmpCommunity.trim()
-      : null;
+  if (typeof snmpCommunity === "string" && snmpCommunity.trim().length > 0) {
+    updateData.snmpCommunity = snmpCommunity.trim();
   }
   if (password) updateData.passwordEncrypted = encrypt(password);
 

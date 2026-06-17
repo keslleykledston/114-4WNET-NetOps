@@ -89,6 +89,41 @@ const routerNoBatch = parseHuaweiL2Circuits({
 assert.equal(findingsFor(routerNoBatch).some((f) => f.code === "VLAN_NOT_IN_SWITCH_BATCH"), false);
 assert.ok(findingsFor(routerNoBatch).some((f) => f.code === "ROUTER_L2_VLAN_ANOMALY"));
 
+const hybridMultiPortVlan = parseHuaweiL2Circuits({
+  "display current-configuration interface": [
+    "# hostname=EDGE_S6730",
+    "vlan batch 2210",
+    "interface Vlanif2210",
+    "#",
+    "interface Eth-Trunk11",
+    " port link-type hybrid",
+    " port hybrid tagged vlan 2210 2282",
+    "#",
+    "interface XGigabitEthernet0/0/15",
+    " port link-type hybrid",
+    " port hybrid tagged vlan 2210 2400",
+    "#",
+  ].join("\\n"),
+});
+const vlan2210 = hybridMultiPortVlan.find((c) => c.localInterface === "Vlanif2210");
+assert.equal(vlan2210?.classification, "vlan_local", "Vlanif2210 with 2+ hybrid ports must be vlan_local");
+assert.equal(findingsFor(hybridMultiPortVlan).some((f) => f.code === "VLANIF_ORPHAN"), false);
+assert.ok(findingsFor(hybridMultiPortVlan).some((f) => f.code === "VLAN_MULTI_INTERFACE_LOCAL"));
+
+const hybridSinglePortVlan = parseHuaweiL2Circuits({
+  "display current-configuration interface": [
+    "# hostname=EDGE_S6730",
+    "vlan batch 2210",
+    "interface Vlanif2210",
+    "#",
+    "interface Eth-Trunk11",
+    " port hybrid tagged vlan 2210",
+    "#",
+  ].join("\\n"),
+});
+const vlan2210Single = hybridSinglePortVlan.find((c) => c.localInterface === "Vlanif2210");
+assert.equal(vlan2210Single?.classification, "vlanif_orphan");
+
 console.log(JSON.stringify({
   dot1qOrphan: dot1qOrphan[0].classification,
   dot1qLocal: dot1qLocal.length,

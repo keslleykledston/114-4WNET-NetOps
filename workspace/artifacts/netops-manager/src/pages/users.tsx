@@ -31,6 +31,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge";
 import { Loader2, Lock, Unlock, RotateCcw, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProfiles } from "@/features/user-profiles/user-profiles-api";
+
+type UserWithProfile = User & { profileId?: number | null };
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -55,7 +58,7 @@ export default function UsersPage() {
   const { toast } = useToast();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<UserWithProfile | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
     type: "disable" | "enable" | "delete" | null;
     userId?: number;
@@ -65,7 +68,7 @@ export default function UsersPage() {
   const [resetPassword, setResetPassword] = useState("");
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
 
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "viewer" });
+  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "viewer", profileId: "" as string });
 
   useEffect(() => {
     if (user && user.role !== "admin") {
@@ -74,13 +77,16 @@ export default function UsersPage() {
   }, [user, setLocation]);
 
   const { data: usersResponse } = useListUsers();
-  const users = usersResponse?.items ?? [];
+  const users = (usersResponse?.items ?? []) as UserWithProfile[];
+  const { data: profilesResponse } = useUserProfiles(user?.role === "admin");
+  const profiles = profilesResponse?.items ?? [];
+  const profileNameById = new Map(profiles.map((profile) => [profile.id, profile.name]));
 
   const createMutation = useCreateUser({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-        setFormData({ name: "", email: "", password: "", role: "viewer" });
+        setFormData({ name: "", email: "", password: "", role: "viewer", profileId: "" });
         setIsCreateOpen(false);
         toast({ title: "Usuário criado" });
       },
@@ -176,7 +182,11 @@ export default function UsersPage() {
       return;
     }
     createMutation.mutate({
-      data: { ...formData, email } as CreateUserRequest,
+      data: {
+        ...formData,
+        email,
+        profileId: formData.profileId ? Number(formData.profileId) : null,
+      } as CreateUserRequest,
     });
   }
 
@@ -205,6 +215,7 @@ export default function UsersPage() {
         name: editingUser.name.trim(),
         email,
         role: editingUser.role,
+        profileId: editingUser.profileId ?? null,
       } as UpdateUserRequest,
     });
   }
@@ -261,6 +272,7 @@ export default function UsersPage() {
                 <tr className="border-b">
                   <th className="text-left py-2 px-4">Nome</th>
                   <th className="text-left py-2 px-4">E-mail</th>
+                  <th className="text-left py-2 px-4">Papel</th>
                   <th className="text-left py-2 px-4">Perfil</th>
                   <th className="text-left py-2 px-4">Status</th>
                   <th className="text-left py-2 px-4">Criado em</th>
@@ -274,6 +286,11 @@ export default function UsersPage() {
                     <td className="py-2 px-4">{entry.email}</td>
                     <td className="py-2 px-4">
                       <Badge>{entry.role}</Badge>
+                    </td>
+                    <td className="py-2 px-4 text-sm">
+                      {entry.profileId
+                        ? profileNameById.get(entry.profileId) ?? `#${entry.profileId}`
+                        : profiles.find((p) => p.slug === entry.role)?.name ?? "Padrão do papel"}
                     </td>
                     <td className="py-2 px-4">
                       {entry.enabled ? (
@@ -357,7 +374,7 @@ export default function UsersPage() {
               />
             </div>
             <div>
-              <Label>Perfil</Label>
+              <Label>Papel</Label>
               <Select value={formData.role} onValueChange={(role) => setFormData({ ...formData, role })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -366,6 +383,25 @@ export default function UsersPage() {
                   <SelectItem value="viewer">Viewer</SelectItem>
                   <SelectItem value="operator">Operator</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Perfil de módulos</Label>
+              <Select
+                value={formData.profileId || "default"}
+                onValueChange={(value) => setFormData({ ...formData, profileId: value === "default" ? "" : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Padrão do papel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Padrão do papel</SelectItem>
+                  {profiles.map((profile) => (
+                    <SelectItem key={profile.id} value={String(profile.id)}>
+                      {profile.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -400,7 +436,7 @@ export default function UsersPage() {
                 />
               </div>
               <div>
-                <Label>Perfil</Label>
+                <Label>Papel</Label>
                 <Select
                   value={editingUser.role}
                   onValueChange={(role) => setEditingUser({ ...editingUser, role: role as User["role"] })}
@@ -412,6 +448,30 @@ export default function UsersPage() {
                     <SelectItem value="viewer">Viewer</SelectItem>
                     <SelectItem value="operator">Operator</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Perfil de módulos</Label>
+                <Select
+                  value={editingUser.profileId ? String(editingUser.profileId) : "default"}
+                  onValueChange={(value) =>
+                    setEditingUser({
+                      ...editingUser,
+                      profileId: value === "default" ? null : Number(value),
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Padrão do papel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Padrão do papel</SelectItem>
+                    {profiles.map((profile) => (
+                      <SelectItem key={profile.id} value={String(profile.id)}>
+                        {profile.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

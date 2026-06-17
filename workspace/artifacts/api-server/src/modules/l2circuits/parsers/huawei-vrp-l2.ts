@@ -7,6 +7,7 @@ import {
   inferDeviceRoleFamily,
   parseGlobalVlans,
   parseMacVlans,
+  parseSwitchingVlanPortCounts,
   parseSwitchingVlans,
   type ParserContext,
 } from "./classification.helpers.js";
@@ -40,11 +41,15 @@ export function parseHuaweiL2Circuits(rawOutputs: Record<string, string | undefi
     rawOutputs["display current-configuration interface"],
     rawOutputs["display vlan"],
   );
+  const switchingVlanPortCounts = parseSwitchingVlanPortCounts(
+    rawOutputs["display current-configuration interface"],
+  );
   const context: ParserContext = {
     deviceRoleFamily,
     globalVlans,
     hasGlobalVlanEvidence,
-    switchingVlans: parseSwitchingVlans(rawOutputs["display current-configuration interface"]),
+    switchingVlans: new Set(switchingVlanPortCounts.keys()),
+    switchingVlanPortCounts,
     macVlans: parseMacVlans(rawOutputs["display mac-address vlan"]),
     l2vcClientInterfaces: new Set(circuits.filter((c) => c.circuitType === "l2vc" || c.circuitType === "vpws").map((c) => c.localInterface).filter(Boolean) as string[]),
     vsiInterfaces: new Set(circuits.filter((c) => c.circuitType === "vsi" || c.circuitType === "vpls").map((c) => c.localInterface).filter(Boolean) as string[]),

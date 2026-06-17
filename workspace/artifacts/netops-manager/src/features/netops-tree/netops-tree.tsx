@@ -8,6 +8,7 @@ import {
   Cloud,
   Filter,
   GitBranch,
+  LayoutGrid,
   Link2,
   Network,
   RadioTower,
@@ -20,6 +21,7 @@ import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { NetopsTreeSelection, NetopsTreeView } from "./types";
+import { dedupeDiscoveryBgpPeers } from "@/features/bgp/bgp-peer-list-utils";
 
 interface NetopsTreeProps {
   devices: Device[];
@@ -89,7 +91,7 @@ function BgpCategoryTree({
   onSelect: (selection: NetopsTreeSelection) => void;
 }) {
   const filteredPeers = useMemo(
-    () => (peers ?? []).filter((p) => p.role === category.roleFilter),
+    () => dedupeDiscoveryBgpPeers(peers ?? []).filter((p) => p.role === category.roleFilter),
     [peers, category.roleFilter],
   );
 
@@ -136,6 +138,7 @@ function DeviceTreeNode({
   onToggleBgp: () => void;
 }) {
   const { data: peers } = useListNetopsDeviceBgpPeers(device.id);
+  const dedupedPeers = useMemo(() => dedupeDiscoveryBgpPeers(peers ?? []), [peers]);
   const activeDevice = selected?.device.id === device.id;
 
   return (
@@ -184,10 +187,21 @@ function DeviceTreeNode({
                     </button>
                   </div>
 
-                  {bgpOpen &&
-                    bgpCategories.map((category) => (
-                      <BgpCategoryTree key={category.key} device={device} peers={peers} category={category} selected={selected} onSelect={onSelect} />
-                    ))}
+                  {bgpOpen && (
+                    <>
+                      <button
+                        type="button"
+                        className={treeItemClass(activeDevice && selected?.view === "bgp-announcements", "child")}
+                        onClick={() => onSelect({ device, view: "bgp-announcements" })}
+                      >
+                        <LayoutGrid className="h-3 w-3 shrink-0" />
+                        <span className="flex-1 text-left">Anúncios (matriz)</span>
+                      </button>
+                      {bgpCategories.map((category) => (
+                        <BgpCategoryTree key={category.key} device={device} peers={dedupedPeers} category={category} selected={selected} onSelect={onSelect} />
+                      ))}
+                    </>
+                  )}
                 </div>
               );
             }

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Device } from "@workspace/api-client-react";
 import type { DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -6,14 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, ClipboardCopy, Download, Loader2, ShieldAlert } from "lucide-react";
+import { CheckCircle2, ClipboardCopy, Download, Info, Loader2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DependencyRiskBadge } from "./dependency-risk-badge";
-import {
-  exportBgpPeerCleanupAnalysis,
-  useBgpPeerCleanupAnalyze,
-} from "./bgp-peer-cleanup-api";
+import { analyzeBgpPeerCleanup, exportBgpPeerCleanupAnalysis } from "./bgp-peer-cleanup-api";
 import type { BgpPeerCleanupAnalysis } from "@/features/bgp-cleanup-types";
+import { ChangePlanDetailsModal } from "@/features/change-plans/change-plan-details-modal";
 import { cn } from "@/lib/utils";
 
 interface BgpPeerCleanupModalProps {
@@ -45,16 +43,31 @@ function DependencyBlock({
   title,
   items,
   tone,
+  subtitle,
 }: {
   title: string;
-  items: BgpPeerCleanupAnalysis["dependencies"]["exclusive" | "shared" | "ambiguous"];
-  tone: "emerald" | "amber" | "red";
+  items: BgpPeerCleanupAnalysis["dependencies"]["exclusive" | "shared" | "global" | "ambiguous"];
+  tone: "emerald" | "amber" | "sky" | "red";
+  subtitle?: string;
 }) {
-  const border = tone === "emerald" ? "border-emerald-500/20 bg-emerald-500/5" : tone === "amber" ? "border-amber-500/20 bg-amber-500/5" : "border-red-500/20 bg-red-500/5";
-  const text = tone === "emerald" ? "text-emerald-200" : tone === "amber" ? "text-amber-200" : "text-red-200";
+  const border = tone === "emerald"
+    ? "border-emerald-500/20 bg-emerald-500/5"
+    : tone === "amber"
+      ? "border-amber-500/20 bg-amber-500/5"
+      : tone === "sky"
+        ? "border-sky-500/20 bg-sky-500/5"
+        : "border-red-500/20 bg-red-500/5";
+  const text = tone === "emerald"
+    ? "text-emerald-200"
+    : tone === "amber"
+      ? "text-amber-200"
+      : tone === "sky"
+        ? "text-sky-200"
+        : "text-red-200";
   return (
     <div className={`rounded-lg border p-4 ${border}`}>
       <div className={`text-xs font-semibold uppercase tracking-wide ${text}`}>{title}</div>
+      {subtitle ? <div className="mt-1 text-[11px] text-slate-400">{subtitle}</div> : null}
       <div className="mt-3 space-y-2">
         {items.length ? items.map((item) => (
           <div key={`${item.type}:${item.name}`} className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
@@ -84,14 +97,51 @@ function DependencyBlock({
 
 export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPeerCleanupModalProps) {
   const { toast } = useToast();
-  const analyze = useBgpPeerCleanupAnalyze();
+  const requestSeq = useRef(0);
+  const [analysis, setAnalysis] = useState<BgpPeerCleanupAnalysis | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showSshRefreshEvidence, setShowSshRefreshEvidence] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  async function runAnalysis(targetPeer: DiscoveryBgpPeer, validateReadOnly = false) {
+    const requestId = requestSeq.current + 1;
+    requestSeq.current = requestId;
+    setAnalysis(null);
+    setLoadError(null);
+    setLoading(true);
+
+    try {
+      const result = await analyzeBgpPeerCleanup({
+        deviceId: device.id,
+        peerIp: targetPeer.peerIp,
+        validateReadOnly,
+      });
+      if (requestSeq.current !== requestId) return;
+      setAnalysis(result);
+    } catch (error) {
+      if (requestSeq.current !== requestId) return;
+      setLoadError(error instanceof Error ? error.message : "Erro desconhecido");
+    } finally {
+      if (requestSeq.current === requestId) {
+        setLoading(false);
+      }
+    }
+  }
 
   useEffect(() => {
-    if (!open || !peer || peer.state === "Established") return;
-    analyze.mutate({ deviceId: device.id, peerIp: peer.peerIp });
-  }, [analyze, device.id, open, peer]);
+    if (!open || !peer || peer.state === "Established") {
+      setAnalysis(null);
+      setLoading(false);
+      setLoadError(null);
+      setShowSshRefreshEvidence(false);
+      return;
+    }
 
-  const analysis = analyze.data ?? null;
+    setShowSshRefreshEvidence(false);
+    void runAnalysis(peer, false);
+  }, [device.id, open, peer?.peerIp, peer?.state]);
+
   const canPlan = peer?.state !== "Established";
 
   async function handleCopyScript() {
@@ -120,6 +170,14 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
     toast({ title: "Markdown exportado", description: "Arquivo gerado para revisão humana." });
   }
 
+  async function handleRefreshAnalysis() {
+    if (!peer || peer.state === "Established") return;
+    setLoadError(null);
+    setShowSshRefreshEvidence(true);
+    await runAnalysis(peer, true);
+    toast({ title: "Resultado atualizado", description: "A coleta, o SSH e o script foram recalculados." });
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl p-0">
@@ -135,7 +193,7 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
               <DialogDescription className="text-xs text-slate-400">
                 Nenhum comando será executado. Script apenas para revisão humana.
               </DialogDescription>
-              {analyze.isPending ? (
+              {loading ? (
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-300">
                   <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
                   Processando consulta / script
@@ -167,17 +225,17 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
             </Alert>
           ) : null}
 
-          {!canPlan ? null : analyze.isPending ? (
+          {!canPlan ? null : loading ? (
             <div className="space-y-4">
               <Skeleton className="h-24 w-full" />
               <Skeleton className="h-40 w-full" />
             </div>
-          ) : analyze.error ? (
+          ) : loadError ? (
             <Alert variant="destructive">
               <ShieldAlert className="h-4 w-4" />
               <AlertTitle>Falha ao analisar peer</AlertTitle>
               <AlertDescription>
-                {analyze.error instanceof Error ? analyze.error.message : "Erro desconhecido"}
+                {loadError}
               </AlertDescription>
             </Alert>
           ) : analysis ? (
@@ -198,6 +256,29 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
                 <InfoCard label="Import policies" value={analysis.importPolicies.length ? analysis.importPolicies.join(", ") : "—"} mono wrap />
                 <InfoCard label="Export policies" value={analysis.exportPolicies.length ? analysis.exportPolicies.join(", ") : "—"} mono wrap />
               </div>
+
+              {showSshRefreshEvidence && analysis.sshRefresh?.enabled ? (
+                <Alert className="border-slate-700 bg-slate-900/70 text-slate-100">
+                  <Loader2 className="h-4 w-4 text-slate-300" />
+                  <AlertTitle className="text-slate-100">Evidência SSH reexecutada</AlertTitle>
+                  <AlertDescription className="space-y-3 text-slate-200">
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <InfoCard label="Comandos" value={`${analysis.sshRefresh.commandCount}`} mono />
+                      <InfoCard label="Respondidos" value={`${analysis.sshRefresh.executedCount}`} mono />
+                      <InfoCard label="Warnings" value={`${analysis.sshRefresh.warnings.length}`} mono />
+                    </div>
+                    <div className="rounded-md border border-slate-800 bg-[#0f111a] p-3 text-xs text-slate-300">
+                      <div className="mb-2 text-[11px] uppercase tracking-wide text-slate-500">Comandos SSH</div>
+                      <pre className="whitespace-pre-wrap break-words font-mono">{analysis.sshRefresh.commands.join("\n") || "—"}</pre>
+                    </div>
+                    {analysis.sshRefresh.warnings.length > 0 ? (
+                      <ul className="list-disc space-y-1 pl-4 text-xs text-amber-200">
+                        {analysis.sshRefresh.warnings.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    ) : null}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
 
               {analysis.blockedReasons.length > 0 ? (
                 <Alert className="border-red-500/30 bg-red-500/10 text-red-100">
@@ -221,9 +302,15 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
                 </Alert>
               ) : null}
 
-              <div className="grid gap-4 lg:grid-cols-3">
+              <div className="grid gap-4 xl:grid-cols-2">
                 <DependencyBlock title="Dependências exclusivas" items={analysis.dependencies.exclusive} tone="emerald" />
                 <DependencyBlock title="Dependências compartilhadas" items={analysis.dependencies.shared} tone="amber" />
+                <DependencyBlock
+                  title="Globais / Preservados"
+                  subtitle="Dependência global compartilhada por desenho operacional."
+                  items={analysis.dependencies.global}
+                  tone="sky"
+                />
                 <DependencyBlock title="Dependências ambíguas" items={analysis.dependencies.ambiguous} tone="red" />
               </div>
 
@@ -246,6 +333,20 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-800 px-6 py-4">
+          <Button variant="outline" onClick={handleRefreshAnalysis} disabled={!canPlan || loading}>
+            <Loader2 className={cn("h-4 w-4", loading && "animate-spin")} />
+            Atualizar via SSH
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            title="Detalhes do Change Plan"
+            aria-label="Detalhes do Change Plan"
+            disabled={!analysis?.changePlanId}
+            onClick={() => setDetailsOpen(true)}
+          >
+            <Info className="h-4 w-4" />
+          </Button>
           <Button variant="outline" onClick={handleCopyScript} disabled={!analysis}>
             <ClipboardCopy className="h-4 w-4" />
             Copiar script
@@ -268,6 +369,11 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
           ) : null}
         </div>
       </DialogContent>
+      <ChangePlanDetailsModal
+        changePlanId={analysis?.changePlanId ?? null}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
     </Dialog>
   );
 }

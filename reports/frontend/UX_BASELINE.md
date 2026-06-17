@@ -65,6 +65,7 @@
 - Modal de peer mantem desenho escuro redesenhado e adiciona source/confidence/evidence curta.
 - Discovery panel mostra status persistido, fontes SSH/SNMP/cache, data do ultimo run e contadores de interfaces, peers, VRFs, L2VPN e policies.
 - Quando nao ha snapshot persistido, BGP mostra empty state pedindo discovery em vez de tentar interpretar CLI.
+- A tela `/operational/bgp` consolida peers por `peerIp/VRF` para evitar duplicacao visual de IPv6 quando a mesma sessao chega em multiplos `afi/safi`.
 - A rota `NetOps Operations` agora concentra a arvore operacional e tambem as acoes de inventario/admin (criar, editar, importar, testar e remover device); `/devices` virou redirect legado e a entrada saiu da sidebar.
 - Communities no detalhe do device agora trazem biblioteca com busca, sync backup/live e community sets com origem/status/members, mantendo o layout shadcn atual.
 

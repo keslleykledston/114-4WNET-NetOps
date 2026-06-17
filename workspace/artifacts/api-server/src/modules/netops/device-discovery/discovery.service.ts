@@ -1,7 +1,8 @@
 import type { BgpPeerSummary, DeviceDiscoveryRequest, DeviceDiscoverySnapshot, DiscoveryStatus, DiscoveryWarning } from "./discovery.types.js";
 import { collectionOrchestrator } from "./discovery.orchestrator.js";
 import { rawEvidenceStore } from "./evidence/evidence-store.js";
-import { bgpPeerRoleOverridesTable, db, devicesTable, snmpSnapshotsTable } from "@workspace/db";
+import { bgpPeerRoleOverridesTable, db, devicesTable } from "@workspace/db";
+import { getLatestSnmpCollectorSnapshot } from "../snmp/snapshot-queries.js";
 import { desc, eq as ormEq } from "drizzle-orm";
 import { logAuditEvent } from "../../../lib/audit.js";
 import { normalizeDiscoveryBgpPeers, primaryDirectionForRole } from "./normalizers/bgp.normalizer.js";
@@ -111,13 +112,7 @@ export function enqueueDeviceDiscovery(
 }
 
 async function getLatestSnmpBgpPeers(deviceId: number) {
-  const [snapshot] = await db
-    .select()
-    .from(snmpSnapshotsTable)
-    .where(ormEq(snmpSnapshotsTable.deviceId, deviceId))
-    .orderBy(desc(snmpSnapshotsTable.collectedAt))
-    .limit(1);
-
+  const snapshot = await getLatestSnmpCollectorSnapshot(deviceId);
   if (!snapshot) return null;
 
   const data = snapshotToNetopsData(snapshot);
@@ -130,14 +125,26 @@ async function mergeDiscoveryBgpPeersWithLatestSnmp(deviceId: number, peers: Bgp
     return peers;
   }
 
-  const discoveryPeers = peers as unknown as Parameters<typeof normalizeDiscoveryBgpPeers>[0];
-  const snmpDiscoveryPeers = snmpPeers as unknown as Parameters<typeof normalizeDiscoveryBgpPeers>[1];
-  return normalizeDiscoveryBgpPeers(
-    discoveryPeers,
-    snmpDiscoveryPeers,
-    [],
-    [],
+  const discoveryByKey = new Map(
+    peers.map((peer) => [`${peer.peerIp}|${peer.addressFamily}|${peer.vrf ?? ""}`, peer]),
   );
+
+  return (snmpPeers as unknown as BgpPeerSummary[]).map((snmpPeer) => {
+    const key = `${snmpPeer.peerIp}|${snmpPeer.addressFamily}|${snmpPeer.vrf ?? ""}`;
+    const discoveryPeer = discoveryByKey.get(key);
+    if (!discoveryPeer) return snmpPeer;
+    return {
+      ...discoveryPeer,
+      ...snmpPeer,
+      state: snmpPeer.state,
+      uptime: snmpPeer.uptime ?? discoveryPeer.uptime,
+      receivedPrefixes: snmpPeer.receivedPrefixes ?? discoveryPeer.receivedPrefixes,
+      advertisedPrefixes: snmpPeer.advertisedPrefixes ?? discoveryPeer.advertisedPrefixes,
+      source: snmpPeer.source,
+      confidence: snmpPeer.confidence,
+      evidence: snmpPeer.evidence,
+    };
+  });
 }
 
 async function applyRoleOverridesToPeers(deviceId: number, peers: BgpPeerSummary[]) {

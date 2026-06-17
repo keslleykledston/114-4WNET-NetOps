@@ -41,6 +41,7 @@ export type AuthUser = {
 
 export type PublicUser = AuthUser & {
   enabled: boolean;
+  profileId: number | null;
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +53,7 @@ export function serializeUser(user: {
   email: string;
   role: string;
   enabled: boolean;
+  profileId?: number | null;
   lastLoginAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -62,6 +64,7 @@ export function serializeUser(user: {
     email: user.email,
     role: user.role as UserRole,
     enabled: user.enabled,
+    profileId: user.profileId ?? null,
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
@@ -154,6 +157,7 @@ export async function findSessionUserByToken(token: string) {
     passwordHash: usersTable.passwordHash,
     role: usersTable.role,
     enabled: usersTable.enabled,
+    profileId: usersTable.profileId,
     lastLoginAt: usersTable.lastLoginAt,
     createdAt: usersTable.createdAt,
     updatedAt: usersTable.updatedAt,
@@ -184,6 +188,7 @@ export async function getSessionUserFromRequest(req: Request): Promise<PublicUse
     email: session.email,
     role: session.role,
     enabled: session.enabled,
+    profileId: session.profileId,
     lastLoginAt: session.lastLoginAt,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
@@ -253,6 +258,7 @@ export function isAuthPublicPath(pathname: string, method: string): boolean {
 export function isAdminOnlyPath(pathname: string, method: string): boolean {
   if (pathname.startsWith("/auth")) return false;
   if (pathname.startsWith("/users")) return true;
+  if (pathname.startsWith("/user-profiles")) return true;
   if (pathname.startsWith("/integrations") && method !== "GET") return true;
   if (pathname.startsWith("/netbox/devices/sync-local")) return true;
   if (pathname.startsWith("/provisioning-jobs") && pathname.includes("/approve")) return true;

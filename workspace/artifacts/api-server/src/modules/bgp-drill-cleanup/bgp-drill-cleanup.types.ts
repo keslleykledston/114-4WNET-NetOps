@@ -3,7 +3,7 @@ import type { DeviceDiscoverySnapshot, BgpPeerSummary } from "../netops/device-d
 
 export type BgpPeerCleanupRecommendation = "full" | "partial" | "skip";
 export type BgpPeerCleanupRisk = "low" | "medium" | "high";
-export type BgpPeerCleanupDependencyStatus = "exclusive" | "shared" | "ambiguous";
+export type BgpPeerCleanupDependencyStatus = "exclusive" | "shared" | "global" | "ambiguous";
 export type BgpPeerCleanupDependencyType =
   | "route-policy"
   | "ip-prefix"
@@ -16,6 +16,7 @@ export type BgpPeerCleanupDependencyType =
 export interface BgpPeerCleanupDependency {
   type: BgpPeerCleanupDependencyType;
   name: string;
+  matchType?: "basic" | "advanced" | null;
   status: BgpPeerCleanupDependencyStatus;
   users: Array<{
     peerIp: string;
@@ -32,6 +33,7 @@ export interface BgpPeerCleanupDependency {
 export interface BgpPeerCleanupDependencyBuckets {
   exclusive: BgpPeerCleanupDependency[];
   shared: BgpPeerCleanupDependency[];
+  global: BgpPeerCleanupDependency[];
   ambiguous: BgpPeerCleanupDependency[];
 }
 
@@ -40,6 +42,19 @@ export interface BgpPeerCleanupScript {
   validationBefore: string[];
   validationAfter: string[];
   sha256: string;
+}
+
+export interface BgpPeerCleanupSshRefresh {
+  enabled: boolean;
+  commandCount: number;
+  executedCount: number;
+  commands: string[];
+  warnings: string[];
+  evidence: Array<{
+    command: string;
+    output: string;
+    error?: string;
+  }>;
 }
 
 export interface BgpPeerCleanupTwinPeer {
@@ -61,18 +76,21 @@ export interface BgpPeerCleanupAnalysis {
   peerCategory: string | null;
   state: string;
   peerAs: number | null;
+  localAs: number | null;
   importPolicies: string[];
   exportPolicies: string[];
   recommendation: BgpPeerCleanupRecommendation;
   riskLevel: BgpPeerCleanupRisk;
   dependencies: BgpPeerCleanupDependencyBuckets;
   script: BgpPeerCleanupScript;
+  sshRefresh?: BgpPeerCleanupSshRefresh | null;
   warnings: string[];
   blockedReasons: string[];
   twin?: BgpPeerCleanupTwinPeer | null;
   collectedAt: string | null;
   snapshotSource: DeviceDiscoverySnapshot["sourcesUsed"][number] | "unknown";
   drilldown?: BgpPeerDrilldownResult | null;
+  changePlanId?: number | null;
 }
 
 export interface BgpPeerCleanupAnalyzeRequest {

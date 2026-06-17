@@ -22,6 +22,26 @@ export const SNMP_OIDS = {
   bgpPeerFsmEstablishedTime: "1.3.6.1.2.1.15.3.1.16",
 } as const;
 
+/** Huawei BGP peer table (VRF-aware) — 1.3.6.1.4.1.2011.5.25.177 */
+export const HUAWEI_BGP_OIDS = {
+  peerVrfTable: "1.3.6.1.4.1.2011.5.25.177.1.1.1",
+  peerTable: "1.3.6.1.4.1.2011.5.25.177.1.1.2",
+  remoteAs: "1.3.6.1.4.1.2011.5.25.177.1.1.2.2",
+  remoteAddr: "1.3.6.1.4.1.2011.5.25.177.1.1.2.4",
+  state: "1.3.6.1.4.1.2011.5.25.177.1.1.2.5",
+  vrfName: "1.3.6.1.4.1.2011.5.25.177.1.1.1.6",
+} as const;
+
+export const HUAWEI_BGP_STATE_BY_CODE: Record<string, string> = {
+  "1": "idle",
+  "2": "connect",
+  "3": "active",
+  "4": "opensent",
+  "5": "openconfirm",
+  "6": "established",
+  "9": "noneg",
+};
+
 export const BGP_STATE_BY_CODE: Record<string, string> = {
   "1": "idle",
   "2": "connect",

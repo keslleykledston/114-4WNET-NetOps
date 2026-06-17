@@ -23,6 +23,11 @@ router.post("/users", async (req, res) => {
   const password = typeof body.password === "string" ? body.password : "";
   const role = body.role === "admin" || body.role === "operator" ? body.role : "viewer";
   const enabled = typeof body.enabled === "boolean" ? body.enabled : true;
+  const profileId = typeof body.profile_id === "number"
+    ? body.profile_id
+    : typeof body.profileId === "number"
+      ? body.profileId
+      : null;
 
   if (!name || !email || !password) {
     res.status(400).json({ error: "Name, email and password are required" });
@@ -41,6 +46,7 @@ router.post("/users", async (req, res) => {
     passwordHash: hashPassword(password),
     role,
     enabled,
+    profileId,
     updatedAt: new Date(),
   }).returning();
 
@@ -81,6 +87,8 @@ router.patch("/users/:id", async (req, res) => {
   if (typeof body.password === "string" && body.password.trim()) updateData.passwordHash = hashPassword(body.password);
   if (body.role === "admin" || body.role === "operator" || body.role === "viewer") updateData.role = body.role;
   if (typeof body.enabled === "boolean") updateData.enabled = body.enabled;
+  if (typeof body.profile_id === "number" || body.profile_id === null) updateData.profileId = body.profile_id;
+  if (typeof body.profileId === "number" || body.profileId === null) updateData.profileId = body.profileId;
 
   const [updated] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, id)).returning();
   if (!updated) {

@@ -3,8 +3,16 @@ import type {
   BgpPeerCleanupAnalysis,
   BgpPeerCleanupDependency,
   BgpPeerCleanupScript,
-  BgpPeerCleanupTwinPeer,
 } from "./bgp-drill-cleanup.types.js";
+
+const REMOVABLE_DEPENDENCY_TYPES = new Set([
+  "route-policy",
+  "ip-prefix",
+  "ipv6-prefix",
+  "community-filter",
+  "as-path-filter",
+  "extcommunity-filter",
+]);
 
 function ensureCommands(commands: string[]): string[] {
   return [...new Set(commands.map((command) => command.trim()).filter(Boolean))];
@@ -18,21 +26,35 @@ function bgpFamilyForAfi(afi: string): "ipv4" | "ipv6" {
 function familyCommands(peerIp: string, vrf: string | null, afi: string): string[] {
   const family = bgpFamilyForAfi(afi);
   if (!vrf) {
-    return [` ${family}-family unicast`, `  undo peer ${peerIp}`];
+    return [`undo peer ${peerIp}`, `y`];
   }
-  return [` ${family}-family vpn-instance ${vrf}`, `  undo peer ${peerIp}`];
+  return [`${family}-family vpn-instance ${vrf}`, `undo peer ${peerIp}`];
 }
 
-function twinPeerCommands(peerIp: string, twin: BgpPeerCleanupTwinPeer | null | undefined, vrf: string | null): string[] {
-  if (!twin) return [];
-  if (twin.afi !== "ipv4" && twin.afi !== "ipv6") return [];
-  const family = bgpFamilyForAfi(twin.afi);
-  if (!vrf) return [` ${family}-family unicast`, `  undo peer ${twin.peerIp}`];
-  return [` ${family}-family vpn-instance ${vrf}`, `  undo peer ${twin.peerIp}`];
+function normalizeRemovalStatus(dep: BgpPeerCleanupDependency & Record<string, unknown>): string {
+  return String(dep.classification ?? dep.status ?? "").toLowerCase();
+}
+
+function isTruthyFlag(value: unknown): boolean {
+  return value === true || value === "true" || value === 1;
+}
+
+export function shouldRemoveDependency(dep: BgpPeerCleanupDependency & Record<string, unknown>): boolean {
+  const status = normalizeRemovalStatus(dep);
+  if (status !== "exclusive") return false;
+  if (!REMOVABLE_DEPENDENCY_TYPES.has(dep.type)) return false;
+  const hasSafetyFlag = dep.safeToRemove !== undefined || dep.safe_to_remove !== undefined;
+  if (hasSafetyFlag && !isTruthyFlag(dep.safeToRemove) && !isTruthyFlag(dep.safe_to_remove)) return false;
+  if (dep.scope === "global_control") return false;
+  if (isTruthyFlag(dep.isGlobal)) return false;
+  if (isTruthyFlag(dep.isProtected)) return false;
+  if (isTruthyFlag(dep.dependency_warning_suppressed)) return false;
+  if (isTruthyFlag(dep.expected_shared)) return false;
+  if (isTruthyFlag(dep.removal_protected)) return false;
+  return true;
 }
 
 function removalForDependency(dep: BgpPeerCleanupDependency): string | null {
-  if (dep.status !== "exclusive") return null;
   switch (dep.type) {
     case "route-policy":
       return `undo route-policy ${dep.name}`;
@@ -41,20 +63,41 @@ function removalForDependency(dep: BgpPeerCleanupDependency): string | null {
     case "ipv6-prefix":
       return `undo ip ipv6-prefix ${dep.name}`;
     case "community-filter":
-      return `undo ip community-filter ${dep.name}`;
+      return dep.matchType
+        ? `undo ip community-filter ${dep.matchType} ${dep.name}`
+        : `undo ip community-filter ${dep.name}`;
     case "as-path-filter":
       return `undo ip as-path-filter ${dep.name}`;
     case "extcommunity-filter":
       return `undo ip extcommunity-filter ${dep.name}`;
-    case "acl":
-      return `undo acl name ${dep.name}`;
     default:
       return null;
   }
 }
 
-function configHeader(asn: number | null): string {
-  return [`system-view`, `bgp ${asn ?? "<ASN>"}`].join("\n");
+function removalPriority(dep: BgpPeerCleanupDependency): number {
+  switch (dep.type) {
+    case "route-policy":
+      return 0;
+    case "ip-prefix":
+      return 1;
+    case "ipv6-prefix":
+      return 2;
+    case "community-filter":
+      return 3;
+    case "as-path-filter":
+      return 4;
+    case "extcommunity-filter":
+      return 5;
+    case "acl":
+      return 6;
+    default:
+      return 9;
+  }
+}
+
+function configHeader(asn: number | null): string[] {
+  return ["system-view", `bgp ${asn ?? "<ASN>"}`];
 }
 
 function validationCommands(peerIp: string, vrf: string | null, afi: string, dependencies: BgpPeerCleanupDependency[]): string[] {
@@ -80,20 +123,31 @@ export function buildBgpPeerCleanupScript(input: {
   const { analysis } = input;
   const removalCommands: string[] = [];
   if (analysis.recommendation !== "skip") {
-    removalCommands.push(configHeader(analysis.peerAs ?? null));
+    removalCommands.push(...configHeader(analysis.localAs ?? null));
     removalCommands.push(...familyCommands(analysis.peerIp, analysis.vrf, analysis.afi));
-    removalCommands.push(...twinPeerCommands(analysis.peerIp, analysis.twin ?? null, analysis.vrf));
-    if (analysis.recommendation === "full") {
-      removalCommands.push("quit");
-      for (const dep of analysis.dependencies.exclusive) {
-        const command = removalForDependency(dep);
-        if (command) removalCommands.push(command);
-      }
+    removalCommands.push("quit");
+    const removableDependencies = analysis.dependencies.exclusive
+      .filter((dep) => shouldRemoveDependency(dep as BgpPeerCleanupDependency & Record<string, unknown>))
+      .map((dep, index) => ({ dep, index }))
+      .sort((left, right) => {
+        const priorityDelta = removalPriority(left.dep) - removalPriority(right.dep);
+        if (priorityDelta !== 0) return priorityDelta;
+        return left.index - right.index;
+      })
+      .map((entry) => entry.dep);
+    for (const dep of removableDependencies) {
+      const command = removalForDependency(dep);
+      if (command) removalCommands.push(command);
     }
     removalCommands.push("commit");
   }
 
-  const validationBefore = validationCommands(analysis.peerIp, analysis.vrf, analysis.afi, [...analysis.dependencies.exclusive, ...analysis.dependencies.shared, ...analysis.dependencies.ambiguous]);
+  const validationBefore = validationCommands(
+    analysis.peerIp,
+    analysis.vrf,
+    analysis.afi,
+    [...analysis.dependencies.exclusive, ...analysis.dependencies.shared, ...analysis.dependencies.global, ...analysis.dependencies.ambiguous],
+  );
   const validationAfter = validationCommands(analysis.peerIp, analysis.vrf, analysis.afi, [...analysis.dependencies.exclusive]);
 
   const normalized = {
@@ -132,7 +186,7 @@ export function buildBgpPeerCleanupMarkdown(input: { analysis: BgpPeerCleanupAna
   }
   lines.push("");
   lines.push("## Dependencies");
-  for (const bucket of ["exclusive", "shared", "ambiguous"] as const) {
+  for (const bucket of ["exclusive", "shared", "global", "ambiguous"] as const) {
     lines.push(`### ${bucket}`);
     const deps = analysis.dependencies[bucket];
     if (!deps.length) {
@@ -142,6 +196,11 @@ export function buildBgpPeerCleanupMarkdown(input: { analysis: BgpPeerCleanupAna
     for (const dep of deps) {
       lines.push(`- ${dep.type} ${dep.name} (${dep.status})`);
     }
+  }
+  if (analysis.dependencies.global.length > 0) {
+    lines.push("");
+    lines.push("## GLOBAIS / PRESERVADOS");
+    lines.push("Dependência global compartilhada por desenho operacional.");
   }
   lines.push("");
   lines.push("## Script");

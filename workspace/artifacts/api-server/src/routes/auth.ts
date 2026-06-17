@@ -17,6 +17,7 @@ import {
   verifyPassword,
   getDefaultPermissions,
 } from "../lib/auth.js";
+import { resolveUserNavModules, getNavModuleCatalog } from "../modules/user-profiles/user-profiles.service.js";
 
 const router = Router();
 
@@ -172,6 +173,33 @@ router.get("/auth/me/permissions", requireAuth, async (req, res) => {
 
   const effectivePermissions = (fullUser as any).permissionsJson ?? getDefaultPermissions(user.role as any);
   res.json({ effectivePermissions });
+});
+
+router.get("/auth/me/modules", requireAuth, async (req, res) => {
+  const user = await getSessionUserFromRequest(req);
+  if (!user) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  const [fullUser] = await db.select().from(usersTable).where(eq(usersTable.id, user.id));
+  if (!fullUser) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  const resolved = await resolveUserNavModules({
+    role: fullUser.role as "viewer" | "operator" | "admin",
+    profileId: fullUser.profileId ?? null,
+  });
+
+  res.json({
+    modules: resolved.modules,
+    profileId: resolved.profileId,
+    profileName: resolved.profileName,
+    isAdminBypass: resolved.isAdminBypass,
+    catalog: getNavModuleCatalog(),
+  });
 });
 
 export default router;

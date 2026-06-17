@@ -12,6 +12,7 @@ import {
   type OidWalkResult,
   type SnmpSession,
 } from "./snmp-session.js";
+import { collectRfc4273BgpPeers } from "../../operational-bgp/operational-bgp-rfc4273-snmp.js";
 import {
   preflightFailureSummary,
   runSnmpPreflightForDevice,
@@ -135,7 +136,12 @@ export async function collectSnmpReadonly(device: Device, community: string): Pr
     const { interfaces, ifMibDiagnostics } = await collectInterfaces(session, errors, warnings);
     Object.assign(oidDiagnostics, ifMibDiagnostics);
 
-    const { bgpPeers, bgpDiagnostics } = await collectBgp4Peers(session, errors, warnings);
+    const [legacyBgp, rfc4273Bgp] = await Promise.all([
+      collectBgp4Peers(session, errors, warnings),
+      collectRfc4273BgpPeers(device.id, session, warnings),
+    ]);
+    const bgpPeers = mergeBgpPeers(legacyBgp.bgpPeers, rfc4273Bgp.map(mapOperationalBgpPeer));
+    const bgpDiagnostics = legacyBgp.bgpDiagnostics;
     Object.assign(oidDiagnostics, bgpDiagnostics);
 
     if (interfaces.length === 0 && Object.values(ifMibDiagnostics).some((d) => d.status !== "ok" && d.status !== "empty")) {
@@ -341,6 +347,36 @@ async function collectBgp4Peers(
     errors.push(message);
     return { bgpPeers: [], bgpDiagnostics };
   }
+}
+
+function bgpPeerKey(peer: Pick<SnmpCollectedBgpPeer, "peerIp" | "addressFamily">): string {
+  return `${peer.peerIp}|${peer.addressFamily}`;
+}
+
+function mergeBgpPeers(primary: SnmpCollectedBgpPeer[], secondary: SnmpCollectedBgpPeer[]): SnmpCollectedBgpPeer[] {
+  const byKey = new Map<string, SnmpCollectedBgpPeer>();
+  for (const peer of secondary) byKey.set(bgpPeerKey(peer), peer);
+  for (const peer of primary) byKey.set(bgpPeerKey(peer), peer);
+  return [...byKey.values()].sort((left, right) => left.peerIp.localeCompare(right.peerIp));
+}
+
+function mapOperationalBgpPeer(peer: {
+  peerIp: string;
+  peerAs: number | null;
+  fsmState: string;
+  uptimeSeconds: number | null;
+  afi: string;
+}): SnmpCollectedBgpPeer {
+  return {
+    peerIp: peer.peerIp,
+    remoteAs: peer.peerAs,
+    state: peer.fsmState,
+    uptimeSecs: peer.uptimeSeconds,
+    inUpdates: null,
+    outUpdates: null,
+    addressFamily: peer.afi === "ipv6" ? "ipv6" : peer.afi === "ipv4" ? "ipv4" : "unknown",
+    source: "snmp",
+  };
 }
 
 function classifyPeerAddressFamily(peerIp: string): "ipv4" | "ipv6" | "unknown" {

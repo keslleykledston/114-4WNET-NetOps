@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListNetopsDeviceBgpPeersQueryKey,
-  getListDeviceBgpPeersQueryKey,
+  useListNetopsDeviceBgpPeers,
   useUpdateNetopsDeviceBgpPeerRole,
 } from "@workspace/api-client-react";
 import type {
@@ -34,7 +34,8 @@ import { BgpPeerDetailModal } from "./bgp-peer-detail-modal";
 import { BgpPeerCleanupModal } from "./bgp-peer-cleanup-modal";
 import { formatBgpUptime } from "./format-bgp-uptime";
 import { CollectSnmpButton } from "@/features/device-inventory/collect-snmp-button";
-import { useDiscoveryBgpPeers, type DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
+import { type DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
+import { dedupeDiscoveryBgpPeers } from "./bgp-peer-list-utils";
 
 interface BgpPanelProps {
   device: Device;
@@ -59,6 +60,34 @@ const roleLabel: Partial<Record<NetopsBgpPeerRole, string>> = {
 
 function formatRoleLabel(role: NetopsBgpPeerRole) {
   return roleLabel[role] ?? "Cliente";
+}
+
+function peerStateTextClass(state: string): string {
+  switch (state) {
+    case "Established":
+      return "text-emerald-400";
+    case "Active":
+      return "text-sky-400";
+    case "Idle":
+      return "text-amber-400";
+    case "Connect":
+      return "text-orange-400";
+    default:
+      return "text-red-400";
+  }
+}
+
+function primaryDirectionForRole(role: NetopsBgpPeerRole): "import" | "export" | "internal" {
+  if (role === "customer") return "import";
+  if (role === "ibgp") return "internal";
+  return "export";
+}
+
+function discoverySourceFromNetopsSource(source: NetopsBgpPeer["source"]): DiscoveryBgpPeer["source"] {
+  if (source === "db") return "local_db";
+  if (source === "ssh") return "ssh_running_config";
+  if (source === "snapshot") return "snmp_snapshot";
+  return "manual_upload";
 }
 
 const roleOptions: Array<{ value: RoleFilter; label: string }> = [
@@ -87,6 +116,10 @@ const afOptions: Array<{ value: AfFilter; label: string }> = [
   { value: "ipv4", label: "IPv4" },
   { value: "ipv6", label: "IPv6" },
 ];
+
+const validStateFilters = new Set<StateFilter>(stateOptions.map((option) => option.value));
+const validRoleFilters = new Set<RoleFilter>(roleOptions.map((option) => option.value));
+const validAfFilters = new Set<AfFilter>(afOptions.map((option) => option.value));
 
 interface StoredBgpFilters {
   search: string;
@@ -118,7 +151,23 @@ function loadStoredFilters(deviceId: number): StoredBgpFilters | null {
   try {
     const raw = localStorage.getItem(`${STORAGE_PREFIX}${deviceId}`);
     if (!raw) return null;
-    return JSON.parse(raw) as StoredBgpFilters;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      search: typeof parsed.search === "string" ? parsed.search : "",
+      stateFilter: typeof parsed.stateFilter === "string" && validStateFilters.has(parsed.stateFilter as StateFilter)
+        ? (parsed.stateFilter as StateFilter)
+        : "all",
+      roleFilter: typeof parsed.roleFilter === "string" && validRoleFilters.has(parsed.roleFilter as RoleFilter)
+        ? (parsed.roleFilter as RoleFilter)
+        : "all",
+      afFilter: typeof parsed.afFilter === "string" && validAfFilters.has(parsed.afFilter as AfFilter)
+        ? (parsed.afFilter as AfFilter)
+        : "all",
+      includeIbgp:
+        typeof parsed.includeIbgp === "boolean"
+          ? parsed.includeIbgp || parsed.roleFilter === "ibgp"
+          : parsed.roleFilter === "ibgp",
+    };
   } catch {
     return null;
   }
@@ -126,14 +175,33 @@ function loadStoredFilters(deviceId: number): StoredBgpFilters | null {
 
 function buildListParams(
   role: ListNetopsDeviceBgpPeersParams["role"] | undefined,
+  roleFilter: RoleFilter,
   stateFilter: StateFilter,
   afFilter: AfFilter,
 ): ListNetopsDeviceBgpPeersParams | undefined {
   const params: ListNetopsDeviceBgpPeersParams = {};
-  if (role) params.role = role;
+  const effectiveRole = role ?? (roleFilter !== "all" ? roleFilter : undefined);
+  if (effectiveRole) params.role = effectiveRole;
   if (stateFilter !== "all") params.state = stateFilter;
   if (afFilter === "ipv4" || afFilter === "ipv6") params.af = afFilter;
   return Object.keys(params).length ? params : undefined;
+}
+
+function toDiscoveryPeer(peer: NetopsBgpPeer): DiscoveryBgpPeer {
+  const largeReceivedRoutes = (peer.receivedPrefixes ?? 0) > 5000;
+  const largeAdvertisedRoutes = (peer.advertisedPrefixes ?? 0) > 5000;
+  return {
+    ...peer,
+    category: peer.role,
+    primaryDirection: primaryDirectionForRole(peer.role),
+    largeReceivedRoutes,
+    largeAdvertisedRoutes,
+    autoLoadRoutes: false,
+    requiresExplicitRouteSearch: largeReceivedRoutes || largeAdvertisedRoutes,
+    source: discoverySourceFromNetopsSource(peer.source),
+    confidence: "high",
+    evidence: undefined,
+  };
 }
 
 export function BgpPanel({ device, title, role }: BgpPanelProps) {
@@ -157,11 +225,12 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
 
   const listParams = useMemo(
-    () => buildListParams(role, stateFilter, afFilter),
-    [afFilter, role, stateFilter],
+    () => buildListParams(role, roleFilter, stateFilter, afFilter),
+    [afFilter, role, roleFilter, stateFilter],
   );
 
-  const { data: peers, isLoading, isError } = useDiscoveryBgpPeers(device.id, role);
+  const { data: peersRaw, isLoading, isError } = useListNetopsDeviceBgpPeers(device.id, listParams);
+  const peers = useMemo(() => dedupeDiscoveryBgpPeers((peersRaw ?? []).map(toDiscoveryPeer)), [peersRaw]);
 
   useEffect(() => {
     if (role) {
@@ -212,41 +281,12 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
           queryClient.setQueryData(queryKey, next);
         });
 
-        const cachedQueries = queryClient.getQueriesData<DiscoveryBgpPeer[]>({
-          queryKey: getListDeviceBgpPeersQueryKey(device.id),
-        });
-
-        cachedQueries.forEach(([queryKey, current]) => {
-          if (!current) return;
-          const params = (queryKey[1] as { category?: string } | undefined) ?? undefined;
-          const currentCategory = params?.category;
-          const next = current
-            .filter((peer) => {
-              if (peer.peerIp !== variables.peerIp || peer.addressFamily !== variables.data.addressFamily) return true;
-              if (!currentCategory || currentCategory === nextRole) return true;
-              return false;
-            })
-            .map((peer) => {
-              if (peer.peerIp !== variables.peerIp || peer.addressFamily !== variables.data.addressFamily) return peer;
-              return {
-                ...peer,
-                role: nextRole,
-                category: nextRole,
-                roleSource: "manual_override" as const,
-                primaryDirection: nextRole === "customer" ? "import" : nextRole === "ibgp" ? "internal" : "export",
-              };
-            });
-
-          queryClient.setQueryData(queryKey, next);
-        });
-
         setEditedRoles((current) => {
           const next = { ...current };
           delete next[key];
           return next;
         });
         await queryClient.invalidateQueries({ queryKey: getListNetopsDeviceBgpPeersQueryKey(device.id) });
-        await queryClient.invalidateQueries({ queryKey: getListDeviceBgpPeersQueryKey(device.id) });
         toast({ title: "Papel BGP salvo" });
       },
       onError: (err) => {
@@ -280,13 +320,13 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
   }, [afFilter, editedRoles, includeIbgp, peers, role, roleFilter, search, stateFilter]);
 
   const counters = useMemo(() => {
-    const base = (peers ?? []).filter((peer) => includeIbgp || (editedRoles[peerEditKey(peer)] ?? peer.role) !== "ibgp");
+    const base = peers.filter((peer) => includeIbgp || (editedRoles[peerEditKey(peer)] ?? peer.role) !== "ibgp");
     return {
       total: base.length,
       established: base.filter((peer) => peer.state === "Established").length,
       down: base.filter((peer) => peer.state !== "Established").length,
       ebgp: base.filter((peer) => peer.sessionType === "eBGP").length,
-      ibgp: (peers ?? []).filter((peer) => (editedRoles[peerEditKey(peer)] ?? peer.role) === "ibgp").length,
+      ibgp: peers.filter((peer) => (editedRoles[peerEditKey(peer)] ?? peer.role) === "ibgp").length,
       customer: countRoleWithEdits(base, editedRoles, "customer"),
       provider: countRoleWithEdits(base, editedRoles, "provider"),
       ix: countRoleWithEdits(base, editedRoles, "ix"),
@@ -412,7 +452,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
             </div>
             <div className="flex flex-wrap gap-2">
               {roleOptions
-                .filter((opt) => opt.value !== (includeIbgp ? "" : "ibgp"))
+                .filter((opt) => includeIbgp || opt.value !== "ibgp")
                 .map((option) => (
                   <button
                     key={option.value}
@@ -458,7 +498,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="[&_th]:py-2 [&_td]:py-1.5">
               <TableHeader>
                 <TableRow>
                   <TableHead>Peer IP</TableHead>
@@ -519,18 +559,22 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell>{peer.description ?? peer.name ?? "-"}</TableCell>
-                      <TableCell>{peer.remoteAs ?? "-"}</TableCell>
+                      <TableCell className="text-xs">{peer.description ?? peer.name ?? "-"}</TableCell>
+                      <TableCell className="text-xs">{peer.remoteAs ?? "-"}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="w-fit">{peer.sessionType ?? "-"}</Badge>
+                        <Badge variant="outline" className="w-fit text-[10px] font-medium">{peer.sessionType ?? "-"}</Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-xs text-muted-foreground">
                         {peer.vrf ?? "-"}
                       </TableCell>
-                      <TableCell><Badge variant="outline">{peer.state}</Badge></TableCell>
-                      <TableCell>{formatBgpUptime(peer.uptime)}</TableCell>
-                      <TableCell className="min-w-44">
-                        <div className="flex items-center gap-2">
+                      <TableCell>
+                        <span className={`text-xs font-medium ${peerStateTextClass(peer.state)}`}>
+                          {peer.state}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs">{formatBgpUptime(peer.uptime)}</TableCell>
+                      <TableCell className="min-w-36">
+                        <div className="flex items-center gap-1">
                           <Select
                             value={selectedRole}
                             onValueChange={(value) => {
@@ -543,12 +587,14 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                               }));
                             }}
                           >
-                            <SelectTrigger className="h-8">
+                            <SelectTrigger className="h-6 min-h-6 gap-1 border-border/50 px-1.5 py-0 font-mono text-xs leading-none shadow-none">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               {editableRoleOptions.map((option) => (
-                                <SelectItem key={option} value={option}>{formatRoleLabel(option)}</SelectItem>
+                                <SelectItem key={option} value={option} className="font-mono text-xs">
+                                  {formatRoleLabel(option)}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -556,12 +602,12 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                             <Button
                               type="button"
                               size="sm"
-                              className="h-8 px-2"
+                              className="h-6 px-1.5 text-xs"
                               onClick={() => saveRole(peer)}
                               disabled={saving}
                               title="Salvar papel"
                             >
-                              <Save className="h-3.5 w-3.5" />
+                              <Save className="h-3 w-3" />
                               {saving ? "..." : "Salvar"}
                             </Button>
                           )}

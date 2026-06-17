@@ -88,6 +88,7 @@ export function DeviceFormDialog({
         connectorId?: number | null;
         connectorGroupId?: number | null;
         tenantId?: number | null;
+        snmpConfigured?: boolean | null;
       };
       const tenantId =
         extended.tenantId ??
@@ -133,6 +134,7 @@ export function DeviceFormDialog({
   const submitLabel = mode === "create" ? "Adicionar Dispositivo" : "Salvar Alterações";
 
   const tenantMissingGroup = Boolean(form.tenantId && !form.connectorGroupId);
+  const snmpConfigured = mode === "edit" && Boolean((device as (Device & { snmpConfigured?: boolean | null }) | null)?.snmpConfigured);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -244,8 +246,13 @@ export function DeviceFormDialog({
               <Input
                 value={form.snmpCommunity}
                 onChange={(event) => setForm({ ...form, snmpCommunity: event.target.value })}
-                placeholder={mode === "edit" ? "Deixe em branco para manter" : "public"}
+                placeholder={mode === "edit" ? (snmpConfigured ? "Registrada; digite para substituir" : "Digite para cadastrar") : "public"}
               />
+              {mode === "edit" ? (
+                <div className="text-xs text-muted-foreground">
+                  {snmpConfigured ? "Comunidade SNMP registrada no banco. O valor em branco mantém o cadastro atual." : "Nenhuma comunidade SNMP registrada."}
+                </div>
+              ) : null}
             </FormField>
 
             <FormField label="Tenant">

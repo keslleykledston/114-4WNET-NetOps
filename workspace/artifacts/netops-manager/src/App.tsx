@@ -29,6 +29,8 @@ import L2Circuits from "@/pages/l2-circuits";
 import BgpPeerDrilldownPage from "@/pages/bgp-peer-drilldown";
 import OperationalBgpPage from "@/pages/operational-bgp";
 import Users from "@/pages/users";
+import UserProfiles from "@/pages/user-profiles";
+import { ModuleAccessGuard } from "@/components/module-access-guard";
 import ConnectorsPage from "@/pages/connectors";
 import ConnectorDetailPage from "@/pages/connector-detail";
 import ConnectorDashboardPage from "@/pages/connector-dashboard";
@@ -75,8 +77,9 @@ function Router() {
   }
 
   return (
-    <Layout>
-      <Switch>
+    <ModuleAccessGuard>
+      <Layout>
+        <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/devices" component={Devices} />
         <Route path="/devices/:id" component={DeviceDetail} />
@@ -110,9 +113,11 @@ function Router() {
         <Route path="/operational/bgp" component={OperationalBgpPage} />
         <Route path="/bgp/operations" component={OperationalBgpPage} />
         <Route path="/users" component={Users} />
+        <Route path="/user-profiles" component={UserProfiles} />
         <Route component={NotFound} />
-      </Switch>
-    </Layout>
+        </Switch>
+      </Layout>
+    </ModuleAccessGuard>
   );
 }
 

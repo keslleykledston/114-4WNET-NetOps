@@ -172,6 +172,26 @@ export function enrichCircuitsWithFindings(
     }
   }
 
+  const switchingVlanMap = new Map<number, { keys: string[]; portCount: number }>();
+  for (const circuit of circuits) {
+    if (circuit.outerVlan === undefined) continue;
+    const flags = circuit.evidenceFlags ?? {};
+    const portCount = typeof flags.switchingPortCount === "number" ? flags.switchingPortCount : 0;
+    if (portCount < 2) continue;
+    const entry = switchingVlanMap.get(circuit.outerVlan) ?? { keys: [], portCount: 0 };
+    entry.keys.push(keyOf(circuit));
+    entry.portCount = Math.max(entry.portCount, portCount);
+    switchingVlanMap.set(circuit.outerVlan, entry);
+  }
+
+  for (const [vlan, entry] of switchingVlanMap.entries()) {
+    addFindingToMany(findingsByKey, entry.keys, {
+      code: "VLAN_MULTI_INTERFACE_LOCAL",
+      severity: "info",
+      message: `VLAN ${vlan} is carried on ${entry.portCount} switch/trunk interfaces (simple L2 VLAN)`,
+    });
+  }
+
   for (const circuit of circuits) {
     const circuitKey = keyOf(circuit);
     const label = circuitLabel(circuit);

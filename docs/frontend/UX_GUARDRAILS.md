@@ -84,6 +84,7 @@ Alteracao permitida:
 - Alertas de compliance/confianca devem usar `Alert` compacto e manter densidade NOC.
 - Empty state de BGP sem snapshot deve orientar "Execute discovery para carregar peers BGP."
 - Snapshot vindo de cache persistido deve aparecer como aviso operacional, nao como erro visual.
+- A tabela operacional de BGP deve mostrar um registro consolidado por `peerIp/VRF`, mesmo quando o SNMP expuser o mesmo IPv6 em mais de um `afi/safi`.
 
 ## BGP peer drilldown snapshot UI
 

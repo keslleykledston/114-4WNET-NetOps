@@ -4,6 +4,7 @@ export type NetopsTreeView =
   | "device"
   | "interfaces"
   | "bgp"
+  | "bgp-announcements"
   | "bgp-providers"
   | "bgp-customers"
   | "bgp-cdn"
@@ -12,6 +13,25 @@ export type NetopsTreeView =
   | "bgp-ibgp"
   | "filters"
   | "communities";
+
+export const NETOPS_TREE_VIEWS: NetopsTreeView[] = [
+  "device",
+  "interfaces",
+  "bgp",
+  "bgp-announcements",
+  "bgp-providers",
+  "bgp-customers",
+  "bgp-cdn",
+  "bgp-ix",
+  "bgp-cdn-ix",
+  "bgp-ibgp",
+  "filters",
+  "communities",
+];
+
+export function isNetopsTreeView(value: string): value is NetopsTreeView {
+  return NETOPS_TREE_VIEWS.includes(value as NetopsTreeView);
+}
 
 export interface NetopsTreeSelection {
   device: Device;
@@ -26,6 +46,8 @@ export function viewLabel(view: NetopsTreeView): string {
       return "Interfaces";
     case "bgp":
       return "BGP";
+    case "bgp-announcements":
+      return "Anúncios (matriz)";
     case "bgp-providers":
       return "Operadoras";
     case "bgp-customers":

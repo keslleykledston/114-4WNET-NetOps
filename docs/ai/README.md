@@ -12,6 +12,7 @@ Pacote de contexto para agentes. **Somente documentação** — não substitui `
 | [DEPENDENCIES.md](./DEPENDENCIES.md) | Pacotes pnpm, libs internas, env, integrações |
 | [FLOWS.md](./FLOWS.md) | Fluxos principais (auth, L2, BGP, connectors, compliance) |
 | [TESTING.md](./TESTING.md) | Selftests, smokes, CI, como validar |
+| [Config Generator](../config-generator/README.md) | MVP preview-only: closure, ID allocator, change request |
 | [PROJECT_HANDOFF.md](../PROJECT_HANDOFF.md) | Handoff completo do projeto: estado, operação, riscos |
 | [agents/](./agents/) | Personas de agentes especializados |
 

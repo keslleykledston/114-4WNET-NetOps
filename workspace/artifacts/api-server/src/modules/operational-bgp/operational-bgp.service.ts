@@ -14,6 +14,7 @@ import { isNetopsSnmpBgpRealEnabled } from "./operational-bgp.gate.js";
 import { OperationalBgpPreflightError } from "./operational-bgp.errors.js";
 import { runBgpPreflightLive } from "./operational-bgp.preflight.js";
 import { resolveSnmpCredential } from "../netops/snmp/snmp-credential-resolver.js";
+import { dedupeBgpPeersForDisplay } from "../netops/bgp/bgp-peer-display-normalizer.js";
 import type {
   BgpFreshnessStatus,
   OperationalBgpCollectResult,
@@ -112,7 +113,7 @@ export async function getOperationalBgpPeers(deviceId: number): Promise<Operatio
 
   return {
     deviceId,
-    peers,
+    peers: dedupeBgpPeersForDisplay(peers),
     freshness: peers.length === 0 && !job ? "unknown" : freshness,
     collectedAt: collectedAt?.toISOString() ?? null,
     jobId: job?.id ?? null,

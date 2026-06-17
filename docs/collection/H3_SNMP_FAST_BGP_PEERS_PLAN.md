@@ -214,6 +214,8 @@ Standard BGP4-MIB **não** define received/accepted/advertised prefix count por 
 
 Env: `SNMP_FAST_BGP_FRESH_MINUTES=15`, `SNMP_FAST_BGP_STALE_HOURS=24`.
 
+**Auto-refresh:** backend poller re-coleta o conjunto SNMP_FAST BGP a cada **5 minutos** por padrão (`SNMP_FAST_BGP_POLL_INTERVAL_MS=300000`), mantendo `operational_bgp_peers` atualizado sem depender de SSH.
+
 Recompute no GET se `collected_at` antigo (mesmo padrão H2).
 
 ---

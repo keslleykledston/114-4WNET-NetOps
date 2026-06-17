@@ -1,11 +1,14 @@
 import { buildPolicyDependencyConfigFromSnapshot } from "../netops/huawei-vrp/parsers/policy-dependency-pipeline.js";
 import { normalizePolicyLookupKey, normalizePolicyObjectName } from "../netops/huawei-vrp/parsers/policy-utils.js";
+import {
+  GLOBAL_CLEANUP_OBJECT_REASON,
+  isGlobalCleanupObject,
+} from "./bgp-drill-cleanup-global-objects.js";
 import type {
   BgpPeerCleanupDependency,
   BgpPeerCleanupDependencyBuckets,
   BgpPeerCleanupDependencyStatus,
   BgpPeerCleanupDependencyType,
-  BgpPeerCleanupObjectUsage,
   BgpPeerCleanupTwinPeer,
 } from "./bgp-drill-cleanup.types.js";
 import type { BgpPeerDrilldownResult } from "../bgp-drilldown/bgp-peer-drilldown.types.js";
@@ -15,15 +18,22 @@ function normalizeKey(value: string): string {
   return normalizePolicyLookupKey(value);
 }
 
-function peerIdentity(peer: BgpPeerSummary): string {
-  return `${peer.peerIp}|${peer.vrf ?? ""}|${peer.addressFamily}`;
+function inferCommunityFilterMatchType(snapshot: DeviceDiscoverySnapshot, name: string): "basic" | "advanced" | null {
+  const target = normalizeKey(name);
+  for (const community of snapshot.communities ?? []) {
+    if (normalizeKey(community.name) !== target) continue;
+    for (const entry of community.entries ?? []) {
+      if (!entry || typeof entry !== "object") continue;
+      const line = "line" in entry ? String((entry as { line?: unknown }).line ?? "") : "";
+      const match = /^\s*ip\s+community-filter\s+(basic|advanced)\s+\S+/i.exec(line);
+      if (match) return (match[1] || "basic").toLowerCase() as "basic" | "advanced";
+    }
+  }
+  return null;
 }
 
-function objectUsageStatus(usage: BgpPeerSummary[], targetPeerIp: string): BgpPeerCleanupDependencyStatus {
-  if (usage.length === 0) return "ambiguous";
-  const otherUsers = usage.filter((peer) => peer.peerIp !== targetPeerIp);
-  if (otherUsers.length === 0) return "exclusive";
-  return "shared";
+function peerIdentity(peer: BgpPeerSummary): string {
+  return `${peer.peerIp}|${peer.vrf ?? ""}|${peer.addressFamily}`;
 }
 
 function mapPeerUsageToDependencyUsers(peers: BgpPeerSummary[]) {
@@ -45,9 +55,21 @@ function collectPeerPolicyNames(snapshot: DeviceDiscoverySnapshot, policyName: s
   });
 }
 
-function buildObjectUsageMap(snapshot: DeviceDiscoverySnapshot, targetPeerIp: string) {
+function collectPolicyUsages(snapshot: DeviceDiscoverySnapshot, policyName: string) {
+  return collectPeerPolicyNames(snapshot, policyName);
+}
+
+function routePolicyPeerStatus(snapshot: DeviceDiscoverySnapshot, policyName: string, targetPeerIp: string): BgpPeerCleanupDependencyStatus {
+  const users = collectPolicyUsages(snapshot, policyName);
+  if (users.length === 0) return "ambiguous";
+  const otherUsers = users.filter((peer) => peer.peerIp !== targetPeerIp);
+  if (otherUsers.length === 0) return "exclusive";
+  return "shared";
+}
+
+function buildRoutePolicyReferenceMap(snapshot: DeviceDiscoverySnapshot) {
   const config = buildPolicyDependencyConfigFromSnapshot(snapshot, { rawConfig: "" });
-  const usage = new Map<string, BgpPeerCleanupObjectUsage>();
+  const usage = new Map<string, { type: BgpPeerCleanupDependencyType; name: string; routePolicies: string[] }>();
 
   for (const dep of config.dependency_graph.route_policy_dependencies) {
     if (!dep.dependencyType) continue;
@@ -56,47 +78,95 @@ function buildObjectUsageMap(snapshot: DeviceDiscoverySnapshot, targetPeerIp: st
       type: dep.dependencyType as BgpPeerCleanupDependencyType,
       name: normalizePolicyObjectName(dep.dependencyName),
       routePolicies: [],
-      peers: [],
-      status: "ambiguous" as const,
     };
-    if (!existing.routePolicies.includes(dep.routePolicy)) {
+    const policyKey = normalizeKey(dep.routePolicy);
+    if (!existing.routePolicies.some((policy) => normalizeKey(policy) === policyKey)) {
       existing.routePolicies.push(dep.routePolicy);
     }
     usage.set(key, existing);
   }
 
-  for (const [key, entry] of usage) {
-    const [type, name] = key.split("|", 2);
-    const policies = entry.routePolicies.map((policyName) =>
-      collectPeerPolicyNames(snapshot, policyName),
-    ).flat();
-    const peerMap = new Map<string, BgpPeerSummary>();
-    for (const peer of policies) {
-      peerMap.set(peerIdentity(peer), peer);
-    }
-    const peers = [...peerMap.values()];
-    entry.peers = peers;
-    entry.status = objectUsageStatus(peers, targetPeerIp);
-    if (entry.status === "shared") {
-      entry.reason = `${type} ${name} usado por outros peers`;
-    } else if (entry.status === "exclusive") {
-      entry.reason = `${type} ${name} usado somente pelo peer alvo`;
-    } else {
-      entry.reason = `uso insuficiente para provar exclusividade de ${type} ${name}`;
-    }
-    usage.set(key, entry);
-  }
-
   return usage;
 }
 
-function collectPolicyUsages(snapshot: DeviceDiscoverySnapshot, policyName: string) {
-  const target = normalizeKey(policyName);
-  return snapshot.bgpPeers.filter((peer) => {
-    const importPolicy = normalizeKey(peer.importPolicy ?? "");
-    const exportPolicy = normalizeKey(peer.exportPolicy ?? "");
-    return importPolicy === target || exportPolicy === target;
-  });
+function classifyCatalogObject(input: {
+  type: BgpPeerCleanupDependencyType;
+  name: string;
+  routePolicies: string[];
+  snapshot: DeviceDiscoverySnapshot;
+  targetPeerIp: string;
+}): { status: BgpPeerCleanupDependencyStatus; reason: string } {
+  const displayName = normalizePolicyObjectName(input.name);
+
+  if (isGlobalCleanupObject(displayName)) {
+    return { status: "global", reason: GLOBAL_CLEANUP_OBJECT_REASON };
+  }
+
+  const uniquePolicies = [...new Set(input.routePolicies.map((policy) => normalizeKey(policy)))];
+  if (uniquePolicies.length === 0) {
+    return {
+      status: "ambiguous",
+      reason: `uso insuficiente para provar exclusividade de ${input.type} ${displayName}`,
+    };
+  }
+
+  if (uniquePolicies.length === 1) {
+    const onlyPolicy = input.routePolicies[0];
+    const policyStatus = routePolicyPeerStatus(input.snapshot, onlyPolicy, input.targetPeerIp);
+    if (policyStatus === "exclusive") {
+      return {
+        status: "exclusive",
+        reason: `${input.type} ${displayName} usado somente pela route-policy exclusiva ${onlyPolicy}`,
+      };
+    }
+    return {
+      status: "shared",
+      reason: `${input.type} ${displayName} referenciado pela route-policy compartilhada ${onlyPolicy}`,
+    };
+  }
+
+  return {
+    status: "shared",
+    reason: `${input.type} ${displayName} referenciado por ${uniquePolicies.length} route-policies`,
+  };
+}
+
+function classifyRoutePolicy(input: {
+  policyName: string;
+  snapshot: DeviceDiscoverySnapshot;
+  targetPeerIp: string;
+}): { status: BgpPeerCleanupDependencyStatus; reason: string; users: BgpPeerSummary[] } {
+  const displayName = normalizePolicyObjectName(input.policyName);
+  const users = collectPolicyUsages(input.snapshot, displayName);
+
+  if (isGlobalCleanupObject(displayName)) {
+    return {
+      status: "global",
+      reason: GLOBAL_CLEANUP_OBJECT_REASON,
+      users,
+    };
+  }
+
+  const status = routePolicyPeerStatus(input.snapshot, displayName, input.targetPeerIp);
+  if (status === "exclusive") {
+    return {
+      status,
+      reason: `route-policy ${displayName} usada somente pelo peer alvo`,
+      users,
+    };
+  }
+  if (status === "shared") {
+    return {
+      status,
+      reason: `route-policy ${displayName} usada por outros peers`,
+      users,
+    };
+  }
+  return {
+    status,
+    reason: `Nenhum uso comprovado no snapshot para route-policy ${displayName}`,
+    users,
+  };
 }
 
 function toDependency(
@@ -106,11 +176,13 @@ function toDependency(
   users: BgpPeerSummary[],
   evidence: string,
   reason?: string | null,
+  matchType?: "basic" | "advanced" | null,
   source: BgpPeerCleanupDependency["source"] = "discovery",
 ): BgpPeerCleanupDependency {
   return {
     type,
     name: normalizePolicyObjectName(name),
+    matchType,
     status,
     users: mapPeerUsageToDependencyUsers(users),
     evidence,
@@ -119,36 +191,64 @@ function toDependency(
   };
 }
 
+function pushDependency(
+  buckets: BgpPeerCleanupDependencyBuckets,
+  item: BgpPeerCleanupDependency,
+) {
+  switch (item.status) {
+    case "exclusive":
+      buckets.exclusive.push(item);
+      break;
+    case "shared":
+      buckets.shared.push(item);
+      break;
+    case "global":
+      buckets.global.push(item);
+      break;
+    default:
+      buckets.ambiguous.push(item);
+      break;
+  }
+}
+
 export function analyzeBgpPeerCleanupDependencies(input: {
   targetPeerIp: string;
   snapshot: DeviceDiscoverySnapshot;
   drilldown: BgpPeerDrilldownResult;
 }): BgpPeerCleanupDependencyBuckets {
-  const exclusive: BgpPeerCleanupDependency[] = [];
-  const shared: BgpPeerCleanupDependency[] = [];
-  const ambiguous: BgpPeerCleanupDependency[] = [];
-  const objectUsage = buildObjectUsageMap(input.snapshot, input.targetPeerIp);
+  const buckets: BgpPeerCleanupDependencyBuckets = {
+    exclusive: [],
+    shared: [],
+    global: [],
+    ambiguous: [],
+  };
+  const objectUsage = buildRoutePolicyReferenceMap(input.snapshot);
   const seen = new Set<string>();
 
   for (const effectivePolicy of input.drilldown.effectivePolicies) {
     const policyName = normalizePolicyObjectName(effectivePolicy.policyName);
-    const policyUsers = collectPolicyUsages(input.snapshot, policyName);
-    const policyStatus = objectUsageStatus(policyUsers, input.targetPeerIp);
-    const policyEvidence = `route-policy ${policyName} usado por ${policyUsers.length} peer(s)`;
-    const policyDependency = toDependency(
-      "route-policy",
-      policyName,
-      policyStatus,
-      policyUsers,
-      policyEvidence,
-      policyUsers.length === 0 ? "Nenhum uso comprovado no snapshot" : null,
-      "discovery",
-    );
     const policyKey = `route-policy|${normalizeKey(policyName)}`;
-    if (!seen.has(policyKey)) {
-      seen.add(policyKey);
-      (policyStatus === "exclusive" ? exclusive : policyStatus === "shared" ? shared : ambiguous).push(policyDependency);
-    }
+    if (seen.has(policyKey)) continue;
+    seen.add(policyKey);
+
+    const classified = classifyRoutePolicy({
+      policyName,
+      snapshot: input.snapshot,
+      targetPeerIp: input.targetPeerIp,
+    });
+    pushDependency(
+      buckets,
+      toDependency(
+        "route-policy",
+        policyName,
+        classified.status,
+        classified.users,
+        `route-policy ${policyName} usada por ${classified.users.length} peer(s)`,
+        classified.reason,
+        null,
+        "discovery",
+      ),
+    );
   }
 
   for (const policy of input.drilldown.policies) {
@@ -157,27 +257,45 @@ export function analyzeBgpPeerCleanupDependencies(input: {
       const key = `${dep.dependencyType}|${normalizeKey(dep.dependencyName)}`;
       if (seen.has(key)) continue;
       seen.add(key);
+
       const usage = objectUsage.get(key);
-      const status = usage?.status ?? "ambiguous";
-      const users = usage?.peers ?? [];
+      const classified = classifyCatalogObject({
+        type: dep.dependencyType as BgpPeerCleanupDependencyType,
+        name: dep.dependencyName,
+        routePolicies: usage?.routePolicies ?? [policy.name],
+        snapshot: input.snapshot,
+        targetPeerIp: input.targetPeerIp,
+      });
+      const matchType = dep.dependencyType === "community-filter"
+        ? inferCommunityFilterMatchType(input.snapshot, dep.dependencyName)
+        : null;
+
+      const users = usage?.routePolicies
+        .flatMap((policyName) => collectPolicyUsages(input.snapshot, policyName)) ?? [];
+      const peerMap = new Map<string, BgpPeerSummary>();
+      for (const peer of users) peerMap.set(peerIdentity(peer), peer);
+
       const evidence = usage?.routePolicies.length
-        ? `${dep.dependencyType} ${normalizePolicyObjectName(dep.dependencyName)} usado por ${usage.routePolicies.join(", ")}`
+        ? `${dep.dependencyType} ${normalizePolicyObjectName(dep.dependencyName)} referenciado por ${usage.routePolicies.join(", ")}`
         : dep.evidence;
-      const reason = usage?.reason ?? (status === "ambiguous" ? "uso insuficiente para prova" : null);
-      const item = toDependency(
-        dep.dependencyType as BgpPeerCleanupDependencyType,
-        dep.dependencyName,
-        status,
-        users,
-        evidence,
-        reason,
-        dep.source === "ssh_running_config" ? "collected_config" : "discovery",
+
+      pushDependency(
+        buckets,
+        toDependency(
+          dep.dependencyType as BgpPeerCleanupDependencyType,
+          dep.dependencyName,
+          classified.status,
+          [...peerMap.values()],
+          evidence,
+          classified.reason,
+          matchType,
+          dep.source === "ssh_running_config" ? "collected_config" : "discovery",
+        ),
       );
-      (status === "exclusive" ? exclusive : status === "shared" ? shared : ambiguous).push(item);
     }
   }
 
-  return { exclusive, shared, ambiguous };
+  return buckets;
 }
 
 export function findTwinPeer(input: {

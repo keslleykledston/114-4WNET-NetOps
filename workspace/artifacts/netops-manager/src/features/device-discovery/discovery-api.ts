@@ -94,36 +94,45 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForDiscoveryCompletion(deviceId: number, timeoutMs = 20 * 60 * 1000): Promise<void> {
+export async function runDeviceDiscoveryAndWait(
+  deviceId: number,
+  request: DeviceDiscoveryRequest = DEFAULT_DISCOVERY_REQUEST,
+  timeoutMs = 20 * 60 * 1000,
+): Promise<DiscoverySnapshot> {
+  const startedAfterMs = Date.now();
+  const startRes = await fetch(`/api/devices/${deviceId}/discover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!startRes.ok && startRes.status !== 202) {
+    const body = await startRes.text();
+    throw new Error(body || `Discovery failed (${startRes.status})`);
+  }
+
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const res = await fetch(`/api/devices/${deviceId}/discovery-status`);
-    if (res.ok) {
-      const status = await res.json() as { status: string };
-      if (status.status !== "running") return;
+    const statusRes = await fetch(`/api/devices/${deviceId}/discovery-status`);
+    if (statusRes.ok) {
+      const status = await statusRes.json() as { status: string; finishedAt?: string | null };
+      const finishedAtMs = status.finishedAt ? new Date(status.finishedAt).getTime() : 0;
+      if (status.status !== "running" && finishedAtMs >= startedAfterMs) {
+        const snapshot = await getDeviceDiscoverySnapshot(deviceId);
+        if (snapshot && new Date(snapshot.finishedAt).getTime() >= startedAfterMs) {
+          return snapshot as DiscoverySnapshot;
+        }
+      }
     }
     await sleep(3000);
   }
+
+  throw new Error("Tempo limite aguardando discovery.");
 }
 
 export function useRunDiscovery(deviceId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      const startRes = await fetch(`/api/devices/${deviceId}/discover`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(DEFAULT_DISCOVERY_REQUEST),
-      });
-      if (!startRes.ok && startRes.status !== 202) {
-        const body = await startRes.text();
-        throw new Error(body || `Discovery failed (${startRes.status})`);
-      }
-      await waitForDiscoveryCompletion(deviceId);
-      const snapshot = await getDeviceDiscoverySnapshot(deviceId);
-      if (!snapshot) throw new Error("Discovery concluido sem snapshot");
-      return snapshot as DiscoverySnapshot;
-    },
+    mutationFn: async () => runDeviceDiscoveryAndWait(deviceId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetDeviceDiscoverySnapshotQueryKey(deviceId) }),

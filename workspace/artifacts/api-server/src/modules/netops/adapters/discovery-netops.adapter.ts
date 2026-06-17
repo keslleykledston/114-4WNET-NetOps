@@ -190,18 +190,21 @@ export async function persistSshDiscoveryToNetopsStores(
   snapshot: DeviceDiscoverySnapshot,
   rawOutputs: Array<{ command?: string; output: string }>,
 ): Promise<void> {
-  if (snapshot.sourceStatus.ssh !== "success") return;
-
   const inventory = discoverySnapshotToNetopsData(snapshot);
   const rawConfig = extractRunningConfig(rawOutputs);
-  const sshSuccess = snapshot.status !== "failed";
+  const discoverySuccess = snapshot.status !== "failed";
+  const collector = snapshot.sourceStatus.ssh === "success"
+    ? "ssh"
+    : snapshot.sourceStatus.snmp === "success"
+      ? "snmp"
+      : "discovery";
 
   await db.insert(snmpSnapshotsTable).values({
     deviceId,
-    collector: "ssh",
+    collector,
     collectorVersion: "discovery-v1",
-    success: sshSuccess,
-    errorMessage: sshSuccess ? null : snapshot.warnings.find((item) => item.level === "error")?.message ?? "SSH discovery failed",
+    success: discoverySuccess,
+    errorMessage: discoverySuccess ? null : snapshot.warnings.find((item) => item.level === "error")?.message ?? "Discovery collection failed",
     errorsJson: snapshot.warnings.length > 0 ? JSON.stringify(snapshot.warnings) : null,
     interfacesJson: inventory.interfaces.length > 0 ? JSON.stringify(inventory.interfaces) : null,
     bgpPeersJson: inventory.bgpPeers.length > 0 ? JSON.stringify(inventory.bgpPeers) : null,
@@ -213,6 +216,12 @@ export async function persistSshDiscoveryToNetopsStores(
       discoveryRunId: snapshot.discoveryRunId,
     }),
   });
+
+  if (discoverySuccess) {
+    await db.update(devicesTable)
+      .set({ lastSeen: new Date(), updatedAt: new Date() })
+      .where(eq(devicesTable.id, deviceId));
+  }
 
   if (rawConfig) {
     const summary = parsedSummary(snapshot);

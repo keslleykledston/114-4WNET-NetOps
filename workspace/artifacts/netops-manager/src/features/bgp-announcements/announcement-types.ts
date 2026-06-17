@@ -1,0 +1,448 @@
+export type CellStateLabel = "On" | "P1" | "P2" | "P3" | "P4" | "Off" | "BH" | "NE" | "Def" | "—" | "?" | "!";
+
+export interface MatrixCell {
+  circuitId: string;
+  upstreamName: string;
+  state: string;
+  label: CellStateLabel;
+  community: string | null;
+  actionCode: string | null;
+  prependCount: number | null;
+  confidence: string;
+}
+
+export interface MatrixRow {
+  targetKey: string;
+  targetType: "origin" | "customer" | "unknown";
+  routePolicyName: string;
+  node: number;
+  family: "ipv4" | "ipv6";
+  prefixScope: string;
+  affectedPrefixes: string[];
+  prefixListName: string | null;
+  modifiable: boolean;
+  riskLevel: string;
+  cells: MatrixCell[];
+  findings: Array<{ code: string; severity: string; message: string }>;
+  lastCollectedAt: string | null;
+  collectionAgeMinutes: number | null;
+  targetRole?: TargetRole;
+  targetEditMode?: TargetEditMode;
+  dependencyScope?: DependencyScope;
+  dependencyProtection?: DependencyProtection;
+  dependencyReason?: string;
+}
+
+export type TargetRole =
+  | "customer"
+  | "origin"
+  | "provider"
+  | "upstream"
+  | "ix"
+  | "cdn"
+  | "ibgp"
+  | "unknown";
+
+export type TargetEditMode = "editable_future" | "audit_only" | "hidden" | "unknown";
+
+export type DependencyScope =
+  | "circuit_specific"
+  | "customer_specific"
+  | "global_shared"
+  | "system"
+  | "unknown";
+
+export type DependencyProtection =
+  | "removable_candidate"
+  | "protected_global"
+  | "protected_system"
+  | "shared_requires_review"
+  | "unknown";
+
+export interface ProtectedGlobalDependency {
+  objectName: string;
+  objectKind: string;
+  dependencyScope: DependencyScope;
+  dependencyProtection: DependencyProtection;
+  reason: string;
+  consumerCount: number;
+  consumers: string[];
+}
+
+export interface MatrixConflictItem {
+  targetKey: string;
+  routePolicyName: string;
+  node: number;
+  family: "ipv4" | "ipv6";
+  targetRole: TargetRole;
+  circuitIds: string[];
+  message: string;
+}
+
+export interface MatrixSemanticWarnings {
+  operational: string[];
+  insufficientData: string[];
+  sharedDependency: string[];
+  protectedGlobalNotices: string[];
+}
+
+export interface MatrixSemanticView {
+  countersByTargetRole: Record<TargetRole, number>;
+  countersByDependencyScope: Record<DependencyScope, number>;
+  protectedGlobals: ProtectedGlobalDependency[];
+  realConflicts: MatrixConflictItem[];
+  warnings: MatrixSemanticWarnings;
+  editableRowCount: number;
+  auditOnlyRowCount: number;
+}
+
+export interface MatrixResponse {
+  deviceId: number;
+  upstreams: Array<{ circuitId: string; displayName: string; role: string }>;
+  rows: MatrixRow[];
+  findings: Array<{ code: string; severity: string; message: string }>;
+  generatedAt: string;
+  semanticView?: MatrixSemanticView;
+  meta?: {
+    source: string;
+    dataSource?: string;
+    collectionAgeMinutes: number | null;
+    lastCollectedAt: string | null;
+    readOnly: boolean;
+    refreshMode?: string;
+    snapshotId?: number;
+    snapshotCreatedAt?: string;
+    counters?: SnapshotCounters;
+    warnings?: string[];
+    status?: SnapshotRefreshStatus;
+  };
+}
+
+export type SnapshotRefreshStatus = "ok" | "partial" | "empty";
+
+export interface SnapshotCounters {
+  originTargets: number;
+  customerTargets: number;
+  upstreamCount: number;
+  communitySetCount: number;
+  policyCount: number;
+  conflictCount: number;
+  rowCount: number;
+}
+
+export interface SnapshotRefreshResult {
+  snapshotId: number;
+  deviceId: number;
+  createdAt: string;
+  counters: SnapshotCounters;
+  warnings: string[];
+  status: SnapshotRefreshStatus;
+}
+
+export interface SnapshotSummary {
+  id: number;
+  deviceId: number;
+  createdAt: string;
+  rowCount: number;
+  counters: SnapshotCounters;
+  conflictCount: number;
+  status: SnapshotRefreshStatus;
+  warnings: string[];
+}
+
+export type SnapshotDiffChangeType =
+  | "target_added"
+  | "target_removed"
+  | "target_changed"
+  | "community_added"
+  | "community_removed"
+  | "community_changed"
+  | "policy_added"
+  | "policy_removed"
+  | "policy_changed"
+  | "protected_global_added"
+  | "protected_global_removed"
+  | "protected_global_changed"
+  | "conflict_added"
+  | "conflict_resolved"
+  | "conflict_changed"
+  | "upstream_audit_changed"
+  | "metadata_changed";
+
+export type SnapshotDiffSeverity = "info" | "warning" | "critical";
+
+export interface SnapshotDiffChange {
+  type: SnapshotDiffChangeType;
+  severity: SnapshotDiffSeverity;
+  targetId: string | null;
+  targetName: string | null;
+  targetRole: TargetRole | null;
+  targetEditMode: TargetEditMode | null;
+  before: unknown;
+  after: unknown;
+  explanation: string;
+  isEditableTarget: boolean;
+  isProtectedGlobal: boolean;
+  isAuditOnly: boolean;
+}
+
+export interface SnapshotDiffSummary {
+  addedTargets: number;
+  removedTargets: number;
+  changedTargets: number;
+  addedCommunities: number;
+  removedCommunities: number;
+  newConflicts: number;
+  resolvedConflicts: number;
+  protectedGlobalChanges: number;
+  upstreamAuditChanges: number;
+}
+
+export interface SnapshotDiffResponse {
+  baseSnapshot: { id: number; deviceId: number; createdAt: string; rowCount: number; status: SnapshotRefreshStatus; conflictCount: number };
+  compareSnapshot: { id: number; deviceId: number; createdAt: string; rowCount: number; status: SnapshotRefreshStatus; conflictCount: number };
+  summary: SnapshotDiffSummary;
+  changes: SnapshotDiffChange[];
+  byTargetRole: Partial<Record<TargetRole, number>>;
+  byDependencyScope: Partial<Record<DependencyScope, number>>;
+  riskHints: string[];
+  readOnly: true;
+}
+
+export type SnapshotDiffFilter =
+  | "all"
+  | "editable"
+  | "audit"
+  | "protected_global"
+  | "conflicts"
+  | "metadata";
+
+export interface TargetEvidence {
+  deviceId: number;
+  targetKey: string;
+  routePolicyName: string;
+  node: number;
+  family: "ipv4" | "ipv6";
+  upstreamCircuitId: string;
+  upstreamName: string;
+  prefix: string | null;
+  prefixesAffected: string[];
+  prefixListName: string | null;
+  detectedState: string;
+  community: string | null;
+  actionCode: string | null;
+  communitiesDirect: string[];
+  communityListName: string | null;
+  policyClass: string;
+  modifiable: boolean;
+  auditOnly: boolean;
+  rawApplies: string[];
+  source: string;
+  lastCollectedAt: string | null;
+  collectionAgeMinutes: number | null;
+  confidence: string;
+  findings: Array<{ code: string; severity: string; message: string }>;
+}
+
+export interface PreviewChangeResponse {
+  allowed: boolean;
+  blockedReasons: string[];
+  targetPolicyName: string;
+  node: number;
+  affectedPrefixes: string[];
+  oldState: CellStateLabel;
+  newState: CellStateLabel;
+  oldCommunities: string[];
+  newCommunities: string[];
+  communitySetMatchName: string | null;
+  usesCommunityList: boolean;
+  generatedScript: string;
+  rollbackScript: string;
+  diff: string[];
+  riskLevel: string;
+  findings: Array<{ code: string; severity: string; message: string }>;
+}
+
+export interface ChangePlanRow {
+  id: number;
+  targetPolicyName: string;
+  targetType: string;
+  family: string;
+  node: number;
+  upstreamCircuitId: string;
+  upstreamName: string | null;
+  oldState: string | null;
+  newState: string;
+  riskLevel: string;
+  status: string;
+  generatedScript: string | null;
+  rollbackScript: string | null;
+  createdAt: string;
+}
+
+export interface UpstreamAuditReport {
+  deviceId: number;
+  localAs: number | null;
+  upstreams: Array<{
+    circuitId: string;
+    displayName: string;
+    exportPolicyName: string | null;
+    localAs: number | null;
+    family: string;
+    findings: Array<{ code: string; severity: string; message: string }>;
+    rules: Array<{
+      actionCode: string;
+      state: string;
+      label: string;
+      communityFilter: string | null;
+      communityValue: string | null;
+      asPathRule: string | null;
+      status: string;
+    }>;
+  }>;
+  findings: Array<{ code: string; severity: string; message: string }>;
+  generatedAt: string;
+}
+
+export interface CommunitySetRow {
+  id: number;
+  name: string;
+  communitiesJson: string[];
+  normalizedHash: string;
+  isShared: boolean;
+  usageCount: number;
+}
+
+export type ChangePreviewActionType =
+  | "set_community"
+  | "add_community"
+  | "remove_community"
+  | "set_prepend"
+  | "clear_prepend"
+  | "block_announcement"
+  | "allow_announcement"
+  | "audit_only_note";
+
+export type ChangePreviewRiskLevel = "blocked" | "high" | "medium" | "low";
+export type ProposedCommandConfidence = "low" | "medium" | "high";
+export type ProposedCommandVendor = "huawei_vrp";
+export type ProposedCommandScope = "documental_only";
+export type ProposedCommandSafety = "not_executable";
+export type ProposedCommandKind = "candidate" | "comment";
+
+export interface ProposedCommandLine {
+  line: string;
+  kind: ProposedCommandKind;
+  confidence: ProposedCommandConfidence;
+  requiresHumanReview: true;
+  notes: string[];
+}
+
+export interface ProposedCommandSet {
+  vendor: ProposedCommandVendor;
+  scope: ProposedCommandScope;
+  safety: ProposedCommandSafety;
+  commandSetName: string;
+  confidence: ProposedCommandConfidence;
+  actionType: ChangePreviewActionType;
+  commands: ProposedCommandLine[];
+  warnings: string[];
+}
+
+export interface ChangePreviewValidation {
+  status: "ok" | "blocked" | "unsupported_preview" | "warning";
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ChangePreviewRiskAssessment {
+  level: ChangePreviewRiskLevel;
+  blocked: boolean;
+  reasons: string[];
+  summary: string;
+}
+
+export interface ChangePreviewPrependDiffEntry {
+  operation: "set_prepend" | "clear_prepend";
+  targetId: string;
+  targetName: string;
+  upstreamCircuitId: string;
+  before: { prepend: number | null | "unknown" };
+  after: { prepend: number | null };
+  explanation: string;
+}
+
+export type ChangePreviewLogicalDiffItem = string | ChangePreviewPrependDiffEntry;
+
+export interface ChangePreviewState {
+  communities: string[];
+  cellStates: Record<string, string>;
+  prependCounts: Record<string, number | null>;
+  announcementAllowed: boolean;
+  notes: string[];
+}
+
+export interface UpstreamAuditImpactItem {
+  circuitId: string;
+  displayName: string;
+  exportPolicyName: string | null;
+  auditNotes: string[];
+  readOnly: true;
+}
+
+export interface AnnouncementChangePreview {
+  id?: number;
+  snapshotId: number | null;
+  tenantId: number | null;
+  deviceId: number;
+  targetId: string;
+  targetName: string;
+  targetRole: TargetRole;
+  targetEditMode: TargetEditMode;
+  actionType: ChangePreviewActionType;
+  upstreamCircuitId: string | null;
+  currentState: ChangePreviewState;
+  proposedState: ChangePreviewState;
+  logicalDiff: ChangePreviewLogicalDiffItem[];
+  riskHints?: string[];
+  dependencyScope?: DependencyScope;
+  dependencyProtection?: DependencyProtection;
+  dependencyReason?: string;
+  affectedPolicies: string[];
+  affectedCommunities: string[];
+  protectedGlobals: ProtectedGlobalDependency[];
+  upstreamAuditImpact: UpstreamAuditImpactItem[];
+  proposedCommands: ProposedCommandSet[];
+  proposedCommandsWarnings?: string[];
+  validation: ChangePreviewValidation;
+  riskAssessment: ChangePreviewRiskAssessment;
+  ticketMarkdown: string;
+  createdAt?: string;
+  createdBy: number | null;
+}
+
+export interface BgpPreviewChangePlanLinkSummary {
+  changePlanId: number;
+  previewId: number;
+  deviceId: number;
+  snapshotId: number | null;
+  targetId: string;
+  title: string;
+  description: string;
+  status: string;
+  workflowStatus:
+    | "draft"
+    | "ready_for_review"
+    | "needs_changes"
+    | "rejected"
+    | "approved_for_manual_implementation"
+    | "archived";
+  riskLevel: string;
+  ticketMarkdown: string;
+  logicalDiff: string[];
+  proposedCommands?: ProposedCommandSet[];
+  warnings: string[];
+  createdAt: string;
+  createdBy: string | null;
+}

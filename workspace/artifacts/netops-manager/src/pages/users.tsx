@@ -1,35 +1,75 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../components/auth-provider";
 import { useLocation } from "wouter";
-import { useListUsers, useCreateUser, useUpdateUser, useDeleteUser, useDisableUser, useEnableUser, useResetUserPassword, getListUsersQueryKey } from "@workspace/api-client-react";
-import type { CreateUserRequest, UpdateUserRequest } from "@workspace/api-client-react";
+import {
+  useListUsers,
+  useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
+  useDisableUser,
+  useEnableUser,
+  useResetUserPassword,
+  getListUsersQueryKey,
+} from "@workspace/api-client-react";
+import type { CreateUserRequest, UpdateUserRequest, User } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "../components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Loader2, Lock, Unlock, RotateCcw, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useUserProfiles } from "@/features/user-profiles/user-profiles-api";
+
+type UserWithProfile = User & { profileId?: number | null };
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function isEmailTaken(users: User[], email: string, excludeUserId?: number): boolean {
+  const normalized = normalizeEmail(email);
+  return users.some((entry) => entry.id !== excludeUserId && entry.email.toLowerCase() === normalized);
+}
+
+function mutationErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message.replace(/^HTTP \d+ [^:]+:\s*/, "");
+  }
+  return "Operação falhou";
+}
 
 export default function UsersPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<UserWithProfile | null>(null);
   const [confirmAction, setConfirmAction] = useState<{
-    type: "disable" | "enable" | "delete" | "reset" | null;
+    type: "disable" | "enable" | "delete" | null;
     userId?: number;
     userName?: string;
   }>({ type: null });
+  const [resetTarget, setResetTarget] = useState<{ userId: number; userName: string } | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState("");
 
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "viewer" });
+  const [formData, setFormData] = useState({ name: "", email: "", password: "", role: "viewer", profileId: "" as string });
 
-  // Check admin access
   useEffect(() => {
     if (user && user.role !== "admin") {
       setLocation("/devices");
@@ -37,14 +77,25 @@ export default function UsersPage() {
   }, [user, setLocation]);
 
   const { data: usersResponse } = useListUsers();
-  const users = usersResponse?.items || [];
+  const users = (usersResponse?.items ?? []) as UserWithProfile[];
+  const { data: profilesResponse } = useUserProfiles(user?.role === "admin");
+  const profiles = profilesResponse?.items ?? [];
+  const profileNameById = new Map(profiles.map((profile) => [profile.id, profile.name]));
 
   const createMutation = useCreateUser({
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-        setFormData({ name: "", email: "", password: "", role: "viewer" });
+        setFormData({ name: "", email: "", password: "", role: "viewer", profileId: "" });
         setIsCreateOpen(false);
+        toast({ title: "Usuário criado" });
+      },
+      onError: (error) => {
+        toast({
+          title: "Erro ao criar usuário",
+          description: mutationErrorMessage(error),
+          variant: "destructive",
+        });
       },
     },
   });
@@ -54,6 +105,14 @@ export default function UsersPage() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
         setEditingUser(null);
+        toast({ title: "Usuário atualizado" });
+      },
+      onError: (error) => {
+        toast({
+          title: "Erro ao atualizar usuário",
+          description: mutationErrorMessage(error),
+          variant: "destructive",
+        });
       },
     },
   });
@@ -80,7 +139,17 @@ export default function UsersPage() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-        setConfirmAction({ type: null });
+        setResetTarget(null);
+        setResetPassword("");
+        setResetPasswordConfirm("");
+        toast({ title: "Senha redefinida", description: "O usuário deve usar a nova senha no próximo login." });
+      },
+      onError: (error) => {
+        toast({
+          title: "Erro ao redefinir senha",
+          description: mutationErrorMessage(error),
+          variant: "destructive",
+        });
       },
     },
   });
@@ -94,6 +163,93 @@ export default function UsersPage() {
     },
   });
 
+  function handleCreateUser() {
+    const email = normalizeEmail(formData.email);
+    if (!formData.name.trim() || !email || !formData.password) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Nome, e-mail e senha são obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (isEmailTaken(users, email)) {
+      toast({
+        title: "E-mail em uso",
+        description: "Já existe um usuário com este e-mail.",
+        variant: "destructive",
+      });
+      return;
+    }
+    createMutation.mutate({
+      data: {
+        ...formData,
+        email,
+        profileId: formData.profileId ? Number(formData.profileId) : null,
+      } as CreateUserRequest,
+    });
+  }
+
+  function handleUpdateUser() {
+    if (!editingUser) return;
+    const email = normalizeEmail(editingUser.email);
+    if (!editingUser.name.trim() || !email) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Nome e e-mail são obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (isEmailTaken(users, email, editingUser.id)) {
+      toast({
+        title: "E-mail em uso",
+        description: "Já existe outro usuário com este e-mail.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateMutation.mutate({
+      id: editingUser.id,
+      data: {
+        name: editingUser.name.trim(),
+        email,
+        role: editingUser.role,
+        profileId: editingUser.profileId ?? null,
+      } as UpdateUserRequest,
+    });
+  }
+
+  function handleResetPassword() {
+    if (!resetTarget) return;
+    if (resetPassword.length < 8) {
+      toast({
+        title: "Senha inválida",
+        description: "A senha deve ter no mínimo 8 caracteres.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (resetPassword !== resetPasswordConfirm) {
+      toast({
+        title: "Senhas não conferem",
+        description: "Digite a mesma senha nos dois campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+    resetPasswordMutation.mutate({
+      id: resetTarget.userId,
+      data: { password: resetPassword },
+    });
+  }
+
+  function openResetDialog(target: User) {
+    setResetPassword("");
+    setResetPasswordConfirm("");
+    setResetTarget({ userId: target.id, userName: target.name });
+  }
+
   if (!user || user.role !== "admin") {
     return null;
   }
@@ -101,76 +257,83 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Users</h1>
-        <Button onClick={() => setIsCreateOpen(true)}>Create User</Button>
+        <h1 className="text-2xl font-bold">Usuários</h1>
+        <Button onClick={() => setIsCreateOpen(true)}>Criar usuário</Button>
       </div>
 
-      {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
+          <CardTitle>Gestão de usuários</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2 px-4">Name</th>
-                  <th className="text-left py-2 px-4">Email</th>
-                  <th className="text-left py-2 px-4">Role</th>
+                  <th className="text-left py-2 px-4">Nome</th>
+                  <th className="text-left py-2 px-4">E-mail</th>
+                  <th className="text-left py-2 px-4">Papel</th>
+                  <th className="text-left py-2 px-4">Perfil</th>
                   <th className="text-left py-2 px-4">Status</th>
-                  <th className="text-left py-2 px-4">Created</th>
-                  <th className="text-left py-2 px-4">Actions</th>
+                  <th className="text-left py-2 px-4">Criado em</th>
+                  <th className="text-left py-2 px-4">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((u: any) => (
-                  <tr key={u.id} className="border-b hover:bg-muted/50">
-                    <td className="py-2 px-4">{u.name}</td>
-                    <td className="py-2 px-4">{u.email}</td>
+                {users.map((entry) => (
+                  <tr key={entry.id} className="border-b hover:bg-muted/50">
+                    <td className="py-2 px-4">{entry.name}</td>
+                    <td className="py-2 px-4">{entry.email}</td>
                     <td className="py-2 px-4">
-                      <Badge>{u.role}</Badge>
+                      <Badge>{entry.role}</Badge>
+                    </td>
+                    <td className="py-2 px-4 text-sm">
+                      {entry.profileId
+                        ? profileNameById.get(entry.profileId) ?? `#${entry.profileId}`
+                        : profiles.find((p) => p.slug === entry.role)?.name ?? "Padrão do papel"}
                     </td>
                     <td className="py-2 px-4">
-                      {u.enabled ? (
-                        <Badge variant="outline" className="bg-green-500/10">Enabled</Badge>
+                      {entry.enabled ? (
+                        <Badge variant="outline" className="bg-green-500/10">Ativo</Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-red-500/10">Disabled</Badge>
+                        <Badge variant="outline" className="bg-red-500/10">Inativo</Badge>
                       )}
                     </td>
-                    <td className="py-2 px-4 text-sm">{new Date(u.createdAt).toLocaleDateString()}</td>
-                    <td className="py-2 px-4 space-x-2 flex">
-                      <Button size="sm" variant="outline" onClick={() => setEditingUser(u)}>Edit</Button>
-                      {u.enabled ? (
+                    <td className="py-2 px-4 text-sm">{new Date(entry.createdAt).toLocaleDateString()}</td>
+                    <td className="py-2 px-4 flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setEditingUser({ ...entry })}>
+                        Editar
+                      </Button>
+                      {entry.enabled ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setConfirmAction({ type: "disable", userId: u.id, userName: u.name })}
+                          onClick={() => setConfirmAction({ type: "disable", userId: entry.id, userName: entry.name })}
                         >
-                          <Lock className="w-4 h-4" />
+                          <Lock className="w-4 h-4 mr-1" />
+                          Desativar
                         </Button>
                       ) : (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setConfirmAction({ type: "enable", userId: u.id, userName: u.name })}
+                          onClick={() => setConfirmAction({ type: "enable", userId: entry.id, userName: entry.name })}
                         >
-                          <Unlock className="w-4 h-4" />
+                          <Unlock className="w-4 h-4 mr-1" />
+                          Ativar
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setConfirmAction({ type: "reset", userId: u.id, userName: u.name })}
-                      >
-                        <RotateCcw className="w-4 h-4" />
+                      <Button size="sm" variant="outline" onClick={() => openResetDialog(entry)}>
+                        <RotateCcw className="w-4 h-4 mr-1" />
+                        Redefinir
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setConfirmAction({ type: "delete", userId: u.id, userName: u.name })}
+                        onClick={() => setConfirmAction({ type: "delete", userId: entry.id, userName: entry.name })}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Excluir
                       </Button>
                     </td>
                   </tr>
@@ -181,22 +344,21 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
-      {/* Create Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create User</DialogTitle>
+            <DialogTitle>Criar usuário</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Name</Label>
+              <Label>Nome</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div>
-              <Label>Email</Label>
+              <Label>E-mail</Label>
               <Input
                 type="email"
                 value={formData.email}
@@ -204,7 +366,7 @@ export default function UsersPage() {
               />
             </div>
             <div>
-              <Label>Password</Label>
+              <Label>Senha</Label>
               <Input
                 type="password"
                 value={formData.password}
@@ -212,7 +374,7 @@ export default function UsersPage() {
               />
             </div>
             <div>
-              <Label>Role</Label>
+              <Label>Papel</Label>
               <Select value={formData.role} onValueChange={(role) => setFormData({ ...formData, role })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -224,35 +386,61 @@ export default function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button
-              onClick={() => createMutation.mutate({ data: formData as CreateUserRequest })}
-              disabled={createMutation.isPending}
-            >
+            <div>
+              <Label>Perfil de módulos</Label>
+              <Select
+                value={formData.profileId || "default"}
+                onValueChange={(value) => setFormData({ ...formData, profileId: value === "default" ? "" : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Padrão do papel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">Padrão do papel</SelectItem>
+                  {profiles.map((profile) => (
+                    <SelectItem key={profile.id} value={String(profile.id)}>
+                      {profile.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleCreateUser} disabled={createMutation.isPending}>
               {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Create
+              Criar
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
       {editingUser && (
         <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
+              <DialogTitle>Editar usuário</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Name</Label>
+                <Label>Nome</Label>
                 <Input
                   value={editingUser.name}
                   onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
                 />
               </div>
               <div>
-                <Label>Role</Label>
-                <Select value={editingUser.role} onValueChange={(role) => setEditingUser({ ...editingUser, role })}>
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  value={editingUser.email}
+                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Papel</Label>
+                <Select
+                  value={editingUser.role}
+                  onValueChange={(role) => setEditingUser({ ...editingUser, role: role as User["role"] })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -263,53 +451,112 @@ export default function UsersPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button
-                onClick={() => updateMutation.mutate({ id: editingUser.id, data: { name: editingUser.name, role: editingUser.role } as UpdateUserRequest })}
-                disabled={updateMutation.isPending}
-              >
+              <div>
+                <Label>Perfil de módulos</Label>
+                <Select
+                  value={editingUser.profileId ? String(editingUser.profileId) : "default"}
+                  onValueChange={(value) =>
+                    setEditingUser({
+                      ...editingUser,
+                      profileId: value === "default" ? null : Number(value),
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Padrão do papel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Padrão do papel</SelectItem>
+                    {profiles.map((profile) => (
+                      <SelectItem key={profile.id} value={String(profile.id)}>
+                        {profile.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={handleUpdateUser} disabled={updateMutation.isPending}>
                 {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Update
+                Salvar
               </Button>
             </div>
           </DialogContent>
         </Dialog>
       )}
 
-      {/* Confirmation Dialog */}
+      <Dialog
+        open={resetTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetTarget(null);
+            setResetPassword("");
+            setResetPasswordConfirm("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Redefinir senha</DialogTitle>
+          </DialogHeader>
+          {resetTarget ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Nova senha para <span className="font-medium text-foreground">{resetTarget.userName}</span>.
+              </p>
+              <div>
+                <Label>Nova senha</Label>
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  value={resetPassword}
+                  onChange={(e) => setResetPassword(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Confirmar senha</Label>
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  value={resetPasswordConfirm}
+                  onChange={(e) => setResetPasswordConfirm(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleResetPassword} disabled={resetPasswordMutation.isPending}>
+                {resetPasswordMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Redefinir senha
+              </Button>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={confirmAction.type !== null} onOpenChange={(open) => !open && setConfirmAction({ type: null })}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction.type === "disable" && "Disable User?"}
-              {confirmAction.type === "enable" && "Enable User?"}
-              {confirmAction.type === "reset" && "Reset Password?"}
-              {confirmAction.type === "delete" && "Delete User?"}
+              {confirmAction.type === "disable" && "Desativar usuário?"}
+              {confirmAction.type === "enable" && "Ativar usuário?"}
+              {confirmAction.type === "delete" && "Excluir usuário?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmAction.type === "disable" && `Disable ${confirmAction.userName}? They won't be able to login.`}
-              {confirmAction.type === "enable" && `Enable ${confirmAction.userName}?`}
-              {confirmAction.type === "reset" && `Reset password for ${confirmAction.userName}?`}
-              {confirmAction.type === "delete" && `Delete ${confirmAction.userName}? This cannot be undone.`}
+              {confirmAction.type === "disable" && `Desativar ${confirmAction.userName}? O login ficará bloqueado.`}
+              {confirmAction.type === "enable" && `Ativar ${confirmAction.userName}?`}
+              {confirmAction.type === "delete" && `Excluir ${confirmAction.userName}? Esta ação não pode ser desfeita.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => {
               if (confirmAction.type === "disable" && confirmAction.userId) {
                 disableMutation.mutate({ id: confirmAction.userId });
               } else if (confirmAction.type === "enable" && confirmAction.userId) {
                 enableMutation.mutate({ id: confirmAction.userId });
-              } else if (confirmAction.type === "reset" && confirmAction.userId) {
-                const newPassword = prompt("Enter new password (min 8 chars):");
-                if (newPassword && newPassword.length >= 8) {
-                  resetPasswordMutation.mutate({ id: confirmAction.userId, data: { password: newPassword } });
-                }
               } else if (confirmAction.type === "delete" && confirmAction.userId) {
                 deleteMutation.mutate({ id: confirmAction.userId });
               }
             }}
           >
-            Confirm
+            Confirmar
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>

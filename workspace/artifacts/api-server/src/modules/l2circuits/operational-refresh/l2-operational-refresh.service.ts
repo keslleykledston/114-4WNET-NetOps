@@ -4,9 +4,11 @@ import {
   l2CircuitsTable,
   l2DeviceOperationalTable,
 } from "@workspace/db";
+import type { Device } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { collectSnmpInterfacesOnly, isNetopsSnmpRealEnabled } from "../../netops/snmp/collect.js";
 import { collectSnmpInterfacesViaConnector } from "../../connectors/connector-snmp-collect.js";
+import type { SnmpCollectedInterface } from "../../netops/snmp/types.js";
 import { resolveSnmpCredential } from "../../netops/snmp/snmp-credential-resolver.js";
 import { assertSnmpFastPilotDevice, OperationalPilotError } from "../../operational/pilot.js";
 import { SnmpCredentialsNotConfiguredError } from "../../operational/operational-errors.js";
@@ -29,6 +31,8 @@ import {
 } from "./l2-operational-refresh.errors.js";
 import { mergeVsiOperationalEvidence } from "../parsers/vsi-multipoint.helpers.js";
 import { computeL2OperationalFreshness, type L2OperationalFreshnessStatus } from "./l2-operational-refresh.freshness.js";
+import { collectL2CircuitsViaSsh } from "../collectors/ssh.collector.js";
+import { persistL2CircuitsFromCommandOutputs, syncL2CircuitsFromLatestCollectedConfig } from "../../config-backup/config-bundle-parser.service.js";
 import { collectL2OperationalViaSsh } from "./l2-operational-ssh-ops.collector.js";
 import {
   applyLiveOpsToCircuit,
@@ -119,19 +123,38 @@ export async function getL2DeviceOperationalMeta(deviceId: number): Promise<L2Op
   };
 }
 
-export async function runL2OperationalRefresh(deviceId: number): Promise<L2OperationalRefreshResult> {
-  if (!isL2OperationalRefreshEnabled()) {
-    throw new L2OperationalRefreshDisabledError();
-  }
+type SnmpRefreshAttempt = {
+  interfaces: SnmpCollectedInterface[];
+  success: boolean;
+  warnings: string[];
+  errorMessage: string | null;
+  collected: boolean;
+};
+
+async function collectOptionalSnmpForL2Refresh(
+  device: Device,
+  deviceId: number,
+  warnings: string[],
+): Promise<SnmpRefreshAttempt> {
+  const empty: SnmpRefreshAttempt = {
+    interfaces: [],
+    success: false,
+    warnings: [],
+    errorMessage: null,
+    collected: false,
+  };
+
   if (!isNetopsSnmpRealEnabled()) {
-    throw new L2OperationalSnmpDisabledError();
+    warnings.push("SNMP desabilitado (NETOPS_SNMP_REAL_ENABLED=false) — refresh continua só com SSH.");
+    return empty;
   }
 
-  assertSnmpFastPilotDevice(deviceId);
-
-  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
-  if (!device) {
-    throw new Error("Device not found");
+  try {
+    assertSnmpFastPilotDevice(deviceId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    warnings.push(`SNMP ignorado: ${message}`);
+    return empty;
   }
 
   const credential = resolveSnmpCredential({
@@ -141,30 +164,119 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
   });
 
   if (!credential.available || !credential.value) {
-    throw new SnmpCredentialsNotConfiguredError(deviceId);
+    warnings.push("SNMP community não configurada — refresh continua só com SSH.");
+    return empty;
   }
 
-  const rows = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.deviceId, deviceId));
-  if (rows.length === 0) {
-    throw new Error(`No L2 circuits stored for device ${deviceId}. Run discovery first.`);
+  try {
+    const snmpResult =
+      device.connectorId || device.connectorGroupId
+        ? await collectSnmpInterfacesViaConnector(device, credential.value)
+        : await collectSnmpInterfacesOnly(device, credential.value);
+
+    if (!snmpResult.success && snmpResult.interfaces.length === 0) {
+      warnings.push(
+        snmpResult.errorMessage ??
+          "SNMP preflight/collection falhou — refresh continua com status operacional via SSH.",
+      );
+    } else if (!snmpResult.success) {
+      warnings.push(snmpResult.errorMessage ?? "SNMP parcial — algumas interfaces não foram coletadas.");
+    }
+    if (snmpResult.warnings.length > 0) {
+      warnings.push(...snmpResult.warnings);
+    }
+
+    return {
+      interfaces: snmpResult.interfaces,
+      success: snmpResult.success,
+      warnings: snmpResult.warnings,
+      errorMessage: snmpResult.errorMessage ?? null,
+      collected: snmpResult.interfaces.length > 0,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    warnings.push(`SNMP falhou (${message}) — refresh continua só com SSH.`);
+    return empty;
+  }
+}
+
+export async function runL2OperationalRefresh(deviceId: number): Promise<L2OperationalRefreshResult> {
+  if (!isL2OperationalRefreshEnabled()) {
+    throw new L2OperationalRefreshDisabledError();
+  }
+
+  const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, deviceId)).limit(1);
+  if (!device) {
+    throw new Error("Device not found");
   }
 
   const refreshAt = new Date();
   const warnings: string[] = [];
+  let sshInventorySynced = 0;
+  let cachedInventorySynced = 0;
+  let sshSyncDetail: string | null = null;
 
-  const snmpResult = device.connectorId || device.connectorGroupId
-    ? await collectSnmpInterfacesViaConnector(device, credential.value)
-    : await collectSnmpInterfacesOnly(device, credential.value);
-  if (!snmpResult.success && snmpResult.interfaces.length === 0) {
-    throw new Error(snmpResult.errorMessage ?? "SNMP_FAST interface collection failed");
-  }
-  if (snmpResult.warnings.length > 0) {
-    warnings.push(...snmpResult.warnings);
-  }
-  if (!snmpResult.success) {
-    warnings.push(snmpResult.errorMessage ?? "SNMP partial failure");
+  try {
+    resolveDeviceSshConfig(device);
+    const sshOutputs = await collectL2CircuitsViaSsh(device);
+    const sync = await persistL2CircuitsFromCommandOutputs({
+      deviceId,
+      device,
+      outputs: sshOutputs as Record<string, string>,
+      discoveryRunId: `ops-sync-${deviceId}-${refreshAt.getTime()}`,
+      source: "ssh_live",
+    });
+    sshInventorySynced = sync.circuitCount;
+    sshSyncDetail = `SSH live: ${sync.circuitCount} circuit(s)`;
+    if (sync.circuitCount === 0) {
+      warnings.push("SSH live collection returned 0 L2 circuits — will try cached config fallback");
+    }
+  } catch (error) {
+    if (error instanceof L2DeviceCredentialsError) {
+      sshSyncDetail = "SSH live: credentials not configured";
+      warnings.push(`SSH inventory sync failed: ${sshSyncDetail}`);
+    } else {
+      sshSyncDetail = `SSH live: ${error instanceof Error ? error.message : String(error)}`;
+      warnings.push(`SSH inventory sync failed: ${sshSyncDetail}`);
+    }
   }
 
+  let rows = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.deviceId, deviceId));
+
+  if (rows.length === 0 || sshInventorySynced === 0) {
+    try {
+      const cached = await syncL2CircuitsFromLatestCollectedConfig({
+        deviceId,
+        device,
+        discoveryRunId: `ops-cached-${deviceId}-${refreshAt.getTime()}`,
+      });
+      if (cached.circuitCount > 0) {
+        cachedInventorySynced = cached.circuitCount;
+        warnings.push(`Inventário complementado via ${cached.detail}`);
+        rows = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.deviceId, deviceId));
+      } else if (rows.length === 0) {
+        warnings.push(`Fallback de config em cache: ${cached.detail}`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (rows.length === 0) {
+        warnings.push(`Fallback de config em cache falhou: ${message}`);
+      }
+    }
+  }
+
+  if (rows.length === 0) {
+    const parts = [
+      sshSyncDetail ?? "SSH live: not attempted",
+      cachedInventorySynced > 0 ? `cached: ${cachedInventorySynced} circuit(s)` : "cached: 0 circuits",
+    ];
+    throw new Error(
+      `No L2 circuits stored for device ${deviceId}. ${parts.join(" · ")}. ` +
+        "Ensure SSH works or run device discovery/config collection first.",
+    );
+  }
+
+  const snmpResult = await collectOptionalSnmpForL2Refresh(device, deviceId, warnings);
   const interfaceMap = buildInterfaceStatusMap(snmpResult.interfaces);
   let snmpMatched = 0;
 
@@ -205,7 +317,7 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
 
     if (
       shouldMarkOperationalStale({
-        snmpCollected: snmpResult.interfaces.length > 0,
+        snmpCollected: snmpResult.collected,
         sshOpsCollected,
         snmpMatched: didSnmp,
         liveMatched: didLive,
@@ -257,6 +369,10 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
   const operationalState = {
     circuits_total: rows.length,
     circuits_updated: rows.length,
+    ssh_inventory_synced: sshInventorySynced,
+    cached_inventory_synced: cachedInventorySynced,
+    snmp_collected: snmpResult.collected,
+    snmp_success: snmpResult.success,
     snmp_interfaces: snmpResult.interfaces.length,
     snmp_interface_matches: snmpMatched,
     ssh_ops: sshOpsCollected,

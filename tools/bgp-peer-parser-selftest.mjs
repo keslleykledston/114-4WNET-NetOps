@@ -55,13 +55,46 @@ async function main() {
   assert.equal(peers[0].name, "C35-BGP-BVA-MNS");
   assert.equal(peers[0].state, "Established");
   assert.equal(peers[0].sessionType, "eBGP");
+  assert.equal(peers[0].uptime, "14d18h36m08s");
   assert.equal(peers[0].receivedPrefixes, 0);
   assert.equal(peers[0].advertisedPrefixes, 10);
   assert.equal(peers[1].peerIp, "2001:db8::5");
   assert.equal(peers[1].sessionType, "iBGP");
   assert.equal(peers[1].state, "Idle");
+  assert.equal(peers[1].uptime, null);
   assert.equal(peers[1].receivedPrefixes, 128);
   assert.equal(peers[1].advertisedPrefixes, 12);
+
+  const compactPeers = parseHuaweiBgpPeers(${JSON.stringify(`
+  45.169.161.42                     4      268707        0  1948364     0 ****h20m      Active        0
+  172.28.1.150                     4      268707    24260    28289     0 0404h17m Established        1
+  2001:db8::6                       4      268707        0        0     0 ****h20m     Active        0
+  2804:5984:B000::6                4      268707        0        0     0 ****h20m     Connect        0
+  `)});
+  assert.equal(compactPeers.length, 4);
+  assert.equal(compactPeers[0].peerIp, "45.169.161.42");
+  assert.equal(compactPeers[0].state, "Active");
+  assert.equal(compactPeers[0].uptime, null);
+  assert.equal(compactPeers[1].uptime, "0404h17m");
+  assert.equal(compactPeers[2].peerIp, "2001:db8::6");
+  assert.equal(compactPeers[2].state, "Active");
+  assert.equal(compactPeers[2].uptime, null);
+  assert.equal(compactPeers[3].peerIp, "2804:5984:B000::6");
+  assert.equal(compactPeers[3].state, "Connect");
+  assert.equal(compactPeers[3].uptime, null);
+
+  const mixedIpv6 = parseHuaweiBgpPeers(${JSON.stringify(`
+BGP Peer is 2001:db8::9,  remote AS 65010
+Peer's description: "IPv6-UPLINK"
+BGP current state: Established, Up for 12d3h
+
+2001:db8::9                       4      65010        0        0     0 ****h20m     Established        0
+  `)});
+  assert.equal(mixedIpv6.length, 1);
+  assert.equal(mixedIpv6[0].peerIp, "2001:db8::9");
+  assert.equal(mixedIpv6[0].description, "IPv6-UPLINK");
+  assert.equal(mixedIpv6[0].name, "IPv6-UPLINK");
+  assert.equal(mixedIpv6[0].uptime, "12d3h");
 
   const policies = parseHuaweiPolicies(fixtures.routePolicy);
   const inbound = policies.find((item) => item.name === "CUST-IN");

@@ -89,8 +89,8 @@ function classifyAfi(peerIp: string): string {
 }
 
 async function resolveLocalAs(deviceId: number, session: SnmpSession, warnings: string[]): Promise<number | null> {
-  const localAsResult = await snmpGet(session, "1.3.6.1.2.1.15.1.1.0");
-  const snmpLocalAs = toSnmpNumber(localAsResult);
+  const localAsResult = await snmpGet(session, "1.3.6.1.2.1.15.2.0");
+  const snmpLocalAs = toSnmpNumber(localAsResult.value);
   if (snmpLocalAs != null) return snmpLocalAs;
 
   const { getLatestDiscoverySnapshot } = await import("../netops/device-discovery/discovery.service.js");

@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { and, desc, eq, gte, lte } from "drizzle-orm";
-import { auditLogsTable, db } from "@workspace/db";
+import { auditLogsTable, bgpPeerCollectionHistoryTable, db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
+import { devicesTable } from "@workspace/db";
 
 const router = Router();
 
@@ -15,6 +16,12 @@ function parseOffset(value: unknown): number {
   const parsed = Number(value ?? 0);
   if (!Number.isFinite(parsed) || parsed < 0) return 0;
   return Math.floor(parsed);
+}
+
+function parseDeviceId(value: unknown): number | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 router.get("/audit-logs", async (req, res) => {
@@ -67,6 +74,52 @@ router.get("/audit-logs", async (req, res) => {
     objectId: row.objectId,
     metadataJson: row.metadataJson ?? null,
     sourceIp: row.sourceIp,
+    createdAt: row.createdAt.toISOString(),
+  })));
+});
+
+router.get("/bgp-peer-removals", async (req, res) => {
+  const deviceId = parseDeviceId(req.query.deviceId);
+  const limit = parseLimit(req.query.limit);
+  const offset = parseOffset(req.query.offset);
+
+  const filters = [];
+  if (deviceId !== null) filters.push(eq(bgpPeerCollectionHistoryTable.deviceId, deviceId));
+
+  const where = filters.length ? and(...filters) : undefined;
+
+  const rows = await db
+    .select({
+      id: bgpPeerCollectionHistoryTable.id,
+      deviceId: bgpPeerCollectionHistoryTable.deviceId,
+      previousSnapshotId: bgpPeerCollectionHistoryTable.previousSnapshotId,
+      currentSnapshotId: bgpPeerCollectionHistoryTable.currentSnapshotId,
+      collector: bgpPeerCollectionHistoryTable.collector,
+      previousPeersJson: bgpPeerCollectionHistoryTable.previousPeersJson,
+      currentPeersJson: bgpPeerCollectionHistoryTable.currentPeersJson,
+      removedPeersJson: bgpPeerCollectionHistoryTable.removedPeersJson,
+      removedCount: bgpPeerCollectionHistoryTable.removedCount,
+      createdAt: bgpPeerCollectionHistoryTable.createdAt,
+      deviceHostname: devicesTable.hostname,
+      deviceIpAddress: devicesTable.ipAddress,
+    })
+    .from(bgpPeerCollectionHistoryTable)
+    .leftJoin(devicesTable, eq(bgpPeerCollectionHistoryTable.deviceId, devicesTable.id))
+    .where(where)
+    .orderBy(desc(bgpPeerCollectionHistoryTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  res.json(rows.map((row) => ({
+    id: row.id,
+    deviceId: row.deviceId,
+    deviceHostname: row.deviceHostname ?? null,
+    deviceIpAddress: row.deviceIpAddress ?? null,
+    previousSnapshotId: row.previousSnapshotId,
+    currentSnapshotId: row.currentSnapshotId,
+    collector: row.collector,
+    removedPeers: Array.isArray(row.removedPeersJson) ? row.removedPeersJson : [],
+    removedCount: row.removedCount,
     createdAt: row.createdAt.toISOString(),
   })));
 });

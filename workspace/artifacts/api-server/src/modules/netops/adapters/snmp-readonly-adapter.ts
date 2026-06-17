@@ -1,4 +1,6 @@
 import type { Device } from "@workspace/db";
+import { deviceUsesConnector } from "../../connectors/connector-execution.service.js";
+import { collectSnmpReadonlyViaConnector } from "../../connectors/connector-snmp-collect.js";
 import {
   collectSnmpReadonly,
   isNetopsSnmpRealEnabled,
@@ -43,6 +45,7 @@ function payloadToBgpPeers(payload: SnmpReadonlyCollectPayload): NetopsBgpPeer[]
     peerIp: peer.peerIp,
     remoteAs: peer.remoteAs,
     state: peer.state,
+    vrf: peer.vrf ?? null,
     uptime: peer.uptimeSecs != null ? String(peer.uptimeSecs) : null,
     source: "snmp",
   }));
@@ -94,10 +97,13 @@ export class SnmpReadonlyAdapter implements ReadonlySnmpAdapter {
       };
     }
 
-    const payload = await collectSnmpReadonly(device, device.snmpCommunity!.trim());
+    const community = device.snmpCommunity!.trim();
+    const payload = deviceUsesConnector(device)
+      ? await collectSnmpReadonlyViaConnector(device, community)
+      : await collectSnmpReadonly(device, community);
     const status = payload.success ? "ready" : "error";
     const message = payload.success
-      ? `SNMP read-only OK: ${payload.interfaces.length} interfaces, ${payload.bgpPeers.length} BGP peers (IPv4 BGP4-MIB).`
+      ? `SNMP read-only OK: ${payload.interfaces.length} interfaces, ${payload.bgpPeers.length} BGP peers (legacy + RFC4273 peer walks).`
       : payload.errorMessage ?? "SNMP read-only finished with errors.";
 
     return {

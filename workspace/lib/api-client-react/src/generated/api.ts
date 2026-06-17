@@ -48,6 +48,34 @@ import type {
   ComplianceSummary,
   ConfigDetail,
   ConfigDiff,
+  ConfigGeneratorArtifactResponse,
+  ConfigGeneratorChangeRequest,
+  ConfigGeneratorChangeRequestPreviewEnvelope,
+  ConfigGeneratorChangeRequestPreviewResponse,
+  ConfigGeneratorDeviceContextResponse,
+  ConfigGeneratorDevicesResponse,
+  ConfigGeneratorDiffResponse,
+  ConfigGeneratorErrorResponse,
+  ConfigGeneratorFeatureResponse,
+  ConfigGeneratorIdInventoryRefreshRequest,
+  ConfigGeneratorIdInventoryRefreshResponse,
+  ConfigGeneratorIdInventoryResponse,
+  ConfigGeneratorIdRangesResponse,
+  ConfigGeneratorIdSuggestRequest,
+  ConfigGeneratorIdSuggestResponse,
+  ConfigGeneratorIdValidateRequest,
+  ConfigGeneratorIdValidateResponse,
+  ConfigGeneratorRenderResponse,
+  ConfigGeneratorRunDetail,
+  ConfigGeneratorRunListItem,
+  ConfigGeneratorRunRequest,
+  ConfigGeneratorRunSaveResponse,
+  ConfigGeneratorScopeResponse,
+  ConfigGeneratorServiceContextResponse,
+  ConfigGeneratorTemplateSchemaResponse,
+  ConfigGeneratorTemplateSummary,
+  ConfigGeneratorTemplatesResponse,
+  ConfigGeneratorWriteDisabledResponse,
   ConfigHistoryItem,
   ConfigTemplate,
   ConfigTemplateInput,
@@ -73,6 +101,8 @@ import type {
   EffectivePermissionsResponse,
   ExportComplianceFindingsGroupsParams,
   ExportComplianceFindingsParams,
+  GetConfigGeneratorSuggestionDeviceContextParams,
+  GetConfigGeneratorSuggestionServiceContextParams,
   GetNetconfConfig200,
   GetNetconfConfigBody,
   HealthStatus,
@@ -83,6 +113,10 @@ import type {
   ListComplianceFindingsGroupsParams,
   ListComplianceFindingsParams,
   ListComplianceJobsParams,
+  ListConfigGeneratorIdInventoryParams,
+  ListConfigGeneratorRunsParams,
+  ListConfigGeneratorSuggestionDevicesParams,
+  ListConfigGeneratorSuggestionTemplatesParams,
   ListConfigTemplatesParams,
   ListDeviceBgpPeersParams,
   ListDevicesParams,
@@ -151,6 +185,7 @@ import type {
   User,
   UserListResponse,
   UserSessionListResponse,
+  ValidateConfigGenerator200,
   ValidationResult
 } from './api.schemas';
 
@@ -2078,6 +2113,2050 @@ export function useListScheduledJobRunItems<TData = Awaited<ReturnType<typeof li
 
 
 
+
+export const getGetConfigGeneratorFeatureUrl = () => {
+
+
+
+
+  return `/api/config-generator/feature`
+}
+
+/**
+ * @summary Get Config Generator feature flag
+ */
+export const getConfigGeneratorFeature = async ( options?: RequestInit): Promise<ConfigGeneratorFeatureResponse> => {
+
+  return customFetch<ConfigGeneratorFeatureResponse>(getGetConfigGeneratorFeatureUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigGeneratorFeatureQueryKey = () => {
+    return [
+    `/api/config-generator/feature`
+    ] as const;
+    }
+
+
+export const getGetConfigGeneratorFeatureQueryOptions = <TData = Awaited<ReturnType<typeof getConfigGeneratorFeature>>, TError = ErrorType<ConfigGeneratorErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorFeature>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigGeneratorFeatureQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigGeneratorFeature>>> = ({ signal }) => getConfigGeneratorFeature({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorFeature>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigGeneratorFeatureQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigGeneratorFeature>>>
+export type GetConfigGeneratorFeatureQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary Get Config Generator feature flag
+ */
+
+export function useGetConfigGeneratorFeature<TData = Awaited<ReturnType<typeof getConfigGeneratorFeature>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorFeature>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigGeneratorFeatureQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListConfigGeneratorSuggestionScopeUrl = () => {
+
+
+
+
+  return `/api/config-generator/suggestions/scope`
+}
+
+/**
+ * @summary List scope suggestions
+ */
+export const listConfigGeneratorSuggestionScope = async ( options?: RequestInit): Promise<ConfigGeneratorScopeResponse> => {
+
+  return customFetch<ConfigGeneratorScopeResponse>(getListConfigGeneratorSuggestionScopeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConfigGeneratorSuggestionScopeQueryKey = () => {
+    return [
+    `/api/config-generator/suggestions/scope`
+    ] as const;
+    }
+
+
+export const getListConfigGeneratorSuggestionScopeQueryOptions = <TData = Awaited<ReturnType<typeof listConfigGeneratorSuggestionScope>>, TError = ErrorType<ConfigGeneratorErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorSuggestionScope>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConfigGeneratorSuggestionScopeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConfigGeneratorSuggestionScope>>> = ({ signal }) => listConfigGeneratorSuggestionScope({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorSuggestionScope>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConfigGeneratorSuggestionScopeQueryResult = NonNullable<Awaited<ReturnType<typeof listConfigGeneratorSuggestionScope>>>
+export type ListConfigGeneratorSuggestionScopeQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary List scope suggestions
+ */
+
+export function useListConfigGeneratorSuggestionScope<TData = Awaited<ReturnType<typeof listConfigGeneratorSuggestionScope>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorSuggestionScope>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConfigGeneratorSuggestionScopeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListConfigGeneratorSuggestionDevicesUrl = (params: ListConfigGeneratorSuggestionDevicesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/config-generator/suggestions/devices?${stringifiedParams}` : `/api/config-generator/suggestions/devices`
+}
+
+/**
+ * @summary List device suggestions
+ */
+export const listConfigGeneratorSuggestionDevices = async (params: ListConfigGeneratorSuggestionDevicesParams, options?: RequestInit): Promise<ConfigGeneratorDevicesResponse> => {
+
+  return customFetch<ConfigGeneratorDevicesResponse>(getListConfigGeneratorSuggestionDevicesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConfigGeneratorSuggestionDevicesQueryKey = (params?: ListConfigGeneratorSuggestionDevicesParams,) => {
+    return [
+    `/api/config-generator/suggestions/devices`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListConfigGeneratorSuggestionDevicesQueryOptions = <TData = Awaited<ReturnType<typeof listConfigGeneratorSuggestionDevices>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(params: ListConfigGeneratorSuggestionDevicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorSuggestionDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConfigGeneratorSuggestionDevicesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConfigGeneratorSuggestionDevices>>> = ({ signal }) => listConfigGeneratorSuggestionDevices(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorSuggestionDevices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConfigGeneratorSuggestionDevicesQueryResult = NonNullable<Awaited<ReturnType<typeof listConfigGeneratorSuggestionDevices>>>
+export type ListConfigGeneratorSuggestionDevicesQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary List device suggestions
+ */
+
+export function useListConfigGeneratorSuggestionDevices<TData = Awaited<ReturnType<typeof listConfigGeneratorSuggestionDevices>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ params: ListConfigGeneratorSuggestionDevicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorSuggestionDevices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConfigGeneratorSuggestionDevicesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetConfigGeneratorSuggestionDeviceContextUrl = (params: GetConfigGeneratorSuggestionDeviceContextParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/config-generator/suggestions/device-context?${stringifiedParams}` : `/api/config-generator/suggestions/device-context`
+}
+
+/**
+ * @summary Get device context suggestions
+ */
+export const getConfigGeneratorSuggestionDeviceContext = async (params: GetConfigGeneratorSuggestionDeviceContextParams, options?: RequestInit): Promise<ConfigGeneratorDeviceContextResponse> => {
+
+  return customFetch<ConfigGeneratorDeviceContextResponse>(getGetConfigGeneratorSuggestionDeviceContextUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigGeneratorSuggestionDeviceContextQueryKey = (params?: GetConfigGeneratorSuggestionDeviceContextParams,) => {
+    return [
+    `/api/config-generator/suggestions/device-context`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConfigGeneratorSuggestionDeviceContextQueryOptions = <TData = Awaited<ReturnType<typeof getConfigGeneratorSuggestionDeviceContext>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(params: GetConfigGeneratorSuggestionDeviceContextParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorSuggestionDeviceContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigGeneratorSuggestionDeviceContextQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigGeneratorSuggestionDeviceContext>>> = ({ signal }) => getConfigGeneratorSuggestionDeviceContext(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorSuggestionDeviceContext>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigGeneratorSuggestionDeviceContextQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigGeneratorSuggestionDeviceContext>>>
+export type GetConfigGeneratorSuggestionDeviceContextQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary Get device context suggestions
+ */
+
+export function useGetConfigGeneratorSuggestionDeviceContext<TData = Awaited<ReturnType<typeof getConfigGeneratorSuggestionDeviceContext>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ params: GetConfigGeneratorSuggestionDeviceContextParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorSuggestionDeviceContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigGeneratorSuggestionDeviceContextQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListConfigGeneratorSuggestionTemplatesUrl = (params?: ListConfigGeneratorSuggestionTemplatesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/config-generator/suggestions/templates?${stringifiedParams}` : `/api/config-generator/suggestions/templates`
+}
+
+/**
+ * @summary List template suggestions
+ */
+export const listConfigGeneratorSuggestionTemplates = async (params?: ListConfigGeneratorSuggestionTemplatesParams, options?: RequestInit): Promise<ConfigGeneratorTemplatesResponse> => {
+
+  return customFetch<ConfigGeneratorTemplatesResponse>(getListConfigGeneratorSuggestionTemplatesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConfigGeneratorSuggestionTemplatesQueryKey = (params?: ListConfigGeneratorSuggestionTemplatesParams,) => {
+    return [
+    `/api/config-generator/suggestions/templates`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListConfigGeneratorSuggestionTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listConfigGeneratorSuggestionTemplates>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(params?: ListConfigGeneratorSuggestionTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorSuggestionTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConfigGeneratorSuggestionTemplatesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConfigGeneratorSuggestionTemplates>>> = ({ signal }) => listConfigGeneratorSuggestionTemplates(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorSuggestionTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConfigGeneratorSuggestionTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listConfigGeneratorSuggestionTemplates>>>
+export type ListConfigGeneratorSuggestionTemplatesQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary List template suggestions
+ */
+
+export function useListConfigGeneratorSuggestionTemplates<TData = Awaited<ReturnType<typeof listConfigGeneratorSuggestionTemplates>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ params?: ListConfigGeneratorSuggestionTemplatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorSuggestionTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConfigGeneratorSuggestionTemplatesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetConfigGeneratorSuggestionServiceContextUrl = (params: GetConfigGeneratorSuggestionServiceContextParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/config-generator/suggestions/service-context?${stringifiedParams}` : `/api/config-generator/suggestions/service-context`
+}
+
+/**
+ * @summary Get service context suggestions
+ */
+export const getConfigGeneratorSuggestionServiceContext = async (params: GetConfigGeneratorSuggestionServiceContextParams, options?: RequestInit): Promise<ConfigGeneratorServiceContextResponse> => {
+
+  return customFetch<ConfigGeneratorServiceContextResponse>(getGetConfigGeneratorSuggestionServiceContextUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigGeneratorSuggestionServiceContextQueryKey = (params?: GetConfigGeneratorSuggestionServiceContextParams,) => {
+    return [
+    `/api/config-generator/suggestions/service-context`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetConfigGeneratorSuggestionServiceContextQueryOptions = <TData = Awaited<ReturnType<typeof getConfigGeneratorSuggestionServiceContext>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(params: GetConfigGeneratorSuggestionServiceContextParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorSuggestionServiceContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigGeneratorSuggestionServiceContextQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigGeneratorSuggestionServiceContext>>> = ({ signal }) => getConfigGeneratorSuggestionServiceContext(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorSuggestionServiceContext>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigGeneratorSuggestionServiceContextQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigGeneratorSuggestionServiceContext>>>
+export type GetConfigGeneratorSuggestionServiceContextQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary Get service context suggestions
+ */
+
+export function useGetConfigGeneratorSuggestionServiceContext<TData = Awaited<ReturnType<typeof getConfigGeneratorSuggestionServiceContext>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ params: GetConfigGeneratorSuggestionServiceContextParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorSuggestionServiceContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigGeneratorSuggestionServiceContextQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListConfigGeneratorTemplatesUrl = () => {
+
+
+
+
+  return `/api/config-generator/templates`
+}
+
+/**
+ * @summary List config generator templates
+ */
+export const listConfigGeneratorTemplates = async ( options?: RequestInit): Promise<ConfigGeneratorTemplateSummary[]> => {
+
+  return customFetch<ConfigGeneratorTemplateSummary[]>(getListConfigGeneratorTemplatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConfigGeneratorTemplatesQueryKey = () => {
+    return [
+    `/api/config-generator/templates`
+    ] as const;
+    }
+
+
+export const getListConfigGeneratorTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listConfigGeneratorTemplates>>, TError = ErrorType<ConfigGeneratorErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConfigGeneratorTemplatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConfigGeneratorTemplates>>> = ({ signal }) => listConfigGeneratorTemplates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConfigGeneratorTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listConfigGeneratorTemplates>>>
+export type ListConfigGeneratorTemplatesQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary List config generator templates
+ */
+
+export function useListConfigGeneratorTemplates<TData = Awaited<ReturnType<typeof listConfigGeneratorTemplates>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConfigGeneratorTemplatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetConfigGeneratorTemplateSchemaUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/templates/${id}/schema`
+}
+
+/**
+ * @summary Get template schema
+ */
+export const getConfigGeneratorTemplateSchema = async (id: number, options?: RequestInit): Promise<ConfigGeneratorTemplateSchemaResponse> => {
+
+  return customFetch<ConfigGeneratorTemplateSchemaResponse>(getGetConfigGeneratorTemplateSchemaUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigGeneratorTemplateSchemaQueryKey = (id: number,) => {
+    return [
+    `/api/config-generator/templates/${id}/schema`
+    ] as const;
+    }
+
+
+export const getGetConfigGeneratorTemplateSchemaQueryOptions = <TData = Awaited<ReturnType<typeof getConfigGeneratorTemplateSchema>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorTemplateSchema>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigGeneratorTemplateSchemaQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigGeneratorTemplateSchema>>> = ({ signal }) => getConfigGeneratorTemplateSchema(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorTemplateSchema>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigGeneratorTemplateSchemaQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigGeneratorTemplateSchema>>>
+export type GetConfigGeneratorTemplateSchemaQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary Get template schema
+ */
+
+export function useGetConfigGeneratorTemplateSchema<TData = Awaited<ReturnType<typeof getConfigGeneratorTemplateSchema>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorTemplateSchema>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigGeneratorTemplateSchemaQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getValidateConfigGeneratorUrl = () => {
+
+
+
+
+  return `/api/config-generator/validate`
+}
+
+/**
+ * @summary Validate config generator input
+ */
+export const validateConfigGenerator = async (configGeneratorRunRequest: ConfigGeneratorRunRequest, options?: RequestInit): Promise<ValidateConfigGenerator200> => {
+
+  return customFetch<ValidateConfigGenerator200>(getValidateConfigGeneratorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      configGeneratorRunRequest,)
+  }
+);}
+
+
+
+
+export const getValidateConfigGeneratorMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateConfigGenerator>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof validateConfigGenerator>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext> => {
+
+const mutationKey = ['validateConfigGenerator'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof validateConfigGenerator>>, {data: BodyType<ConfigGeneratorRunRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  validateConfigGenerator(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ValidateConfigGeneratorMutationResult = NonNullable<Awaited<ReturnType<typeof validateConfigGenerator>>>
+    export type ValidateConfigGeneratorMutationBody = BodyType<ConfigGeneratorRunRequest>
+    export type ValidateConfigGeneratorMutationError = ErrorType<ConfigGeneratorErrorResponse>
+
+    /**
+ * @summary Validate config generator input
+ */
+export const useValidateConfigGenerator = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateConfigGenerator>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof validateConfigGenerator>>,
+        TError,
+        {data: BodyType<ConfigGeneratorRunRequest>},
+        TContext
+      > => {
+      return useMutation(getValidateConfigGeneratorMutationOptions(options));
+    }
+
+export const getRenderConfigGeneratorUrl = () => {
+
+
+
+
+  return `/api/config-generator/render`
+}
+
+/**
+ * @summary Render config generator preview
+ */
+export const renderConfigGenerator = async (configGeneratorRunRequest: ConfigGeneratorRunRequest, options?: RequestInit): Promise<ConfigGeneratorRenderResponse> => {
+
+  return customFetch<ConfigGeneratorRenderResponse>(getRenderConfigGeneratorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      configGeneratorRunRequest,)
+  }
+);}
+
+
+
+
+export const getRenderConfigGeneratorMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renderConfigGenerator>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof renderConfigGenerator>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext> => {
+
+const mutationKey = ['renderConfigGenerator'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof renderConfigGenerator>>, {data: BodyType<ConfigGeneratorRunRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  renderConfigGenerator(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RenderConfigGeneratorMutationResult = NonNullable<Awaited<ReturnType<typeof renderConfigGenerator>>>
+    export type RenderConfigGeneratorMutationBody = BodyType<ConfigGeneratorRunRequest>
+    export type RenderConfigGeneratorMutationError = ErrorType<ConfigGeneratorErrorResponse>
+
+    /**
+ * @summary Render config generator preview
+ */
+export const useRenderConfigGenerator = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renderConfigGenerator>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof renderConfigGenerator>>,
+        TError,
+        {data: BodyType<ConfigGeneratorRunRequest>},
+        TContext
+      > => {
+      return useMutation(getRenderConfigGeneratorMutationOptions(options));
+    }
+
+export const getDiffConfigGeneratorUrl = () => {
+
+
+
+
+  return `/api/config-generator/diff`
+}
+
+/**
+ * @summary Diff generated config against current baseline
+ */
+export const diffConfigGenerator = async (configGeneratorRunRequest: ConfigGeneratorRunRequest, options?: RequestInit): Promise<ConfigGeneratorDiffResponse> => {
+
+  return customFetch<ConfigGeneratorDiffResponse>(getDiffConfigGeneratorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      configGeneratorRunRequest,)
+  }
+);}
+
+
+
+
+export const getDiffConfigGeneratorMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof diffConfigGenerator>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof diffConfigGenerator>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext> => {
+
+const mutationKey = ['diffConfigGenerator'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof diffConfigGenerator>>, {data: BodyType<ConfigGeneratorRunRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  diffConfigGenerator(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DiffConfigGeneratorMutationResult = NonNullable<Awaited<ReturnType<typeof diffConfigGenerator>>>
+    export type DiffConfigGeneratorMutationBody = BodyType<ConfigGeneratorRunRequest>
+    export type DiffConfigGeneratorMutationError = ErrorType<ConfigGeneratorErrorResponse>
+
+    /**
+ * @summary Diff generated config against current baseline
+ */
+export const useDiffConfigGenerator = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof diffConfigGenerator>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof diffConfigGenerator>>,
+        TError,
+        {data: BodyType<ConfigGeneratorRunRequest>},
+        TContext
+      > => {
+      return useMutation(getDiffConfigGeneratorMutationOptions(options));
+    }
+
+export const getListConfigGeneratorRunsUrl = (params?: ListConfigGeneratorRunsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/config-generator/runs?${stringifiedParams}` : `/api/config-generator/runs`
+}
+
+/**
+ * @summary List config generator runs
+ */
+export const listConfigGeneratorRuns = async (params?: ListConfigGeneratorRunsParams, options?: RequestInit): Promise<ConfigGeneratorRunListItem[]> => {
+
+  return customFetch<ConfigGeneratorRunListItem[]>(getListConfigGeneratorRunsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConfigGeneratorRunsQueryKey = (params?: ListConfigGeneratorRunsParams,) => {
+    return [
+    `/api/config-generator/runs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListConfigGeneratorRunsQueryOptions = <TData = Awaited<ReturnType<typeof listConfigGeneratorRuns>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(params?: ListConfigGeneratorRunsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorRuns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConfigGeneratorRunsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConfigGeneratorRuns>>> = ({ signal }) => listConfigGeneratorRuns(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorRuns>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConfigGeneratorRunsQueryResult = NonNullable<Awaited<ReturnType<typeof listConfigGeneratorRuns>>>
+export type ListConfigGeneratorRunsQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary List config generator runs
+ */
+
+export function useListConfigGeneratorRuns<TData = Awaited<ReturnType<typeof listConfigGeneratorRuns>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ params?: ListConfigGeneratorRunsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorRuns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConfigGeneratorRunsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSaveConfigGeneratorRunUrl = () => {
+
+
+
+
+  return `/api/config-generator/runs`
+}
+
+/**
+ * @summary Save config generator run
+ */
+export const saveConfigGeneratorRun = async (configGeneratorRunRequest: ConfigGeneratorRunRequest, options?: RequestInit): Promise<ConfigGeneratorRunSaveResponse> => {
+
+  return customFetch<ConfigGeneratorRunSaveResponse>(getSaveConfigGeneratorRunUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      configGeneratorRunRequest,)
+  }
+);}
+
+
+
+
+export const getSaveConfigGeneratorRunMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveConfigGeneratorRun>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveConfigGeneratorRun>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext> => {
+
+const mutationKey = ['saveConfigGeneratorRun'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveConfigGeneratorRun>>, {data: BodyType<ConfigGeneratorRunRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveConfigGeneratorRun(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveConfigGeneratorRunMutationResult = NonNullable<Awaited<ReturnType<typeof saveConfigGeneratorRun>>>
+    export type SaveConfigGeneratorRunMutationBody = BodyType<ConfigGeneratorRunRequest>
+    export type SaveConfigGeneratorRunMutationError = ErrorType<ConfigGeneratorErrorResponse>
+
+    /**
+ * @summary Save config generator run
+ */
+export const useSaveConfigGeneratorRun = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveConfigGeneratorRun>>, TError,{data: BodyType<ConfigGeneratorRunRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveConfigGeneratorRun>>,
+        TError,
+        {data: BodyType<ConfigGeneratorRunRequest>},
+        TContext
+      > => {
+      return useMutation(getSaveConfigGeneratorRunMutationOptions(options));
+    }
+
+export const getGetConfigGeneratorRunUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/runs/${id}`
+}
+
+/**
+ * @summary Get config generator run
+ */
+export const getConfigGeneratorRun = async (id: number, options?: RequestInit): Promise<ConfigGeneratorRunDetail> => {
+
+  return customFetch<ConfigGeneratorRunDetail>(getGetConfigGeneratorRunUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigGeneratorRunQueryKey = (id: number,) => {
+    return [
+    `/api/config-generator/runs/${id}`
+    ] as const;
+    }
+
+
+export const getGetConfigGeneratorRunQueryOptions = <TData = Awaited<ReturnType<typeof getConfigGeneratorRun>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorRun>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigGeneratorRunQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigGeneratorRun>>> = ({ signal }) => getConfigGeneratorRun(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorRun>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigGeneratorRunQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigGeneratorRun>>>
+export type GetConfigGeneratorRunQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary Get config generator run
+ */
+
+export function useGetConfigGeneratorRun<TData = Awaited<ReturnType<typeof getConfigGeneratorRun>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorRun>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigGeneratorRunQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetConfigGeneratorRunArtifactsUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/runs/${id}/artifacts`
+}
+
+/**
+ * @summary Get run artifacts
+ */
+export const getConfigGeneratorRunArtifacts = async (id: number, options?: RequestInit): Promise<ConfigGeneratorArtifactResponse[]> => {
+
+  return customFetch<ConfigGeneratorArtifactResponse[]>(getGetConfigGeneratorRunArtifactsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigGeneratorRunArtifactsQueryKey = (id: number,) => {
+    return [
+    `/api/config-generator/runs/${id}/artifacts`
+    ] as const;
+    }
+
+
+export const getGetConfigGeneratorRunArtifactsQueryOptions = <TData = Awaited<ReturnType<typeof getConfigGeneratorRunArtifacts>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorRunArtifacts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigGeneratorRunArtifactsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigGeneratorRunArtifacts>>> = ({ signal }) => getConfigGeneratorRunArtifacts(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorRunArtifacts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigGeneratorRunArtifactsQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigGeneratorRunArtifacts>>>
+export type GetConfigGeneratorRunArtifactsQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary Get run artifacts
+ */
+
+export function useGetConfigGeneratorRunArtifacts<TData = Awaited<ReturnType<typeof getConfigGeneratorRunArtifacts>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorRunArtifacts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigGeneratorRunArtifactsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDiffConfigGeneratorRunUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/runs/${id}/diff`
+}
+
+/**
+ * @summary Diff saved config generator run against current baseline
+ */
+export const diffConfigGeneratorRun = async (id: number, options?: RequestInit): Promise<ConfigGeneratorDiffResponse> => {
+
+  return customFetch<ConfigGeneratorDiffResponse>(getDiffConfigGeneratorRunUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getDiffConfigGeneratorRunMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof diffConfigGeneratorRun>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof diffConfigGeneratorRun>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['diffConfigGeneratorRun'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof diffConfigGeneratorRun>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  diffConfigGeneratorRun(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DiffConfigGeneratorRunMutationResult = NonNullable<Awaited<ReturnType<typeof diffConfigGeneratorRun>>>
+
+    export type DiffConfigGeneratorRunMutationError = ErrorType<ConfigGeneratorErrorResponse>
+
+    /**
+ * @summary Diff saved config generator run against current baseline
+ */
+export const useDiffConfigGeneratorRun = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof diffConfigGeneratorRun>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof diffConfigGeneratorRun>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDiffConfigGeneratorRunMutationOptions(options));
+    }
+
+export const getGetConfigGeneratorChangeRequestPreviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/runs/${id}/change-request-preview`
+}
+
+/**
+ * @summary Get saved change request preview package for a run
+ */
+export const getConfigGeneratorChangeRequestPreview = async (id: number, options?: RequestInit): Promise<ConfigGeneratorChangeRequestPreviewEnvelope> => {
+
+  return customFetch<ConfigGeneratorChangeRequestPreviewEnvelope>(getGetConfigGeneratorChangeRequestPreviewUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigGeneratorChangeRequestPreviewQueryKey = (id: number,) => {
+    return [
+    `/api/config-generator/runs/${id}/change-request-preview`
+    ] as const;
+    }
+
+
+export const getGetConfigGeneratorChangeRequestPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigGeneratorChangeRequestPreviewQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>> = ({ signal }) => getConfigGeneratorChangeRequestPreview(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigGeneratorChangeRequestPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>>
+export type GetConfigGeneratorChangeRequestPreviewQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary Get saved change request preview package for a run
+ */
+
+export function useGetConfigGeneratorChangeRequestPreview<TData = Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorChangeRequestPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigGeneratorChangeRequestPreviewQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGenerateConfigGeneratorChangeRequestPreviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/runs/${id}/change-request-preview`
+}
+
+/**
+ * @summary Generate change request preview package (preview-only, no execution)
+ */
+export const generateConfigGeneratorChangeRequestPreview = async (id: number, options?: RequestInit): Promise<ConfigGeneratorChangeRequestPreviewResponse> => {
+
+  return customFetch<ConfigGeneratorChangeRequestPreviewResponse>(getGenerateConfigGeneratorChangeRequestPreviewUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenerateConfigGeneratorChangeRequestPreviewMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['generateConfigGeneratorChangeRequestPreview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  generateConfigGeneratorChangeRequestPreview(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateConfigGeneratorChangeRequestPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>>
+
+    export type GenerateConfigGeneratorChangeRequestPreviewMutationError = ErrorType<ConfigGeneratorErrorResponse>
+
+    /**
+ * @summary Generate change request preview package (preview-only, no execution)
+ */
+export const useGenerateConfigGeneratorChangeRequestPreview = <TError = ErrorType<ConfigGeneratorErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateConfigGeneratorChangeRequestPreview>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGenerateConfigGeneratorChangeRequestPreviewMutationOptions(options));
+    }
+
+export const getRequestConfigGeneratorApprovalUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/runs/${id}/request-approval`
+}
+
+/**
+ * @summary Request config generator approval
+ */
+export const requestConfigGeneratorApproval = async (id: number, options?: RequestInit): Promise<unknown> => {
+
+  return customFetch<unknown>(getRequestConfigGeneratorApprovalUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRequestConfigGeneratorApprovalMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse | ConfigGeneratorWriteDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestConfigGeneratorApproval>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestConfigGeneratorApproval>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['requestConfigGeneratorApproval'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestConfigGeneratorApproval>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  requestConfigGeneratorApproval(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestConfigGeneratorApprovalMutationResult = NonNullable<Awaited<ReturnType<typeof requestConfigGeneratorApproval>>>
+
+    export type RequestConfigGeneratorApprovalMutationError = ErrorType<ConfigGeneratorErrorResponse | ConfigGeneratorWriteDisabledResponse>
+
+    /**
+ * @summary Request config generator approval
+ */
+export const useRequestConfigGeneratorApproval = <TError = ErrorType<ConfigGeneratorErrorResponse | ConfigGeneratorWriteDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestConfigGeneratorApproval>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestConfigGeneratorApproval>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRequestConfigGeneratorApprovalMutationOptions(options));
+    }
+
+export const getApproveConfigGeneratorChangeRequestUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/change-requests/${id}/approve`
+}
+
+/**
+ * @summary Approve config generator change request
+ */
+export const approveConfigGeneratorChangeRequest = async (id: number, options?: RequestInit): Promise<unknown> => {
+
+  return customFetch<unknown>(getApproveConfigGeneratorChangeRequestUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getApproveConfigGeneratorChangeRequestMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse | ConfigGeneratorWriteDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveConfigGeneratorChangeRequest>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveConfigGeneratorChangeRequest>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['approveConfigGeneratorChangeRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveConfigGeneratorChangeRequest>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  approveConfigGeneratorChangeRequest(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveConfigGeneratorChangeRequestMutationResult = NonNullable<Awaited<ReturnType<typeof approveConfigGeneratorChangeRequest>>>
+
+    export type ApproveConfigGeneratorChangeRequestMutationError = ErrorType<ConfigGeneratorErrorResponse | ConfigGeneratorWriteDisabledResponse>
+
+    /**
+ * @summary Approve config generator change request
+ */
+export const useApproveConfigGeneratorChangeRequest = <TError = ErrorType<ConfigGeneratorErrorResponse | ConfigGeneratorWriteDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveConfigGeneratorChangeRequest>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof approveConfigGeneratorChangeRequest>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getApproveConfigGeneratorChangeRequestMutationOptions(options));
+    }
+
+export const getExecuteConfigGeneratorChangeRequestUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/change-requests/${id}/execute`
+}
+
+/**
+ * @summary Execute config generator change request
+ */
+export const executeConfigGeneratorChangeRequest = async (id: number, options?: RequestInit): Promise<unknown> => {
+
+  return customFetch<unknown>(getExecuteConfigGeneratorChangeRequestUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getExecuteConfigGeneratorChangeRequestMutationOptions = <TError = ErrorType<ConfigGeneratorErrorResponse | ConfigGeneratorWriteDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof executeConfigGeneratorChangeRequest>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof executeConfigGeneratorChangeRequest>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['executeConfigGeneratorChangeRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof executeConfigGeneratorChangeRequest>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  executeConfigGeneratorChangeRequest(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExecuteConfigGeneratorChangeRequestMutationResult = NonNullable<Awaited<ReturnType<typeof executeConfigGeneratorChangeRequest>>>
+
+    export type ExecuteConfigGeneratorChangeRequestMutationError = ErrorType<ConfigGeneratorErrorResponse | ConfigGeneratorWriteDisabledResponse>
+
+    /**
+ * @summary Execute config generator change request
+ */
+export const useExecuteConfigGeneratorChangeRequest = <TError = ErrorType<ConfigGeneratorErrorResponse | ConfigGeneratorWriteDisabledResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof executeConfigGeneratorChangeRequest>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof executeConfigGeneratorChangeRequest>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getExecuteConfigGeneratorChangeRequestMutationOptions(options));
+    }
+
+export const getGetConfigGeneratorChangeRequestUrl = (id: number,) => {
+
+
+
+
+  return `/api/config-generator/change-requests/${id}`
+}
+
+/**
+ * @summary Get config generator change request
+ */
+export const getConfigGeneratorChangeRequest = async (id: number, options?: RequestInit): Promise<ConfigGeneratorChangeRequest> => {
+
+  return customFetch<ConfigGeneratorChangeRequest>(getGetConfigGeneratorChangeRequestUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConfigGeneratorChangeRequestQueryKey = (id: number,) => {
+    return [
+    `/api/config-generator/change-requests/${id}`
+    ] as const;
+    }
+
+
+export const getGetConfigGeneratorChangeRequestQueryOptions = <TData = Awaited<ReturnType<typeof getConfigGeneratorChangeRequest>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorChangeRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConfigGeneratorChangeRequestQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConfigGeneratorChangeRequest>>> = ({ signal }) => getConfigGeneratorChangeRequest(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorChangeRequest>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConfigGeneratorChangeRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getConfigGeneratorChangeRequest>>>
+export type GetConfigGeneratorChangeRequestQueryError = ErrorType<ConfigGeneratorErrorResponse>
+
+
+/**
+ * @summary Get config generator change request
+ */
+
+export function useGetConfigGeneratorChangeRequest<TData = Awaited<ReturnType<typeof getConfigGeneratorChangeRequest>>, TError = ErrorType<ConfigGeneratorErrorResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConfigGeneratorChangeRequest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConfigGeneratorChangeRequestQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListConfigGeneratorIdRangesUrl = () => {
+
+
+
+
+  return `/api/config-generator/id-ranges`
+}
+
+/**
+ * @summary List builtin VLAN/ID ranges (K3G)
+ */
+export const listConfigGeneratorIdRanges = async ( options?: RequestInit): Promise<ConfigGeneratorIdRangesResponse> => {
+
+  return customFetch<ConfigGeneratorIdRangesResponse>(getListConfigGeneratorIdRangesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConfigGeneratorIdRangesQueryKey = () => {
+    return [
+    `/api/config-generator/id-ranges`
+    ] as const;
+    }
+
+
+export const getListConfigGeneratorIdRangesQueryOptions = <TData = Awaited<ReturnType<typeof listConfigGeneratorIdRanges>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorIdRanges>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConfigGeneratorIdRangesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConfigGeneratorIdRanges>>> = ({ signal }) => listConfigGeneratorIdRanges({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorIdRanges>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConfigGeneratorIdRangesQueryResult = NonNullable<Awaited<ReturnType<typeof listConfigGeneratorIdRanges>>>
+export type ListConfigGeneratorIdRangesQueryError = ErrorType<void>
+
+
+/**
+ * @summary List builtin VLAN/ID ranges (K3G)
+ */
+
+export function useListConfigGeneratorIdRanges<TData = Awaited<ReturnType<typeof listConfigGeneratorIdRanges>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorIdRanges>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConfigGeneratorIdRangesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListConfigGeneratorIdInventoryUrl = (params: ListConfigGeneratorIdInventoryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/config-generator/id-inventory?${stringifiedParams}` : `/api/config-generator/id-inventory`
+}
+
+/**
+ * @summary List discovered IDs for tenant/device
+ */
+export const listConfigGeneratorIdInventory = async (params: ListConfigGeneratorIdInventoryParams, options?: RequestInit): Promise<ConfigGeneratorIdInventoryResponse> => {
+
+  return customFetch<ConfigGeneratorIdInventoryResponse>(getListConfigGeneratorIdInventoryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConfigGeneratorIdInventoryQueryKey = (params?: ListConfigGeneratorIdInventoryParams,) => {
+    return [
+    `/api/config-generator/id-inventory`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListConfigGeneratorIdInventoryQueryOptions = <TData = Awaited<ReturnType<typeof listConfigGeneratorIdInventory>>, TError = ErrorType<unknown>>(params: ListConfigGeneratorIdInventoryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorIdInventory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConfigGeneratorIdInventoryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConfigGeneratorIdInventory>>> = ({ signal }) => listConfigGeneratorIdInventory(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorIdInventory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConfigGeneratorIdInventoryQueryResult = NonNullable<Awaited<ReturnType<typeof listConfigGeneratorIdInventory>>>
+export type ListConfigGeneratorIdInventoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List discovered IDs for tenant/device
+ */
+
+export function useListConfigGeneratorIdInventory<TData = Awaited<ReturnType<typeof listConfigGeneratorIdInventory>>, TError = ErrorType<unknown>>(
+ params: ListConfigGeneratorIdInventoryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConfigGeneratorIdInventory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConfigGeneratorIdInventoryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRefreshConfigGeneratorIdInventoryUrl = () => {
+
+
+
+
+  return `/api/config-generator/id-inventory/refresh`
+}
+
+/**
+ * @summary Reprocess existing DB data into ID inventory (no device collect)
+ */
+export const refreshConfigGeneratorIdInventory = async (configGeneratorIdInventoryRefreshRequest: ConfigGeneratorIdInventoryRefreshRequest, options?: RequestInit): Promise<ConfigGeneratorIdInventoryRefreshResponse> => {
+
+  return customFetch<ConfigGeneratorIdInventoryRefreshResponse>(getRefreshConfigGeneratorIdInventoryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      configGeneratorIdInventoryRefreshRequest,)
+  }
+);}
+
+
+
+
+export const getRefreshConfigGeneratorIdInventoryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshConfigGeneratorIdInventory>>, TError,{data: BodyType<ConfigGeneratorIdInventoryRefreshRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof refreshConfigGeneratorIdInventory>>, TError,{data: BodyType<ConfigGeneratorIdInventoryRefreshRequest>}, TContext> => {
+
+const mutationKey = ['refreshConfigGeneratorIdInventory'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshConfigGeneratorIdInventory>>, {data: BodyType<ConfigGeneratorIdInventoryRefreshRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  refreshConfigGeneratorIdInventory(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RefreshConfigGeneratorIdInventoryMutationResult = NonNullable<Awaited<ReturnType<typeof refreshConfigGeneratorIdInventory>>>
+    export type RefreshConfigGeneratorIdInventoryMutationBody = BodyType<ConfigGeneratorIdInventoryRefreshRequest>
+    export type RefreshConfigGeneratorIdInventoryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Reprocess existing DB data into ID inventory (no device collect)
+ */
+export const useRefreshConfigGeneratorIdInventory = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshConfigGeneratorIdInventory>>, TError,{data: BodyType<ConfigGeneratorIdInventoryRefreshRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof refreshConfigGeneratorIdInventory>>,
+        TError,
+        {data: BodyType<ConfigGeneratorIdInventoryRefreshRequest>},
+        TContext
+      > => {
+      return useMutation(getRefreshConfigGeneratorIdInventoryMutationOptions(options));
+    }
+
+export const getSuggestConfigGeneratorIdsUrl = () => {
+
+
+
+
+  return `/api/config-generator/id-allocator/suggest`
+}
+
+/**
+ * @summary Suggest next free VLAN/L2VC/VSI IDs
+ */
+export const suggestConfigGeneratorIds = async (configGeneratorIdSuggestRequest: ConfigGeneratorIdSuggestRequest, options?: RequestInit): Promise<ConfigGeneratorIdSuggestResponse> => {
+
+  return customFetch<ConfigGeneratorIdSuggestResponse>(getSuggestConfigGeneratorIdsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      configGeneratorIdSuggestRequest,)
+  }
+);}
+
+
+
+
+export const getSuggestConfigGeneratorIdsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof suggestConfigGeneratorIds>>, TError,{data: BodyType<ConfigGeneratorIdSuggestRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof suggestConfigGeneratorIds>>, TError,{data: BodyType<ConfigGeneratorIdSuggestRequest>}, TContext> => {
+
+const mutationKey = ['suggestConfigGeneratorIds'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof suggestConfigGeneratorIds>>, {data: BodyType<ConfigGeneratorIdSuggestRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  suggestConfigGeneratorIds(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SuggestConfigGeneratorIdsMutationResult = NonNullable<Awaited<ReturnType<typeof suggestConfigGeneratorIds>>>
+    export type SuggestConfigGeneratorIdsMutationBody = BodyType<ConfigGeneratorIdSuggestRequest>
+    export type SuggestConfigGeneratorIdsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Suggest next free VLAN/L2VC/VSI IDs
+ */
+export const useSuggestConfigGeneratorIds = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof suggestConfigGeneratorIds>>, TError,{data: BodyType<ConfigGeneratorIdSuggestRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof suggestConfigGeneratorIds>>,
+        TError,
+        {data: BodyType<ConfigGeneratorIdSuggestRequest>},
+        TContext
+      > => {
+      return useMutation(getSuggestConfigGeneratorIdsMutationOptions(options));
+    }
+
+export const getValidateConfigGeneratorIdsUrl = () => {
+
+
+
+
+  return `/api/config-generator/id-allocator/validate`
+}
+
+/**
+ * @summary Validate manually chosen IDs against inventory and ranges
+ */
+export const validateConfigGeneratorIds = async (configGeneratorIdValidateRequest: ConfigGeneratorIdValidateRequest, options?: RequestInit): Promise<ConfigGeneratorIdValidateResponse> => {
+
+  return customFetch<ConfigGeneratorIdValidateResponse>(getValidateConfigGeneratorIdsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      configGeneratorIdValidateRequest,)
+  }
+);}
+
+
+
+
+export const getValidateConfigGeneratorIdsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateConfigGeneratorIds>>, TError,{data: BodyType<ConfigGeneratorIdValidateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof validateConfigGeneratorIds>>, TError,{data: BodyType<ConfigGeneratorIdValidateRequest>}, TContext> => {
+
+const mutationKey = ['validateConfigGeneratorIds'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof validateConfigGeneratorIds>>, {data: BodyType<ConfigGeneratorIdValidateRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  validateConfigGeneratorIds(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ValidateConfigGeneratorIdsMutationResult = NonNullable<Awaited<ReturnType<typeof validateConfigGeneratorIds>>>
+    export type ValidateConfigGeneratorIdsMutationBody = BodyType<ConfigGeneratorIdValidateRequest>
+    export type ValidateConfigGeneratorIdsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Validate manually chosen IDs against inventory and ranges
+ */
+export const useValidateConfigGeneratorIds = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof validateConfigGeneratorIds>>, TError,{data: BodyType<ConfigGeneratorIdValidateRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof validateConfigGeneratorIds>>,
+        TError,
+        {data: BodyType<ConfigGeneratorIdValidateRequest>},
+        TContext
+      > => {
+      return useMutation(getValidateConfigGeneratorIdsMutationOptions(options));
+    }
 
 export const getListDevicesUrl = (params?: ListDevicesParams,) => {
   const normalizedParams = new URLSearchParams();

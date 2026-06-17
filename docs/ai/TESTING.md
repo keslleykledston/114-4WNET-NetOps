@@ -44,6 +44,7 @@
 | `snmp-fast-operational-selftest.mjs` | Interfaces SNMP_FAST |
 | `snmp-fast-bgp-selftest.mjs` | BGP SNMP |
 | `bgp-peer-parser-selftest.mjs` | BGP parser |
+| `bgp-peer-dedupe-selftest.mjs` | API/UI peer dedupe parity (SNMP+SSH merge, VRF collapse) |
 | `bgp-peer-drilldown-snapshot-selftest.mjs` | Drilldown cache |
 | `operational-pilot-smoke.mjs` | Pilot gate |
 
@@ -56,6 +57,33 @@
 | `connectors-config-bundle-parse-selftest.mjs` | Config bundle |
 | `connectors-post-ssh-autocollect-selftest.mjs` | Autocollect |
 
+### Config Generator (in-process, `workspace/`)
+
+Executar a partir de `workspace/` com `DATABASE_URL` apontando para Postgres (lab ou URL dummy para testes offline quando aplicável). Ver [CONFIG_GENERATOR_MVP_CLOSURE.md](../config-generator/CONFIG_GENERATOR_MVP_CLOSURE.md).
+
+| Script | Foco |
+|--------|------|
+| `config-generator.selftest.ts` | Core: validate, render, runs, artifacts |
+| `config-generator.contract.selftest.ts` | Contrato OpenAPI / shapes |
+| `config-generator.suggestions.selftest.ts` | Sugestões de contexto de serviço |
+| `config-generator.template-refinement.selftest.ts` | Refinamento de templates |
+| `config-generator.diff.selftest.ts` | Diff preview-only |
+| `config-generator.id-allocator.selftest.ts` | ID allocator (requer `CONFIG_GENERATOR_ENABLED=true`) |
+| `config-generator.change-request-preview.selftest.ts` | Change request preview (requer flag ON) |
+| `config-generator.l2vpn-templates.selftest.ts` | Templates L2VPN PTP/L2VC e PTMP/VSI |
+| `provisioning-ui-integration.selftest.ts` | UI `/provisioning` + doc closure |
+
+Caminho base: `artifacts/api-server/src/modules/config-generator/` (ou `netops-manager/src/pages/` para UI).
+
+Exemplo:
+
+```bash
+cd workspace
+DATABASE_URL=postgres://selftest:selftest@127.0.0.1:1/selftest \
+  pnpm --dir ./scripts exec tsx \
+  ../artifacts/api-server/src/modules/config-generator/config-generator.selftest.ts
+```
+
 ### Compliance / RBAC / outros
 
 | Script | Foco |
@@ -64,7 +92,7 @@
 | `compliance-deep-selftest.mjs` | Engine rules |
 | `rbac-selftest.mjs` | Permissions |
 | `user-management-selftest.mjs` | Users CRUD |
-| `provisioning-preview-selftest.mjs` | Preview engine |
+| `provisioning-preview-selftest.mjs` | Preview engine legado |
 | `scheduler-selftest.mjs` | Scheduler |
 | `netbox-readonly-selftest.mjs` | NetBox |
 

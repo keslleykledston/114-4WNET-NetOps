@@ -105,6 +105,7 @@ export interface ParsedL2Circuit {
     hasMtu?: boolean;
     hasStatisticEnable?: boolean;
     hasSwitchingUse?: boolean;
+    switchingPortCount?: number;
     vlanDeclaredGlobal?: boolean;
     vsiPeers?: L2VsiPeer[];
     pwSummary?: L2PwSummary;

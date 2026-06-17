@@ -1,7 +1,9 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startSnmpPoller } from "./lib/snmp-poller.js";
+import { startOperationalBgpPoller } from "./lib/operational-bgp-poller.js";
 import { ensureLocalAdminUser } from "./lib/auth.js";
+import { ensureDefaultUserProfiles } from "./modules/user-profiles/user-profiles.service.js";
 import { startScheduler } from "./modules/scheduler/scheduler.runner.js";
 import { startConnectorHealthEvaluation } from "./modules/connectors/connector-health.runner.js";
 import { startComplianceTrendRunner } from "./modules/compliance/compliance-trend.runner.js";
@@ -23,6 +25,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 void (async () => {
   await ensureLocalAdminUser();
+  await ensureDefaultUserProfiles();
   try {
     const seed = await ensureServiceTemplatesInDb();
     logger.info(seed, "Provisioning service templates ensured");
@@ -37,6 +40,7 @@ void (async () => {
 
     logger.info({ port }, "Server listening");
     startSnmpPoller();
+    startOperationalBgpPoller();
     startScheduler();
     startConnectorHealthEvaluation();
     startComplianceTrendRunner();

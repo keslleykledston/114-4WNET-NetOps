@@ -1,7 +1,6 @@
 import type { Device } from "@workspace/db";
 import { db, bgpRouteHistoryTable } from "@workspace/db";
-import { runSSHCommands } from "../../../../lib/ssh.js";
-import { decrypt } from "../../../../lib/crypto.js";
+import { runSSHCommandsForDevice } from "../../../connectors/connector-aware-transport.js";
 import { parseHuaweiRoutes } from "../../huawei-vrp/parsers/routes-parser.js";
 import { validateReadonlyCommand } from "../../huawei-vrp/commands.js";
 
@@ -44,6 +43,20 @@ export interface RouteQueryResponse {
 
 export const MAX_DISPLAY_ROUTES = 200;
 export const DEFAULT_LIMIT = 200;
+/** BGP route dumps via connector can be slow on large tables. */
+const ROUTE_QUERY_SSH_TIMEOUT_MS = 300_000;
+
+/** SNMP VRF column often uses Public/GLOBAL for the default BGP table — not a vpn-instance. */
+const GLOBAL_VRF_ALIASES = new Set(["", "GLOBAL", "DEFAULT", "_PUBLIC_", "PUBLIC", "Public"]);
+
+export function normalizeRouteQueryVrf(vrf: string | null | undefined): string | null {
+  const normalized = (vrf ?? "").trim();
+  if (!normalized) return null;
+  if (GLOBAL_VRF_ALIASES.has(normalized) || GLOBAL_VRF_ALIASES.has(normalized.toUpperCase())) {
+    return null;
+  }
+  return normalized;
+}
 
 function isIpv6(ip: string): boolean {
   return ip.includes(":");
@@ -54,7 +67,7 @@ export function buildRouteCommands(
   direction: "received" | "advertised",
   vrf: string | null
 ): string[] {
-  const vrfName = (vrf || "").trim();
+  const vrfName = normalizeRouteQueryVrf(vrf);
   const isV6 = isIpv6(peerIp);
   const directionCmd = direction === "received" ? "received-routes" : "advertised-routes";
   const commands: string[] = [];
@@ -85,12 +98,20 @@ function splitAsPath(asPathStr: string): string[] {
     .filter(s => s && /^\d+$/.test(s));
 }
 
+function isUsableRouteCommandOutput(output: string): boolean {
+  const lower = output.toLowerCase();
+  if (!output.trim()) return false;
+  if (lower.includes("no route") || lower.includes("not found")) return false;
+  if (lower.includes("vpn instance does not exist")) return false;
+  if (lower.includes("wrong parameter")) return false;
+  if (/\berror:/i.test(output) && !lower.includes("total number of routes")) return false;
+  return true;
+}
+
 async function executeSSHCommands(
   device: Device,
   commands: string[]
 ): Promise<string> {
-  const decrypted = decrypt(device.passwordEncrypted);
-
   for (const cmd of commands) {
     const check = validateReadonlyCommand(cmd);
     if (!check.allowed) {
@@ -98,19 +119,14 @@ async function executeSSHCommands(
     }
   }
 
-  const results = await runSSHCommands({
-    host: device.ipAddress,
-    port: device.sshPort,
-    username: device.username,
-    password: decrypted,
-  }, commands);
+  const results = await runSSHCommandsForDevice(device, commands, {
+    sessionTimeoutMs: ROUTE_QUERY_SSH_TIMEOUT_MS,
+    commandTimeoutMs: ROUTE_QUERY_SSH_TIMEOUT_MS,
+  });
 
   for (const result of results) {
-    if (!result.error && result.output && result.output.trim().length > 0) {
-      if (!result.output.toLowerCase().includes("no route") &&
-          !result.output.toLowerCase().includes("not found")) {
-        return result.output;
-      }
+    if (!result.error && result.output && isUsableRouteCommandOutput(result.output)) {
+      return result.output;
     }
   }
 

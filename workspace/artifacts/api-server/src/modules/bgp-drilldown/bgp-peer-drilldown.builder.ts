@@ -44,6 +44,60 @@ export function resolvePeerKey(peer: string, model: ParsedHuaweiBgpPeerDependenc
   return null;
 }
 
+function afiSafiFromSnapshotPeer(peer: DeviceDiscoverySnapshot["bgpPeers"][number]): BgpPeerFamily["afiSafi"] {
+  if (peer.vrf) {
+    if (peer.addressFamily === "ipv6") return "ipv6_vrf";
+    if (peer.addressFamily === "ipv4") return "ipv4_vrf";
+  }
+  if (peer.addressFamily === "ipv6") return "ipv6_unicast";
+  if (peer.addressFamily === "ipv4") return "ipv4_unicast";
+  return "unknown";
+}
+
+function familyNameForSnapshotPeer(peer: DeviceDiscoverySnapshot["bgpPeers"][number]): string {
+  if (peer.vrf) {
+    return `${peer.addressFamily === "ipv6" ? "ipv6-family" : "ipv4-family"} vpn-instance ${peer.vrf}`;
+  }
+  return peer.addressFamily === "ipv6" ? "ipv6-family unicast" : "ipv4-family unicast";
+}
+
+function snapshotPeerFallbackFamily(peer: DeviceDiscoverySnapshot["bgpPeers"][number]): BgpPeerFamily {
+  const peerKey = normalizePolicyLookupKey(peer.peerIp);
+  return {
+    peerKey,
+    peerAddressOrName: peer.peerIp,
+    isGroup: false,
+    afiSafi: afiSafiFromSnapshotPeer(peer),
+    familyName: familyNameForSnapshotPeer(peer),
+    vrfName: peer.vrf ?? null,
+    enabled: true,
+    importRoutePolicy: peer.importPolicy,
+    exportRoutePolicy: peer.exportPolicy,
+    defaultRouteAdvertise: false,
+    nextHopLocal: false,
+    advertiseCommunity: false,
+    advertiseExtCommunity: false,
+    reflectClient: false,
+    groupName: null,
+    inheritedFromGroup: false,
+    inheritedGroup: null,
+    effectiveImportRoutePolicy: peer.importPolicy,
+    effectiveExportRoutePolicy: peer.exportPolicy,
+    effectiveNextHopLocal: false,
+    effectiveAdvertiseCommunity: false,
+    effectiveAdvertiseExtCommunity: false,
+    rawEvidence: [peer.evidence ?? `snapshot bgp peer ${peer.peerIp}`],
+  };
+}
+
+function findSnapshotPeer(snapshot: DeviceDiscoverySnapshot, peer: string): DeviceDiscoverySnapshot["bgpPeers"][number] | null {
+  const key = normalizePolicyLookupKey(peer);
+  return snapshot.bgpPeers.find((item) =>
+    normalizePolicyLookupKey(item.peerIp) === key
+    || normalizePolicyLookupKey(item.name ?? "") === key
+  ) ?? null;
+}
+
 function effectivePolicySource(fam: BgpPeerFamily): "peer" | "peer_group" | "none" {
   const hasImport = Boolean(fam.effectiveImportRoutePolicy ?? fam.importRoutePolicy);
   const hasExport = Boolean(fam.effectiveExportRoutePolicy ?? fam.exportRoutePolicy);
@@ -236,6 +290,12 @@ export function buildBgpPeerDrilldownResult(input: {
   const includePolicyObjects = input.query.includePolicyObjects !== false;
 
   const config = buildPolicyDependencyConfigFromSnapshot(input.snapshot, { rawConfig: input.rawConfig });
+  const snapshotConfig = input.snapshot.policies.length > 0
+    ? buildPolicyDependencyConfigFromSnapshot(input.snapshot, { rawConfig: "" })
+    : config;
+  const policyConfig = Object.keys(config.consumers.route_policies).length > 0
+    ? config
+    : snapshotConfig;
   const model = config.bgp_peer_model;
   const warnings: string[] = [];
 
@@ -252,12 +312,20 @@ export function buildBgpPeerDrilldownResult(input: {
   const discSource = discoverySourceFromDrilldown(drilldownSource);
 
   const rootRow = peerKey && model ? model.roots[peerKey] : null;
-  const peerFamilies = model && peerKey
+  const parsedPeerFamilies = model && peerKey
     ? model.families.filter((f) => f.peerKey === peerKey)
     : [];
+  const snapshotPeer = findSnapshotPeer(input.snapshot, input.peer);
+  const peerFamilies = parsedPeerFamilies.length > 0
+    ? parsedPeerFamilies
+    : snapshotPeer
+      ? [snapshotPeerFallbackFamily(snapshotPeer)]
+      : [];
 
-  if (!peerKey || peerFamilies.length === 0) {
+  if (peerFamilies.length === 0) {
     warnings.push(`Peer ${peerDisplay} não encontrado em address-families BGP.`);
+  } else if (parsedPeerFamilies.length === 0 && snapshotPeer) {
+    warnings.push(`Peer ${peerDisplay} resolvido pelo snapshot BGP; parser do bloco BGP não encontrou a family no raw config.`);
   }
 
   const families: BgpPeerFamilyConfig[] = peerFamilies.map((fam) => ({
@@ -299,13 +367,13 @@ export function buildBgpPeerDrilldownResult(input: {
         source: fam.inheritedFromGroup ? "peer_group" : "peer",
         inheritedFromGroup: fam.inheritedFromGroup,
         inheritedGroup: fam.inheritedGroup,
-        status: policyBindingStatus(config, fam.peerAddressOrName, fam.afiSafi, direction, policyName),
+        status: policyBindingStatus(policyConfig, fam.peerAddressOrName, fam.afiSafi, direction, policyName),
       });
     }
   }
 
-  const policies = buildPolicyDrilldowns(config, peerFamilies, includePolicies, includePolicyObjects);
-  const dependencies = flattenDependencies(config, peerDisplay, peerFamilies, policies);
+  const policies = buildPolicyDrilldowns(policyConfig, peerFamilies, includePolicies, includePolicyObjects);
+  const dependencies = flattenDependencies(policyConfig, peerDisplay, peerFamilies, policies);
 
   const rawEvidenceRefs = input.rawConfig.trim()
     ? [{

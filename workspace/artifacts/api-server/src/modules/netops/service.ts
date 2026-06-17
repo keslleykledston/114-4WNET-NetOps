@@ -1,8 +1,14 @@
-import { bgpPeerRoleOverridesTable, db, devicesTable, snmpSnapshotsTable } from "@workspace/db";
+import { bgpPeerCollectionHistoryTable, bgpPeerRoleOverridesTable, db, devicesTable, snmpSnapshotsTable } from "@workspace/db";
 import { desc, eq, sql } from "drizzle-orm";
+import { decrypt } from "../../lib/crypto.js";
+import { collectDiscoverySsh } from "./device-discovery/collectors/ssh.collector.js";
+import { getLatestDiscoverySnapshot } from "./device-discovery/discovery.service.js";
 import { snapshotToNetopsData } from "./adapters/snapshot-adapter.js";
+import { discoverySnapshotToNetopsData } from "./adapters/discovery-netops.adapter.js";
 import { deriveDeviceKind } from "./device-profile/device-profile-resolver.js";
 import { snmpReadonlyAdapter } from "./adapters/snmp-readonly-adapter.js";
+import { getLatestSnmpCollectorSnapshot } from "./snmp/snapshot-queries.js";
+import { dedupeBgpPeersForDisplay } from "./bgp/bgp-peer-display-normalizer.js";
 import type {
   NetopsAddressFamilyFilter,
   NetopsBgpPeer,
@@ -32,21 +38,17 @@ export async function getDeviceOrNull(deviceId: number) {
 }
 
 async function getLatestSnapshot(deviceId: number) {
-  const [snapshot] = await db
-    .select()
-    .from(snmpSnapshotsTable)
-    .where(eq(snmpSnapshotsTable.deviceId, deviceId))
-    .orderBy(desc(snmpSnapshotsTable.collectedAt))
-    .limit(1);
-
-  return snapshot ?? null;
+  return getLatestSnmpCollectorSnapshot(deviceId);
 }
 
 export async function getNetopsSummary(deviceId: number): Promise<NetopsDeviceSummary | null> {
   const device = await getDeviceOrNull(deviceId);
   if (!device) return null;
 
-  const data = snapshotToNetopsData(await getLatestSnapshot(deviceId));
+  const snmpSnapshot = await getLatestSnapshot(deviceId);
+  const discoverySnapshot = await getLatestDiscoverySnapshot(deviceId);
+  const data = buildReadonlySnapshotData(snmpSnapshot, discoverySnapshot);
+  if (!data) return null;
   const bgpEstablished = data.bgpPeers.filter((peer) => peer.state === "Established").length;
 
   return {
@@ -65,8 +67,9 @@ export async function getNetopsSummary(deviceId: number): Promise<NetopsDeviceSu
 }
 
 export async function listNetopsInterfaces(deviceId: number): Promise<NetopsInterface[] | null> {
-  if (!(await getDeviceOrNull(deviceId))) return null;
-  return snapshotToNetopsData(await getLatestSnapshot(deviceId)).interfaces;
+  const data = await getSnapshotDataOrNull(deviceId);
+  if (!data) return null;
+  return data.interfaces;
 }
 
 function filterBgpPeers(
@@ -138,9 +141,108 @@ function applyRoleOverrides(peers: NetopsBgpPeer[], overrides: NetopsBgpPeerRole
   });
 }
 
+function bgpPeerSnapshotKey(peer: Pick<NetopsBgpPeer, "peerIp" | "addressFamily" | "vrf">): string {
+  return `${peer.peerIp.trim().toUpperCase()}|${peer.addressFamily}|${(peer.vrf ?? "").trim().toUpperCase()}`;
+}
+
+function diffBgpPeers(previousPeers: NetopsBgpPeer[], currentPeers: NetopsBgpPeer[]): NetopsBgpPeer[] {
+  const currentKeys = new Set(currentPeers.map((peer) => bgpPeerSnapshotKey(peer)));
+  return previousPeers.filter((peer) => !currentKeys.has(bgpPeerSnapshotKey(peer)));
+}
+
+function toRemovedPeerHistoryEntry(peer: NetopsBgpPeer, removedAt: string) {
+  return {
+    ...peer,
+    collectionState: "removed",
+    removedAt,
+    removedReason: "missing_in_latest_snmp_collection",
+  };
+}
+
+function readonlyBgpPeerKey(peer: Pick<NetopsBgpPeer, "peerIp" | "addressFamily" | "vrf">): string {
+  return `${peer.peerIp.trim().toUpperCase()}|${peer.addressFamily}|${(peer.vrf ?? "").trim().toUpperCase()}`;
+}
+
+/** SNMP is authoritative for peer list; SSH/discovery only enriches matching peers (no union). */
+export function mergeReadonlyBgpPeers(basePeers: NetopsBgpPeer[], detailPeers: NetopsBgpPeer[]): NetopsBgpPeer[] {
+  const detailsByKey = new Map(detailPeers.map((peer) => [readonlyBgpPeerKey(peer), peer] as const));
+  return basePeers.map((peer) => {
+    const detail = detailsByKey.get(readonlyBgpPeerKey(peer));
+    if (!detail) return { ...peer };
+
+    return {
+      ...peer,
+      description: peer.description ?? detail.description,
+      name: peer.name ?? detail.name,
+      state: peer.state !== "Unknown" ? peer.state : detail.state,
+      remoteAs: peer.remoteAs ?? detail.remoteAs,
+      vrf: peer.vrf ?? detail.vrf,
+      importPolicy: peer.importPolicy ?? detail.importPolicy,
+      exportPolicy: peer.exportPolicy ?? detail.exportPolicy,
+      receivedPrefixes: peer.receivedPrefixes ?? detail.receivedPrefixes,
+      advertisedPrefixes: peer.advertisedPrefixes ?? detail.advertisedPrefixes,
+      activePrefixes: peer.activePrefixes ?? detail.activePrefixes,
+      // Uptime is SNMP-only here; Huawei SSH compact output can emit broken values like "****h36m".
+      uptime: peer.uptime ?? null,
+      source: peer.source,
+    };
+  }).sort((left, right) => left.peerIp.localeCompare(right.peerIp));
+}
+
+export async function recordBgpPeerRemovalHistory(input: {
+  deviceId: number;
+  collector: string;
+  previousSnapshotId: number | null;
+  currentSnapshotId: number | null;
+  previousPeers: NetopsBgpPeer[];
+  currentPeers: NetopsBgpPeer[];
+}): Promise<number> {
+  const removedAt = new Date().toISOString();
+  const removedBgpPeers = diffBgpPeers(input.previousPeers, input.currentPeers);
+  if (removedBgpPeers.length === 0) return 0;
+
+  const removedHistoryPeers = removedBgpPeers.map((peer) => toRemovedPeerHistoryEntry(peer, removedAt));
+  await db.insert(bgpPeerCollectionHistoryTable).values({
+    deviceId: input.deviceId,
+    collector: input.collector,
+    previousSnapshotId: input.previousSnapshotId,
+    currentSnapshotId: input.currentSnapshotId,
+    previousPeersJson: JSON.stringify(input.previousPeers),
+    currentPeersJson: JSON.stringify(input.currentPeers),
+    removedPeersJson: JSON.stringify(removedHistoryPeers),
+    removedCount: removedBgpPeers.length,
+  });
+  return removedBgpPeers.length;
+}
+
+function buildReadonlySnapshotData(snmpSnapshot: Awaited<ReturnType<typeof getLatestSnapshot>>, discoverySnapshot: Awaited<ReturnType<typeof getLatestDiscoverySnapshot>>) {
+  const snmpData = snapshotToNetopsData(snmpSnapshot);
+  const discoveryData = discoverySnapshot ? discoverySnapshotToNetopsData(discoverySnapshot) : null;
+
+  if (!snmpSnapshot) {
+    return discoverySnapshot
+      ? {
+          snapshot: null,
+          ...discoveryData!,
+        }
+      : null;
+  }
+
+  return {
+    snapshot: snmpSnapshot,
+    interfaces: snmpData.interfaces.length > 0 ? snmpData.interfaces : discoveryData?.interfaces ?? [],
+    bgpPeers: discoveryData ? mergeReadonlyBgpPeers(snmpData.bgpPeers, discoveryData.bgpPeers) : snmpData.bgpPeers,
+    filters: discoveryData?.filters.length ? discoveryData.filters : snmpData.filters,
+    communities: discoveryData?.communities.length ? discoveryData.communities : snmpData.communities,
+  };
+}
+
 async function getSnapshotDataOrNull(deviceId: number) {
   if (!(await getDeviceOrNull(deviceId))) return null;
-  const data = snapshotToNetopsData(await getLatestSnapshot(deviceId));
+  const snmpSnapshot = await getLatestSnapshot(deviceId);
+  const discoverySnapshot = await getLatestDiscoverySnapshot(deviceId);
+  const data = buildReadonlySnapshotData(snmpSnapshot, discoverySnapshot);
+  if (!data) return null;
   return {
     ...data,
     bgpPeers: applyRoleOverrides(data.bgpPeers, await getRoleOverrides(deviceId)),
@@ -153,7 +255,7 @@ export async function listNetopsBgpPeers(
 ): Promise<NetopsBgpPeer[] | null> {
   const data = await getSnapshotDataOrNull(deviceId);
   if (!data) return null;
-  return filterBgpPeers(data.bgpPeers, filters);
+  return dedupeBgpPeersForDisplay(filterBgpPeers(data.bgpPeers, filters));
 }
 
 export async function listNetopsFilters(deviceId: number): Promise<NetopsFilter[] | null> {
@@ -236,20 +338,66 @@ export async function collectNetopsReadOnly(deviceId: number): Promise<NetopsRea
   const device = await getDeviceOrNull(deviceId);
   if (!device) return null;
 
+  const previousSnapshot = await getLatestSnapshot(deviceId);
+  const previousBgpPeers = previousSnapshot ? snapshotToNetopsData(previousSnapshot).bgpPeers : [];
+
   const result = await snmpReadonlyAdapter.collect({ device });
   const payload = "payload" in result ? result.payload : undefined;
+  const snmpBgpPeers = result.data.bgpPeers;
+  let mergedBgpPeers = snmpBgpPeers;
+  const removedAt = new Date().toISOString();
+
+  if (payload && device.passwordEncrypted) {
+    try {
+      const password = decrypt(device.passwordEncrypted);
+      const ssh = await collectDiscoverySsh(device, password, ["bgp", "policies"]);
+      if (ssh.success) {
+        mergedBgpPeers = mergeReadonlyBgpPeers(snmpBgpPeers, ssh.bgpPeers);
+      } else {
+        const discovery = await getLatestDiscoverySnapshot(deviceId);
+        if (discovery) {
+          mergedBgpPeers = mergeReadonlyBgpPeers(snmpBgpPeers, discovery.bgpPeers as unknown as NetopsBgpPeer[]);
+        }
+      }
+    } catch {
+      const discovery = await getLatestDiscoverySnapshot(deviceId);
+      if (discovery) {
+        mergedBgpPeers = mergeReadonlyBgpPeers(snmpBgpPeers, discovery.bgpPeers as unknown as NetopsBgpPeer[]);
+      }
+    }
+  }
+
+  const removedBgpPeers = diffBgpPeers(previousBgpPeers, snmpBgpPeers);
 
   if (result.executed && payload) {
-    await db.insert(snmpSnapshotsTable).values({
-      deviceId,
-      collector: "snmp",
-      collectorVersion: "phase5",
-      success: payload.success,
-      errorMessage: payload.errorMessage,
-      errorsJson: payload.errors.length > 0 ? JSON.stringify(payload.errors) : null,
-      interfacesJson: payload.interfaces.length > 0 ? JSON.stringify(payload.interfaces) : null,
-      bgpPeersJson: payload.bgpPeers.length > 0 ? JSON.stringify(payload.bgpPeers) : null,
-      vrfsJson: null,
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      const [snapshotRow] = await tx.insert(snmpSnapshotsTable).values({
+        deviceId,
+        collector: "snmp",
+        collectorVersion: "phase5",
+        success: payload.success,
+        errorMessage: payload.errorMessage,
+        errorsJson: payload.errors.length > 0 ? JSON.stringify(payload.errors) : null,
+        interfacesJson: payload.interfaces.length > 0 ? JSON.stringify(payload.interfaces) : null,
+        bgpPeersJson: snmpBgpPeers.length > 0 ? JSON.stringify(snmpBgpPeers) : null,
+        vrfsJson: null,
+        collectedAt: now,
+      }).returning({ id: snmpSnapshotsTable.id });
+
+      if (removedBgpPeers.length > 0) {
+        const removedHistoryPeers = removedBgpPeers.map((peer) => toRemovedPeerHistoryEntry(peer, removedAt));
+        await tx.insert(bgpPeerCollectionHistoryTable).values({
+          deviceId,
+          collector: "snmp",
+          previousSnapshotId: previousSnapshot?.id ?? null,
+          currentSnapshotId: snapshotRow?.id ?? null,
+          previousPeersJson: JSON.stringify(previousBgpPeers),
+          currentPeersJson: JSON.stringify(snmpBgpPeers),
+          removedPeersJson: JSON.stringify(removedHistoryPeers),
+          removedCount: removedBgpPeers.length,
+        });
+      }
     });
 
     if (payload.success) {
@@ -259,20 +407,22 @@ export async function collectNetopsReadOnly(deviceId: number): Promise<NetopsRea
     }
   }
 
-  const bgpEstablished = payload?.bgpPeers.filter((p) => p.state === "Established").length ?? 0;
-  const bgpDown = (payload?.bgpPeers.length ?? 0) - bgpEstablished;
+  const bgpEstablished = snmpBgpPeers.filter((p) => p.state === "Established").length;
+  const bgpDown = snmpBgpPeers.length - bgpEstablished;
 
   return {
     deviceId: result.deviceId,
     status: result.executed ? "completed" : (result.status === "ready" || result.status === "blocked" ? "disabled" : result.status),
     executed: result.executed,
     collector: "snmp",
-    message: result.message,
+    message: result.executed && removedBgpPeers.length > 0
+      ? `${result.message} ${removedBgpPeers.length} peer(s) ausente(s) foram registrados como removidos no histórico.`
+      : result.message,
     commandChecks: result.commandChecks,
     collectedAt: result.executed ? new Date().toISOString() : undefined,
     summary: {
       interfaces: payload?.interfaces.length ?? 0,
-      bgpPeers: payload?.bgpPeers.length ?? 0,
+      bgpPeers: snmpBgpPeers.length,
       bgpEstablished,
       bgpDown,
     },

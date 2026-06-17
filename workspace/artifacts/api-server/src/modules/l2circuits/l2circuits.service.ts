@@ -205,10 +205,14 @@ function inferDot1qView(row: typeof l2CircuitsTable.$inferSelect): {
     flags.hasVcId ||
     flags.hasVsi ||
     flags.hasSwitchingUse ||
-    flags.hasMac;
+    flags.hasMac ||
+    (typeof flags.switchingPortCount === "number" && flags.switchingPortCount >= 2);
   const hasDescription = Boolean(row.description?.trim()) || Boolean(flags.hasDescription);
 
   if (!hasBinding && !hasDescription) {
+    if (typeof flags.switchingPortCount === "number" && flags.switchingPortCount >= 2) {
+      return { classification: "vlan_local", circuitType: "vlan_local", l2Transport: "local_vlan" };
+    }
     return { classification: "vlan_orphan", circuitType: "vlan_orphan", l2Transport: "none" };
   }
 

@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { getRequestSourceIp } from "../../lib/audit.js";
+import { ConnectorJobTimeoutError } from "../connectors/connector-execution.service.js";
 import {
   analyzeBgpPeerCleanup,
   auditBgpCleanupCreation,
@@ -36,6 +37,7 @@ export async function postBgpPeerCleanupAnalyzeHandler(req: Request, res: Respon
       deviceId,
       peerIp,
       request: req.body && typeof req.body === "object" ? { validateReadOnly: req.body.validateReadOnly === true } : undefined,
+      sourceIp: getRequestSourceIp(req),
     });
     if (result === "device_not_found") {
       res.status(404).json({ error: "Device not found" });
@@ -57,6 +59,14 @@ export async function postBgpPeerCleanupAnalyzeHandler(req: Request, res: Respon
     await auditBgpCleanupCreation(result, getRequestSourceIp(req));
     res.status(201).json(result);
   } catch (error) {
+    if (error instanceof ConnectorJobTimeoutError) {
+      res.status(504).json({
+        error: "Connector não retornou resultado dentro do tempo limite.",
+        message:
+          "A coleta SSH via connector excedeu o tempo limite. Em switches com muitas interfaces, tente novamente; a config BGP é priorizada e a interface é coletada em segundo plano.",
+      });
+      return;
+    }
     res.status(500).json({ error: error instanceof Error ? error.message : "Failed to analyze cleanup" });
   }
 }
@@ -95,6 +105,10 @@ export async function postBgpPeerCleanupExportHandler(req: Request, res: Respons
     });
     if (result === "not_found") {
       res.status(404).json({ error: "Cleanup analysis not found" });
+      return;
+    }
+    if (result === "invalid") {
+      res.status(409).json({ error: "Change plan inválido — rollback documental indisponível; export bloqueado." });
       return;
     }
 

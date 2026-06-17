@@ -29,12 +29,17 @@ import L2Circuits from "@/pages/l2-circuits";
 import BgpPeerDrilldownPage from "@/pages/bgp-peer-drilldown";
 import OperationalBgpPage from "@/pages/operational-bgp";
 import Users from "@/pages/users";
+import UserProfiles from "@/pages/user-profiles";
+import { ModuleAccessGuard } from "@/components/module-access-guard";
 import ConnectorsPage from "@/pages/connectors";
 import ConnectorDetailPage from "@/pages/connector-detail";
 import ConnectorDashboardPage from "@/pages/connector-dashboard";
 import ConnectorGroupsPage from "@/pages/connector-groups";
 import CredentialVaultPage from "@/pages/credential-vault";
 import NotificationsPage from "@/pages/notifications";
+import ConfigGeneratorPage from "@/pages/config-generator";
+import BgpAnnouncementsPage from "@/pages/bgp-announcements";
+import ChangePlansPage from "@/pages/change-plans";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -72,12 +77,14 @@ function Router() {
   }
 
   return (
-    <Layout>
-      <Switch>
+    <ModuleAccessGuard>
+      <Layout>
+        <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/devices" component={Devices} />
         <Route path="/devices/:id" component={DeviceDetail} />
         <Route path="/compliance" component={Compliance} />
+        {/* Provisioning MVP uses Config Generator preview-only flow. Keep legacy apply/execute out of main route. */}
         <Route path="/provisioning" component={Provisioning} />
         <Route path="/provisioning/templates" component={ProvisioningTemplatesPage} />
         <Route path="/provisioning/templates/:id" component={ProvisioningTemplateDetailPage} />
@@ -93,19 +100,24 @@ function Router() {
         <Route path="/infrastructure/connectors" component={ConnectorsPage} />
         <Route path="/security/credentials" component={CredentialVaultPage} />
         <Route path="/tenants/notifications" component={NotificationsPage} />
+        <Route path="/config-generator" component={ConfigGeneratorPage} />
         <Route path="/scheduler" component={Scheduler} />
         <Route path="/policies" component={Policies} />
         <Route path="/config-collection" component={ConfigCollection} />
         <Route path="/snmp-history" component={SnmpHistory} />
         <Route path="/netops-operations" component={NetopsOperations} />
+        <Route path="/bgp-announcements" component={BgpAnnouncementsPage} />
+        <Route path="/change-plans" component={ChangePlansPage} />
         <Route path="/l2-circuits" component={L2Circuits} />
         <Route path="/bgp/peer-drilldown" component={BgpPeerDrilldownPage} />
         <Route path="/operational/bgp" component={OperationalBgpPage} />
         <Route path="/bgp/operations" component={OperationalBgpPage} />
         <Route path="/users" component={Users} />
+        <Route path="/user-profiles" component={UserProfiles} />
         <Route component={NotFound} />
-      </Switch>
-    </Layout>
+        </Switch>
+      </Layout>
+    </ModuleAccessGuard>
   );
 }
 

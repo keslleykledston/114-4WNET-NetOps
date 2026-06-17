@@ -173,7 +173,7 @@ export default function L2Circuits() {
     if (!deviceId) {
       toast({
         title: "Selecione um device",
-        description: "Refresh operacional exige filtro de device (1 por vez).",
+        description: "A sincronização SSH exige um device no filtro (1 por vez).",
         variant: "destructive",
       });
       return;
@@ -181,17 +181,38 @@ export default function L2Circuits() {
 
     refreshMutation.mutate(deviceId, {
       onSuccess: (result) => {
+        const snmpOk = result.operational_state?.snmp_collected === true;
+        const sshSynced = Number(result.operational_state?.ssh_inventory_synced ?? 0);
+        const cachedSynced = Number(result.operational_state?.cached_inventory_synced ?? 0);
+        const sshOps = result.operational_state?.ssh_ops === true;
+        const syncHint =
+          sshSynced > 0
+            ? `${sshSynced} circuitos via SSH · `
+            : cachedSynced > 0
+              ? `${cachedSynced} circuitos do backup em cache · `
+              : "";
+        const opsHint = sshOps ? "status operacional SSH · " : "";
+        const snmpHint = snmpOk ? "" : "SNMP indisponível (só SSH) · ";
         toast({
-          title: "Refresh operacional concluído",
-          description: `${result.circuits_updated} circuitos · ${result.findings_count} findings · ${result.freshness}`,
+          title: "Sincronização operacional concluída",
+          description: `${snmpHint}${syncHint}${opsHint}${result.circuits_updated} circuitos · ${result.findings_count} findings · ${result.freshness}${
+            result.warnings?.length ? ` · ${result.warnings.length} aviso(s)` : ""
+          }`,
         });
+        if (result.warnings?.length) {
+          toast({
+            title: "Avisos do refresh",
+            description: result.warnings.slice(0, 3).join(" · "),
+            variant: "destructive",
+          });
+        }
         void refetch();
       },
       onError: (error) => {
         const code = (error as Error & { code?: string }).code;
         const status = (error as Error & { status?: number }).status;
         toast({
-          title: code === "L2_OPERATIONAL_REFRESH_DISABLED" || status === 503 ? "Refresh desabilitado" : "Falha no refresh",
+          title: code === "L2_OPERATIONAL_REFRESH_DISABLED" || status === 503 ? "Refresh desabilitado" : "Falha na sincronização",
           description: error instanceof Error ? error.message : "Erro desconhecido",
           variant: "destructive",
         });
@@ -211,7 +232,7 @@ export default function L2Circuits() {
             L2 Circuits
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            NOC read-only — default só problemas. Refresh operacional (SNMP + SSH ops) por device.
+            NOC read-only — default só problemas. Atualizar operacional coleta via SSH e sincroniza circuitos do device selecionado.
           </p>
           {deviceId && operational && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
@@ -235,7 +256,7 @@ export default function L2Circuits() {
           </Button>
           <Button variant="outline" size="sm" onClick={handleOperationalRefresh} disabled={refreshBusy || !deviceId}>
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshBusy ? "animate-spin" : ""}`} />
-            Atualizar operacional
+            {refreshBusy ? "Sincronizando..." : "Atualizar operacional"}
           </Button>
         </div>
       </div>

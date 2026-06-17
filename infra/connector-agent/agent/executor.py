@@ -11,6 +11,7 @@ from .diagnostics import (
     run_route_check,
     run_snmp_get,
     run_snmp_walk,
+    run_ssh_config_bundle,
     run_ssh_command,
     run_tcp_check,
     run_traceroute,
@@ -73,6 +74,10 @@ def execute_job(job: dict[str, Any], config: Config, api: NetOpsApiClient) -> di
             if not target_ip:
                 raise ValueError("SSH_COMMAND requires target_ip")
             return run_ssh_command(target_ip, payload, config)
+        if job_type == "SSH_CONFIG_BUNDLE":
+            if not target_ip:
+                raise ValueError("SSH_CONFIG_BUNDLE requires target_ip")
+            return run_ssh_config_bundle(target_ip, payload, config)
         if job_type == "NETCONF_GET":
             if not target_ip:
                 raise ValueError("NETCONF_GET requires target_ip")

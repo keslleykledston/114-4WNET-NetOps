@@ -1,6 +1,6 @@
 export type BgpPeerCleanupRecommendation = "full" | "partial" | "skip";
 export type BgpPeerCleanupRisk = "low" | "medium" | "high";
-export type BgpPeerCleanupDependencyStatus = "exclusive" | "shared" | "ambiguous";
+export type BgpPeerCleanupDependencyStatus = "exclusive" | "shared" | "global" | "ambiguous";
 export type BgpPeerCleanupDependencyType =
   | "route-policy"
   | "ip-prefix"
@@ -32,6 +32,19 @@ export interface BgpPeerCleanupScript {
   sha256: string;
 }
 
+export interface BgpPeerCleanupSshRefresh {
+  enabled: boolean;
+  commandCount: number;
+  executedCount: number;
+  commands: string[];
+  warnings: string[];
+  evidence: Array<{
+    command: string;
+    output: string;
+    error?: string;
+  }>;
+}
+
 export interface BgpPeerCleanupTwinPeer {
   peerIp: string;
   state: string;
@@ -51,6 +64,7 @@ export interface BgpPeerCleanupAnalysis {
   peerCategory: string | null;
   state: string;
   peerAs: number | null;
+  localAs: number | null;
   importPolicies: string[];
   exportPolicies: string[];
   recommendation: BgpPeerCleanupRecommendation;
@@ -58,14 +72,17 @@ export interface BgpPeerCleanupAnalysis {
   dependencies: {
     exclusive: BgpPeerCleanupDependency[];
     shared: BgpPeerCleanupDependency[];
+    global: BgpPeerCleanupDependency[];
     ambiguous: BgpPeerCleanupDependency[];
   };
   script: BgpPeerCleanupScript;
+  sshRefresh?: BgpPeerCleanupSshRefresh | null;
   warnings: string[];
   blockedReasons: string[];
   twin?: BgpPeerCleanupTwinPeer | null;
   collectedAt: string | null;
   snapshotSource: string;
+  changePlanId?: number | null;
 }
 
 export interface BgpPeerCleanupExportResponse {

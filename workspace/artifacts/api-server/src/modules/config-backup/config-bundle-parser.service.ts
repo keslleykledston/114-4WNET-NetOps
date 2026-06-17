@@ -60,19 +60,26 @@ export function splitCommandBundle(rawBundle: string): Record<string, string> {
 }
 
 function mapOutputsForL2Parser(outputs: Record<string, string>): Record<string, string | undefined> {
-  const runningConfig = outputs["display current-configuration"];
+  const runningConfig = outputs["display current-configuration"] ?? outputs["raw"];
   return {
     "display mpls l2vc verbose": outputs["display mpls l2vc verbose"] ?? outputs["display mpls l2vc"],
     "display mpls l2vc": outputs["display mpls l2vc"],
     "display vsi verbose": outputs["display vsi verbose"] ?? outputs["display vsi"],
     "display interface description": outputs["display interface description"],
     "display interface brief": outputs["display interface brief"],
+    "display current-configuration": runningConfig,
     "display current-configuration interface": outputs["display current-configuration interface"] ?? runningConfig,
     "display vlan": outputs["display vlan"],
   };
 }
 
-function circuitRowValues(circuit: NormalizedL2Circuit, deviceId: number, runId: string, now: Date) {
+function circuitRowValues(
+  circuit: NormalizedL2Circuit,
+  deviceId: number,
+  runId: string,
+  now: Date,
+  source: "connector_ssh_bundle" | "ssh_live" | "cached_config" = "connector_ssh_bundle",
+) {
   return {
     deviceId,
     circuitType: circuit.circuitType,
@@ -101,7 +108,8 @@ function circuitRowValues(circuit: NormalizedL2Circuit, deviceId: number, runId:
     rawEvidence: circuit.rawEvidence,
     discoveryRunId: runId,
     lastSeen: now,
-    source: "connector_ssh_bundle" as const,
+    updatedAt: now,
+    source,
   };
 }
 
@@ -109,14 +117,17 @@ export async function persistL2CircuitsFromCommandOutputs(input: {
   deviceId: number;
   device: Device;
   outputs: Record<string, string>;
-  collectedConfigId: number;
+  collectedConfigId?: number;
+  discoveryRunId?: string;
+  source?: "connector_ssh_bundle" | "ssh_live" | "cached_config";
 }): Promise<{ circuitCount: number; findingsCount: number }> {
   const rawOutputs = mapOutputsForL2Parser(input.outputs);
   const parsed = parseHuaweiL2Circuits(rawOutputs);
   const normalized = normalizeCircuits(parsed);
   const withFindings = enrichCircuitsWithFindings(normalized, input.deviceId);
   const allFindings = resolveL2Findings(normalized, input.deviceId);
-  const runId = `bundle-l2-${input.collectedConfigId}`;
+  const runId = input.discoveryRunId ?? `bundle-l2-${input.collectedConfigId ?? 0}`;
+  const source = input.source ?? "connector_ssh_bundle";
   const now = new Date();
 
   const existingRows = await db
@@ -152,7 +163,7 @@ export async function persistL2CircuitsFromCommandOutputs(input: {
   for (const circuit of withFindings) {
     const key = buildCircuitKey(circuit, input.deviceId);
     const existing = existingByKey.get(key);
-    const values = circuitRowValues(circuit, input.deviceId, runId, now);
+    const values = circuitRowValues(circuit, input.deviceId, runId, now, source);
 
     if (existing) {
       await db.update(l2CircuitsTable).set(values).where(eq(l2CircuitsTable.id, existing.id));
@@ -176,6 +187,72 @@ export async function persistL2CircuitsFromCommandOutputs(input: {
   return { circuitCount: withFindings.length, findingsCount: allFindings.length };
 }
 
+export type L2CollectedConfigSyncResult = {
+  circuitCount: number;
+  findingsCount: number;
+  collectedConfigId: number | null;
+  source: "cached_config" | "none";
+  detail: string;
+};
+
+export async function syncL2CircuitsFromLatestCollectedConfig(input: {
+  deviceId: number;
+  device: Device;
+  discoveryRunId?: string;
+}): Promise<L2CollectedConfigSyncResult> {
+  const [latest] = await db
+    .select()
+    .from(collectedConfigsTable)
+    .where(eq(collectedConfigsTable.deviceId, input.deviceId))
+    .orderBy(desc(collectedConfigsTable.collectedAt))
+    .limit(1);
+
+  if (!latest) {
+    return {
+      circuitCount: 0,
+      findingsCount: 0,
+      collectedConfigId: null,
+      source: "none",
+      detail: "no collected_configs row for device",
+    };
+  }
+
+  if (!latest.rawConfig?.trim()) {
+    return {
+      circuitCount: 0,
+      findingsCount: 0,
+      collectedConfigId: latest.id,
+      source: "none",
+      detail: `collected_configs#${latest.id} has empty raw_config`,
+    };
+  }
+
+  const outputs = splitCommandBundle(latest.rawConfig);
+  const runId = input.discoveryRunId ?? `cached-config-${latest.id}-${Date.now()}`;
+  const persisted = await persistL2CircuitsFromCommandOutputs({
+    deviceId: input.deviceId,
+    device: input.device,
+    outputs,
+    collectedConfigId: latest.id,
+    discoveryRunId: runId,
+    source: "cached_config",
+  });
+
+  const summary = (latest.parsedSummaryJson ?? null) as ParsedSummary | null;
+  const detail =
+    persisted.circuitCount > 0
+      ? `collected_configs#${latest.id} (${latest.source ?? "unknown"})`
+      : `collected_configs#${latest.id} parsed 0 circuits (summary l2=${summary?.l2CircuitCount ?? "?"})`;
+
+  return {
+    circuitCount: persisted.circuitCount,
+    findingsCount: persisted.findingsCount,
+    collectedConfigId: latest.id,
+    source: persisted.circuitCount > 0 ? "cached_config" : "none",
+    detail,
+  };
+}
+
 export async function persistBgpFromCommandOutputs(input: {
   deviceId: number;
   connectorId: number;
@@ -195,16 +272,19 @@ export async function persistBgpFromCommandOutputs(input: {
   const briefOutput = input.outputs["display interface brief"] ?? "";
   const interfaces = briefOutput ? parseHuaweiInterfaces(briefOutput) : [];
 
-  await db.insert(snmpSnapshotsTable).values({
-    deviceId: input.deviceId,
-    collector: "ssh_bundle",
-    collectorVersion: "config-bundle-v1",
-    success: peers.length > 0 || interfaces.length > 0,
-    errorMessage: peers.length === 0 ? "No BGP peers parsed from bundle" : null,
-    interfacesJson: interfaces.length > 0 ? JSON.stringify(interfaces) : null,
-    bgpPeersJson: peers.length > 0 ? JSON.stringify(peers) : null,
-    vrfsJson: JSON.stringify({ collectedConfigId: input.collectedConfigId, connectorId: input.connectorId }),
-  });
+  // Do not mirror empty SSH bundle parses into snmp_snapshots — that table is SNMP-authoritative.
+  if (peers.length > 0 || interfaces.length > 0) {
+    await db.insert(snmpSnapshotsTable).values({
+      deviceId: input.deviceId,
+      collector: "ssh_bundle",
+      collectorVersion: "config-bundle-v1",
+      success: true,
+      errorMessage: null,
+      interfacesJson: interfaces.length > 0 ? JSON.stringify(interfaces) : null,
+      bgpPeersJson: peers.length > 0 ? JSON.stringify(peers) : null,
+      vrfsJson: JSON.stringify({ collectedConfigId: input.collectedConfigId, connectorId: input.connectorId }),
+    });
+  }
 
   return { peerCount: peers.length };
 }

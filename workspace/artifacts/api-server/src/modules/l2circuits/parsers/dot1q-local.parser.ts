@@ -62,9 +62,11 @@ export function parseVlanLocalCircuits(
     const hasL2vc = context?.l2vcClientInterfaces?.has(block.interfaceName) ?? false;
     const hasVsi = context?.vsiInterfaces?.has(block.interfaceName) ?? false;
     const hasMac = context?.macVlans?.has(vlanId) ?? false;
-    const hasSwitchingUse = context?.switchingVlans?.has(vlanId) ?? false;
+    const switchingPortCount = context?.switchingVlanPortCounts?.get(vlanId) ?? 0;
+    const hasSwitchingUse = (context?.switchingVlans?.has(vlanId) ?? false) || switchingPortCount > 0;
     const hasGlobalVlan = context?.globalVlans?.has(vlanId) ?? false;
-    const hasMultiInterfaceUse = (vlanUsageCount.get(vlanId) ?? 0) > 1;
+    const hasMultiInterfaceUse =
+      (vlanUsageCount.get(vlanId) ?? 0) > 1 || switchingPortCount >= 2;
     const hasValidDescription = Boolean(mergedDescription?.trim()) && !block.isVlanif;
     const hasRealL2Use =
       hasL2vc ||
@@ -98,6 +100,8 @@ export function parseVlanLocalCircuits(
       hasRealL2Use,
       missingSwitchBatch,
       evidenceFlags,
+      switchingPortCount,
+      hasGlobalVlan,
     });
 
     const roleContext =
@@ -125,7 +129,10 @@ export function parseVlanLocalCircuits(
       classification: classification.classification,
       l2Transport: classification.l2Transport,
       deviceRoleFamily: role,
-      evidenceFlags,
+      evidenceFlags: {
+        ...evidenceFlags,
+        switchingPortCount,
+      },
       anomalyTags: buildAnomalyTags({
         role,
         classification: classification.classification,
@@ -395,12 +402,23 @@ function classifyInterfaceBlock(input: {
   hasRealL2Use: boolean;
   missingSwitchBatch: boolean;
   evidenceFlags: L3EvidenceSnapshot;
+  switchingPortCount: number;
+  hasGlobalVlan: boolean;
 }): {
   circuitType: ParsedL2Circuit["circuitType"];
   classification: NonNullable<ParsedL2Circuit["classification"]>;
   l2Transport: NonNullable<ParsedL2Circuit["l2Transport"]>;
 } {
-  const { block, hasL2vc, hasVsi, hasRealL2Use, missingSwitchBatch, evidenceFlags } = input;
+  const {
+    block,
+    hasL2vc,
+    hasVsi,
+    hasRealL2Use,
+    missingSwitchBatch,
+    evidenceFlags,
+    switchingPortCount,
+    hasGlobalVlan,
+  } = input;
 
   if (hasL2vc) return { circuitType: "config_only", classification: "config_only", l2Transport: "config_only" };
   if (hasVsi) return { circuitType: "config_only", classification: "config_only", l2Transport: "config_only" };
@@ -415,6 +433,30 @@ function classifyInterfaceBlock(input: {
   if (missingSwitchBatch) {
     return { circuitType: "vlan_orphan", classification: "vlan_not_in_switch_batch", l2Transport: "none" };
   }
+
+  // Vlanif sem IP/VRF mas VLAN presente em 2+ portas L2 (trunk/hybrid) = VLAN L2 simples, não órfã.
+  if (block.isVlanif && switchingPortCount >= 2) {
+    return { circuitType: "vlan_local", classification: "vlan_local", l2Transport: "local_vlan" };
+  }
+
+  // Vlanif vazio: órfã só se não há uso L2 em nenhuma porta e não está no batch global.
+  if (block.isVlanif && !hasRealL2Use && !hasGlobalVlan && switchingPortCount === 0) {
+    return {
+      circuitType: "vlan_orphan",
+      classification: "vlanif_orphan",
+      l2Transport: "none",
+    };
+  }
+
+  // Uma única porta L2 + Vlanif vazio no batch = candidato a órfã (conforme regra operacional).
+  if (block.isVlanif && switchingPortCount === 1 && !block.hasL2Binding && !block.hasBridge) {
+    return {
+      circuitType: "vlan_orphan",
+      classification: "vlanif_orphan",
+      l2Transport: "none",
+    };
+  }
+
   if (hasRealL2Use) {
     return { circuitType: "vlan_local", classification: "vlan_local", l2Transport: "local_vlan" };
   }

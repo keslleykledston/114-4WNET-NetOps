@@ -71,7 +71,12 @@
 - Policy engine, jobs, findings export
 
 #### `provisioning/`
-- Preview engine (v0.4), export renderer
+- Preview engine legado (v0.4), export renderer — **não reativado** como backend da UI principal
+
+#### `config-generator/`
+- Engine oficial de preview (MVP fechado): templates, validate/render, runs, diff, ID allocator, change request preview
+- Gate: `CONFIG_GENERATOR_ENABLED` (default false)
+- Docs: `docs/config-generator/`
 
 #### `netbox/`
 - Read-only sync
@@ -91,7 +96,8 @@
 | `devices.tsx`, `device-detail.tsx` | `/devices`, `/devices/:id` |
 | `l2-circuits.tsx` | `/l2-circuits` |
 | `compliance.tsx` | `/compliance` |
-| `provisioning.tsx` | `/provisioning` |
+| `provisioning.tsx` | `/provisioning` (reexport Config Generator) |
+| `config-generator.tsx` | `/config-generator` (mesma UI, rota técnica) |
 | `operational-bgp.tsx` | `/operational/bgp` |
 | `bgp-peer-drilldown.tsx` | `/bgp/peer-drilldown` |
 | `connectors.tsx`, `connector-detail.tsx` | `/infrastructure/connectors` |

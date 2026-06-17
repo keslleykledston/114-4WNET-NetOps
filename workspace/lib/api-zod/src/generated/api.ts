@@ -558,6 +558,923 @@ export const ListScheduledJobRunItemsResponse = zod.array(ListScheduledJobRunIte
 
 
 /**
+ * @summary Get Config Generator feature flag
+ */
+export const GetConfigGeneratorFeatureResponse = zod.object({
+  "enabled": zod.boolean()
+})
+
+
+/**
+ * @summary List scope suggestions
+ */
+export const ListConfigGeneratorSuggestionScopeResponse = zod.object({
+  "tenants": zod.array(zod.object({
+  "tenantId": zod.number(),
+  "tenantName": zod.string(),
+  "deviceCount": zod.number()
+}))
+})
+
+
+/**
+ * @summary List device suggestions
+ */
+export const ListConfigGeneratorSuggestionDevicesQueryParams = zod.object({
+  "tenantId": zod.coerce.number()
+})
+
+export const ListConfigGeneratorSuggestionDevicesResponse = zod.object({
+  "tenantId": zod.number(),
+  "devices": zod.array(zod.object({
+  "tenantId": zod.number(),
+  "tenantName": zod.string(),
+  "deviceId": zod.number(),
+  "deviceName": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string(),
+  "status": zod.string()
+}))
+})
+
+
+/**
+ * @summary Get device context suggestions
+ */
+export const GetConfigGeneratorSuggestionDeviceContextQueryParams = zod.object({
+  "tenantId": zod.coerce.number(),
+  "deviceId": zod.coerce.number()
+})
+
+export const GetConfigGeneratorSuggestionDeviceContextResponse = zod.object({
+  "tenantId": zod.number(),
+  "tenantName": zod.string(),
+  "deviceId": zod.number(),
+  "deviceName": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string(),
+  "interfaces": zod.array(zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.enum(['up', 'down', 'unknown']),
+  "kind": zod.string(),
+  "source": zod.enum(['inventory', 'discovery', 'snmp'])
+})),
+  "bgp": zod.object({
+  "localAsn": zod.number().nullable(),
+  "peers": zod.array(zod.object({
+  "remoteAsn": zod.number().nullable(),
+  "remoteIp": zod.string().nullable(),
+  "localIp": zod.string().nullable(),
+  "description": zod.string().nullable(),
+  "state": zod.string().nullable()
+}))
+}),
+  "l2Circuits": zod.array(zod.object({
+  "circuitId": zod.string().nullable(),
+  "serviceId": zod.string().nullable(),
+  "circuitType": zod.string(),
+  "name": zod.string(),
+  "vlan": zod.number().nullable(),
+  "interfaceName": zod.string().nullable(),
+  "peerIp": zod.string().nullable()
+})),
+  "globalDependencies": zod.array(zod.object({
+  "type": zod.string(),
+  "name": zod.string(),
+  "status": zod.enum(['present', 'missing', 'conflict']),
+  "classification": zod.enum(['global', 'circuit']),
+  "reason": zod.string().nullish()
+})),
+  "conflicts": zod.array(zod.object({
+  "code": zod.string(),
+  "severity": zod.enum(['warning', 'error']),
+  "message": zod.string(),
+  "field": zod.string().nullish()
+})),
+  "suggestedInput": zod.record(zod.string(), zod.unknown()),
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['device_context', 'inventory', 'bgp_peer', 'l2_circuit', 'service_catalog', 'announcement_matrix', 'discovery', 'id_allocator', 'manual']))
+})
+
+
+/**
+ * @summary List template suggestions
+ */
+export const ListConfigGeneratorSuggestionTemplatesQueryParams = zod.object({
+  "tenantId": zod.coerce.number().optional(),
+  "deviceId": zod.coerce.number().optional(),
+  "serviceType": zod.coerce.string().optional()
+})
+
+export const ListConfigGeneratorSuggestionTemplatesResponse = zod.object({
+  "tenantId": zod.number().nullable(),
+  "deviceId": zod.number().nullable(),
+  "serviceType": zod.string().nullable(),
+  "templates": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "serviceType": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string(),
+  "templateKey": zod.string(),
+  "isActive": zod.boolean(),
+  "latestVersion": zod.string().nullable(),
+  "latestVersionId": zod.number().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Get service context suggestions
+ */
+export const GetConfigGeneratorSuggestionServiceContextQueryParams = zod.object({
+  "tenantId": zod.coerce.number(),
+  "deviceId": zod.coerce.number(),
+  "serviceType": zod.coerce.string(),
+  "ref": zod.coerce.string().optional()
+})
+
+export const GetConfigGeneratorSuggestionServiceContextResponse = zod.object({
+  "tenantId": zod.number(),
+  "deviceId": zod.number(),
+  "serviceType": zod.string(),
+  "ref": zod.string().nullable(),
+  "suggestedInput": zod.record(zod.string(), zod.unknown()),
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['device_context', 'inventory', 'bgp_peer', 'l2_circuit', 'service_catalog', 'announcement_matrix', 'discovery', 'id_allocator', 'manual'])),
+  "conflicts": zod.array(zod.object({
+  "code": zod.string(),
+  "severity": zod.enum(['warning', 'error']),
+  "message": zod.string(),
+  "field": zod.string().nullish()
+})),
+  "globalDependencies": zod.array(zod.object({
+  "type": zod.string(),
+  "name": zod.string(),
+  "status": zod.enum(['present', 'missing', 'conflict']),
+  "classification": zod.enum(['global', 'circuit']),
+  "reason": zod.string().nullish()
+})),
+  "notes": zod.array(zod.string())
+})
+
+
+/**
+ * @summary List config generator templates
+ */
+export const ListConfigGeneratorTemplatesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "serviceType": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string(),
+  "templateKey": zod.string(),
+  "isActive": zod.boolean(),
+  "latestVersion": zod.string().nullable(),
+  "latestVersionId": zod.number().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListConfigGeneratorTemplatesResponse = zod.array(ListConfigGeneratorTemplatesResponseItem)
+
+
+/**
+ * @summary Get template schema
+ */
+export const GetConfigGeneratorTemplateSchemaParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConfigGeneratorTemplateSchemaResponse = zod.object({
+  "template": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "serviceType": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string(),
+  "templateKey": zod.string(),
+  "isActive": zod.boolean(),
+  "latestVersion": zod.string().nullable(),
+  "latestVersionId": zod.number().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "version": zod.object({
+  "id": zod.number(),
+  "version": zod.string(),
+  "renderer": zod.string(),
+  "checksum": zod.string(),
+  "content": zod.string(),
+  "schemaJson": zod.object({
+  "fields": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['string', 'number', 'ipv4', 'ipv6', 'cidr', 'array', 'secret', 'boolean', 'select']),
+  "required": zod.boolean().optional(),
+  "description": zod.string().optional(),
+  "placeholder": zod.string().optional(),
+  "defaultValue": zod.union([zod.string(),zod.number(),zod.boolean(),zod.array(zod.string()),zod.null()]).optional(),
+  "options": zod.array(zod.string()).optional()
+})),
+  "blocks": zod.array(zod.object({
+  "key": zod.string(),
+  "title": zod.string(),
+  "classification": zod.enum(['global', 'circuit']),
+  "description": zod.string().optional(),
+  "statusHint": zod.enum(['existing', 'missing', 'new', 'conflict', 'manual', 'suggested']).optional()
+})),
+  "notes": zod.array(zod.string()).optional()
+}),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Validate config generator input
+ */
+export const ValidateConfigGeneratorBody = zod.object({
+  "tenantId": zod.number(),
+  "deviceId": zod.number(),
+  "templateId": zod.number(),
+  "templateVersionId": zod.number().nullish(),
+  "input": zod.record(zod.string(), zod.unknown()),
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['device_context', 'inventory', 'bgp_peer', 'l2_circuit', 'service_catalog', 'announcement_matrix', 'discovery', 'id_allocator', 'manual'])).optional()
+})
+
+export const ValidateConfigGeneratorResponse = zod.object({
+  "validation": zod.object({
+  "status": zod.enum(['passed', 'warning', 'failed']),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "errors": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "normalizedInput": zod.record(zod.string(), zod.unknown()),
+  "template": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "serviceType": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string(),
+  "templateKey": zod.string(),
+  "isActive": zod.boolean(),
+  "latestVersion": zod.string().nullable(),
+  "latestVersionId": zod.number().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Render config generator preview
+ */
+export const RenderConfigGeneratorBody = zod.object({
+  "tenantId": zod.number(),
+  "deviceId": zod.number(),
+  "templateId": zod.number(),
+  "templateVersionId": zod.number().nullish(),
+  "input": zod.record(zod.string(), zod.unknown()),
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['device_context', 'inventory', 'bgp_peer', 'l2_circuit', 'service_catalog', 'announcement_matrix', 'discovery', 'id_allocator', 'manual'])).optional()
+})
+
+export const RenderConfigGeneratorResponse = zod.object({
+  "ok": zod.literal(true),
+  "runPreviewId": zod.number(),
+  "validation": zod.object({
+  "status": zod.enum(['passed', 'warning', 'failed']),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "errors": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "blocks": zod.array(zod.object({
+  "key": zod.string(),
+  "title": zod.string(),
+  "classification": zod.enum(['global', 'circuit']),
+  "status": zod.enum(['existing', 'missing', 'new', 'conflict', 'manual', 'suggested']),
+  "content": zod.string()
+})),
+  "renderedConfig": zod.string(),
+  "postcheckCommands": zod.string(),
+  "rollbackPlaceholder": zod.string()
+})
+
+
+/**
+ * @summary Diff generated config against current baseline
+ */
+export const DiffConfigGeneratorBody = zod.object({
+  "tenantId": zod.number(),
+  "deviceId": zod.number(),
+  "templateId": zod.number(),
+  "templateVersionId": zod.number().nullish(),
+  "input": zod.record(zod.string(), zod.unknown()),
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['device_context', 'inventory', 'bgp_peer', 'l2_circuit', 'service_catalog', 'announcement_matrix', 'discovery', 'id_allocator', 'manual'])).optional()
+})
+
+export const DiffConfigGeneratorResponse = zod.object({
+  "status": zod.enum(['ok']),
+  "baseline": zod.object({
+  "source": zod.enum(['collected_configs', 'discovery_snapshots', 'snmp_snapshots', 'policy_catalog', 'none']),
+  "collectedAt": zod.coerce.date().nullish(),
+  "deviceId": zod.number(),
+  "checksum": zod.string().nullish()
+}),
+  "summary": zod.object({
+  "alreadyPresent": zod.number(),
+  "newCandidate": zod.number(),
+  "conflicts": zod.number(),
+  "manualReview": zod.number(),
+  "unknown": zod.number(),
+  "missingDependencies": zod.number(),
+  "globalExisting": zod.number(),
+  "globalMissing": zod.number()
+}),
+  "blocks": zod.array(zod.object({
+  "key": zod.string(),
+  "title": zod.string(),
+  "classification": zod.enum(['global', 'circuit']),
+  "status": zod.enum(['already_present', 'new_candidate', 'partial_match', 'conflict', 'missing_dependency', 'global_existing', 'global_missing', 'manual_review', 'unknown_no_baseline']),
+  "items": zod.array(zod.object({
+  "line": zod.string(),
+  "status": zod.enum(['already_present', 'new_candidate', 'partial_match', 'conflict', 'missing_dependency', 'global_existing', 'global_missing', 'manual_review', 'unknown_no_baseline']),
+  "details": zod.string().nullish()
+}))
+})),
+  "blocking": zod.boolean(),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "errors": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "renderedConfig": zod.string(),
+  "candidateChecksum": zod.string(),
+  "baselineChecksum": zod.string().nullable()
+})
+
+
+/**
+ * @summary List config generator runs
+ */
+export const ListConfigGeneratorRunsQueryParams = zod.object({
+  "tenantId": zod.coerce.number().optional(),
+  "deviceId": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListConfigGeneratorRunsResponseItem = zod.object({
+  "id": zod.number(),
+  "tenantId": zod.number(),
+  "tenantName": zod.string().nullable(),
+  "deviceId": zod.number(),
+  "deviceHostname": zod.string().nullable(),
+  "serviceType": zod.string(),
+  "templateVersionId": zod.number(),
+  "templateName": zod.string().nullable(),
+  "templateVersion": zod.string().nullable(),
+  "status": zod.string(),
+  "riskLevel": zod.enum(['low', 'medium', 'high', 'blocked']),
+  "createdBy": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListConfigGeneratorRunsResponse = zod.array(ListConfigGeneratorRunsResponseItem)
+
+
+/**
+ * @summary Save config generator run
+ */
+export const SaveConfigGeneratorRunBody = zod.object({
+  "tenantId": zod.number(),
+  "deviceId": zod.number(),
+  "templateId": zod.number(),
+  "templateVersionId": zod.number().nullish(),
+  "input": zod.record(zod.string(), zod.unknown()),
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['device_context', 'inventory', 'bgp_peer', 'l2_circuit', 'service_catalog', 'announcement_matrix', 'discovery', 'id_allocator', 'manual'])).optional()
+})
+
+export const SaveConfigGeneratorRunResponse = zod.object({
+  "ok": zod.literal(true),
+  "runId": zod.number(),
+  "validation": zod.object({
+  "status": zod.enum(['passed', 'warning', 'failed']),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "errors": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "blocks": zod.array(zod.object({
+  "key": zod.string(),
+  "title": zod.string(),
+  "classification": zod.enum(['global', 'circuit']),
+  "status": zod.enum(['existing', 'missing', 'new', 'conflict', 'manual', 'suggested']),
+  "content": zod.string()
+})),
+  "renderedConfig": zod.string(),
+  "postcheckCommands": zod.string(),
+  "rollbackPlaceholder": zod.string()
+})
+
+
+/**
+ * @summary Get config generator run
+ */
+export const GetConfigGeneratorRunParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConfigGeneratorRunResponse = zod.object({
+  "id": zod.number(),
+  "tenantId": zod.number(),
+  "tenantName": zod.string().nullable(),
+  "deviceId": zod.number(),
+  "deviceHostname": zod.string().nullable(),
+  "serviceType": zod.string(),
+  "templateVersionId": zod.number(),
+  "templateName": zod.string().nullable(),
+  "templateVersion": zod.string().nullable(),
+  "status": zod.string(),
+  "riskLevel": zod.enum(['low', 'medium', 'high', 'blocked']),
+  "createdBy": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "inputJson": zod.record(zod.string(), zod.unknown()),
+  "renderedConfig": zod.string(),
+  "validationSummary": zod.object({
+  "status": zod.enum(['passed', 'warning', 'failed']),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "errors": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['device_context', 'inventory', 'bgp_peer', 'l2_circuit', 'service_catalog', 'announcement_matrix', 'discovery', 'id_allocator', 'manual']))
+}))
+
+
+/**
+ * @summary Get run artifacts
+ */
+export const GetConfigGeneratorRunArtifactsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConfigGeneratorRunArtifactsResponseItem = zod.object({
+  "id": zod.number(),
+  "runId": zod.number(),
+  "artifactType": zod.enum(['candidate_config', 'postcheck_commands', 'rollback_placeholder', 'ticket_markdown', 'diff_notes', 'precheck_diff', 'semantic_diff', 'change_request_preview', 'risk_assessment', 'implementation_package']),
+  "content": zod.string(),
+  "checksum": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const GetConfigGeneratorRunArtifactsResponse = zod.array(GetConfigGeneratorRunArtifactsResponseItem)
+
+
+/**
+ * @summary Diff saved config generator run against current baseline
+ */
+export const DiffConfigGeneratorRunParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DiffConfigGeneratorRunResponse = zod.object({
+  "status": zod.enum(['ok']),
+  "baseline": zod.object({
+  "source": zod.enum(['collected_configs', 'discovery_snapshots', 'snmp_snapshots', 'policy_catalog', 'none']),
+  "collectedAt": zod.coerce.date().nullish(),
+  "deviceId": zod.number(),
+  "checksum": zod.string().nullish()
+}),
+  "summary": zod.object({
+  "alreadyPresent": zod.number(),
+  "newCandidate": zod.number(),
+  "conflicts": zod.number(),
+  "manualReview": zod.number(),
+  "unknown": zod.number(),
+  "missingDependencies": zod.number(),
+  "globalExisting": zod.number(),
+  "globalMissing": zod.number()
+}),
+  "blocks": zod.array(zod.object({
+  "key": zod.string(),
+  "title": zod.string(),
+  "classification": zod.enum(['global', 'circuit']),
+  "status": zod.enum(['already_present', 'new_candidate', 'partial_match', 'conflict', 'missing_dependency', 'global_existing', 'global_missing', 'manual_review', 'unknown_no_baseline']),
+  "items": zod.array(zod.object({
+  "line": zod.string(),
+  "status": zod.enum(['already_present', 'new_candidate', 'partial_match', 'conflict', 'missing_dependency', 'global_existing', 'global_missing', 'manual_review', 'unknown_no_baseline']),
+  "details": zod.string().nullish()
+}))
+})),
+  "blocking": zod.boolean(),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "errors": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "renderedConfig": zod.string(),
+  "candidateChecksum": zod.string(),
+  "baselineChecksum": zod.string().nullable()
+})
+
+
+/**
+ * @summary Get saved change request preview package for a run
+ */
+export const GetConfigGeneratorChangeRequestPreviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConfigGeneratorChangeRequestPreviewResponse = zod.object({
+  "preview": zod.object({
+  "id": zod.string(),
+  "runId": zod.number(),
+  "tenantId": zod.number(),
+  "deviceId": zod.number(),
+  "serviceType": zod.string(),
+  "templateKey": zod.string(),
+  "status": zod.enum(['draft_preview']),
+  "riskLevel": zod.enum(['low', 'medium', 'high', 'blocked']),
+  "summary": zod.object({
+  "title": zod.string(),
+  "description": zod.string(),
+  "customerName": zod.string().nullish(),
+  "circuitId": zod.string().nullish(),
+  "deviceName": zod.string(),
+  "vendor": zod.string(),
+  "platform": zod.string()
+}),
+  "scope": zod.object({
+  "tenant": zod.string(),
+  "site": zod.string().nullish(),
+  "device": zod.string(),
+  "interfaces": zod.array(zod.string()),
+  "bgpPeers": zod.array(zod.string()),
+  "vlans": zod.array(zod.number()),
+  "l2vcIds": zod.array(zod.number()),
+  "vsiIds": zod.array(zod.number())
+}),
+  "inputs": zod.object({
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['device_context', 'inventory', 'bgp_peer', 'l2_circuit', 'service_catalog', 'announcement_matrix', 'discovery', 'id_allocator', 'manual'])),
+  "manualFields": zod.array(zod.string()),
+  "suggestedFields": zod.array(zod.string())
+}),
+  "validations": zod.object({
+  "errors": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "infos": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "idAllocation": zod.object({
+  "suggestions": zod.record(zod.string(), zod.unknown()),
+  "usedIdsSummary": zod.record(zod.string(), zod.array(zod.number())),
+  "conflicts": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "diff": zod.object({
+  "baseline": zod.object({
+  "source": zod.enum(['collected_configs', 'discovery_snapshots', 'snmp_snapshots', 'policy_catalog', 'none']),
+  "collectedAt": zod.coerce.date().nullish(),
+  "deviceId": zod.number(),
+  "checksum": zod.string().nullish()
+}),
+  "summary": zod.object({
+  "alreadyPresent": zod.number(),
+  "newCandidate": zod.number(),
+  "conflicts": zod.number(),
+  "manualReview": zod.number(),
+  "unknown": zod.number(),
+  "missingDependencies": zod.number(),
+  "globalExisting": zod.number(),
+  "globalMissing": zod.number()
+}),
+  "blocking": zod.boolean(),
+  "candidateChecksum": zod.string().nullish(),
+  "baselineChecksum": zod.string().nullish(),
+  "precheckChecksum": zod.string().nullish()
+}),
+  "candidateConfig": zod.string(),
+  "postcheckCommands": zod.string(),
+  "rollbackPlan": zod.object({
+  "type": zod.enum(['manual_placeholder']),
+  "notes": zod.array(zod.string()),
+  "content": zod.string()
+}),
+  "riskAssessment": zod.object({
+  "score": zod.number(),
+  "factors": zod.array(zod.object({
+  "code": zod.string(),
+  "severity": zod.enum(['low', 'medium', 'high', 'blocked']),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+}),
+  "ticketMarkdown": zod.string(),
+  "generatedAt": zod.coerce.date(),
+  "generatedBy": zod.number().nullish(),
+  "artifactChecksum": zod.string().nullish()
+})
+})
+
+
+/**
+ * @summary Generate change request preview package (preview-only, no execution)
+ */
+export const GenerateConfigGeneratorChangeRequestPreviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Request config generator approval
+ */
+export const RequestConfigGeneratorApprovalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Approve config generator change request
+ */
+export const ApproveConfigGeneratorChangeRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Execute config generator change request
+ */
+export const ExecuteConfigGeneratorChangeRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get config generator change request
+ */
+export const GetConfigGeneratorChangeRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetConfigGeneratorChangeRequestResponse = zod.object({
+  "id": zod.number(),
+  "generationRunId": zod.number(),
+  "approvalStatus": zod.string(),
+  "approvedBy": zod.number().nullish(),
+  "approvedAt": zod.coerce.date().nullish(),
+  "executionStatus": zod.string(),
+  "executionPlanJson": zod.record(zod.string(), zod.unknown()),
+  "rollbackPlanJson": zod.record(zod.string(), zod.unknown()),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List builtin VLAN/ID ranges (K3G)
+ */
+export const ListConfigGeneratorIdRangesResponse = zod.object({
+  "version": zod.string(),
+  "ranges": zod.array(zod.object({
+  "key": zod.string(),
+  "type": zod.string(),
+  "rangeStart": zod.number(),
+  "rangeEnd": zod.number(),
+  "serviceTypes": zod.array(zod.string()),
+  "reserved": zod.boolean().optional(),
+  "blocking": zod.boolean().optional(),
+  "untaggedRequired": zod.boolean().optional(),
+  "label": zod.string()
+}))
+})
+
+
+/**
+ * @summary List discovered IDs for tenant/device
+ */
+export const ListConfigGeneratorIdInventoryQueryParams = zod.object({
+  "tenantId": zod.coerce.number(),
+  "deviceId": zod.coerce.number().optional(),
+  "siteCode": zod.coerce.string().optional(),
+  "idType": zod.enum(['vlan', 'subinterface', 'l2vc', 'vsi']).optional()
+})
+
+export const ListConfigGeneratorIdInventoryResponse = zod.object({
+  "tenantId": zod.number(),
+  "siteCode": zod.string().nullish(),
+  "deviceId": zod.number().nullish(),
+  "idType": zod.string().nullish(),
+  "items": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "tenantId": zod.number().optional(),
+  "siteCode": zod.string().nullish(),
+  "deviceId": zod.number().nullish(),
+  "idType": zod.string().optional(),
+  "idValue": zod.number().optional(),
+  "parentInterface": zod.string().nullish(),
+  "interfaceName": zod.string().nullish(),
+  "serviceType": zod.string().nullish(),
+  "serviceName": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "source": zod.string().optional(),
+  "confidence": zod.string().optional(),
+  "lastSeenAt": zod.coerce.date().optional()
+})),
+  "summary": zod.record(zod.string(), zod.array(zod.number()))
+})
+
+
+/**
+ * @summary Reprocess existing DB data into ID inventory (no device collect)
+ */
+export const RefreshConfigGeneratorIdInventoryBody = zod.object({
+  "tenantId": zod.number(),
+  "deviceId": zod.number().optional(),
+  "siteCode": zod.string().optional()
+})
+
+export const RefreshConfigGeneratorIdInventoryResponse = zod.object({
+  "ok": zod.boolean(),
+  "inserted": zod.number(),
+  "updated": zod.number(),
+  "total": zod.number(),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Suggest next free VLAN/L2VC/VSI IDs
+ */
+export const SuggestConfigGeneratorIdsBody = zod.object({
+  "tenantId": zod.number(),
+  "deviceId": zod.number().optional(),
+  "serviceType": zod.string(),
+  "siteCode": zod.string().optional(),
+  "parentInterface": zod.string().optional()
+})
+
+export const SuggestConfigGeneratorIdsResponse = zod.object({
+  "tenantId": zod.number(),
+  "siteCode": zod.string().nullish(),
+  "deviceId": zod.number().nullish(),
+  "serviceType": zod.string(),
+  "suggestions": zod.object({
+  "vlan": zod.object({
+  "value": zod.number(),
+  "range": zod.string().optional(),
+  "rangeKey": zod.string().optional(),
+  "reason": zod.string(),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "origin": zod.enum(['id_allocator']),
+  "scope": zod.enum(['tenant', 'device', 'site']).optional(),
+  "alternatives": zod.array(zod.number()).optional()
+}).optional(),
+  "subinterfaceId": zod.object({
+  "value": zod.number(),
+  "range": zod.string().optional(),
+  "rangeKey": zod.string().optional(),
+  "reason": zod.string(),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "origin": zod.enum(['id_allocator']),
+  "scope": zod.enum(['tenant', 'device', 'site']).optional(),
+  "alternatives": zod.array(zod.number()).optional()
+}).optional(),
+  "l2vcId": zod.object({
+  "value": zod.number(),
+  "range": zod.string().optional(),
+  "rangeKey": zod.string().optional(),
+  "reason": zod.string(),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "origin": zod.enum(['id_allocator']),
+  "scope": zod.enum(['tenant', 'device', 'site']).optional(),
+  "alternatives": zod.array(zod.number()).optional()
+}).optional(),
+  "vsiId": zod.object({
+  "value": zod.number(),
+  "range": zod.string().optional(),
+  "rangeKey": zod.string().optional(),
+  "reason": zod.string(),
+  "confidence": zod.enum(['high', 'medium', 'low']),
+  "origin": zod.enum(['id_allocator']),
+  "scope": zod.enum(['tenant', 'device', 'site']).optional(),
+  "alternatives": zod.array(zod.number()).optional()
+}).optional()
+}),
+  "usedIdsSummary": zod.record(zod.string(), zod.array(zod.number())),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "blockingConflicts": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+}))
+})
+
+
+/**
+ * @summary Validate manually chosen IDs against inventory and ranges
+ */
+export const ValidateConfigGeneratorIdsBody = zod.object({
+  "tenantId": zod.number(),
+  "deviceId": zod.number().optional(),
+  "siteCode": zod.string().optional(),
+  "serviceType": zod.string(),
+  "parentInterface": zod.string().optional(),
+  "vlan": zod.number().optional(),
+  "subinterfaceId": zod.number().optional(),
+  "l2vcId": zod.number().optional(),
+  "vsiId": zod.number().optional()
+})
+
+export const ValidateConfigGeneratorIdsResponse = zod.object({
+  "ok": zod.boolean(),
+  "warnings": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "blockingConflicts": zod.array(zod.object({
+  "severity": zod.enum(['warning', 'error']),
+  "code": zod.string(),
+  "message": zod.string(),
+  "context": zod.record(zod.string(), zod.unknown()).optional()
+})),
+  "fieldOrigins": zod.record(zod.string(), zod.enum(['id_allocator', 'manual']))
+})
+
+
+/**
  * @summary List all devices
  */
 export const ListDevicesQueryParams = zod.object({
@@ -577,7 +1494,8 @@ export const ListDevicesResponseItem = zod.object({
   "site": zod.string(),
   "role": zod.string().nullish().describe('pe, p, ce, sw'),
   "groupId": zod.number().nullish(),
-  "snmpCommunity": zod.string().nullish(),
+  "snmpCommunity": zod.string().nullish().describe('Always redacted in API responses. Use snmpConfigured to know whether a value is stored.'),
+  "snmpConfigured": zod.boolean().optional().describe('True when an SNMP community is stored for this device.'),
   "netboxDeviceId": zod.number().nullish().describe('Future Netbox integration ID'),
   "lastSeen": zod.string().nullish(),
   "status": zod.string().describe('active, unreachable, unknown'),
@@ -643,7 +1561,8 @@ export const GetDeviceResponse = zod.object({
   "site": zod.string(),
   "role": zod.string().nullish().describe('pe, p, ce, sw'),
   "groupId": zod.number().nullish(),
-  "snmpCommunity": zod.string().nullish(),
+  "snmpCommunity": zod.string().nullish().describe('Always redacted in API responses. Use snmpConfigured to know whether a value is stored.'),
+  "snmpConfigured": zod.boolean().optional().describe('True when an SNMP community is stored for this device.'),
   "netboxDeviceId": zod.number().nullish().describe('Future Netbox integration ID'),
   "lastSeen": zod.string().nullish(),
   "status": zod.string().describe('active, unreachable, unknown'),
@@ -685,7 +1604,8 @@ export const UpdateDeviceResponse = zod.object({
   "site": zod.string(),
   "role": zod.string().nullish().describe('pe, p, ce, sw'),
   "groupId": zod.number().nullish(),
-  "snmpCommunity": zod.string().nullish(),
+  "snmpCommunity": zod.string().nullish().describe('Always redacted in API responses. Use snmpConfigured to know whether a value is stored.'),
+  "snmpConfigured": zod.boolean().optional().describe('True when an SNMP community is stored for this device.'),
   "netboxDeviceId": zod.number().nullish().describe('Future Netbox integration ID'),
   "lastSeen": zod.string().nullish(),
   "status": zod.string().describe('active, unreachable, unknown'),

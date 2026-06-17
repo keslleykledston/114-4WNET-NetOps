@@ -27,6 +27,7 @@ export interface SnmpCollectedBgpPeer {
   // SNMP BGP counters used as prefix counts in the inventory layer.
   outUpdates: number | null;
   addressFamily: "ipv4" | "ipv6" | "unknown";
+  vrf?: string | null;
   source: "snmp";
 }
 

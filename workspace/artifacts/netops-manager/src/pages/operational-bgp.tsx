@@ -12,7 +12,9 @@ import {
   useOperationalBgpPeers,
   useOperationalBgpSummary,
 } from "@/features/operational-bgp/operational-bgp-api";
+import { dedupeOperationalBgpPeers } from "@/features/operational-bgp/operational-bgp-utils";
 import { BgpFsmStateBadge, BgpOperStatusBadge } from "@/features/operational-bgp/operational-bgp-state-badge";
+import { formatBgpUptimeSeconds } from "@/features/bgp/format-bgp-uptime";
 
 function fmtDate(value: string | null): string {
   if (!value) return "-";
@@ -48,11 +50,35 @@ export default function OperationalBgpPage() {
   const peersQuery = useOperationalBgpPeers(effectiveDeviceId);
   const summaryQuery = useOperationalBgpSummary(effectiveDeviceId);
 
-  const peers = peersQuery.data?.peers ?? [];
+  const peers = useMemo(() => dedupeOperationalBgpPeers(peersQuery.data?.peers ?? []), [peersQuery.data?.peers]);
   const summary = summaryQuery.data;
   const isLoading = peersQuery.isLoading || summaryQuery.isLoading;
 
-  const activeConnect = (summary?.counts.active ?? 0) + peers.filter((peer) => peer.fsmState === "connect").length;
+  const peerCounts = useMemo(() => {
+    const counts = { up: 0, down: 0, idle: 0, active: 0, unknown: 0 };
+    for (const peer of peers) {
+      if (peer.fsmState === "idle") {
+        counts.idle += 1;
+        continue;
+      }
+      if (peer.fsmState === "active") {
+        counts.active += 1;
+        continue;
+      }
+      if (peer.operStatus === "up") {
+        counts.up += 1;
+        continue;
+      }
+      if (peer.operStatus === "down" || peer.fsmState === "connect" || peer.fsmState === "opensent") {
+        counts.down += 1;
+        continue;
+      }
+      counts.unknown += 1;
+    }
+    return counts;
+  }, [peers]);
+
+  const activeConnect = peerCounts.active + peers.filter((peer) => peer.fsmState === "connect").length;
 
   return (
     <div className="space-y-6">
@@ -97,11 +123,11 @@ export default function OperationalBgpPage() {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">total peers</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{summary?.total ?? 0}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">established</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-emerald-400">{summary?.counts.up ?? 0}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">idle</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-yellow-400">{summary?.counts.idle ?? 0}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">total peers</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{peers.length}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">established</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-emerald-400">{peerCounts.up}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">idle</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-yellow-400">{peerCounts.idle}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">active/connect</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{activeConnect}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">down/unknown</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{(summary?.counts.down ?? 0) + (summary?.counts.unknown ?? 0)}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">down/unknown</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{peerCounts.down + peerCounts.unknown}</div></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">freshness</CardTitle></CardHeader><CardContent><div className="text-lg font-semibold">{freshnessLabel(summary?.freshness ?? "unknown")}</div></CardContent></Card>
       </div>
 
@@ -146,6 +172,7 @@ export default function OperationalBgpPage() {
                   <TableHead>IP Peer</TableHead>
                   <TableHead>AS</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Família</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Operacional</TableHead>
                   <TableHead>Uptime</TableHead>
@@ -156,24 +183,27 @@ export default function OperationalBgpPage() {
               </TableHeader>
               <TableBody>
                 {peers.map((peer) => (
-                  <TableRow key={`${peer.peerIp}-${peer.afi}-${peer.safi}`}>
+                  <TableRow key={`${peer.peerIp}-${peer.vrf ?? "global"}`}>
                     <TableCell className="font-mono text-xs">{peer.peerIp}</TableCell>
-                    <TableCell>{peer.peerAs ?? "-"}</TableCell>
-                    <TableCell className="font-semibold">{peer.peerType}</TableCell>
+                    <TableCell className="text-xs">{peer.peerAs ?? "-"}</TableCell>
+                    <TableCell className="text-xs font-semibold">{peer.peerType}</TableCell>
+                    <TableCell className="text-xs">
+                      {peer.families.length === 1 ? peer.families[0] : peer.families.join(", ")}
+                    </TableCell>
                     <TableCell><BgpFsmStateBadge state={peer.fsmState} /></TableCell>
                     <TableCell><BgpOperStatusBadge status={peer.operStatus} /></TableCell>
-                      <TableCell>{peer.uptimeSeconds ?? "-"}</TableCell>
-                      <TableCell>{fmtDate(peer.collectedAt)}</TableCell>
-                      <TableCell>{freshnessLabel(summary?.freshness ?? "unknown")}</TableCell>
-                      <TableCell>
-                        <Button asChild variant="outline" size="sm" className="h-8">
-                          <Link
-                            href={`/bgp/peer-drilldown?deviceId=${effectiveDeviceId ?? ""}&peer=${encodeURIComponent(peer.peerIp)}&auto=1`}
-                            title="Abrir drilldown técnico"
-                          >
-                            <GitBranch className="h-4 w-4" />
-                            Drilldown
-                          </Link>
+                    <TableCell className="text-xs">{formatBgpUptimeSeconds(peer.uptimeSeconds)}</TableCell>
+                    <TableCell className="text-xs">{fmtDate(peer.collectedAt)}</TableCell>
+                    <TableCell className="text-xs">{freshnessLabel(summary?.freshness ?? "unknown")}</TableCell>
+                    <TableCell>
+                      <Button asChild variant="outline" size="sm" className="h-8">
+                        <Link
+                          href={`/bgp/peer-drilldown?deviceId=${effectiveDeviceId ?? ""}&peer=${encodeURIComponent(peer.peerIp)}&auto=1`}
+                          title="Abrir drilldown técnico"
+                        >
+                          <GitBranch className="h-4 w-4" />
+                          Drilldown
+                        </Link>
                       </Button>
                     </TableCell>
                   </TableRow>

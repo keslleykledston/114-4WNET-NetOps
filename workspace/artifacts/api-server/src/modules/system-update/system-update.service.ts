@@ -137,8 +137,13 @@ export type SystemUpdateRunView = {
 type RunContext = {
   abortController: AbortController;
   status: "running" | "rollback" | "idle";
-  lockedClient: Awaited<ReturnType<typeof pool.connect>> | null;
+  lockedClient: AdvisoryLockClient | null;
   child: ReturnType<typeof spawn> | null;
+};
+
+type AdvisoryLockClient = {
+  query: (text: string, params?: unknown[]) => Promise<{ rows: Array<{ locked?: boolean }> }>;
+  release: () => void;
 };
 
 function parseJsonRecord(value: unknown): Record<string, unknown> | null {
@@ -589,12 +594,12 @@ async function buildChangeSummary(currentCommit: string, remoteCommit: string) {
   };
 }
 
-async function tryAcquireGlobalLock(client: Awaited<ReturnType<typeof pool.connect>>) {
+async function tryAcquireGlobalLock(client: AdvisoryLockClient) {
   const result = await client.query("SELECT pg_try_advisory_lock($1) AS locked", [ACTIVE_LOCK_KEY]);
   return Boolean(result.rows[0]?.locked);
 }
 
-async function releaseGlobalLock(client: Awaited<ReturnType<typeof pool.connect>>) {
+async function releaseGlobalLock(client: AdvisoryLockClient) {
   try {
     await client.query("SELECT pg_advisory_unlock($1)", [ACTIVE_LOCK_KEY]);
   } catch {
@@ -680,7 +685,7 @@ async function rollbackRun(runId: number, reason: string, sourceRun: Pick<System
 async function executeRun(runId: number) {
   const context = ensureRunContext(runId);
   context.status = "running";
-  const lockedClient = await pool.connect();
+  const lockedClient = (await pool.connect()) as unknown as AdvisoryLockClient;
   context.lockedClient = lockedClient;
   const run = await db.select().from(systemUpdateRunsTable).where(eq(systemUpdateRunsTable.id, runId)).limit(1).then((rows) => rows[0] ?? null);
   if (!run) {
@@ -758,6 +763,10 @@ async function executeRun(runId: number) {
     await runStep(runId, "build_frontend", 6, async () => {
       const result = await runCommand("pnpm", ["--filter", "@workspace/netops-manager", "run", "build"], {
         cwd: repoRoot,
+        env: {
+          BASE_PATH: process.env["BASE_PATH"]?.trim() || "/",
+          PORT: process.env["PORT"]?.trim() || "3000",
+        },
         timeoutMs: env.systemUpdateStepTimeoutSeconds * 1000,
         signal: context.abortController.signal,
         context,
@@ -766,13 +775,25 @@ async function executeRun(runId: number) {
     });
 
     await runStep(runId, "tests", 7, async () => {
-      const result = await runCommand("pnpm", ["run", "typecheck"], {
+      const result = await runCommand("pnpm", ["--filter", "@workspace/api-server", "run", "typecheck:system-update"], {
         cwd: resolve(repoRoot, "workspace"),
         timeoutMs: env.systemUpdateStepTimeoutSeconds * 1000,
         signal: context.abortController.signal,
         context,
       });
-      return { output: result.stdout };
+      const frontend = await runCommand("pnpm", ["--filter", "@workspace/netops-manager", "run", "typecheck:system-update"], {
+        cwd: resolve(repoRoot, "workspace"),
+        timeoutMs: env.systemUpdateStepTimeoutSeconds * 1000,
+        signal: context.abortController.signal,
+        context,
+      });
+      const selftest = await runCommand("node", ["tools/system-update-selftest.mjs"], {
+        cwd: repoRoot,
+        timeoutMs: env.systemUpdateStepTimeoutSeconds * 1000,
+        signal: context.abortController.signal,
+        context,
+      });
+      return { output: [result.stdout, frontend.stdout, selftest.stdout].filter(Boolean).join("\n") };
     });
 
     await runStep(runId, "migrations", 8, async () => {

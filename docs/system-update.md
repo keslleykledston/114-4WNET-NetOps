@@ -74,6 +74,13 @@ Admin recebe tudo por padrão.
 - `cd workspace && pnpm run typecheck`
 - `cd workspace && pnpm run build`
 - `node tools/system-update-selftest.mjs`
+- `cd workspace/artifacts/api-server && pnpm run typecheck:system-update`
+- `cd workspace/artifacts/netops-manager && pnpm run typecheck:system-update`
+
+## Execução do runner
+
+- O step de build frontend precisa de `BASE_PATH=/`.
+- O step de testes do runner usa typecheck focado em `system-update` para não falhar por drift legado fora do escopo da feature.
 
 ## Limitações
 

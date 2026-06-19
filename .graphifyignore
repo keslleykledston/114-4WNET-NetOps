@@ -1,0 +1,55 @@
+## Graphify ignore patterns - CODE ONLY MVP
+# Ignore: docs, images, configs, build artifacts
+
+# Documents
+*.md
+*.txt
+*.pdf
+*.doc
+*.docx
+*.odt
+*.xlsx
+*.xls
+*.pptx
+*.ppt
+
+# Images, media, archives
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.mp3
+*.mp4
+*.zip
+*.tar
+*.gz
+
+# Directories to skip
+docs/
+images/
+assets/
+.git/
+.github/
+node_modules/
+venv/
+.venv/
+env/
+__pycache__/
+*.egg-info/
+dist/
+build/
+.cache/
+.pytest_cache/
+.tox/
+.coverage/
+htmlcov/
+.mypy_cache/
+
+# Lock files, env, config (optional)
+.env
+.env.local
+requirements-lock.txt
+poetry.lock
+Pipfile.lock

@@ -156,13 +156,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       ? "bg-[#1e2a45] text-primary"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
-                  title={sidebarCollapsed ? "Tenants" : undefined}
+                  title={sidebarCollapsed ? "Gestão de Tenants" : undefined}
                 >
                   {location === "/admin/tenants" || location.startsWith("/admin/tenants/") ? (
                     <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" />
                   ) : null}
                   <Building2 className="h-4 w-4 shrink-0" />
-                  {!sidebarCollapsed ? <span className="truncate">Tenants</span> : null}
+                  {!sidebarCollapsed ? <span className="truncate">Gestão de Tenants</span> : null}
                 </div>
               </Link>
             </div>

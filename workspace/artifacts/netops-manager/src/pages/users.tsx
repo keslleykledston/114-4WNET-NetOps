@@ -13,7 +13,8 @@ import { Badge } from "../components/ui/badge";
 import { Checkbox } from "../components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Lock, Unlock, RotateCcw, Trash2 } from "lucide-react";
+import { Loader2, Lock, Unlock, RotateCcw, Trash2, Building2 } from "lucide-react";
+import { Link } from "wouter";
 import { listTenants } from "@/features/connectors/connectors-api";
 import { useCreateUser, useDeleteUser, useDisableUser, useEnableUser, useListUsers, useResetUserPassword, useUpdateUser, getListUsersQueryKey } from "@workspace/api-client-react";
 import type { CreateUserRequest, UpdateUserRequest } from "@workspace/api-client-react";
@@ -298,6 +299,12 @@ export default function UsersPage() {
           <p className="text-sm text-muted-foreground">Perfil define módulos; usuário seleciona um perfil; admin acessa tudo.</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/tenants">
+              <Building2 className="h-4 w-4 mr-2" />
+              Gestão de Tenants
+            </Link>
+          </Button>
           <Button variant="outline" onClick={() => setCreateProfileOpen(true)}>Criar perfil</Button>
           <Button onClick={() => setCreateUserOpen(true)}>Criar usuário</Button>
         </div>

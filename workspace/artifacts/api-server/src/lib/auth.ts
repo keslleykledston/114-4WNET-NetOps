@@ -15,6 +15,7 @@ export type UserPermissions = {
   audit?: { read?: boolean };
   provisioning?: { read?: boolean; write?: boolean; export?: boolean };
   bgp?: { read?: boolean; cleanup?: { plan?: boolean } };
+  systemUpdate?: { read?: boolean; verify?: boolean; execute?: boolean; rollback?: boolean; history?: boolean };
 };
 
 export const AUTH_COOKIE_NAME = "netops_session";
@@ -276,6 +277,8 @@ export function isAdminOnlyPath(pathname: string, method: string): boolean {
   if (pathname.startsWith("/users")) return true;
   if (pathname.startsWith("/user-profiles")) return true;
   if (pathname.startsWith("/integrations") && method !== "GET") return true;
+  if (pathname.startsWith("/system/version")) return true;
+  if (pathname.startsWith("/system/update")) return true;
   if (pathname.startsWith("/netbox/devices/sync-local")) return true;
   if (pathname.startsWith("/provisioning-jobs") && pathname.includes("/approve")) return true;
   return false;
@@ -349,6 +352,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
       bgp: { read: true, cleanup: { plan: true } },
+      systemUpdate: { read: true, verify: true, execute: true, rollback: true, history: true },
     };
   }
   if (role === "operator") {
@@ -361,6 +365,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
       bgp: { read: true, cleanup: { plan: true } },
+      systemUpdate: { read: false, verify: false, execute: false, rollback: false, history: false },
     };
   }
   // viewer
@@ -373,6 +378,7 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
     audit: { read: true },
     provisioning: { read: true, write: false, export: true },
     bgp: { read: false, cleanup: { plan: false } },
+    systemUpdate: { read: false, verify: false, execute: false, rollback: false, history: false },
   };
 }
 

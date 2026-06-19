@@ -25,6 +25,7 @@ import {
   KeyRound,
   BellRing,
   Layers,
+  RefreshCw,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -163,6 +164,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   ) : null}
                   <Building2 className="h-4 w-4 shrink-0" />
                   {!sidebarCollapsed ? <span className="truncate">Gestão de Tenants</span> : null}
+                </div>
+              </Link>
+              <Link href="/admin/system-update">
+                <div
+                  className={cn(
+                    "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
+                    sidebarCollapsed ? "justify-center px-2 gap-0" : "gap-2.5 px-3 py-2",
+                    location === "/admin/system-update" || location.startsWith("/admin/system-update/")
+                      ? "bg-[#1e2a45] text-primary"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                  title={sidebarCollapsed ? "Atualização do Sistema" : undefined}
+                >
+                  {location === "/admin/system-update" || location.startsWith("/admin/system-update/") ? (
+                    <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" />
+                  ) : null}
+                  <RefreshCw className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed ? <span className="truncate">Atualização do Sistema</span> : null}
                 </div>
               </Link>
             </div>

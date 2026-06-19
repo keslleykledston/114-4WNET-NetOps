@@ -31,6 +31,7 @@ import BgpPeerDrilldownPage from "@/pages/bgp-peer-drilldown";
 import OperationalBgpPage from "@/pages/operational-bgp";
 import Users from "@/pages/users";
 import TenantsPage from "@/pages/tenants";
+import SystemUpdatePage from "@/pages/system-update";
 import ConnectorsPage from "@/pages/connectors";
 import ConnectorDetailPage from "@/pages/connector-detail";
 import ConnectorDashboardPage from "@/pages/connector-dashboard";
@@ -120,6 +121,7 @@ function Router() {
         <Route path="/bgp/operations" component={OperationalBgpPage} />
         <Route path="/users" component={Users} />
         <Route path="/admin/tenants" component={TenantsPage} />
+        <Route path="/admin/system-update" component={SystemUpdatePage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

@@ -22,8 +22,8 @@ router.use(async (_req, _res, next) => {
   next();
 });
 
-// GET /provisioning/templates — list all templates
-router.get("/templates", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
+// GET /provisioning/template-registry — list all VRP templates
+router.get("/provisioning/template-registry", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
   try {
     const status = req.query.status ? String(req.query.status) : undefined;
     const vendor = req.query.vendor ? String(req.query.vendor) : undefined;
@@ -38,8 +38,8 @@ router.get("/templates", requirePermission("provisioning.read"), async (req: Req
   }
 });
 
-// GET /provisioning/templates/:id — get single template detail
-router.get("/templates/:id", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
+// GET /provisioning/template-registry/:id — get single template detail
+router.get("/provisioning/template-registry/:id", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const actor = (req as any).user?.email || "unknown";
@@ -57,8 +57,8 @@ router.get("/templates/:id", requirePermission("provisioning.read"), async (req:
   }
 });
 
-// GET /provisioning/templates/:id/versions — get template version history
-router.get("/templates/:id/versions", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
+// GET /provisioning/template-registry/:id/versions — get template version history
+router.get("/provisioning/template-registry/:id/versions", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const versions = await getTemplateVersions(id);
@@ -69,8 +69,8 @@ router.get("/templates/:id/versions", requirePermission("provisioning.read"), as
   }
 });
 
-// GET /provisioning/templates/:id/diff/:vA/:vB — diff between two versions
-router.get("/templates/:id/diff/:vA/:vB", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
+// GET /provisioning/template-registry/:id/diff/:vA/:vB — diff between two versions
+router.get("/provisioning/template-registry/:id/diff/:vA/:vB", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const vA = String(req.params.vA);
@@ -88,8 +88,8 @@ router.get("/templates/:id/diff/:vA/:vB", requirePermission("provisioning.read")
   }
 });
 
-// GET /provisioning/templates/:id/export — export template
-router.get("/templates/:id/export", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
+// GET /provisioning/template-registry/:id/export — export template
+router.get("/provisioning/template-registry/:id/export", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const actor = (req as any).user?.email || "unknown";
@@ -112,8 +112,8 @@ router.get("/templates/:id/export", requirePermission("provisioning.read"), asyn
   }
 });
 
-// GET /provisioning/templates/:id/audit — get audit logs
-router.get("/templates/:id/audit", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
+// GET /provisioning/template-registry/:id/audit — get audit logs
+router.get("/provisioning/template-registry/:id/audit", requirePermission("provisioning.read"), async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const logs = await getTemplateAuditLogs(id);

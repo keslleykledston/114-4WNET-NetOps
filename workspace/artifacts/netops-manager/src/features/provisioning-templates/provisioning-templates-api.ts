@@ -61,11 +61,11 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-const templateRegistryQueryKey = () => ["provisioning", "templates"];
-const templateDetailQueryKey = (id: number) => ["provisioning", "templates", id];
-const templateVersionsQueryKey = (id: number) => ["provisioning", "templates", id, "versions"];
-const templateDiffQueryKey = (id: number, vA: string, vB: string) => ["provisioning", "templates", id, "diff", vA, vB];
-const templateAuditQueryKey = (id: number) => ["provisioning", "templates", id, "audit"];
+const templateRegistryQueryKey = (filters?: { status?: string; vendor?: string }) => ["provisioning", "template-registry", filters?.status, filters?.vendor];
+const templateDetailQueryKey = (id: number) => ["provisioning", "template-registry", id];
+const templateVersionsQueryKey = (id: number) => ["provisioning", "template-registry", id, "versions"];
+const templateDiffQueryKey = (id: number, vA: string, vB: string) => ["provisioning", "template-registry", id, "diff", vA, vB];
+const templateAuditQueryKey = (id: number) => ["provisioning", "template-registry", id, "audit"];
 
 export function useTemplateRegistry(filters?: { status?: string; vendor?: string }) {
   const params = new URLSearchParams();
@@ -73,10 +73,10 @@ export function useTemplateRegistry(filters?: { status?: string; vendor?: string
   if (filters?.vendor) params.append("vendor", filters.vendor);
 
   return useQuery({
-    queryKey: templateRegistryQueryKey(),
+    queryKey: templateRegistryQueryKey(filters),
     queryFn: () =>
       apiFetch<TemplateRegistryEntry[]>(
-        `/api/provisioning/templates${params.size > 0 ? `?${params}` : ""}`,
+        `/api/provisioning/template-registry${params.size > 0 ? `?${params}` : ""}`,
       ),
   });
 }
@@ -84,7 +84,7 @@ export function useTemplateRegistry(filters?: { status?: string; vendor?: string
 export function useTemplateDetail(id: number) {
   return useQuery({
     queryKey: templateDetailQueryKey(id),
-    queryFn: () => apiFetch<TemplateDetail>(`/api/provisioning/templates/${id}`),
+    queryFn: () => apiFetch<TemplateDetail>(`/api/provisioning/template-registry/${id}`),
     enabled: !!id,
   });
 }
@@ -92,7 +92,7 @@ export function useTemplateDetail(id: number) {
 export function useTemplateVersions(id: number) {
   return useQuery({
     queryKey: templateVersionsQueryKey(id),
-    queryFn: () => apiFetch<TemplateVersion[]>(`/api/provisioning/templates/${id}/versions`),
+    queryFn: () => apiFetch<TemplateVersion[]>(`/api/provisioning/template-registry/${id}/versions`),
     enabled: !!id,
   });
 }
@@ -100,7 +100,7 @@ export function useTemplateVersions(id: number) {
 export function useTemplateDiff(id: number, vA: string, vB: string) {
   return useQuery({
     queryKey: templateDiffQueryKey(id, vA, vB),
-    queryFn: () => apiFetch<DiffLine[]>(`/api/provisioning/templates/${id}/diff/${vA}/${vB}`),
+    queryFn: () => apiFetch<DiffLine[]>(`/api/provisioning/template-registry/${id}/diff/${vA}/${vB}`),
     enabled: !!id && !!vA && !!vB,
   });
 }
@@ -108,13 +108,13 @@ export function useTemplateDiff(id: number, vA: string, vB: string) {
 export function useTemplateAuditLogs(id: number) {
   return useQuery({
     queryKey: templateAuditQueryKey(id),
-    queryFn: () => apiFetch<TemplateAuditLog[]>(`/api/provisioning/templates/${id}/audit`),
+    queryFn: () => apiFetch<TemplateAuditLog[]>(`/api/provisioning/template-registry/${id}/audit`),
     enabled: !!id,
   });
 }
 
 export async function exportTemplate(id: number): Promise<Blob> {
-  const res = await fetch(`/api/provisioning/templates/${id}/export`, {
+  const res = await fetch(`/api/provisioning/template-registry/${id}/export`, {
     credentials: "include",
   });
   if (!res.ok) {

@@ -1,0 +1,31 @@
+VSI Name          : VSI-CORE-100
+VSI ID            : 100
+BD ID             : 100
+MAC Count         : 12
+Bound Interface   : GigabitEthernet0/0/1
+Admin Status      : up
+Oper Status       : up
+Description       : Core multipoint service
+Peer IP (local)   : 10.10.10.1
+
+Peer Router ID    : 10.10.10.2
+  Session        : up
+  PW State       : up
+  VC Label       : 1001
+  Tunnel ID      : 0x1001
+
+VSI Name          : VSI-CORE-200
+VSI ID            : 200
+BD ID             : 200
+MAC Count         : 2
+Bound Interface   : GigabitEthernet0/0/2
+Admin Status      : up
+Oper Status       : down
+Description       : Backup service
+Peer IP (remote)  : 10.10.20.1
+
+Peer Router ID    : 10.10.20.2
+  Session        : down
+  PW State       : down
+  VC Label       : 2001
+  Tunnel ID      : 0x2001

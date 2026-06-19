@@ -37,15 +37,6 @@ import { buildConnectorPayloadWithCredential } from "../credentials/credential-v
 
 const HEARTBEAT_OFFLINE_MS = 2 * 60 * 1000;
 
-function slugify(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 64) || "tenant";
-}
-
 const LEGACY_WG_ENDPOINT_HOSTS = new Set(["vpn.netops.local", "vpn.example.com"]);
 
 function getWireGuardServerConfig() {
@@ -158,34 +149,7 @@ function mapConnectorRow(
   };
 }
 
-export async function listTenants() {
-  return db.select().from(tenantsTable).orderBy(tenantsTable.name);
-}
-
-export async function createTenant(input: { name: string; slug?: string }) {
-  const name = input.name.trim();
-  const slug = input.slug?.trim() ? slugify(input.slug) : slugify(input.name);
-
-  const [existing] = await db.select().from(tenantsTable).where(eq(tenantsTable.slug, slug)).limit(1);
-  if (existing) {
-    throw new ConflictError(
-      `Tenant com slug "${slug}" já existe (${existing.name}). Reutilize o tenant existente para criar um novo connector.`,
-    );
-  }
-
-  try {
-    const [tenant] = await db
-      .insert(tenantsTable)
-      .values({ name, slug, status: "active" })
-      .returning();
-    return tenant;
-  } catch (error) {
-    if (isUniqueViolation(error, "tenants_slug_key")) {
-      throw new ConflictError(`Tenant com slug "${slug}" já existe. Reutilize o tenant existente para criar um novo connector.`);
-    }
-    throw error;
-  }
-}
+export { createTenant, listTenants } from "../tenants/tenants.service.js";
 
 export async function listConnectors(): Promise<ConnectorPublicView[]> {
   await refreshConnectorOnlineStatus();

@@ -1,4 +1,5 @@
 import { boolean, index, integer, json, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { tenantsTable } from "./connectors.js";
 
 export const userRoleValues = ["viewer", "operator", "admin"] as const;
 export type UserRole = (typeof userRoleValues)[number];
@@ -12,8 +13,25 @@ export type UserPermissions = {
   audit?: { read?: boolean };
 };
 
+export const userAccessProfilesTable = pgTable("user_access_profiles", {
+  id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenantsTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  permissionsJson: json("permissions_json").$type<UserPermissions>().notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  tenantNameUq: uniqueIndex("user_access_profiles_tenant_name_uq").on(table.tenantId, table.name),
+  tenantIdx: index("user_access_profiles_tenant_id_idx").on(table.tenantId),
+  defaultIdx: index("user_access_profiles_is_default_idx").on(table.isDefault),
+}));
+
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
+  tenantId: integer("tenant_id").references(() => tenantsTable.id, { onDelete: "set null" }),
+  profileId: integer("profile_id").references(() => userAccessProfilesTable.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   email: text("email").notNull(),
   passwordHash: text("password_hash").notNull(),
@@ -25,6 +43,8 @@ export const usersTable = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
   emailUq: uniqueIndex("users_email_uq").on(table.email),
+  tenantIdx: index("users_tenant_id_idx").on(table.tenantId),
+  profileIdx: index("users_profile_id_idx").on(table.profileId),
   roleIdx: index("users_role_idx").on(table.role),
 }));
 

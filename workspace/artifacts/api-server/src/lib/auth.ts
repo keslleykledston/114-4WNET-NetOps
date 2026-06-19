@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { userSessionsTable, usersTable, type UserRole } from "@workspace/db";
+import { userSessionsTable, usersTable, userAccessProfilesTable, type UserRole } from "@workspace/db";
 import { env } from "./env.js";
 import { setRequestUser } from "./request-context.js";
 
@@ -28,7 +28,14 @@ export type AuthUser = {
 };
 
 export type PublicUser = AuthUser & {
+  tenantId: number | null;
+  tenantName: string | null;
+  profileId: number | null;
+  profileName: string | null;
+  profileDescription: string | null;
+  profilePermissionsJson: UserPermissions | null;
   enabled: boolean;
+  permissionsJson: UserPermissions | null;
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -39,7 +46,14 @@ export function serializeUser(user: {
   name: string;
   email: string;
   role: string;
+  tenantId?: number | null;
+  tenantName?: string | null;
+  profileId?: number | null;
+  profileName?: string | null;
+  profileDescription?: string | null;
+  profilePermissionsJson?: UserPermissions | null;
   enabled: boolean;
+  permissionsJson?: UserPermissions | null;
   lastLoginAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -49,7 +63,14 @@ export function serializeUser(user: {
     name: user.name,
     email: user.email,
     role: user.role as UserRole,
+    tenantId: user.tenantId ?? null,
+    tenantName: user.tenantName ?? null,
+    profileId: user.profileId ?? null,
+    profileName: user.profileName ?? null,
+    profileDescription: user.profileDescription ?? null,
+    profilePermissionsJson: user.profilePermissionsJson ?? null,
     enabled: user.enabled,
+    permissionsJson: user.permissionsJson ?? null,
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
@@ -137,15 +158,21 @@ export async function findSessionUserByToken(token: string) {
     revokedAt: userSessionsTable.revokedAt,
     tokenHash: userSessionsTable.tokenHash,
     userId: usersTable.id,
+    tenantId: usersTable.tenantId,
+    profileId: usersTable.profileId,
     name: usersTable.name,
     email: usersTable.email,
     passwordHash: usersTable.passwordHash,
     role: usersTable.role,
     enabled: usersTable.enabled,
+    permissionsJson: usersTable.permissionsJson,
     lastLoginAt: usersTable.lastLoginAt,
     createdAt: usersTable.createdAt,
     updatedAt: usersTable.updatedAt,
-  }).from(userSessionsTable).innerJoin(usersTable, eq(userSessionsTable.userId, usersTable.id)).where(
+    profileName: userAccessProfilesTable.name,
+    profileDescription: userAccessProfilesTable.description,
+    profilePermissionsJson: userAccessProfilesTable.permissionsJson,
+  }).from(userSessionsTable).innerJoin(usersTable, eq(userSessionsTable.userId, usersTable.id)).leftJoin(userAccessProfilesTable, eq(usersTable.profileId, userAccessProfilesTable.id)).where(
     and(
       eq(userSessionsTable.tokenHash, tokenHash),
       isNull(userSessionsTable.revokedAt),
@@ -171,7 +198,13 @@ export async function getSessionUserFromRequest(req: Request): Promise<PublicUse
     name: session.name,
     email: session.email,
     role: session.role,
+    tenantId: session.tenantId,
+    profileId: session.profileId,
+    profileName: session.profileName,
+    profileDescription: session.profileDescription,
+    profilePermissionsJson: session.profilePermissionsJson,
     enabled: session.enabled,
+    permissionsJson: session.permissionsJson,
     lastLoginAt: session.lastLoginAt,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
@@ -241,6 +274,7 @@ export function isAuthPublicPath(pathname: string, method: string): boolean {
 export function isAdminOnlyPath(pathname: string, method: string): boolean {
   if (pathname.startsWith("/auth")) return false;
   if (pathname.startsWith("/users")) return true;
+  if (pathname.startsWith("/user-profiles")) return true;
   if (pathname.startsWith("/integrations") && method !== "GET") return true;
   if (pathname.startsWith("/netbox/devices/sync-local")) return true;
   if (pathname.startsWith("/provisioning-jobs") && pathname.includes("/approve")) return true;
@@ -290,6 +324,8 @@ export async function ensureLocalAdminUser() {
     email,
     passwordHash: hashPassword(env.adminPassword),
     role: "admin",
+    tenantId: null,
+    profileId: null,
     enabled: true,
     createdAt: now,
     updatedAt: now,
@@ -340,9 +376,9 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
   };
 }
 
-export function checkPermission(user: { role: UserRole; permissionsJson: UserPermissions | null }, permission: string): boolean {
-  // Use override permissions if present, otherwise fall back to role defaults
-  const effectivePerms = user.permissionsJson ?? getDefaultPermissions(user.role);
+export function checkPermission(user: { role: UserRole; permissionsJson?: UserPermissions | null; profilePermissionsJson?: UserPermissions | null }, permission: string): boolean {
+  if (user.role === "admin") return true;
+  const effectivePerms = user.profilePermissionsJson ?? user.permissionsJson ?? getDefaultPermissions(user.role);
   const parts = permission.split(".").filter(Boolean);
   return getPermissionValue(effectivePerms, parts);
 }

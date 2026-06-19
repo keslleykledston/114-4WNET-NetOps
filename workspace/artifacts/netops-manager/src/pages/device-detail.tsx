@@ -100,7 +100,7 @@ export default function DeviceDetail() {
   const tenantLabel = extendedDevice.tenantName ?? (extendedDevice.tenantId ? `Tenant #${extendedDevice.tenantId}` : null);
 
   const handleUpdate = (values: DeviceFormValues) => {
-    const payload: DeviceUpdate = {
+    const payload = {
       hostname: values.hostname,
       ipAddress: values.ipAddress,
       vendor: values.vendor,
@@ -109,7 +109,8 @@ export default function DeviceDetail() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || "",
-    };
+      ...(values.connectorGroupId ? { connectorGroupId: Number(values.connectorGroupId) } : {}),
+    } as DeviceUpdate & { connectorGroupId?: number };
 
     if (values.snmpCommunity.trim().length > 0) {
       payload.snmpCommunity = values.snmpCommunity;

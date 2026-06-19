@@ -136,7 +136,7 @@ export default function NetopsOperations() {
   };
 
   const handleCreate = (values: DeviceFormValues) => {
-    const payload: DeviceInput = {
+    const payload = {
       hostname: values.hostname,
       ipAddress: values.ipAddress,
       vendor: values.vendor,
@@ -147,7 +147,8 @@ export default function NetopsOperations() {
       sshPort: values.sshPort,
       role: values.role || undefined,
       snmpCommunity: values.snmpCommunity || undefined,
-    };
+      ...(values.connectorGroupId ? { connectorGroupId: Number(values.connectorGroupId) } : {}),
+    } as DeviceInput & { connectorGroupId?: number };
 
     createDevice.mutate({ data: payload as DeviceInput }, {
       onSuccess: async (newDevice: Device) => {
@@ -196,7 +197,7 @@ export default function NetopsOperations() {
   const handleUpdate = (values: DeviceFormValues) => {
     if (!editingDevice) return;
 
-    const payload: DeviceUpdate = {
+    const payload = {
       hostname: values.hostname,
       ipAddress: values.ipAddress,
       vendor: values.vendor,
@@ -206,7 +207,8 @@ export default function NetopsOperations() {
       sshPort: values.sshPort,
       role: values.role || "",
       snmpCommunity: values.snmpCommunity,
-    };
+      ...(values.connectorGroupId ? { connectorGroupId: Number(values.connectorGroupId) } : {}),
+    } as DeviceUpdate & { connectorGroupId?: number };
 
     if (values.password.trim().length > 0) {
       payload.password = values.password;

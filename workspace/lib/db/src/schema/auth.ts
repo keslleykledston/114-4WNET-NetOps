@@ -11,6 +11,7 @@ export type UserPermissions = {
   integrations?: { read?: boolean; write?: boolean };
   users?: { read?: boolean; write?: boolean };
   audit?: { read?: boolean };
+  systemUpdate?: { read?: boolean; verify?: boolean; execute?: boolean; rollback?: boolean; history?: boolean };
 };
 
 export const userAccessProfilesTable = pgTable("user_access_profiles", {

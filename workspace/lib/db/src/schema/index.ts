@@ -28,3 +28,4 @@ export * from "./notifications";
 export * from "./resource-manager";
 export * from "./topology";
 export * from "./impact";
+export * from "./system-update";

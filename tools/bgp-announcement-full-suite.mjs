@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 
-import { spawn } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveTsxBin } from "./lib/bgp-selftest-tsx.mjs";
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+const tsxBin = resolveTsxBin(rootDir);
+if (!tsxBin) {
+  console.error("bgp-announcement-full-suite: tsx not found (required to import .ts modules without committed .js artifacts)");
+  process.exit(1);
+}
 
 const TESTS = [
   "tools/bgp-announcement-snapshot-selftest.mjs",
@@ -35,24 +42,18 @@ const TESTS = [
 
 function runTest(relativePath) {
   const started = performance.now();
-  return new Promise((resolve) => {
-    const child = spawn(process.execPath, [path.join(rootDir, relativePath)], {
-      cwd: rootDir,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let output = "";
-    child.stdout.on("data", (chunk) => { output += chunk.toString(); });
-    child.stderr.on("data", (chunk) => { output += chunk.toString(); });
-    child.on("close", (code) => {
-      resolve({
-        path: relativePath,
-        ok: code === 0,
-        ms: Math.round(performance.now() - started),
-        output: output.trim(),
-        code: code ?? 1,
-      });
-    });
+  const result = spawnSync(tsxBin, [path.join(rootDir, relativePath)], {
+    cwd: rootDir,
+    encoding: "utf8",
   });
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+  return {
+    path: relativePath,
+    ok: result.status === 0,
+    ms: Math.round(performance.now() - started),
+    output,
+    code: result.status ?? 1,
+  };
 }
 
 async function main() {
@@ -61,7 +62,7 @@ async function main() {
 
   const results = [];
   for (const testPath of TESTS) {
-    const result = await runTest(testPath);
+    const result = runTest(testPath);
     results.push(result);
     const label = result.ok ? "PASS" : "FAIL";
     console.log(`[${label}] ${testPath} (${result.ms}ms)`);

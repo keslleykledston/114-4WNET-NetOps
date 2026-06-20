@@ -28,6 +28,7 @@ import NetopsOperations from "@/pages/netops-operations";
 import L2Circuits from "@/pages/l2-circuits";
 import BgpPeerDrilldownPage from "@/pages/bgp-peer-drilldown";
 import OperationalBgpPage from "@/pages/operational-bgp";
+import BgpAnnouncementsPage from "@/pages/bgp-announcements";
 import Users from "@/pages/users";
 import ConnectorsPage from "@/pages/connectors";
 import ConnectorDetailPage from "@/pages/connector-detail";
@@ -100,6 +101,7 @@ function Router() {
         <Route path="/netops-operations" component={NetopsOperations} />
         <Route path="/l2-circuits" component={L2Circuits} />
         <Route path="/bgp/peer-drilldown" component={BgpPeerDrilldownPage} />
+        <Route path="/bgp/announcements" component={BgpAnnouncementsPage} />
         <Route path="/operational/bgp" component={OperationalBgpPage} />
         <Route path="/bgp/operations" component={OperationalBgpPage} />
         <Route path="/users" component={Users} />

@@ -28,6 +28,7 @@ import bgpCleanupRouter from "../modules/bgp-drill-cleanup/bgp-drill-cleanup.rou
 import credentialVaultRouter from "../modules/credentials/credential-vault.routes.js";
 import notificationsRouter from "../modules/notifications/notifications.routes.js";
 import configHistoryRouter from "../modules/config-history/config-history.routes.js";
+import bgpAnnouncementsRouter from "../modules/bgp-announcements/bgp-announcements.routes.js";
 import {
   connectorAgentRouter,
   connectorsManagementRouter,
@@ -68,6 +69,7 @@ router.use(l2CircuitsRouter);
 router.use(operationalRouter);
 router.use(operationalBgpRouter);
 router.use(bgpDrilldownRouter);
+router.use(bgpAnnouncementsRouter);
 router.use(bgpCleanupRouter);
 router.use(credentialVaultRouter);
 router.use(notificationsRouter);

@@ -13,6 +13,7 @@ export * from "./collected_configs";
 export * from "./snmp_snapshots";
 export * from "./bgp_peer_role_overrides";
 export * from "./bgp_peer_drilldown_snapshots";
+export * from "./bgp_announcements";
 export * from "./discovery";
 export * from "./communities";
 export * from "./scheduler";

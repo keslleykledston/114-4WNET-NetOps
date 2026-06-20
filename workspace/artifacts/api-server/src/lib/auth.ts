@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { userSessionsTable, usersTable, type UserRole } from "@workspace/db";
+import { userSessionsTable, usersTable, userAccessProfilesTable, type UserRole } from "@workspace/db";
 import { env } from "./env.js";
 import { setRequestUser } from "./request-context.js";
 
@@ -15,6 +15,8 @@ export type UserPermissions = {
   audit?: { read?: boolean };
   provisioning?: { read?: boolean; write?: boolean; export?: boolean };
   bgp?: { read?: boolean; cleanup?: { plan?: boolean } };
+  bgp_announcements?: { view?: boolean; preview?: boolean; change_plan?: { create?: boolean }; approval?: { request?: boolean; review?: boolean }; dry_run?: { execute?: boolean }; execute?: { real?: boolean }; rollback?: { request?: boolean; review?: boolean; dry_run?: boolean; execute?: boolean; postcheck?: boolean } };
+  systemUpdate?: { read?: boolean; verify?: boolean; execute?: boolean; rollback?: boolean; history?: boolean };
 };
 
 export const AUTH_COOKIE_NAME = "netops_session";
@@ -28,7 +30,14 @@ export type AuthUser = {
 };
 
 export type PublicUser = AuthUser & {
+  tenantId: number | null;
+  tenantName: string | null;
+  profileId: number | null;
+  profileName: string | null;
+  profileDescription: string | null;
+  profilePermissionsJson: UserPermissions | null;
   enabled: boolean;
+  permissionsJson: UserPermissions | null;
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -39,7 +48,14 @@ export function serializeUser(user: {
   name: string;
   email: string;
   role: string;
+  tenantId?: number | null;
+  tenantName?: string | null;
+  profileId?: number | null;
+  profileName?: string | null;
+  profileDescription?: string | null;
+  profilePermissionsJson?: UserPermissions | null;
   enabled: boolean;
+  permissionsJson?: UserPermissions | null;
   lastLoginAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -49,7 +65,14 @@ export function serializeUser(user: {
     name: user.name,
     email: user.email,
     role: user.role as UserRole,
+    tenantId: user.tenantId ?? null,
+    tenantName: user.tenantName ?? null,
+    profileId: user.profileId ?? null,
+    profileName: user.profileName ?? null,
+    profileDescription: user.profileDescription ?? null,
+    profilePermissionsJson: user.profilePermissionsJson ?? null,
     enabled: user.enabled,
+    permissionsJson: user.permissionsJson ?? null,
     lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString(),
@@ -137,15 +160,21 @@ export async function findSessionUserByToken(token: string) {
     revokedAt: userSessionsTable.revokedAt,
     tokenHash: userSessionsTable.tokenHash,
     userId: usersTable.id,
+    tenantId: usersTable.tenantId,
+    profileId: usersTable.profileId,
     name: usersTable.name,
     email: usersTable.email,
     passwordHash: usersTable.passwordHash,
     role: usersTable.role,
     enabled: usersTable.enabled,
+    permissionsJson: usersTable.permissionsJson,
     lastLoginAt: usersTable.lastLoginAt,
     createdAt: usersTable.createdAt,
     updatedAt: usersTable.updatedAt,
-  }).from(userSessionsTable).innerJoin(usersTable, eq(userSessionsTable.userId, usersTable.id)).where(
+    profileName: userAccessProfilesTable.name,
+    profileDescription: userAccessProfilesTable.description,
+    profilePermissionsJson: userAccessProfilesTable.permissionsJson,
+  }).from(userSessionsTable).innerJoin(usersTable, eq(userSessionsTable.userId, usersTable.id)).leftJoin(userAccessProfilesTable, eq(usersTable.profileId, userAccessProfilesTable.id)).where(
     and(
       eq(userSessionsTable.tokenHash, tokenHash),
       isNull(userSessionsTable.revokedAt),
@@ -171,7 +200,13 @@ export async function getSessionUserFromRequest(req: Request): Promise<PublicUse
     name: session.name,
     email: session.email,
     role: session.role,
+    tenantId: session.tenantId,
+    profileId: session.profileId,
+    profileName: session.profileName,
+    profileDescription: session.profileDescription,
+    profilePermissionsJson: session.profilePermissionsJson,
     enabled: session.enabled,
+    permissionsJson: session.permissionsJson,
     lastLoginAt: session.lastLoginAt,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
@@ -241,7 +276,10 @@ export function isAuthPublicPath(pathname: string, method: string): boolean {
 export function isAdminOnlyPath(pathname: string, method: string): boolean {
   if (pathname.startsWith("/auth")) return false;
   if (pathname.startsWith("/users")) return true;
+  if (pathname.startsWith("/user-profiles")) return true;
   if (pathname.startsWith("/integrations") && method !== "GET") return true;
+  if (pathname.startsWith("/system/version")) return true;
+  if (pathname.startsWith("/system/update")) return true;
   if (pathname.startsWith("/netbox/devices/sync-local")) return true;
   if (pathname.startsWith("/provisioning-jobs") && pathname.includes("/approve")) return true;
   return false;
@@ -290,6 +328,8 @@ export async function ensureLocalAdminUser() {
     email,
     passwordHash: hashPassword(env.adminPassword),
     role: "admin",
+    tenantId: null,
+    profileId: null,
     enabled: true,
     createdAt: now,
     updatedAt: now,
@@ -313,6 +353,8 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
       bgp: { read: true, cleanup: { plan: true } },
+      bgp_announcements: { view: true, preview: true, change_plan: { create: true }, approval: { request: true, review: true }, dry_run: { execute: true }, execute: { real: true }, rollback: { request: true, review: true, dry_run: true, execute: true, postcheck: true } },
+      systemUpdate: { read: true, verify: true, execute: true, rollback: true, history: true },
     };
   }
   if (role === "operator") {
@@ -325,6 +367,8 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
       bgp: { read: true, cleanup: { plan: true } },
+      bgp_announcements: { view: true, preview: true, change_plan: { create: true }, approval: { request: true, review: true }, dry_run: { execute: true }, execute: { real: true }, rollback: { request: true, review: true, dry_run: true, execute: true, postcheck: true } },
+      systemUpdate: { read: false, verify: false, execute: false, rollback: false, history: false },
     };
   }
   // viewer
@@ -337,12 +381,14 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
     audit: { read: true },
     provisioning: { read: true, write: false, export: true },
     bgp: { read: false, cleanup: { plan: false } },
+    bgp_announcements: { view: true, preview: false, change_plan: { create: false }, approval: { request: false, review: false }, dry_run: { execute: false }, execute: { real: false }, rollback: { request: false, review: false, dry_run: false, execute: false, postcheck: false } },
+    systemUpdate: { read: false, verify: false, execute: false, rollback: false, history: false },
   };
 }
 
-export function checkPermission(user: { role: UserRole; permissionsJson: UserPermissions | null }, permission: string): boolean {
-  // Use override permissions if present, otherwise fall back to role defaults
-  const effectivePerms = user.permissionsJson ?? getDefaultPermissions(user.role);
+export function checkPermission(user: { role: UserRole; permissionsJson?: UserPermissions | null; profilePermissionsJson?: UserPermissions | null }, permission: string): boolean {
+  if (user.role === "admin") return true;
+  const effectivePerms = user.profilePermissionsJson ?? user.permissionsJson ?? getDefaultPermissions(user.role);
   const parts = permission.split(".").filter(Boolean);
   return getPermissionValue(effectivePerms, parts);
 }

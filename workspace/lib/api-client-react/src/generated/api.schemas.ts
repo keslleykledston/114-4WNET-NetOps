@@ -27,10 +27,24 @@ export interface AuthUser {
 
 export interface User {
   id: number;
+  /** @nullable */
+  tenantId?: number | null;
+  /** @nullable */
+  tenantName?: string | null;
+  /** @nullable */
+  profileId?: number | null;
+  /** @nullable */
+  profileName?: string | null;
+  /** @nullable */
+  profileDescription?: string | null;
+  /** @nullable */
+  profilePermissionsJson?: UserPermissions | null;
   name: string;
   email: string;
   role: UserRole;
   enabled: boolean;
+  /** @nullable */
+  permissionsJson?: UserPermissions | null;
   /** @nullable */
   lastLoginAt?: string | null;
   createdAt: string;
@@ -60,7 +74,13 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   role?: UserRole;
+  /** @nullable */
+  tenantId?: number | null;
+  /** @nullable */
+  profileId?: number | null;
   enabled?: boolean;
+  /** @nullable */
+  permissionsJson?: UserPermissions | null;
 }
 
 export interface UpdateUserRequest {
@@ -68,7 +88,13 @@ export interface UpdateUserRequest {
   email?: string;
   password?: string;
   role?: UserRole;
+  /** @nullable */
+  tenantId?: number | null;
+  /** @nullable */
+  profileId?: number | null;
   enabled?: boolean;
+  /** @nullable */
+  permissionsJson?: UserPermissions | null;
 }
 
 /**
@@ -2691,6 +2717,11 @@ export interface UserPermissions {
   integrations?: UserPermissionsIntegrations;
   users?: UserPermissionsUsers;
   audit?: UserPermissionsAudit;
+  provisioning?: {
+    read?: boolean;
+    write?: boolean;
+    export?: boolean;
+  };
   bgp?: UserPermissionsBgp;
 }
 
@@ -2977,4 +3008,3 @@ export type GetNetconfConfig200 = {
   exit_code?: number;
   result_json?: GetNetconfConfig200ResultJson;
 };
-

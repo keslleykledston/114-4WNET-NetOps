@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import healthRouter from "./health.js";
 import authRouter from "./auth.js";
 import usersRouter from "./users.js";
+import userProfilesRouter from "./user-profiles.js";
 import devicesRouter from "./devices.js";
 import deviceGroupsRouter from "./device_groups.js";
 import complianceRouter from "./compliance.js";
@@ -28,10 +29,13 @@ import bgpCleanupRouter from "../modules/bgp-drill-cleanup/bgp-drill-cleanup.rou
 import credentialVaultRouter from "../modules/credentials/credential-vault.routes.js";
 import notificationsRouter from "../modules/notifications/notifications.routes.js";
 import configHistoryRouter from "../modules/config-history/config-history.routes.js";
+import systemUpdateRouter from "../modules/system-update/system-update.routes.js";
+import bgpAnnouncementsRouter from "../modules/bgp-announcements/bgp-announcements.routes.js";
 import {
   connectorAgentRouter,
   connectorsManagementRouter,
 } from "../modules/connectors/connectors.routes.js";
+import tenantsRouter from "../modules/tenants/tenants.routes.js";
 import resourceManagerRouter from "./resource-manager.js";
 import topologyRouter from "./topology.js";
 import impactRouter from "./impact.js";
@@ -46,6 +50,7 @@ router.use(authRouter);
 router.use(connectorAgentRouter);
 router.use(authorizeRequest);
 router.use(usersRouter);
+router.use(userProfilesRouter);
 router.use(devicesRouter);
 router.use(deviceGroupsRouter);
 router.use(complianceRouter);
@@ -68,11 +73,14 @@ router.use(l2CircuitsRouter);
 router.use(operationalRouter);
 router.use(operationalBgpRouter);
 router.use(bgpDrilldownRouter);
+router.use(bgpAnnouncementsRouter);
 router.use(bgpCleanupRouter);
 router.use(credentialVaultRouter);
 router.use(notificationsRouter);
 router.use(configHistoryRouter);
+router.use(systemUpdateRouter);
 router.use(connectorsManagementRouter);
+router.use(tenantsRouter);
 router.use(resourceManagerRouter);
 router.use(topologyRouter);
 router.use(impactRouter);

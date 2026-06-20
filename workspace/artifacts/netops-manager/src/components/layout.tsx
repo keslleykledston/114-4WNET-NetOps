@@ -20,9 +20,13 @@ import {
   CalendarClock,
   Network,
   Users,
+  Building2,
   GitBranch,
   KeyRound,
   BellRing,
+  Layers,
+  RefreshCw,
+  ClipboardList,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -35,6 +39,7 @@ import { useAuth } from "./auth-provider";
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/l2-circuits", icon: Network, label: "L2 Circuits" },
+  { href: "/l2-circuits/vsi-vpls", icon: Layers, label: "VSI/VPLS", indent: true },
   { href: "/compliance", icon: ShieldCheck, label: "Compliance" },
   { href: "/provisioning", icon: Rocket, label: "Provisioning" },
   { href: "/provisioning/templates", icon: FileCode, label: "Template Registry" },
@@ -47,8 +52,9 @@ const navItems = [
   { href: "/netops-operations", icon: Workflow, label: "NetOps Operations" },
   { href: "/operational/bgp", icon: GitBranch, label: "BGP Operations" },
   { href: "/bgp/peer-drilldown", icon: GitBranch, label: "BGP Drilldown" },
+  { href: "/bgp/announcements", icon: ClipboardList, label: "Anúncios BGP" },
   { href: "/audit", icon: ShieldAlert, label: "Audit" },
-  { href: "/security/credentials", icon: KeyRound, label: "Credential Vault" },
+  { href: "/security/credentials", icon: KeyRound, label: "Perfis" },
   { href: "/tenants/notifications", icon: BellRing, label: "Notifications" },
   { href: "/reports", icon: FileBarChart, label: "Reports" },
   { href: "/integrations", icon: PlugZap, label: "Integrations" },
@@ -106,8 +112,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Link key={item.href} href={item.href}>
                 <div
                   className={cn(
-                    "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
-                    sidebarCollapsed ? "justify-center px-2 gap-0" : "gap-2.5 px-3 py-2",
+                  "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
+                    sidebarCollapsed ? "justify-center px-2 gap-0" : `gap-2.5 px-3 py-2 ${item.indent ? "pl-8" : ""}`,
                     isActive
                       ? "bg-[#1e2a45] text-primary"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -137,11 +143,47 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       ? "bg-[#1e2a45] text-primary"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
-                  title={sidebarCollapsed ? "Users" : undefined}
+                  title={sidebarCollapsed ? "Usuários" : undefined}
                 >
                   {location === "/users" ? <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" /> : null}
                   <Users className="h-4 w-4 shrink-0" />
-                  {!sidebarCollapsed ? <span className="truncate">Users</span> : null}
+                  {!sidebarCollapsed ? <span className="truncate">Usuários e Perfis</span> : null}
+                </div>
+              </Link>
+              <Link href="/admin/tenants">
+                <div
+                  className={cn(
+                    "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
+                    sidebarCollapsed ? "justify-center px-2 gap-0" : "gap-2.5 px-3 py-2",
+                    location === "/admin/tenants" || location.startsWith("/admin/tenants/")
+                      ? "bg-[#1e2a45] text-primary"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                  title={sidebarCollapsed ? "Gestão de Tenants" : undefined}
+                >
+                  {location === "/admin/tenants" || location.startsWith("/admin/tenants/") ? (
+                    <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" />
+                  ) : null}
+                  <Building2 className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed ? <span className="truncate">Gestão de Tenants</span> : null}
+                </div>
+              </Link>
+              <Link href="/admin/system-update">
+                <div
+                  className={cn(
+                    "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
+                    sidebarCollapsed ? "justify-center px-2 gap-0" : "gap-2.5 px-3 py-2",
+                    location === "/admin/system-update" || location.startsWith("/admin/system-update/")
+                      ? "bg-[#1e2a45] text-primary"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                  title={sidebarCollapsed ? "Atualização do Sistema" : undefined}
+                >
+                  {location === "/admin/system-update" || location.startsWith("/admin/system-update/") ? (
+                    <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" />
+                  ) : null}
+                  <RefreshCw className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed ? <span className="truncate">Atualização do Sistema</span> : null}
                 </div>
               </Link>
             </div>

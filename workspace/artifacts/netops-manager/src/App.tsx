@@ -26,9 +26,13 @@ import ConfigCollection from "@/pages/config-collection";
 import SnmpHistory from "@/pages/snmp-history";
 import NetopsOperations from "@/pages/netops-operations";
 import L2Circuits from "@/pages/l2-circuits";
+import VsiVplsPage from "@/pages/vsi-vpls";
 import BgpPeerDrilldownPage from "@/pages/bgp-peer-drilldown";
 import OperationalBgpPage from "@/pages/operational-bgp";
+import BgpAnnouncementsPage from "@/pages/bgp-announcements";
 import Users from "@/pages/users";
+import TenantsPage from "@/pages/tenants";
+import SystemUpdatePage from "@/pages/system-update";
 import ConnectorsPage from "@/pages/connectors";
 import ConnectorDetailPage from "@/pages/connector-detail";
 import ConnectorDashboardPage from "@/pages/connector-dashboard";
@@ -36,6 +40,16 @@ import ConnectorGroupsPage from "@/pages/connector-groups";
 import CredentialVaultPage from "@/pages/credential-vault";
 import NotificationsPage from "@/pages/notifications";
 import NotFound from "@/pages/not-found";
+
+function VsiVplsRedirect() {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    setLocation("/l2-circuits/vsi-vpls", { replace: true });
+  }, [setLocation]);
+
+  return null;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -98,11 +112,18 @@ function Router() {
         <Route path="/config-collection" component={ConfigCollection} />
         <Route path="/snmp-history" component={SnmpHistory} />
         <Route path="/netops-operations" component={NetopsOperations} />
+        <Route path="/l2-circuits/vsi-vpls/" component={VsiVplsPage} />
+        <Route path="/l2-circuits/vsi-vpls" component={VsiVplsPage} />
+        <Route path="/vsi-vpls/" component={VsiVplsRedirect} />
+        <Route path="/vsi-vpls" component={VsiVplsRedirect} />
         <Route path="/l2-circuits" component={L2Circuits} />
         <Route path="/bgp/peer-drilldown" component={BgpPeerDrilldownPage} />
+        <Route path="/bgp/announcements" component={BgpAnnouncementsPage} />
         <Route path="/operational/bgp" component={OperationalBgpPage} />
         <Route path="/bgp/operations" component={OperationalBgpPage} />
         <Route path="/users" component={Users} />
+        <Route path="/admin/tenants" component={TenantsPage} />
+        <Route path="/admin/system-update" component={SystemUpdatePage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

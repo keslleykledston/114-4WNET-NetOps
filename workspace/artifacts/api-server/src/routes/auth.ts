@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { usersTable, userSessionsTable } from "@workspace/db";
+import { usersTable, userSessionsTable, userAccessProfilesTable } from "@workspace/db";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
 import {
   AUTH_COOKIE_NAME,
@@ -163,14 +163,23 @@ router.get("/auth/me/permissions", requireAuth, async (req, res) => {
     return;
   }
 
-  // Fetch full user with permissionsJson
-  const [fullUser] = await db.select().from(usersTable).where(eq(usersTable.id, user.id));
+  const [fullUser] = await db
+    .select({
+      role: usersTable.role,
+      permissionsJson: usersTable.permissionsJson,
+      profilePermissionsJson: userAccessProfilesTable.permissionsJson,
+    })
+    .from(usersTable)
+    .leftJoin(userAccessProfilesTable, eq(usersTable.profileId, userAccessProfilesTable.id))
+    .where(eq(usersTable.id, user.id));
   if (!fullUser) {
     res.status(404).json({ error: "User not found" });
     return;
   }
 
-  const effectivePermissions = (fullUser as any).permissionsJson ?? getDefaultPermissions(user.role as any);
+  const effectivePermissions = user.role === "admin"
+    ? getDefaultPermissions("admin")
+    : (fullUser.profilePermissionsJson ?? fullUser.permissionsJson ?? getDefaultPermissions(user.role as any));
   res.json({ effectivePermissions });
 });
 

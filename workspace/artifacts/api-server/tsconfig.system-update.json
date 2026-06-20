@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/lib/auth.ts",
+    "src/lib/env.ts",
+    "src/lib/request-context.ts",
+    "src/routes/index.ts",
+    "src/modules/system-update/**/*.ts"
+  ]
+}

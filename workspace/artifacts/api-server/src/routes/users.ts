@@ -1,18 +1,55 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
+import { tenantsTable, userAccessProfilesTable, usersTable } from "@workspace/db";
 import { getRequestSourceIp, logAuditEvent } from "../lib/audit.js";
-import { hashPassword, serializeUser } from "../lib/auth.js";
+import { hashPassword, serializeUser, type UserPermissions } from "../lib/auth.js";
 
 const router = Router();
 
-function toPublicUser(user: typeof usersTable.$inferSelect) {
+function toPublicUser(user: {
+  id: number;
+  tenantId: number | null;
+  tenantName?: string | null;
+  profileId: number | null;
+  profileName?: string | null;
+  profileDescription?: string | null;
+  profilePermissionsJson?: UserPermissions | null;
+  name: string;
+  email: string;
+  role: string;
+  enabled: boolean;
+  permissionsJson?: UserPermissions | null;
+  lastLoginAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
   return serializeUser(user);
 }
 
 router.get("/users", async (_req, res) => {
-  const rows = await db.select().from(usersTable).orderBy(usersTable.createdAt);
+  const rows = await db
+    .select({
+      id: usersTable.id,
+      tenantId: usersTable.tenantId,
+      tenantName: tenantsTable.name,
+      profileId: usersTable.profileId,
+      profileName: userAccessProfilesTable.name,
+      profileDescription: userAccessProfilesTable.description,
+      profilePermissionsJson: userAccessProfilesTable.permissionsJson,
+      name: usersTable.name,
+      email: usersTable.email,
+      role: usersTable.role,
+      enabled: usersTable.enabled,
+      permissionsJson: usersTable.permissionsJson,
+      lastLoginAt: usersTable.lastLoginAt,
+      createdAt: usersTable.createdAt,
+      updatedAt: usersTable.updatedAt,
+    })
+    .from(usersTable)
+    .leftJoin(tenantsTable, eq(usersTable.tenantId, tenantsTable.id))
+    .leftJoin(userAccessProfilesTable, eq(usersTable.profileId, userAccessProfilesTable.id))
+    .orderBy(usersTable.createdAt);
   res.json({ items: rows.map(toPublicUser) });
 });
 
@@ -22,11 +59,28 @@ router.post("/users", async (req, res) => {
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const password = typeof body.password === "string" ? body.password : "";
   const role = body.role === "admin" || body.role === "operator" ? body.role : "viewer";
+  const parsedTenantId = Number(body.tenantId);
+  const tenantId = Number.isInteger(parsedTenantId) && parsedTenantId > 0 ? parsedTenantId : null;
+  const parsedProfileId = Number(body.profileId);
+  const profileId = Number.isInteger(parsedProfileId) && parsedProfileId > 0 ? parsedProfileId : null;
   const enabled = typeof body.enabled === "boolean" ? body.enabled : true;
+  const permissionsJson = body.permissionsJson && typeof body.permissionsJson === "object" ? body.permissionsJson as UserPermissions : null;
 
   if (!name || !email || !password) {
     res.status(400).json({ error: "Name, email and password are required" });
     return;
+  }
+
+  if (profileId != null) {
+    const [profile] = await db.select().from(userAccessProfilesTable).where(eq(userAccessProfilesTable.id, profileId));
+    if (!profile) {
+      res.status(400).json({ error: "Invalid profileId" });
+      return;
+    }
+    if (tenantId != null && profile.tenantId != null && profile.tenantId !== tenantId) {
+      res.status(400).json({ error: "Profile tenant mismatch" });
+      return;
+    }
   }
 
   const [created] = await db.insert(usersTable).values({
@@ -34,7 +88,10 @@ router.post("/users", async (req, res) => {
     email,
     passwordHash: hashPassword(password),
     role,
+    tenantId,
+    profileId,
     enabled,
+    permissionsJson,
     updatedAt: new Date(),
   }).returning();
 
@@ -62,7 +119,27 @@ router.patch("/users/:id", async (req, res) => {
   if (typeof body.email === "string") updateData.email = body.email.trim().toLowerCase();
   if (typeof body.password === "string" && body.password.trim()) updateData.passwordHash = hashPassword(body.password);
   if (body.role === "admin" || body.role === "operator" || body.role === "viewer") updateData.role = body.role;
+  const parsedUpdateTenantId = Number(body.tenantId);
+  if (body.tenantId === null) updateData.tenantId = null;
+  if (Number.isInteger(parsedUpdateTenantId) && parsedUpdateTenantId > 0) updateData.tenantId = parsedUpdateTenantId;
+  const parsedUpdateProfileId = Number(body.profileId);
+  if (body.profileId === null) updateData.profileId = null;
+  if (Number.isInteger(parsedUpdateProfileId) && parsedUpdateProfileId > 0) updateData.profileId = parsedUpdateProfileId;
   if (typeof body.enabled === "boolean") updateData.enabled = body.enabled;
+  if (body.permissionsJson && typeof body.permissionsJson === "object") updateData.permissionsJson = body.permissionsJson as UserPermissions;
+  if (body.permissionsJson === null) updateData.permissionsJson = null;
+
+  if (updateData.profileId != null) {
+    const [profile] = await db.select().from(userAccessProfilesTable).where(eq(userAccessProfilesTable.id, Number(updateData.profileId)));
+    if (!profile) {
+      res.status(400).json({ error: "Invalid profileId" });
+      return;
+    }
+    if (updateData.tenantId != null && profile.tenantId != null && profile.tenantId !== Number(updateData.tenantId)) {
+      res.status(400).json({ error: "Profile tenant mismatch" });
+      return;
+    }
+  }
 
   const [updated] = await db.update(usersTable).set(updateData).where(eq(usersTable.id, id)).returning();
   if (!updated) {

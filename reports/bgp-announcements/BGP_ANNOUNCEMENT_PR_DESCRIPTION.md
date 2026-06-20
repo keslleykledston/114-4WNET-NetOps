@@ -15,9 +15,11 @@ Commits BGP principais: `2304f0e`, `0ef3699`
 
 ## Aviso de escopo da branch
 
-Esta branch **não contém apenas BGP Announcement Matrix**. O diff contra `main` inclui alterações acumuladas em outras áreas, como **copilot**, **graphify/system-update**, **vsi-vpls** e componentes compartilhados. O escopo BGP está documentado nos relatórios em `reports/bgp-announcements/`. Recomenda-se revisão por área ou separação em PRs menores se o fluxo do repositório permitir.
+Esta branch foi recriada a partir de `main` contendo **apenas o escopo BGP Announcement Matrix e dependências diretas necessárias** (env flags, auth RBAC, routes, UI nav, migrations 0057–0062).
 
-Ver detalhamento: `reports/bgp-announcements/BGP_ANNOUNCEMENT_BRANCH_SCOPE_REVIEW.md`
+Branch limpa: `kgs-145/bgp-announcements-safe-noc` — 91 arquivos vs 287 na branch acumulada.
+
+Detalhamento cherry-pick: `reports/bgp-announcements/BGP_ANNOUNCEMENT_CLEAN_BRANCH_REPORT.md`
 
 ---
 

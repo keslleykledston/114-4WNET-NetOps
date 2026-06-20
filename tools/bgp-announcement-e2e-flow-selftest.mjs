@@ -3,6 +3,9 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureTsxBootstrap } from "./lib/bgp-selftest-tsx.mjs";
+
+ensureTsxBootstrap(import.meta.url);
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const previewPath = path.join(rootDir, "workspace/artifacts/api-server/src/modules/bgp-announcements/bgp-announcements.preview.service.ts");

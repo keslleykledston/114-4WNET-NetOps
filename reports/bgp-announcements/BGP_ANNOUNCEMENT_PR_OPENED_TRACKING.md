@@ -1,7 +1,7 @@
 # BGP Announcement Matrix — PR Tracking
 
 **Última atualização:** 2026-06-20 (agente)  
-**Status:** ⏳ Aguardando abertura manual — GitHub requer login autenticado
+**Status:** ✅ PR aberto e CI GitHub green
 
 ---
 
@@ -12,7 +12,8 @@
 | Título | `feat(bgp-announcements): safe BGP announcement matrix workflow` |
 | Base | `main` |
 | Head | `kgs-145/bgp-announcements-safe-noc` |
-| HEAD commit | `e790a86` |
+| PR # | `8` |
+| HEAD commit | `378c2f2` |
 | Body | `reports/bgp-announcements/BGP_ANNOUNCEMENT_PR_DESCRIPTION.md` |
 | Comentário inicial | `reports/bgp-announcements/BGP_ANNOUNCEMENT_PR_INITIAL_COMMENT.md` |
 
@@ -20,22 +21,18 @@
 
 ## URL do PR
 
-**Status:** não aberto ainda (sem token gh / browser sem login GitHub)
+**Status:** aberto
+**URL:** https://github.com/keslleykledston/114-4WNET-NetOps/pull/8
 
-_Preencher após abertura manual:_
-```
-https://github.com/keslleykledston/114-4WNET-NetOps/pull/___
-```
-
-**Abrir PR (1 clique após login):**  
+**Abrir PR (compare):**  
 https://github.com/keslleykledston/114-4WNET-NetOps/compare/main...kgs-145/bgp-announcements-safe-noc?expand=1
 
-**Compare verificado (browser, 2026-06-20):**
+**Compare verificado (GitHub, 2026-06-20):**
 - Base: `main` ✅
 - Head: `kgs-145/bgp-announcements-safe-noc` ✅
-- Commits: **6**
-- Files changed: **93** (GitHub UI)
-- HEAD visível: `e790a86` ✅
+- Commits: **7**
+- Files changed: **94** (GitHub UI)
+- HEAD visível: `378c2f2` ✅
 - Sem graphify/vsi/copilot/system-update no escopo da branch ✅
 
 ---
@@ -44,7 +41,7 @@ https://github.com/keslleykledston/114-4WNET-NetOps/compare/main...kgs-145/bgp-a
 
 | Check | Status |
 |-------|--------|
-| CI GitHub | **não iniciado** — PR ainda não aberto |
+| CI GitHub | **PASS** — `Typecheck and build` / `Docker smoke` concluídos com sucesso |
 | typecheck local | **PASS** |
 | full suite 24/24 | **PASS** |
 | e2e local | **PASS** |
@@ -58,15 +55,17 @@ _Atualizar após abertura PR: Actions tab → workflow runs_
 
 | Reviewer | Área | Status |
 |----------|------|--------|
-| _a definir_ | migrations 0057–0062 | pendente |
-| _a definir_ | segurança flags/gates | pendente |
-| _a definir_ | UI/UX NOC | pendente |
+| GitHub Actions | `Typecheck and build` | PASS |
+| GitHub Actions | `Docker smoke` | PASS |
+| Reviewers humanos | migrations 0057–0062 | pendente |
+| Reviewers humanos | segurança flags/gates | pendente |
+| Reviewers humanos | UI/UX NOC | pendente |
 
 ---
 
-## Comentário inicial (colar no PR após abrir)
+## Comentário inicial
 
-Ver arquivo completo: `BGP_ANNOUNCEMENT_PR_INITIAL_COMMENT.md`
+Publicado no PR: ver `BGP_ANNOUNCEMENT_PR_INITIAL_COMMENT.md`
 
 ---
 
@@ -90,8 +89,8 @@ Esperado modo seguro. Sem write real, snapshot observado não muda. Postcheck co
 
 ## Checklist pré-merge
 
-- [ ] PR aberto contra `main`
-- [ ] CI PASS
+- [x] PR aberto contra `main`
+- [x] CI PASS
 - [ ] typecheck PASS
 - [ ] full suite 24/24 PASS
 - [ ] e2e PASS
@@ -129,12 +128,9 @@ Detalhe: `reports/bgp-announcements/BGP_ANNOUNCEMENT_POST_HOMOLOGATION_DEPLOY_RE
 
 ## Pendências
 
-1. **Login GitHub** e abrir PR manualmente (compare URL acima)
-2. Colar body de `BGP_ANNOUNCEMENT_PR_DESCRIPTION.md`
-3. Colar comentário de `BGP_ANNOUNCEMENT_PR_INITIAL_COMMENT.md`
-4. Atualizar URL do PR neste arquivo
-5. Observar CI Actions após abertura
-6. Review humano UI browser (ressalva NOC)
+1. Observar review humano UI browser (ressalva NOC)
+2. Manter flags de execução/rollback real OFF
+3. Acompanhar comentários/reviews no PR #8
 
 ---
 

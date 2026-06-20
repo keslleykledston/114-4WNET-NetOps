@@ -1,6 +1,5 @@
 import { complianceFindingsTable, complianceJobsTable, db, devicesTable } from "@workspace/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { env } from "../../lib/env.js";
 import { getAnnouncementMatrix } from "../bgp-announcements/announcement-matrix.service.js";
 import { listL2Circuits } from "../l2circuits/l2circuits.service.js";
 import { listNetopsBgpPeers } from "../netops/service.js";
@@ -143,8 +142,6 @@ export async function searchAnnouncements(input: {
   entities: CopilotEntity[];
   deviceIds: number[];
 }): Promise<CopilotAnnouncementMatch[]> {
-  if (!env.bgpAnnouncementMatrixEnabled) return [];
-
   const searchTerms = input.entities
     .filter((entity) => ["prefix", "asn", "customer", "provider"].includes(entity.kind))
     .map((entity) => {
@@ -163,7 +160,7 @@ export async function searchAnnouncements(input: {
   for (const device of devices.slice(0, 12)) {
     for (const term of searchTerms) {
       const matrix = await getAnnouncementMatrix(device.id, { search: term });
-      if (matrix === "device_not_found" || matrix === "no_snapshot") continue;
+      if (matrix === "no_snapshot") continue;
       for (const row of matrix.rows.slice(0, 12)) {
         matches.push({
           deviceId: device.id,

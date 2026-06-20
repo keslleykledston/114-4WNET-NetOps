@@ -64,7 +64,7 @@ export async function explainRoutePoliciesInScope(input: {
       const peerBindings = Object.values(ctx.parsedConfig.consumers.bgp_peers)
         .filter((peer) => peer.importPolicy === policy.name || peer.exportPolicy === policy.name)
         .map((peer) => ({
-          peerIp: peer.peerIp ?? peer.name,
+          peerIp: peer.peerIp ?? peer.name ?? `peer-${deviceId}`,
           direction: peer.importPolicy === policy.name ? "import" as const : "export" as const,
         }));
 

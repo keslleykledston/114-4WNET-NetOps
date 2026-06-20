@@ -1,0 +1,5003 @@
+{
+  "startedAt": "2026-06-20T04:13:49.668Z",
+  "baseUrl": "http://127.0.0.1:8085",
+  "deviceId": 94,
+  "hostname": "4WNET-BVA-BRT-RB",
+  "checks": [
+    {
+      "name": "healthz",
+      "ok": true,
+      "message": "HTTP 200"
+    },
+    {
+      "name": "auth.login",
+      "ok": true
+    },
+    {
+      "name": "device.selected",
+      "ok": true,
+      "message": "#94 4WNET-BVA-BRT-RB"
+    },
+    {
+      "name": "matrix.latest.initial",
+      "ok": true,
+      "message": "snapshot 20"
+    },
+    {
+      "name": "matrix.refresh.1",
+      "ok": true,
+      "message": "snapshot 23"
+    },
+    {
+      "name": "matrix.refresh.2",
+      "ok": true,
+      "message": "snapshot 24"
+    },
+    {
+      "name": "matrix.snapshot_rotation",
+      "ok": true,
+      "message": "23 -> 24",
+      "required": false
+    },
+    {
+      "name": "classification.origin_present",
+      "ok": false,
+      "message": "origin=0",
+      "required": false
+    },
+    {
+      "name": "classification.customer_import_present",
+      "ok": true,
+      "message": "import=5",
+      "required": false
+    },
+    {
+      "name": "classification.customer_export_absent",
+      "ok": true,
+      "message": "export=0"
+    },
+    {
+      "name": "classification.cxx_not_in_matrix",
+      "ok": true,
+      "message": "cxx=0"
+    },
+    {
+      "name": "classification.internal_absent",
+      "ok": true,
+      "message": "internal=0"
+    },
+    {
+      "name": "classification.unknown_absent",
+      "ok": true,
+      "message": "unknown=0"
+    },
+    {
+      "name": "matrix.diff",
+      "ok": true,
+      "message": "changed=0",
+      "required": false
+    },
+    {
+      "name": "history.endpoint",
+      "ok": true,
+      "message": "events=20",
+      "required": false
+    },
+    {
+      "name": "upstream.audit",
+      "ok": true,
+      "message": "findings=0",
+      "required": false
+    },
+    {
+      "name": "community_sets.list",
+      "ok": true,
+      "message": "sets=0",
+      "required": false
+    },
+    {
+      "name": "preview.change",
+      "ok": "bgp-preview-v1.eyJiYXNlU25hcHNob3RJZCI6MjQsImRldmljZUlkIjo5NCwiY29sbGVjdGlvbklkIjo2MCwidGFyZ2V0UG9saWN5TmFtZSI6IkFTMjY0MTk2LVJPUkFJTUFORVQtSW1wb3J0LUlQdjQiLCJ0YXJnZXRUeXBlIjoiY3VzdG9tZXJfaW1wb3J0X3RhcmdldCIsIm5vZGUiOjEwLCJ1cHN0cmVhbUNpcmN1aXRJZCI6IjE1IiwidXBzdHJlYW1OYW1lIjoiQzE1IiwicHJlZml4U2NvcGUiOnsibmFtZSI6IkFTMjY0MTk2LVJPUkFJTUFORVQtSW1wb3J0LUlQdjQiLCJ0eXBlIjoidW5rbm93biIsInNoYXJlZCI6bnVsbCwiZXhwYW5kZWRQcmVmaXhlcyI6W10sImFmZmVjdGVkUHJlZml4Q291bnQiOjB9LCJjdXJyZW50U3RhdGUiOiJPbiIsImRlc2lyZWRTdGF0ZSI6IlAyIiwiY3VycmVudENvbW11bml0eSI6IjY0Nzc3OjUxNTAxIiwiZGVzaXJlZENvbW11bml0eSI6IjY0Nzc3OjUxNTAzIiwiY3VycmVudENvbW11bml0eVNvdXJjZVR5cGUiOiJkaXJlY3QiLCJjdXJyZW50Q29tbXVuaXR5U291cmNlTmFtZSI6bnVsbCwiY3VycmVudENvbW11bml0aWVzIjpbIjY0Nzc3OjUxMzAxIiwiNjQ3Nzc6NTE1MDEiLCI2NDc3Nzo1MTYwMSIsIjY0Nzc3OjUxNzAxIiwiNjQ3Nzc6NTE4MDEiLCI2NDc3Nzo1MTkwMSJdLCJkZXNpcmVkQ29tbXVuaXRpZXMiOlsiNjQ3Nzc6NTEzMDEiLCI2NDc3Nzo1MTUwMyIsIjY0Nzc3OjUxNjAxIiwiNjQ3Nzc6NTE3MDEiLCI2NDc3Nzo1MTgwMSIsIjY0Nzc3OjUxOTAxIl0sImNvbW11bml0eVNldE1hdGNoIjp7Im1hdGNoZWQiOmZhbHNlLCJtYXRjaFR5cGUiOiJub25lIiwiY29tbXVuaXRpZXMiOltdLCJkZXNpcmVkQ29tbXVuaXRpZXMiOlsiNjQ3Nzc6NTEzMDEiLCI2NDc3Nzo1MTUwMyIsIjY0Nzc3OjUxNjAxIiwiNjQ3Nzc6NTE3MDEiLCI2NDc3Nzo1MTgwMSIsIjY0Nzc3OjUxOTAxIl0sIm5lYXJlc3RNYXRjaGVzIjpbXX0sImRpZmYiOnsicmVtb3ZlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxNTAxIl0sImFkZGVkQ29tbXVuaXRpZXMiOlsiNjQ3Nzc6NTE1MDMiXSwicHJlc2VydmVkQ29tbXVuaXRpZXMiOlsiNjQ3Nzc6NTEzMDEiLCI2NDc3Nzo1MTYwMSIsIjY0Nzc3OjUxNzAxIiwiNjQ3Nzc6NTE4MDEiLCI2NDc3Nzo1MTkwMSJdLCJvbGRTdGF0ZSI6Ik9uIiwibmV3U3RhdGUiOiJQMiJ9LCJwcm9wb3NlZENvbW1hbmRzIjpbeyJjb21tYW5kIjoic3lzdGVtLXZpZXciLCJjb25maWRlbmNlIjoibWVkaXVtIn0seyJjb21tYW5kIjoicm91dGUtcG9saWN5IEFTMjY0MTk2LVJPUkFJTUFORVQtSW1wb3J0LUlQdjQgcGVybWl0IG5vZGUgMTAiLCJjb25maWRlbmNlIjoibWVkaXVtIn0seyJjb21tYW5kIjoiYXBwbHkgY29tbXVuaXR5IDY0Nzc3OjUxMzAxIDY0Nzc3OjUxNTAzIDY0Nzc3OjUxNjAxIDY0Nzc3OjUxNzAxIDY0Nzc3OjUxODAxIDY0Nzc3OjUxOTAxIiwiY29uZmlkZW5jZSI6Im1lZGl1bSJ9LHsiY29tbWFuZCI6InJldHVybiIsImNvbmZpZGVuY2UiOiJtZWRpdW0ifV0sInJvbGxiYWNrQ29tbWFuZHMiOlt7ImNvbW1hbmQiOiJzeXN0ZW0tdmlldyIsImNvbmZpZGVuY2UiOiJtZWRpdW0ifSx7ImNvbW1hbmQiOiJyb3V0ZS1wb2xpY3kgQVMyNjQxOTYtUk9SQUlNQU5FVC1JbXBvcnQtSVB2NCBwZXJtaXQgbm9kZSAxMCIsImNvbmZpZGVuY2UiOiJtZWRpdW0ifSx7ImNvbW1hbmQiOiJhcHBseSBjb21tdW5pdHkgNjQ3Nzc6NTEzMDEgNjQ3Nzc6NTE1MDEgNjQ3Nzc6NTE2MDEgNjQ3Nzc6NTE3MDEgNjQ3Nzc6NTE4MDEgNjQ3Nzc6NTE5MDEiLCJjb25maWRlbmNlIjoibWVkaXVtIn0seyJjb21tYW5kIjoicmV0dXJuIiwiY29uZmlkZW5jZSI6Im1lZGl1bSJ9XSwicm9sbGJhY2tEaWZmIjp7InJlbW92ZWRDb21tdW5pdGllcyI6WyI2NDc3Nzo1MTUwMyJdLCJhZGRlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxNTAxIl0sInByZXNlcnZlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxMzAxIiwiNjQ3Nzc6NTE2MDEiLCI2NDc3Nzo1MTcwMSIsIjY0Nzc3OjUxODAxIiwiNjQ3Nzc6NTE5MDEiXSwib2xkU3RhdGUiOiJQMiIsIm5ld1N0YXRlIjoiT24ifSwicm9sbGJhY2tTb3VyY2UiOjI0LCJyaXNrTGV2ZWwiOiJtZWRpdW0iLCJmaW5kaW5ncyI6W3siY29kZSI6IkNPTU1VTklUWV9TRVRfTk9fRVhBQ1RfTUFUQ0giLCJzZXZlcml0eSI6ImluZm8iLCJzY29wZSI6ImNvbW11bml0eV9zZXQiLCJtZXNzYWdlIjoiTmVuaHVtIGNvbW11bml0eS1zZXQgZXhhdG8gZW5jb250cmFkby4gUHJldmlldyB2YWkgcHJvcG9yIGNvbW11bml0aWVzIGRpcmV0YXMuIiwiZXZpZGVuY2UiOnsiZGVzaXJlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxMzAxIiwiNjQ3Nzc6NTE1MDMiLCI2NDc3Nzo1MTYwMSIsIjY0Nzc3OjUxNzAxIiwiNjQ3Nzc6NTE4MDEiLCI2NDc3Nzo1MTkwMSJdfX0seyJjb2RlIjoiUFJFVklFV19VU0VTX0RJUkVDVF9DT01NVU5JVElFUyIsInNldmVyaXR5IjoiaW5mbyIsInNjb3BlIjoiY2VsbCIsIm1lc3NhZ2UiOiJQcmV2aWV3IHZhaSB1c2FyIGNvbW11bml0aWVzIGRpcmV0YXMuIiwiZXZpZGVuY2UiOnsiZGVzaXJlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxMzAxIiwiNjQ3Nzc6NTE1MDMiLCI2NDc3Nzo1MTYwMSIsIjY0Nzc3OjUxNzAxIiwiNjQ3Nzc6NTE4MDEiLCI2NDc3Nzo1MTkwMSJdfX1dLCJzdGF0dXMiOiJwcmV2aWV3X29ubHkiLCJjb21tYW5kQ29uZmlkZW5jZSI6Im1lZGl1bSIsIm5vdGUiOiJub2MgaG9tb2xvZ2F0aW9uIn0",
+      "message": "On -> P2"
+    },
+    {
+      "name": "change_plan.draft",
+      "ok": true,
+      "message": "id=5"
+    },
+    {
+      "name": "change_plan.list",
+      "ok": true
+    },
+    {
+      "name": "change_plan.detail",
+      "ok": true,
+      "message": "draft"
+    },
+    {
+      "name": "approval.request",
+      "ok": true,
+      "message": "pending"
+    },
+    {
+      "name": "approval.approve",
+      "ok": true,
+      "message": "approved"
+    },
+    {
+      "name": "dry_run.execute",
+      "ok": true,
+      "message": "dry_run"
+    },
+    {
+      "name": "dry_run.would_execute_only",
+      "ok": true,
+      "message": "steps=9"
+    },
+    {
+      "name": "execution.real_blocked",
+      "ok": true,
+      "message": "{\"blocked\":true,\"reason\":\"BGP announcement real execution is disabled by feature flag\",\"featureFlag\":\"BGP_ANNOUNCEMENT_EXECUTION_ENABLED\"}",
+      "required": true
+    },
+    {
+      "name": "postcheck.run",
+      "ok": false,
+      "message": "ok",
+      "required": false
+    },
+    {
+      "name": "rollback.request",
+      "ok": true,
+      "message": "pending_approval",
+      "required": false
+    },
+    {
+      "name": "rollback.approve",
+      "ok": true,
+      "required": false
+    },
+    {
+      "name": "rollback.dry_run",
+      "ok": true,
+      "message": "dry_run",
+      "required": false
+    },
+    {
+      "name": "rollback.real_blocked",
+      "ok": true,
+      "message": "{\"blocked\":true,\"reason\":\"Rollback real execution is disabled by feature flag\",\"featureFlag\":\"BGP_ANNOUNCEMENT_ROLLBACK_ENABLED\"}"
+    },
+    {
+      "name": "rollback.postcheck",
+      "ok": true,
+      "message": "postcheck_succeeded",
+      "required": false
+    }
+  ],
+  "artifacts": {
+    "initialLatest": {
+      "snapshot_id": 20,
+      "generated_at": "2026-06-20T04:12:28.988Z",
+      "collection_id": 60,
+      "is_stale": false,
+      "matrix": {
+        "rows": [
+          {
+            "node": 600,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "13",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "15": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "15",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "16": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "16",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "17": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "17",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "18": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "18",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "19": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "19",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              }
+            },
+            "family": "ipv6",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy DENY nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "DENY",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "medium",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": null
+            },
+            "prefixScope": {
+              "name": "DENY",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "DENY",
+            "affectedPrefixes": [],
+            "targetPolicyName": "DENY"
+          },
+          {
+            "node": 10,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "13",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "15": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "15",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "16": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "16",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "17": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "17",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "18": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "18",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "19": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "19",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              }
+            },
+            "family": "ipv4",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy AS36040-GGC-Import-V4 nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS36040-GGC-Import-V4",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "high",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": null
+            },
+            "prefixScope": {
+              "name": "AS36040-GGC-Import-V4",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "AS36040-GGC-Import-V4",
+            "affectedPrefixes": [],
+            "targetPolicyName": "AS36040-GGC-Import-V4"
+          },
+          {
+            "node": 10,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "13",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "15": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "15",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "16": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "16",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "17": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "17",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "18": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "18",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "19": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "19",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              }
+            },
+            "family": "ipv6",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy AS36040-GGC-Import-V6 nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS36040-GGC-Import-V6",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "high",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": null
+            },
+            "prefixScope": {
+              "name": "AS36040-GGC-Import-V6",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "AS36040-GGC-Import-V6",
+            "affectedPrefixes": [],
+            "targetPolicyName": "AS36040-GGC-Import-V6"
+          },
+          {
+            "node": 10,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "13",
+                "community": "64777:51301",
+                "actionCode": "01",
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "15": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "15",
+                "community": "64777:51501",
+                "actionCode": "01",
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "16": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "16",
+                "community": "64777:51601",
+                "actionCode": "01",
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "17": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "17",
+                "community": "64777:51701",
+                "actionCode": "01",
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "18": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "18",
+                "community": "64777:51801",
+                "actionCode": "01",
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "19": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "19",
+                "community": "64777:51901",
+                "actionCode": "01",
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              }
+            },
+            "family": "ipv4",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy AS264196-RORAIMANET-Import-IPv4 nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4",
+                "upstreamCircuitId": null
+              },
+              {
+                "code": "COMMUNITY_SET_NO_EXACT_MATCH",
+                "node": null,
+                "scope": "community_set",
+                "message": "Combinação de communities em AS264196-RORAIMANET-Import-IPv4 nao tem match exato em community-list.",
+                "evidence": {
+                  "matched": false,
+                  "matchType": "none",
+                  "communities": [],
+                  "nearestMatches": [],
+                  "desiredCommunities": [
+                    "64777:51301",
+                    "64777:51501",
+                    "64777:51601",
+                    "64777:51701",
+                    "64777:51801",
+                    "64777:51901"
+                  ]
+                },
+                "severity": "info",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "high",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": {
+                "matched": false,
+                "matchType": "none",
+                "communities": [],
+                "nearestMatches": [],
+                "desiredCommunities": [
+                  "64777:51301",
+                  "64777:51501",
+                  "64777:51601",
+                  "64777:51701",
+                  "64777:51801",
+                  "64777:51901"
+                ]
+              }
+            },
+            "prefixScope": {
+              "name": "AS264196-RORAIMANET-Import-IPv4",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "AS264196-RORAIMANET-Import-IPv4",
+            "affectedPrefixes": [],
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4"
+          },
+          {
+            "node": 20,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "13",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "15": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "15",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "16": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "16",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "17": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "17",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "18": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "18",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "19": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "19",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              }
+            },
+            "family": "ipv6",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy AS264196-RORAIMANET-Import-IPv6 nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS264196-RORAIMANET-Import-IPv6",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "high",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": null
+            },
+            "prefixScope": {
+              "name": "AS264196-RORAIMANET-Import-IPv6",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "AS264196-RORAIMANET-Import-IPv6",
+            "affectedPrefixes": [],
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv6"
+          }
+        ],
+        "columns": [
+          {
+            "key": "13",
+            "role": null,
+            "label": "C13",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C13",
+            "upstreamCircuitId": "13"
+          },
+          {
+            "key": "15",
+            "role": null,
+            "label": "C15",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C15",
+            "upstreamCircuitId": "15"
+          },
+          {
+            "key": "16",
+            "role": null,
+            "label": "C16",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C16",
+            "upstreamCircuitId": "16"
+          },
+          {
+            "key": "17",
+            "role": null,
+            "label": "C17",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C17",
+            "upstreamCircuitId": "17"
+          },
+          {
+            "key": "18",
+            "role": null,
+            "label": "C18",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C18",
+            "upstreamCircuitId": "18"
+          },
+          {
+            "key": "19",
+            "role": null,
+            "label": "C19",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C19",
+            "upstreamCircuitId": "19"
+          }
+        ],
+        "featureStatus": "community_cells",
+        "generatedFrom": "policy_graph_community_resolver",
+        "upstreamAudit": {
+          "findings": [],
+          "byCircuit": {
+            "15": {
+              "actions": {},
+              "localAs": 268707,
+              "findings": [],
+              "circuitId": "15",
+              "maxSeverity": null,
+              "exportPolicy": "C15-EXPORT",
+              "upstreamName": "C15-EXPORT"
+            },
+            "16": {
+              "actions": {},
+              "localAs": 268707,
+              "findings": [],
+              "circuitId": "16",
+              "maxSeverity": null,
+              "exportPolicy": "C16-EXPORT",
+              "upstreamName": "C16-EXPORT"
+            }
+          },
+          "totalAuditFindings": 0,
+          "localAsUnknownCount": 0,
+          "prependMismatchCount": 0,
+          "totalUpstreamsAudited": 2,
+          "totalCriticalAuditFindings": 0
+        }
+      },
+      "summary": {
+        "note": "Policy graph snapshot; community cells e prefix expansion habilitados",
+        "totalOn": 6,
+        "totalP1": 0,
+        "totalP2": 0,
+        "totalP3": 0,
+        "totalP4": 0,
+        "totalOff": 0,
+        "totalCells": 30,
+        "totalTargets": 5,
+        "totalUnknown": 0,
+        "debugFindings": [
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy C15-EXPORT está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "C15-EXPORT",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy C16-EXPORT está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "C16-EXPORT",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy AS36040-GGC-Export-V4 está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS36040-GGC-Export-V4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy AS36040-GGC-Export-V6 está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS36040-GGC-Export-V6",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy AS264196-RORAIMANET-Export-IPv4 está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Export-IPv4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy AS264196-RORAIMANET-Export-IPv6 está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Export-IPv6",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P4 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P4 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P5 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P5 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P6 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P6 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P7 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P7 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P8 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P8 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-DEFAULT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-DEFAULT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-NOEXPORT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-NOEXPORT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-NOEXPORT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-NOEXPORT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P1 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P1 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P2 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-IMPORT-IPV6",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P2 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-IMPORT-IPV6",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P3 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P3 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P4 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P4 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P5 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-IMPORT-IPV6",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P5 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-IMPORT-IPV6",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P6 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P6 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P7 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P7 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P8 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P8 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P1 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "FNA-EXPORT",
+                "GGC-EXPORT",
+                "OCA-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P1 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "FNA-EXPORT",
+                "GGC-EXPORT",
+                "OCA-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido FULL-ROUTE-ALL pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "FULL-ROUTE-ALL",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido FULL-ROUTE-ALL deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "FULL-ROUTE-ALL",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-DEFAULT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-DEFAULT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-NOEXPORT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-NOEXPORT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-NOEXPORT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-NOEXPORT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P1 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P1 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P2 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P2 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P3 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P3 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P4 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P4 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P5 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P5 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P6 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P6 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P7 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P7 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P8 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P8 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-DEFAULT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-DEFAULT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P2 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P2 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P3 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P3 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P4 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P4 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P5 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P5 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P6 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P6 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P7 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P7 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P8 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P8 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P1 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P1 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P2 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P2 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P3 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P3 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy DENY nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "DENY",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy AS36040-GGC-Import-V4 nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS36040-GGC-Import-V4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy AS36040-GGC-Import-V6 nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS36040-GGC-Import-V6",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy AS264196-RORAIMANET-Import-IPv4 nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "COMMUNITY_SET_NO_EXACT_MATCH",
+            "node": null,
+            "scope": "community_set",
+            "message": "Combinação de communities em AS264196-RORAIMANET-Import-IPv4 nao tem match exato em community-list.",
+            "evidence": {
+              "matched": false,
+              "matchType": "none",
+              "communities": [],
+              "nearestMatches": [],
+              "desiredCommunities": [
+                "64777:51301",
+                "64777:51501",
+                "64777:51601",
+                "64777:51701",
+                "64777:51801",
+                "64777:51901"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy AS264196-RORAIMANET-Import-IPv6 nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv6",
+            "upstreamCircuitId": null
+          }
+        ],
+        "totalConflict": 0,
+        "totalFindings": 88,
+        "totalUnmarked": 24,
+        "upstreamAudit": {
+          "totalAuditFindings": 0,
+          "localAsUnknownCount": 0,
+          "prependMismatchCount": 0,
+          "totalUpstreamsAudited": 2,
+          "totalCriticalAuditFindings": 0
+        },
+        "totalUpstreams": 6,
+        "totalOriginTargets": 0,
+        "totalUnknownPolicies": 3,
+        "totalCriticalFindings": 0,
+        "totalExpandedPrefixes": 0,
+        "totalPrefixScopeUnknown": 5,
+        "totalCustomerImportTargets": 5,
+        "totalExcludedCustomerExports": 7,
+        "totalExcludedInternalPolicies": 1,
+        "totalExcludedUpstreamPolicies": 5
+      },
+      "diff_summary": {
+        "added": 0,
+        "changed": 0,
+        "removed": 0
+      },
+      "run_id": null,
+      "status": "completed"
+    },
+    "refresh1": {
+      "run_id": 23,
+      "snapshot_id": 23,
+      "generated_at": "2026-06-20T04:13:49.792Z",
+      "collection_id": 60,
+      "matrix": {
+        "rows": [
+          {
+            "node": 600,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "13",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "15": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "15",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "16": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "16",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "17": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "17",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "18": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "18",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "19": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "19",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              }
+            },
+            "family": "ipv6",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy DENY nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "DENY",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "medium",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": null
+            },
+            "prefixScope": {
+              "name": "DENY",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "DENY",
+            "affectedPrefixes": [],
+            "targetPolicyName": "DENY"
+          },
+          {
+            "node": 10,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "13",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "15": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "15",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "16": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "16",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "17": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "17",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "18": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "18",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "19": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "19",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              }
+            },
+            "family": "ipv4",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy AS36040-GGC-Import-V4 nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS36040-GGC-Import-V4",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "high",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": null
+            },
+            "prefixScope": {
+              "name": "AS36040-GGC-Import-V4",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "AS36040-GGC-Import-V4",
+            "affectedPrefixes": [],
+            "targetPolicyName": "AS36040-GGC-Import-V4"
+          },
+          {
+            "node": 10,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "13",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "15": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "15",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "16": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "16",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "17": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "17",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "18": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "18",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "19": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "19",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              }
+            },
+            "family": "ipv6",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy AS36040-GGC-Import-V6 nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS36040-GGC-Import-V6",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "high",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": null
+            },
+            "prefixScope": {
+              "name": "AS36040-GGC-Import-V6",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "AS36040-GGC-Import-V6",
+            "affectedPrefixes": [],
+            "targetPolicyName": "AS36040-GGC-Import-V6"
+          },
+          {
+            "node": 10,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "13",
+                "community": "64777:51301",
+                "actionCode": "01",
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "15": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "15",
+                "community": "64777:51501",
+                "actionCode": "01",
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "16": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "16",
+                "community": "64777:51601",
+                "actionCode": "01",
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "17": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "17",
+                "community": "64777:51701",
+                "actionCode": "01",
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "18": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "18",
+                "community": "64777:51801",
+                "actionCode": "01",
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              },
+              "19": {
+                "note": null,
+                "label": "On",
+                "state": "on",
+                "circuitId": "19",
+                "community": "64777:51901",
+                "actionCode": "01",
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "direct"
+              }
+            },
+            "family": "ipv4",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy AS264196-RORAIMANET-Import-IPv4 nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4",
+                "upstreamCircuitId": null
+              },
+              {
+                "code": "COMMUNITY_SET_NO_EXACT_MATCH",
+                "node": null,
+                "scope": "community_set",
+                "message": "Combinação de communities em AS264196-RORAIMANET-Import-IPv4 nao tem match exato em community-list.",
+                "evidence": {
+                  "matched": false,
+                  "matchType": "none",
+                  "communities": [],
+                  "nearestMatches": [],
+                  "desiredCommunities": [
+                    "64777:51301",
+                    "64777:51501",
+                    "64777:51601",
+                    "64777:51701",
+                    "64777:51801",
+                    "64777:51901"
+                  ]
+                },
+                "severity": "info",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "high",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": {
+                "matched": false,
+                "matchType": "none",
+                "communities": [],
+                "nearestMatches": [],
+                "desiredCommunities": [
+                  "64777:51301",
+                  "64777:51501",
+                  "64777:51601",
+                  "64777:51701",
+                  "64777:51801",
+                  "64777:51901"
+                ]
+              }
+            },
+            "prefixScope": {
+              "name": "AS264196-RORAIMANET-Import-IPv4",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "AS264196-RORAIMANET-Import-IPv4",
+            "affectedPrefixes": [],
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4"
+          },
+          {
+            "node": 20,
+            "risk": "medium",
+            "cells": {
+              "13": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "13",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C13",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "15": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "15",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C15",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "16": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "16",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C16",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "17": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "17",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C17",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "18": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "18",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C18",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              },
+              "19": {
+                "note": null,
+                "label": "—",
+                "state": "unmarked",
+                "circuitId": "19",
+                "community": null,
+                "actionCode": null,
+                "upstreamName": "C19",
+                "communitySourceName": null,
+                "communitySourceType": "unknown"
+              }
+            },
+            "family": "ipv6",
+            "source": "policy_graph",
+            "findings": [
+              {
+                "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+                "node": null,
+                "scope": "prefix_scope",
+                "message": "A policy AS264196-RORAIMANET-Import-IPv6 nao referencia ip-prefix/ipv6-prefix.",
+                "severity": "warning",
+                "community": null,
+                "prefixList": null,
+                "upstreamName": null,
+                "communityList": null,
+                "recommendation": null,
+                "communityFilter": null,
+                "targetPolicyName": "AS264196-RORAIMANET-Import-IPv6",
+                "upstreamCircuitId": null
+              }
+            ],
+            "riskLevel": "medium",
+            "confidence": "high",
+            "targetType": "customer_import_target",
+            "matrixState": {
+              "communitySetMatch": null
+            },
+            "prefixScope": {
+              "name": "AS264196-RORAIMANET-Import-IPv6",
+              "type": "unknown",
+              "shared": null,
+              "expandedPrefixes": [],
+              "affectedPrefixCount": 0
+            },
+            "routePolicyName": "AS264196-RORAIMANET-Import-IPv6",
+            "affectedPrefixes": [],
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv6"
+          }
+        ],
+        "columns": [
+          {
+            "key": "13",
+            "role": null,
+            "label": "C13",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C13",
+            "upstreamCircuitId": "13"
+          },
+          {
+            "key": "15",
+            "role": null,
+            "label": "C15",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C15",
+            "upstreamCircuitId": "15"
+          },
+          {
+            "key": "16",
+            "role": null,
+            "label": "C16",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C16",
+            "upstreamCircuitId": "16"
+          },
+          {
+            "key": "17",
+            "role": null,
+            "label": "C17",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C17",
+            "upstreamCircuitId": "17"
+          },
+          {
+            "key": "18",
+            "role": null,
+            "label": "C18",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C18",
+            "upstreamCircuitId": "18"
+          },
+          {
+            "key": "19",
+            "role": null,
+            "label": "C19",
+            "source": "policy_graph_community_resolver",
+            "upstreamName": "C19",
+            "upstreamCircuitId": "19"
+          }
+        ],
+        "featureStatus": "community_cells",
+        "generatedFrom": "policy_graph_community_resolver",
+        "upstreamAudit": {
+          "findings": [],
+          "byCircuit": {
+            "15": {
+              "actions": {},
+              "localAs": 268707,
+              "findings": [],
+              "circuitId": "15",
+              "maxSeverity": null,
+              "exportPolicy": "C15-EXPORT",
+              "upstreamName": "C15-EXPORT"
+            },
+            "16": {
+              "actions": {},
+              "localAs": 268707,
+              "findings": [],
+              "circuitId": "16",
+              "maxSeverity": null,
+              "exportPolicy": "C16-EXPORT",
+              "upstreamName": "C16-EXPORT"
+            }
+          },
+          "totalAuditFindings": 0,
+          "localAsUnknownCount": 0,
+          "prependMismatchCount": 0,
+          "totalUpstreamsAudited": 2,
+          "totalCriticalAuditFindings": 0
+        }
+      },
+      "summary": {
+        "note": "Policy graph snapshot; community cells e prefix expansion habilitados",
+        "totalOn": 6,
+        "totalP1": 0,
+        "totalP2": 0,
+        "totalP3": 0,
+        "totalP4": 0,
+        "totalOff": 0,
+        "totalCells": 30,
+        "totalTargets": 5,
+        "totalUnknown": 0,
+        "debugFindings": [
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy C15-EXPORT está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "C15-EXPORT",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy C16-EXPORT está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "C16-EXPORT",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy AS36040-GGC-Export-V4 está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS36040-GGC-Export-V4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy AS36040-GGC-Export-V6 está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS36040-GGC-Export-V6",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy AS264196-RORAIMANET-Export-IPv4 está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Export-IPv4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "EXPORT_POLICY_EXCLUDED_FROM_ANNOUNCEMENT_MATRIX",
+            "node": null,
+            "scope": "target",
+            "message": "A policy AS264196-RORAIMANET-Export-IPv6 está associada como export e foi excluída da matriz, pois a matriz representa apenas pontos de marcação de community em ORIGIN/customer import.",
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Export-IPv6",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P4 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P4 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P5 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P5 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P6 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P6 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P7 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P7 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P8 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P8 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-DEFAULT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-DEFAULT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-NOEXPORT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-NOEXPORT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-NOEXPORT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-NOEXPORT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P1 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P1 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P2 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-IMPORT-IPV6",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P2 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-IMPORT-IPV6",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P3 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P3 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P4 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P4 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P5 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-IMPORT-IPV6",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P5 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-IMPORT-IPV6",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P6 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P6 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P7 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P7 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P8 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-UPSTREAM-P8 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-UPSTREAM-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P1 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "FNA-EXPORT",
+                "GGC-EXPORT",
+                "OCA-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P1 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "FNA-EXPORT",
+                "GGC-EXPORT",
+                "OCA-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido FULL-ROUTE-ALL pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "FULL-ROUTE-ALL",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido FULL-ROUTE-ALL deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "FULL-ROUTE-ALL",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-DEFAULT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-DEFAULT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-NOEXPORT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-NOEXPORT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-NOEXPORT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-NOEXPORT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P1 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P1 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P2 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P2 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P3 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P3 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P4 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P4 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P5 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P5 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": [
+                "C15-EXPORT",
+                "C16-EXPORT"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P6 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P6 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P7 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P7 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P8 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-ALL-P8 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-ALL-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-DEFAULT pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-DEFAULT deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-DEFAULT",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P2 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P2 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P3 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P3 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P4 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P4 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P4",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P5 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P5 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P5",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P6 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P6 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P6",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P7 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P7 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P7",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P8 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-CDNS-P8 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-CDNS-P8",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P1 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P1 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P1",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P2 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P2 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P2",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_SHARED_OK",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P3 pode ser reutilizado sem conflito compartilhado.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "PROTECTED_GLOBAL_FILTER_PRESERVE_ON_REMOVE",
+            "node": null,
+            "scope": "protected_global_filter",
+            "message": "Filtro global protegido GLOBAL-EXPORT-PTT-PUBLIC-P3 deve ser preservado em remoção futura.",
+            "evidence": {
+              "usedBy": []
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": "GLOBAL-EXPORT-PTT-PUBLIC-P3",
+            "targetPolicyName": null,
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy DENY nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "DENY",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy AS36040-GGC-Import-V4 nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS36040-GGC-Import-V4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy AS36040-GGC-Import-V6 nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS36040-GGC-Import-V6",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy AS264196-RORAIMANET-Import-IPv4 nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "COMMUNITY_SET_NO_EXACT_MATCH",
+            "node": null,
+            "scope": "community_set",
+            "message": "Combinação de communities em AS264196-RORAIMANET-Import-IPv4 nao tem match exato em community-list.",
+            "evidence": {
+              "matched": false,
+              "matchType": "none",
+              "communities": [],
+              "nearestMatches": [],
+              "desiredCommunities": [
+                "64777:51301",
+                "64777:51501",
+                "64777:51601",
+                "64777:51701",
+                "64777:51801",
+                "64777:51901"
+              ]
+            },
+            "severity": "info",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv4",
+            "upstreamCircuitId": null
+          },
+          {
+            "code": "TARGET_POLICY_WITHOUT_PREFIX_SCOPE",
+            "node": null,
+            "scope": "prefix_scope",
+            "message": "A policy AS264196-RORAIMANET-Import-IPv6 nao referencia ip-prefix/ipv6-prefix.",
+            "severity": "warning",
+            "community": null,
+            "prefixList": null,
+            "upstreamName": null,
+            "communityList": null,
+            "recommendation": null,
+            "communityFilter": null,
+            "targetPolicyName": "AS264196-RORAIMANET-Import-IPv6",
+            "upstreamCircuitId": null
+          }
+        ],
+        "totalConflict": 0,
+        "totalFindings": 88,
+        "totalUnmarked": 24,
+        "upstreamAudit": {
+          "totalAuditFindings": 0,
+          "localAsUnknownCount": 0,
+          "prependMismatchCount": 0,
+          "totalUpstreamsAudited": 2,
+          "totalCriticalAuditFindings": 0
+        },
+        "totalUpstreams": 6,
+        "totalOriginTargets": 0,
+        "totalUnknownPolicies": 3,
+        "totalCriticalFindings": 0,
+        "totalExpandedPrefixes": 0,
+        "totalPrefixScopeUnknown": 5,
+        "totalCustomerImportTargets": 5,
+        "totalExcludedCustomerExports": 7,
+        "totalExcludedInternalPolicies": 1,
+        "totalExcludedUpstreamPolicies": 5
+      },
+      "diff_summary": {
+        "added": 0,
+        "removed": 0,
+        "changed": 0
+      }
+    },
+    "classification": {
+      "total": 5,
+      "origin": 0,
+      "customerImport": 5,
+      "customerExport": 0,
+      "upstreamAudit": 0,
+      "internal": 0,
+      "unknown": 0,
+      "labels": [
+        "—",
+        "On"
+      ]
+    },
+    "diff": {
+      "previousSnapshotId": 23,
+      "currentSnapshotId": 24,
+      "deviceId": 94,
+      "diffHash": "e0defb3f3437735f4168b101b57537b87eb19c50c9a72d0da0897f90f00f8674",
+      "added": [],
+      "removed": [],
+      "changed": [],
+      "summary": {
+        "added": 0,
+        "removed": 0,
+        "changed": 0
+      }
+    },
+    "history": [
+      {
+        "id": 10,
+        "deviceId": 94,
+        "targetPolicyName": "foundation",
+        "family": "all",
+        "prefix": null,
+        "upstreamCircuitId": null,
+        "upstreamName": null,
+        "eventType": "snapshot_generated",
+        "oldState": null,
+        "newState": "completed",
+        "oldCommunity": null,
+        "newCommunity": null,
+        "snapshotId": 10,
+        "detectedAt": "2026-06-20T04:11:04.685Z",
+        "createdAt": "2026-06-20T04:11:04.693Z"
+      },
+      {
+        "id": 11,
+        "deviceId": 94,
+        "targetPolicyName": "DENY",
+        "family": "ipv6",
+        "prefix": null,
+        "upstreamCircuitId": null,
+        "upstreamName": null,
+        "eventType": "target_added",
+        "oldState": null,
+        "newState": "medium",
+        "oldCommunity": null,
+        "newCommunity": null,
+        "snapshotId": 10,
+        "detectedAt": "2026-06-20T04:11:04.685Z",
+        "createdAt": "2026-06-20T04:11:04.693Z"
+      },
+      {
+        "id": 13,
+        "deviceId": 94,
+        "targetPolicyName": "AS36040-GGC-Import-V6",
+        "family": "ipv6",
+        "prefix": null,
+        "upstreamCircuitId": null,
+        "upstreamName": null,
+        "eventType": "target_added",
+        "oldState": null,
+        "newState": "medium",
+        "oldCommunity": null,
+        "newCommunity": null,
+        "snapshotId": 10,
+        "detectedAt": "2026-06-20T04:11:04.685Z",
+        "createdAt": "2026-06-20T04:11:04.693Z"
+      },
+      {
+        "id": 15,
+        "deviceId": 94,
+        "targetPolicyName": "AS264196-RORAIMANET-Import-IPv6",
+        "family": "ipv6",
+        "prefix": null,
+        "upstreamCircuitId": null,
+        "upstreamName": null,
+        "eventType": "target_added",
+        "oldState": null,
+        "newState": "medium",
+        "oldCommunity": null,
+        "newCommunity": null,
+        "snapshotId": 10,
+        "detectedAt": "2026-06-20T04:11:04.685Z",
+        "createdAt": "2026-06-20T04:11:04.693Z"
+      },
+      {
+        "id": 12,
+        "deviceId": 94,
+        "targetPolicyName": "AS36040-GGC-Import-V4",
+        "family": "ipv4",
+        "prefix": null,
+        "upstreamCircuitId": null,
+        "upstreamName": null,
+        "eventType": "target_added",
+        "oldState": null,
+        "newState": "medium",
+        "oldCommunity": null,
+        "newCommunity": null,
+        "snapshotId": 10,
+        "detectedAt": "2026-06-20T04:11:04.685Z",
+        "createdAt": "2026-06-20T04:11:04.693Z"
+      }
+    ],
+    "preview": {
+      "previewId": "bgp-preview-v1.eyJiYXNlU25hcHNob3RJZCI6MjQsImRldmljZUlkIjo5NCwiY29sbGVjdGlvbklkIjo2MCwidGFyZ2V0UG9saWN5TmFtZSI6IkFTMjY0MTk2LVJPUkFJTUFORVQtSW1wb3J0LUlQdjQiLCJ0YXJnZXRUeXBlIjoiY3VzdG9tZXJfaW1wb3J0X3RhcmdldCIsIm5vZGUiOjEwLCJ1cHN0cmVhbUNpcmN1aXRJZCI6IjE1IiwidXBzdHJlYW1OYW1lIjoiQzE1IiwicHJlZml4U2NvcGUiOnsibmFtZSI6IkFTMjY0MTk2LVJPUkFJTUFORVQtSW1wb3J0LUlQdjQiLCJ0eXBlIjoidW5rbm93biIsInNoYXJlZCI6bnVsbCwiZXhwYW5kZWRQcmVmaXhlcyI6W10sImFmZmVjdGVkUHJlZml4Q291bnQiOjB9LCJjdXJyZW50U3RhdGUiOiJPbiIsImRlc2lyZWRTdGF0ZSI6IlAyIiwiY3VycmVudENvbW11bml0eSI6IjY0Nzc3OjUxNTAxIiwiZGVzaXJlZENvbW11bml0eSI6IjY0Nzc3OjUxNTAzIiwiY3VycmVudENvbW11bml0eVNvdXJjZVR5cGUiOiJkaXJlY3QiLCJjdXJyZW50Q29tbXVuaXR5U291cmNlTmFtZSI6bnVsbCwiY3VycmVudENvbW11bml0aWVzIjpbIjY0Nzc3OjUxMzAxIiwiNjQ3Nzc6NTE1MDEiLCI2NDc3Nzo1MTYwMSIsIjY0Nzc3OjUxNzAxIiwiNjQ3Nzc6NTE4MDEiLCI2NDc3Nzo1MTkwMSJdLCJkZXNpcmVkQ29tbXVuaXRpZXMiOlsiNjQ3Nzc6NTEzMDEiLCI2NDc3Nzo1MTUwMyIsIjY0Nzc3OjUxNjAxIiwiNjQ3Nzc6NTE3MDEiLCI2NDc3Nzo1MTgwMSIsIjY0Nzc3OjUxOTAxIl0sImNvbW11bml0eVNldE1hdGNoIjp7Im1hdGNoZWQiOmZhbHNlLCJtYXRjaFR5cGUiOiJub25lIiwiY29tbXVuaXRpZXMiOltdLCJkZXNpcmVkQ29tbXVuaXRpZXMiOlsiNjQ3Nzc6NTEzMDEiLCI2NDc3Nzo1MTUwMyIsIjY0Nzc3OjUxNjAxIiwiNjQ3Nzc6NTE3MDEiLCI2NDc3Nzo1MTgwMSIsIjY0Nzc3OjUxOTAxIl0sIm5lYXJlc3RNYXRjaGVzIjpbXX0sImRpZmYiOnsicmVtb3ZlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxNTAxIl0sImFkZGVkQ29tbXVuaXRpZXMiOlsiNjQ3Nzc6NTE1MDMiXSwicHJlc2VydmVkQ29tbXVuaXRpZXMiOlsiNjQ3Nzc6NTEzMDEiLCI2NDc3Nzo1MTYwMSIsIjY0Nzc3OjUxNzAxIiwiNjQ3Nzc6NTE4MDEiLCI2NDc3Nzo1MTkwMSJdLCJvbGRTdGF0ZSI6Ik9uIiwibmV3U3RhdGUiOiJQMiJ9LCJwcm9wb3NlZENvbW1hbmRzIjpbeyJjb21tYW5kIjoic3lzdGVtLXZpZXciLCJjb25maWRlbmNlIjoibWVkaXVtIn0seyJjb21tYW5kIjoicm91dGUtcG9saWN5IEFTMjY0MTk2LVJPUkFJTUFORVQtSW1wb3J0LUlQdjQgcGVybWl0IG5vZGUgMTAiLCJjb25maWRlbmNlIjoibWVkaXVtIn0seyJjb21tYW5kIjoiYXBwbHkgY29tbXVuaXR5IDY0Nzc3OjUxMzAxIDY0Nzc3OjUxNTAzIDY0Nzc3OjUxNjAxIDY0Nzc3OjUxNzAxIDY0Nzc3OjUxODAxIDY0Nzc3OjUxOTAxIiwiY29uZmlkZW5jZSI6Im1lZGl1bSJ9LHsiY29tbWFuZCI6InJldHVybiIsImNvbmZpZGVuY2UiOiJtZWRpdW0ifV0sInJvbGxiYWNrQ29tbWFuZHMiOlt7ImNvbW1hbmQiOiJzeXN0ZW0tdmlldyIsImNvbmZpZGVuY2UiOiJtZWRpdW0ifSx7ImNvbW1hbmQiOiJyb3V0ZS1wb2xpY3kgQVMyNjQxOTYtUk9SQUlNQU5FVC1JbXBvcnQtSVB2NCBwZXJtaXQgbm9kZSAxMCIsImNvbmZpZGVuY2UiOiJtZWRpdW0ifSx7ImNvbW1hbmQiOiJhcHBseSBjb21tdW5pdHkgNjQ3Nzc6NTEzMDEgNjQ3Nzc6NTE1MDEgNjQ3Nzc6NTE2MDEgNjQ3Nzc6NTE3MDEgNjQ3Nzc6NTE4MDEgNjQ3Nzc6NTE5MDEiLCJjb25maWRlbmNlIjoibWVkaXVtIn0seyJjb21tYW5kIjoicmV0dXJuIiwiY29uZmlkZW5jZSI6Im1lZGl1bSJ9XSwicm9sbGJhY2tEaWZmIjp7InJlbW92ZWRDb21tdW5pdGllcyI6WyI2NDc3Nzo1MTUwMyJdLCJhZGRlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxNTAxIl0sInByZXNlcnZlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxMzAxIiwiNjQ3Nzc6NTE2MDEiLCI2NDc3Nzo1MTcwMSIsIjY0Nzc3OjUxODAxIiwiNjQ3Nzc6NTE5MDEiXSwib2xkU3RhdGUiOiJQMiIsIm5ld1N0YXRlIjoiT24ifSwicm9sbGJhY2tTb3VyY2UiOjI0LCJyaXNrTGV2ZWwiOiJtZWRpdW0iLCJmaW5kaW5ncyI6W3siY29kZSI6IkNPTU1VTklUWV9TRVRfTk9fRVhBQ1RfTUFUQ0giLCJzZXZlcml0eSI6ImluZm8iLCJzY29wZSI6ImNvbW11bml0eV9zZXQiLCJtZXNzYWdlIjoiTmVuaHVtIGNvbW11bml0eS1zZXQgZXhhdG8gZW5jb250cmFkby4gUHJldmlldyB2YWkgcHJvcG9yIGNvbW11bml0aWVzIGRpcmV0YXMuIiwiZXZpZGVuY2UiOnsiZGVzaXJlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxMzAxIiwiNjQ3Nzc6NTE1MDMiLCI2NDc3Nzo1MTYwMSIsIjY0Nzc3OjUxNzAxIiwiNjQ3Nzc6NTE4MDEiLCI2NDc3Nzo1MTkwMSJdfX0seyJjb2RlIjoiUFJFVklFV19VU0VTX0RJUkVDVF9DT01NVU5JVElFUyIsInNldmVyaXR5IjoiaW5mbyIsInNjb3BlIjoiY2VsbCIsIm1lc3NhZ2UiOiJQcmV2aWV3IHZhaSB1c2FyIGNvbW11bml0aWVzIGRpcmV0YXMuIiwiZXZpZGVuY2UiOnsiZGVzaXJlZENvbW11bml0aWVzIjpbIjY0Nzc3OjUxMzAxIiwiNjQ3Nzc6NTE1MDMiLCI2NDc3Nzo1MTYwMSIsIjY0Nzc3OjUxNzAxIiwiNjQ3Nzc6NTE4MDEiLCI2NDc3Nzo1MTkwMSJdfX1dLCJzdGF0dXMiOiJwcmV2aWV3X29ubHkiLCJjb21tYW5kQ29uZmlkZW5jZSI6Im1lZGl1bSIsIm5vdGUiOiJub2MgaG9tb2xvZ2F0aW9uIn0",
+      "riskLevel": "medium",
+      "proposedCommands": 4,
+      "rollbackCommands": 4
+    }
+  },
+  "finishedAt": "2026-06-20T04:13:50.120Z",
+  "summary": {
+    "passed": 30,
+    "total": 32
+  }
+}

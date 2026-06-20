@@ -76,7 +76,7 @@ export async function tracePrefixInScope(input: {
     }
 
     const matrix = await getAnnouncementMatrix(deviceId, { search: input.prefix });
-    if (matrix !== "device_not_found" && matrix !== "no_snapshot") {
+    if (matrix !== "no_snapshot") {
       for (const row of matrix.rows) {
         const hit = row.affectedPrefixes.some((p) => prefixMatches(p, input.prefix));
         if (!hit && !row.routePolicyName.toLowerCase().includes(input.prefix.split("/")[0] ?? "")) continue;
@@ -96,7 +96,7 @@ export async function tracePrefixInScope(input: {
       trace.configSnapshotAt = ctx.lastCollectedAt;
       const networks = parseBgpNetworkStatements(ctx.rawConfig);
       for (const network of networks) {
-        if (prefixMatches(network.prefix, input.prefix)) {
+        if (network.routePolicyName && prefixMatches(network.prefix, input.prefix)) {
           trace.relatedPolicies.push(network.routePolicyName);
         }
       }
@@ -113,10 +113,10 @@ export async function tracePrefixInScope(input: {
             }
           }
           for (const apply of node.applies) {
-            const community = /apply\s+community\s+(.+)/i.exec(apply);
-            if (community) trace.communities.push(community[1].trim());
-          }
-        }
+        const community = /apply\s+community\s+(.+)/i.exec(apply);
+        if (community?.[1]) trace.communities.push(community[1].trim());
+      }
+    }
       }
     }
 

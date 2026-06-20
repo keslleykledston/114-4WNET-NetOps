@@ -11,7 +11,13 @@ Homologação NOC manual concluída em device **#94 4WNET-BVA-BRT-RB** — **apr
 Branch: `kgs-145/provisioning-template-registry-fix`  
 Commits BGP principais: `2304f0e`, `0ef3699`
 
-> **Nota reviewer:** esta branch contém também outras entregas (system-update, vsi-vpls, copilot, tenants, graphify-out). Revisar escopo BGP nos paths listados abaixo.
+---
+
+## Aviso de escopo da branch
+
+Esta branch **não contém apenas BGP Announcement Matrix**. O diff contra `main` inclui alterações acumuladas em outras áreas, como **copilot**, **graphify/system-update**, **vsi-vpls** e componentes compartilhados. O escopo BGP está documentado nos relatórios em `reports/bgp-announcements/`. Recomenda-se revisão por área ou separação em PRs menores se o fluxo do repositório permitir.
+
+Ver detalhamento: `reports/bgp-announcements/BGP_ANNOUNCEMENT_BRANCH_SCOPE_REVIEW.md`
 
 ---
 

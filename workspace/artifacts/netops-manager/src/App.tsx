@@ -36,6 +36,8 @@ import ConnectorDashboardPage from "@/pages/connector-dashboard";
 import ConnectorGroupsPage from "@/pages/connector-groups";
 import CredentialVaultPage from "@/pages/credential-vault";
 import NotificationsPage from "@/pages/notifications";
+import NetworkMapPage from "@/pages/network-map";
+import Topology from "@/pages/topology";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -104,6 +106,8 @@ function Router() {
         <Route path="/bgp/announcements" component={BgpAnnouncementsPage} />
         <Route path="/operational/bgp" component={OperationalBgpPage} />
         <Route path="/bgp/operations" component={OperationalBgpPage} />
+        <Route path="/map" component={NetworkMapPage} />
+        <Route path="/topology" component={Topology} />
         <Route path="/users" component={Users} />
         <Route component={NotFound} />
       </Switch>

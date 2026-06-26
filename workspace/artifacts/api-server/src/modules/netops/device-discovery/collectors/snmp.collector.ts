@@ -4,6 +4,7 @@ import { collectSnmpReadonlyViaConnector } from "../../../connectors/connector-s
 import { snmpReadonlyAdapter } from "../../adapters/snmp-readonly-adapter.js";
 import { collectSnmpReadonly, isNetopsSnmpRealEnabled } from "../../snmp/collect.js";
 import { normalizeBgpPeer } from "../../bgp/bgp-normalizer.js";
+import { normalizeInterface } from "../../interface-classifier/interface-classifier.js";
 import type { NetopsInterface } from "../../types.js";
 import type { CollectorOutput } from "../discovery.types.js";
 import { emptyL2vpnSummary } from "../normalizers/l2vpn.normalizer.js";
@@ -62,20 +63,30 @@ export async function collectDiscoverySnmp(device: Device): Promise<CollectorOut
       }),
       error: payload.errorMessage ?? undefined,
     }],
-    interfaces: payload.interfaces.map((item): NetopsInterface => ({
-      name: item.name,
-      description: item.description,
-      alias: item.alias,
-      rawDescr: item.rawDescr,
-      adminStatus: item.adminStatus === "up" || item.adminStatus === "down" ? item.adminStatus : "unknown",
-      operStatus: item.operStatus === "up" || item.operStatus === "down" ? item.operStatus : "unknown",
-      ipv4: [],
-      ipv6: [],
-      vlan: null,
-      vrf: null,
-      source: "snmp",
-      ifIndex: item.ifIndex,
-    })),
+    interfaces: payload.interfaces.map((item): NetopsInterface => {
+      const normalized = normalizeInterface(item);
+      return {
+        name: normalized.name,
+        description: normalized.description,
+        alias: normalized.alias,
+        rawDescr: normalized.rawDescr,
+        adminStatus: normalized.adminStatus === "up" || normalized.adminStatus === "down" ? normalized.adminStatus : "unknown",
+        operStatus: normalized.operStatus === "up" || normalized.operStatus === "down" ? normalized.operStatus : "unknown",
+        ipv4: [],
+        ipv6: [],
+        vlan: null,
+        vrf: null,
+        source: "snmp",
+        ifIndex: normalized.ifIndex,
+        kind: normalized.kind,
+        parentInterface: normalized.parentInterface,
+        vlanId: normalized.vlanId,
+        encapsulation: normalized.encapsulation,
+        highSpeedMbps: item.highSpeedMbps,
+        inOctets: item.inOctets,
+        outOctets: item.outOctets,
+      };
+    }),
     bgpPeers: payload.bgpPeers.map((item) => normalizeBgpPeer({
       peerIp: item.peerIp,
       remoteAs: item.remoteAs,

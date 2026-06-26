@@ -86,6 +86,28 @@ export const DEVICE_PROFILE_LIBRARY: DeviceProfileLibrary = {
     kind: "switch",
     vendor: "Datacom",
     family: "DM",
-    models: ["DM4100", "DM4200", "DM4300"],
+    models: ["DMOS", "DM4100", "DM4200", "DM4250", "DM4300", "DM4600"],
+  },
+
+  // Raisecom Routers/Switches (phase 1 inventory + basic kind inference)
+  "raisecom-ros": {
+    kind: "router",
+    vendor: "Raisecom",
+    family: "ROS",
+    models: ["ROS", "RC", "RAX", "ISCOM"],
+  },
+  "raisecom-iscom": {
+    kind: "switch",
+    vendor: "Raisecom",
+    family: "ISCOM",
+    models: ["ISCOM2600", "ISCOM5800", "ISCOM6800"],
+  },
+
+  // ZTE inventory registration (phase 1)
+  "zte-zxros": {
+    kind: "router",
+    vendor: "ZTE",
+    family: "ZXROS",
+    models: ["ZXROS", "ZXR10", "M6000", "M6000-S"],
   },
 };

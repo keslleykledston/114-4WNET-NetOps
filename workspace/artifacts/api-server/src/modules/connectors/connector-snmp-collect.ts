@@ -8,6 +8,8 @@ const IF_DESCR_OID = "1.3.6.1.2.1.2.2.1.2";
 const IF_ADMIN_OID = "1.3.6.1.2.1.2.2.1.7";
 const IF_OPER_OID = "1.3.6.1.2.1.2.2.1.8";
 const IF_NAME_OID = "1.3.6.1.2.1.31.1.1.1.1";
+const IF_HIGH_SPEED_OID = "1.3.6.1.2.1.31.1.1.1.15";
+const IF_SPEED_OID = "1.3.6.1.2.1.2.2.1.5";
 
 function parseSnmpWalkLines(stdout: string): Map<string, string> {
   const values = new Map<string, string>();
@@ -127,7 +129,7 @@ export async function collectSnmpInterfacesViaConnector(
     };
   }
 
-  const [adminWalk, operWalk, nameWalk] = await Promise.all([
+  const [adminWalk, operWalk, nameWalk, highSpeedWalk, speedWalk] = await Promise.all([
     executeSnmpWalk({
       deviceId: device.id,
       connectorId,
@@ -152,17 +154,37 @@ export async function collectSnmpInterfacesViaConnector(
       community,
       timeoutSeconds: 120,
     }),
+    executeSnmpWalk({
+      deviceId: device.id,
+      connectorId,
+      targetIp: device.ipAddress,
+      oid: IF_HIGH_SPEED_OID,
+      community,
+      timeoutSeconds: 120,
+    }),
+    executeSnmpWalk({
+      deviceId: device.id,
+      connectorId,
+      targetIp: device.ipAddress,
+      oid: IF_SPEED_OID,
+      community,
+      timeoutSeconds: 120,
+    }),
   ]);
 
   const descrMap = parseSnmpWalkLines(descrWalk.stdout);
   const adminMap = parseSnmpWalkLines(adminWalk.stdout);
   const operMap = parseSnmpWalkLines(operWalk.stdout);
   const nameMap = parseSnmpWalkLines(nameWalk.stdout);
+  const highSpeedMap = parseSnmpWalkLines(highSpeedWalk.stdout);
+  const speedMap = parseSnmpWalkLines(speedWalk.stdout);
 
   const indices = new Set<number>();
-  for (const oid of descrMap.keys()) {
-    const index = indexFromSuffix(oid, IF_DESCR_OID);
-    if (index) indices.add(index);
+  for (const map of [descrMap, nameMap]) {
+    for (const oid of map.keys()) {
+      const index = indexFromSuffix(oid, IF_DESCR_OID) ?? indexFromSuffix(oid, IF_NAME_OID);
+      if (index) indices.add(index);
+    }
   }
 
   const interfaces: SnmpCollectedInterface[] = [...indices]
@@ -172,6 +194,13 @@ export async function collectSnmpInterfacesViaConnector(
       const ifName = nameMap.get(`${IF_NAME_OID}.${ifIndex}`) ?? descr;
       const adminStatus = mapStatus(adminMap.get(`${IF_ADMIN_OID}.${ifIndex}`), IF_ADMIN_STATUS);
       const operStatus = mapStatus(operMap.get(`${IF_OPER_OID}.${ifIndex}`), IF_OPER_STATUS);
+      const speedBps = toSnmpNumber(speedMap.get(`${IF_SPEED_OID}.${ifIndex}`));
+      const highSpeedRaw = toSnmpNumber(highSpeedMap.get(`${IF_HIGH_SPEED_OID}.${ifIndex}`));
+      const highSpeedMbps = highSpeedRaw != null && highSpeedRaw > 0
+        ? highSpeedRaw
+        : speedBps != null && speedBps > 0
+          ? Math.round(speedBps / 1_000_000)
+          : null;
       return {
         ifIndex,
         name: ifName,
@@ -182,8 +211,8 @@ export async function collectSnmpInterfacesViaConnector(
         operStatus,
         type: null,
         mtu: null,
-        speed: null,
-        highSpeedMbps: null,
+        speed: speedBps,
+        highSpeedMbps,
         lastChangeTicks: null,
         mac: null,
         inOctets: null,

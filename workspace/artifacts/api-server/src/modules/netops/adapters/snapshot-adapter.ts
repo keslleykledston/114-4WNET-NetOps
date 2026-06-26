@@ -114,6 +114,13 @@ function normalizeInterfaces(snapshot: SnmpSnapshot): NetopsInterface[] {
     const encapText = text(row["encapsulation"]);
     if (encapText) result.encapsulation = encapText;
 
+    const highSpeedMbps = numberValue(row["highSpeedMbps"]);
+    if (highSpeedMbps != null) result.highSpeedMbps = highSpeedMbps;
+    const inOctets = numberValue(row["inOctets"]);
+    if (inOctets != null) result.inOctets = inOctets;
+    const outOctets = numberValue(row["outOctets"]);
+    if (outOctets != null) result.outOctets = outOctets;
+
     return result;
   });
 }

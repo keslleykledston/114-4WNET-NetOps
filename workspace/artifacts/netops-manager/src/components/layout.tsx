@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   FileBarChart,
   PlugZap,
+  Map,
   Waypoints,
   CalendarClock,
   Network,
@@ -35,6 +36,7 @@ import { useAuth } from "./auth-provider";
 
 const navItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/map", icon: Map, label: "Mapa" },
   { href: "/l2-circuits", icon: Network, label: "L2 Circuits" },
   { href: "/compliance", icon: ShieldCheck, label: "Compliance" },
   { href: "/provisioning", icon: Rocket, label: "Provisioning" },
@@ -61,6 +63,7 @@ const navItems = [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const isFullscreenMap = location === "/map";
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -187,10 +190,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
       
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-background">
-        <div className="p-8">
-          {children}
-        </div>
+      <main className={cn("flex-1 bg-background", isFullscreenMap ? "flex min-h-0 flex-col overflow-hidden" : "overflow-y-auto")}>
+        {isFullscreenMap ? children : <div className="p-8">{children}</div>}
       </main>
     </div>
   );

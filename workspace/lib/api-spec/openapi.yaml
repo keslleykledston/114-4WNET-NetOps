@@ -2677,6 +2677,55 @@ paths:
               schema:
                 $ref: "#/components/schemas/AuditLogListResponse"
 
+  /topology/summary:
+    get:
+      operationId: getTopologySummary
+      tags: [topology]
+      summary: Topology node and edge counts
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /topology/graph:
+    get:
+      operationId: getTopologyGraph
+      tags: [topology]
+      summary: Network map graph (loom format)
+      parameters:
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [global, site, device]
+        - name: scopeId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Graph payload
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /topology/rebuild:
+    post:
+      operationId: rebuildTopology
+      tags: [topology]
+      summary: Rebuild topology from inventory collections
+      responses:
+        "200":
+          description: Rebuilt summary
+          content:
+            application/json:
+              schema:
+                type: object
+
   /reports:
     get:
       operationId: listReports
@@ -4054,10 +4103,10 @@ components:
           type: string
         vendor:
           type: string
-          description: "cisco, huawei, juniper, nokia"
+          description: "cisco, huawei, juniper, nokia, raisecom, datacom, zte"
         platform:
           type: string
-          description: "ios, ios-xe, ios-xr, vrp, junos, sros"
+          description: "ios, ios-xe, ios-xr, vrp, junos, sros, ros, dmos, zxros"
         sshPort:
           type: integer
         username:
@@ -5371,6 +5420,15 @@ components:
           description: Service VLAN only. Default/reserved VLAN 1 is omitted.
         encapsulation:
           type: string
+        highSpeedMbps:
+          type: ["integer", "null"]
+          description: SNMP ifHighSpeed (Mbps) when collected
+        inOctets:
+          type: ["integer", "null"]
+          description: SNMP HC counter snapshot (octets)
+        outOctets:
+          type: ["integer", "null"]
+          description: SNMP HC counter snapshot (octets)
 
     NetopsBgpPeer:
       type: object

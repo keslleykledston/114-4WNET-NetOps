@@ -12,6 +12,7 @@ import {
 } from "./mock-adapter.js";
 import type { ReadonlyAdapterContext, ReadonlyCollectionResult, ReadonlySnmpAdapter } from "./adapter-types.js";
 import { normalizeBgpPeer } from "../bgp/bgp-normalizer.js";
+import { normalizeInterface } from "../interface-classifier/interface-classifier.js";
 import type { NetopsBgpPeer, NetopsInterface } from "../types.js";
 
 const FLAG_DISABLED_MESSAGE =
@@ -22,20 +23,30 @@ function hasSnmpCommunity(device: Device): boolean {
 }
 
 function payloadToInterfaces(payload: SnmpReadonlyCollectPayload): NetopsInterface[] {
-  return payload.interfaces.map((iface) => ({
-    name: iface.name,
-    description: iface.description ?? iface.alias,
-    alias: iface.alias,
-    rawDescr: iface.rawDescr,
-    adminStatus: iface.adminStatus === "up" ? "up" : iface.adminStatus === "down" ? "down" : "unknown",
-    operStatus: iface.operStatus === "up" ? "up" : iface.operStatus === "down" ? "down" : "unknown",
-    ipv4: [],
-    ipv6: [],
-    vlan: null,
-    vrf: null,
-    source: "snmp",
-    ifIndex: iface.ifIndex,
-  }));
+  return payload.interfaces.map((iface) => {
+    const normalized = normalizeInterface(iface);
+    return {
+      name: normalized.name,
+      description: normalized.description,
+      alias: normalized.alias,
+      rawDescr: normalized.rawDescr,
+      adminStatus: normalized.adminStatus === "up" ? "up" : normalized.adminStatus === "down" ? "down" : "unknown",
+      operStatus: normalized.operStatus === "up" ? "up" : normalized.operStatus === "down" ? "down" : "unknown",
+      ipv4: [],
+      ipv6: [],
+      vlan: null,
+      vrf: null,
+      source: "snmp",
+      ifIndex: normalized.ifIndex,
+      kind: normalized.kind,
+      parentInterface: normalized.parentInterface,
+      vlanId: normalized.vlanId,
+      encapsulation: normalized.encapsulation,
+      highSpeedMbps: iface.highSpeedMbps,
+      inOctets: iface.inOctets,
+      outOctets: iface.outOctets,
+    };
+  });
 }
 
 function payloadToBgpPeers(payload: SnmpReadonlyCollectPayload): NetopsBgpPeer[] {

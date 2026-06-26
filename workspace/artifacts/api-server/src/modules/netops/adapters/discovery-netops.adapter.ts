@@ -2,7 +2,7 @@ import { collectedConfigsTable, db, devicesTable, snmpSnapshotsTable } from "@wo
 import { createConfigDiffForCollectedConfig } from "../../config-history/config-history.service.js";
 import type { SnmpSnapshot } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import type { DeviceDiscoverySnapshot } from "../device-discovery/discovery.types.js";
+import type { DeviceDiscoverySnapshot, DiscoveryWarning } from "../device-discovery/discovery.types.js";
 import { normalizeServiceVlanId } from "../service-vlan-policy.js";
 import type { NetopsBgpPeer, NetopsCommunity, NetopsFilter, NetopsInterface, NetopsSnapshotData, NetopsSource } from "../types.js";
 import { snapshotToNetopsData } from "./snapshot-adapter.js";
@@ -171,7 +171,10 @@ export function mergeNetopsInventory(
 }
 
 function extractRunningConfig(rawOutputs: Array<{ command?: string; output: string }>): string {
-  const match = rawOutputs.find((item) => item.command?.trim().replace(/\s+/g, " ") === "display current-configuration");
+  const match = rawOutputs.find((item) => {
+    const command = item.command?.trim().replace(/\s+/g, " ").toLowerCase();
+    return command === "display current-configuration" || command === "show running-config";
+  });
   return match?.output?.trim() ?? "";
 }
 
@@ -234,4 +237,31 @@ export async function persistSshDiscoveryToNetopsStores(
   await db.update(devicesTable)
     .set({ lastSeen: new Date(), updatedAt: new Date() })
     .where(eq(devicesTable.id, deviceId));
+}
+
+export async function persistSnmpDiscoveryToNetopsStores(
+  deviceId: number,
+  interfaces: NetopsInterface[],
+  bgpPeers: NetopsBgpPeer[],
+  options: { success: boolean; errorMessage?: string | null; warnings?: DiscoveryWarning[] },
+): Promise<void> {
+  if (!options.success && interfaces.length === 0 && bgpPeers.length === 0) return;
+
+  await db.insert(snmpSnapshotsTable).values({
+    deviceId,
+    collector: "snmp",
+    collectorVersion: "discovery-v1",
+    success: options.success,
+    errorMessage: options.errorMessage ?? null,
+    errorsJson: options.warnings?.length ? JSON.stringify(options.warnings) : null,
+    interfacesJson: interfaces.length > 0 ? JSON.stringify(interfaces) : null,
+    bgpPeersJson: bgpPeers.length > 0 ? JSON.stringify(bgpPeers) : null,
+    vrfsJson: null,
+  });
+
+  if (options.success) {
+    await db.update(devicesTable)
+      .set({ lastSeen: new Date(), updatedAt: new Date() })
+      .where(eq(devicesTable.id, deviceId));
+  }
 }

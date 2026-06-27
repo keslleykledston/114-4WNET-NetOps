@@ -3,6 +3,7 @@ import {
   devicesTable,
   l2CircuitsTable,
   l2DeviceOperationalTable,
+  l2DiscoveryJobsTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { collectSnmpInterfacesOnly, isNetopsSnmpRealEnabled } from "../../netops/snmp/collect.js";
@@ -32,11 +33,14 @@ import { computeL2OperationalFreshness, type L2OperationalFreshnessStatus } from
 import { collectL2OperationalViaSsh } from "./l2-operational-ssh-ops.collector.js";
 import {
   applyLiveOpsToCircuit,
+  applyParsedConfigToCircuit,
   applySnmpInterfaceStatus,
+  buildConfigCircuitKeys,
   buildInterfaceStatusMap,
   buildLiveOpsByKey,
   OPERATIONAL_STALE_TAG,
   shouldMarkOperationalStale,
+  stripOperationalStaleTag,
 } from "./l2-operational-merge.js";
 
 export {
@@ -119,7 +123,22 @@ export async function getL2DeviceOperationalMeta(deviceId: number): Promise<L2Op
   };
 }
 
-export async function runL2OperationalRefresh(deviceId: number): Promise<L2OperationalRefreshResult> {
+export type L2OperationalRefreshJob = {
+  runId: string;
+  deviceId: number;
+  status: "pending" | "running" | "completed" | "failed";
+  startedAt: Date;
+  finishedAt?: Date | null;
+  circuitCount?: number | null;
+  findingsCount?: number | null;
+  errorMessage?: string | null;
+};
+
+export function createL2OperationalRefreshRunId(deviceId: number): string {
+  return `refresh-l2-${deviceId}-${Date.now()}`;
+}
+
+export async function validateL2OperationalRefreshRequest(deviceId: number): Promise<typeof devicesTable.$inferSelect> {
   if (!isL2OperationalRefreshEnabled()) {
     throw new L2OperationalRefreshDisabledError();
   }
@@ -149,12 +168,104 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
     throw new Error(`No L2 circuits stored for device ${deviceId}. Run discovery first.`);
   }
 
+  return device;
+}
+
+export async function startL2OperationalRefreshJob(
+  deviceId: number,
+  runId: string,
+): Promise<{ jobId: number; startedAt: Date }> {
+  const startedAt = new Date();
+  const [job] = await db
+    .insert(l2DiscoveryJobsTable)
+    .values({
+      runId,
+      jobType: "refresh",
+      deviceId,
+      status: "running",
+      startedAt,
+    })
+    .returning();
+
+  if (!job) {
+    throw new Error("Failed to create L2 operational refresh job");
+  }
+
+  return { jobId: job.id, startedAt };
+}
+
+export async function getL2OperationalRefreshJob(runId: string): Promise<L2OperationalRefreshJob | null> {
+  const [row] = await db
+    .select()
+    .from(l2DiscoveryJobsTable)
+    .where(eq(l2DiscoveryJobsTable.runId, runId))
+    .limit(1);
+
+  if (!row || row.jobType !== "refresh") {
+    return null;
+  }
+
+  return {
+    runId: row.runId,
+    deviceId: row.deviceId,
+    status: row.status as L2OperationalRefreshJob["status"],
+    startedAt: row.startedAt,
+    finishedAt: row.finishedAt,
+    circuitCount: row.circuitCount,
+    findingsCount: row.findingsCount,
+    errorMessage: row.errorMessage,
+  };
+}
+
+export async function runL2OperationalRefreshJob(deviceId: number, runId: string): Promise<void> {
+  const job = await getL2OperationalRefreshJob(runId);
+  if (!job) {
+    throw new Error(`Operational refresh job not found: ${runId}`);
+  }
+
+  try {
+    const result = await runL2OperationalRefresh(deviceId);
+    await db
+      .update(l2DiscoveryJobsTable)
+      .set({
+        status: "completed",
+        finishedAt: new Date(),
+        circuitCount: result.circuits_updated,
+        findingsCount: result.findings_count,
+      })
+      .where(eq(l2DiscoveryJobsTable.runId, runId));
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    await db
+      .update(l2DiscoveryJobsTable)
+      .set({
+        status: "failed",
+        finishedAt: new Date(),
+        errorMessage: errorMsg,
+      })
+      .where(eq(l2DiscoveryJobsTable.runId, runId));
+    throw error;
+  }
+}
+
+export async function runL2OperationalRefresh(deviceId: number): Promise<L2OperationalRefreshResult> {
+  const device = await validateL2OperationalRefreshRequest(deviceId);
+
+  const credential = resolveSnmpCredential({
+    device: { snmpCommunity: device.snmpCommunity },
+    env: { snmpCommunity: process.env["SNMP_COMMUNITY"], labFallbackAllowed: true },
+    nodeEnv: process.env.NODE_ENV,
+  });
+  const snmpCommunity = credential.value!;
+
+  const rows = await db.select().from(l2CircuitsTable).where(eq(l2CircuitsTable.deviceId, deviceId));
+
   const refreshAt = new Date();
   const warnings: string[] = [];
 
   const snmpResult = device.connectorId || device.connectorGroupId
-    ? await collectSnmpInterfacesViaConnector(device, credential.value)
-    : await collectSnmpInterfacesOnly(device, credential.value);
+    ? await collectSnmpInterfacesViaConnector(device, snmpCommunity)
+    : await collectSnmpInterfacesOnly(device, snmpCommunity);
   if (!snmpResult.success && snmpResult.interfaces.length === 0) {
     throw new Error(snmpResult.errorMessage ?? "SNMP_FAST interface collection failed");
   }
@@ -171,6 +282,8 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
   let sshOpsCollected = false;
   let sshConfigCollected = false;
   const liveByKey = new Map<string, import("../l2circuits.types.js").ParsedL2Circuit>();
+  let configKeys = new Set<string>();
+  let configParsed = false;
   let staleMarked = 0;
 
   try {
@@ -178,10 +291,14 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
     const includeConfig = isL2OperationalRefreshSshConfigEnabled();
     const sshOutput = await collectL2OperationalViaSsh(device, { includeConfig });
     sshOpsCollected = true;
-    sshConfigCollected = includeConfig;
+    sshConfigCollected = Boolean(sshOutput["display current-configuration interface"]?.trim());
     const parsed = parseHuaweiL2Circuits(sshOutput);
     for (const [key, value] of buildLiveOpsByKey(parsed, deviceId)) {
       liveByKey.set(key, value);
+    }
+    if (sshConfigCollected) {
+      configParsed = true;
+      configKeys = buildConfigCircuitKeys(parsed, deviceId);
     }
   } catch (error) {
     if (error instanceof L2DeviceCredentialsError) {
@@ -199,6 +316,7 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
     if (didSnmp) {
       snmpMatched += 1;
     }
+    const didConfig = applyParsedConfigToCircuit(normalized, liveByKey, deviceId);
     const didLive = applyLiveOpsToCircuit(normalized, liveByKey, deviceId);
     const key = buildCircuitKey(normalized, deviceId);
     let stale = false;
@@ -208,11 +326,13 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
         snmpCollected: snmpResult.interfaces.length > 0,
         sshOpsCollected,
         snmpMatched: didSnmp,
-        liveMatched: didLive,
+        liveMatched: didLive || didConfig,
         localInterface: normalized.localInterface,
         circuitType: normalized.circuitType,
         circuitKey: key,
         liveKeys,
+        configParsed,
+        configKeys,
       })
     ) {
       normalized.operStatus = "UNKNOWN";
@@ -234,10 +354,18 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
     const entry = normalizedRows[i];
     const circuit = entry.stale ? entry.normalized : (enriched[i] ?? entry.normalized);
     const findings = entry.stale ? [] : circuit.findings;
+    const anomalyTags = entry.stale
+      ? [...new Set([...(entry.normalized.anomalyTags ?? []), OPERATIONAL_STALE_TAG])]
+      : stripOperationalStaleTag(entry.normalized.anomalyTags);
 
     await db
       .update(l2CircuitsTable)
       .set({
+        circuitType: circuit.circuitType,
+        classification: circuit.classification ?? null,
+        l2Transport: circuit.l2Transport ?? null,
+        roleContext: circuit.roleContext ?? null,
+        deviceRoleFamily: circuit.deviceRoleFamily ?? null,
         adminStatus: circuit.adminStatus,
         operStatus: circuit.operStatus,
         pwStatus: circuit.pwStatus ?? null,
@@ -245,7 +373,7 @@ export async function runL2OperationalRefresh(deviceId: number): Promise<L2Opera
         description: circuit.description ?? null,
         findings,
         evidenceFlags: mergeVsiOperationalEvidence(entry.normalized.evidenceFlags, circuit),
-        anomalyTags: entry.normalized.anomalyTags ?? [],
+        anomalyTags,
         lastSeen: refreshAt,
         updatedAt: refreshAt,
         source: sshOpsCollected ? "ssh_live" : "cached_config",

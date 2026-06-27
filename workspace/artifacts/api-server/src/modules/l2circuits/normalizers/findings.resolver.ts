@@ -39,6 +39,20 @@ function addFindingToMany(
   }
 }
 
+function isVlanifCircuit(circuit: NormalizedL2Circuit): boolean {
+  if (circuit.evidenceFlags?.hasVlanif) return true;
+  return Boolean(circuit.localInterface?.toLowerCase().startsWith("vlanif"));
+}
+
+function countVlanDeclarations(circuits: NormalizedL2Circuit[]): Map<number, number> {
+  const counts = new Map<number, number>();
+  for (const circuit of circuits) {
+    if (circuit.outerVlan === undefined) continue;
+    counts.set(circuit.outerVlan, (counts.get(circuit.outerVlan) ?? 0) + 1);
+  }
+  return counts;
+}
+
 /** Attach findings per circuit using exact logical keys (no substring matching). */
 export function enrichCircuitsWithFindings(
   circuits: NormalizedL2Circuit[],
@@ -46,25 +60,41 @@ export function enrichCircuitsWithFindings(
 ): NormalizedL2Circuit[] {
   const keyOf = (circuit: NormalizedL2Circuit) => buildCircuitKey(circuit, deviceId);
   const findingsByKey = new Map<string, L2Finding[]>();
+  const vlanDeclarationCount = countVlanDeclarations(circuits);
 
   for (const circuit of circuits) {
   const circuitKey = keyOf(circuit);
   const label = circuitLabel(circuit);
 
     if (circuit.classification === "vlan_orphan") {
-      addFinding(findingsByKey, circuitKey, {
-        code: "VLAN_ORPHAN",
-        severity: "warning",
-        message:
-          `Subinterface ${label} possui apenas encapsulamento dot1q e não apresenta evidência de serviço L2/L3 conhecido. ` +
-          "Validar se é resíduo de configuração. Se não estiver em uso, remover a subinterface; se estiver em uso, corrigir amarração e descrição do serviço.",
-      });
+      const multiInterfaceVlan = (vlanDeclarationCount.get(circuit.outerVlan ?? -1) ?? 0) > 1;
+      if (multiInterfaceVlan) {
+        // VLAN on multiple interfaces is local switching use, not an orphan subinterface.
+      } else if (isVlanifCircuit(circuit)) {
+        addFinding(findingsByKey, circuitKey, {
+          code: "VLANIF_ORPHAN",
+          severity: "warning",
+          message:
+            `Vlanif ${label} existe sem IP, VRF, L2VC, VSI ou uso L2 conhecido. ` +
+            "Validar se a interface vlanif é necessária; se não estiver em uso, remover.",
+        });
+      } else {
+        addFinding(findingsByKey, circuitKey, {
+          code: "VLAN_ORPHAN",
+          severity: "warning",
+          message:
+            `Subinterface ${label} possui apenas encapsulamento dot1q e não apresenta evidência de serviço L2/L3 conhecido. ` +
+            "Validar se é resíduo de configuração. Se não estiver em uso, remover a subinterface; se estiver em uso, corrigir amarração e descrição do serviço.",
+        });
+      }
     }
     if (circuit.classification === "vlanif_orphan") {
       addFinding(findingsByKey, circuitKey, {
         code: "VLANIF_ORPHAN",
         severity: "warning",
-        message: `Vlanif ${label} has no IP, VRF, L2VC, VSI, MAC, or switching service`,
+        message:
+          `Vlanif ${label} existe sem IP, VRF, L2VC, VSI ou uso L2 conhecido. ` +
+          "Validar se a interface vlanif é necessária; se não estiver em uso, remover.",
       });
     }
     if (circuit.classification === "vlan_not_in_switch_batch" || circuit.anomalyTags?.includes("VLAN_NOT_IN_SWITCH_BATCH")) {

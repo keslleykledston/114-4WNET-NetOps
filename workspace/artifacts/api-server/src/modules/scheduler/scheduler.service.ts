@@ -486,6 +486,8 @@ async function executeHealthCheckRun(job: DbScheduledJob, runId: number, devices
         port: device.sshPort,
         username: device.username,
         password,
+        vendor: device.vendor,
+        platform: device.platform,
       });
       await db.update(scheduledJobRunItemsTable).set({
         status: result.success ? "completed" : "failed",

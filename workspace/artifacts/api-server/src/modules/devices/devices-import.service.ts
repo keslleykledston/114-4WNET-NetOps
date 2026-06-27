@@ -34,7 +34,7 @@ export interface DeviceImportPreview {
   fileHash: string;
 }
 
-const VALID_VENDORS = ["huawei", "cisco", "juniper", "arista", "nokia", "unknown"];
+const VALID_VENDORS = ["huawei", "cisco", "juniper", "arista", "nokia", "raisecom", "datacom", "zte", "unknown"];
 const VALID_ROLES = ["provider", "customer", "ix", "cdn"];
 
 function isValidIP(ip: string): boolean {

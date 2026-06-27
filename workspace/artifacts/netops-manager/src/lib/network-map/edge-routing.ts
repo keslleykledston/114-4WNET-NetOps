@@ -54,6 +54,91 @@ function segmentPath(
  * Build an SVG path for topology edges, optionally routed through waypoints.
  * Returns [path, labelX, labelY].
  */
+export function getOrthogonalPathPoints(
+  source: FlowPoint,
+  target: FlowPoint,
+  waypoints: FlowPoint[],
+  sourcePosition: Position,
+  targetPosition: Position,
+  offset: number = 0,
+): FlowPoint[] {
+  const points: FlowPoint[] = [source];
+  const allWaypoints = [...waypoints, target];
+
+  let current = source;
+  let isHorizontal = sourcePosition === "left" || sourcePosition === "right";
+
+  for (let i = 0; i < allWaypoints.length; i++) {
+    const next = allWaypoints[i];
+    
+    if (current.x === next.x) {
+      points.push(next);
+      isHorizontal = true;
+    } else if (current.y === next.y) {
+      points.push(next);
+      isHorizontal = false;
+    } else {
+      if (isHorizontal) {
+        points.push({ x: next.x, y: current.y });
+        points.push(next);
+        isHorizontal = false;
+      } else {
+        points.push({ x: current.x, y: next.y });
+        points.push(next);
+        isHorizontal = true;
+      }
+    }
+    current = next;
+  }
+
+  // Apply offset to parallel lines if needed to prevent overlap
+  if (offset !== 0 && points.length > 2) {
+    return points.map((p, idx) => {
+      if (idx === 0 || idx === points.length - 1) return p;
+      const prev = points[idx - 1];
+      const next = points[idx + 1];
+      
+      const prevIsHorizontal = prev.y === p.y;
+      const nextIsHorizontal = next && next.y === p.y;
+      
+      if (prevIsHorizontal && !nextIsHorizontal) {
+        return { x: p.x, y: p.y + offset };
+      } else if (!prevIsHorizontal && nextIsHorizontal) {
+        return { x: p.x + offset, y: p.y };
+      }
+      return p;
+    });
+  }
+
+  return points;
+}
+
+export function getInitialWaypoints(
+  source: FlowPoint,
+  target: FlowPoint,
+  sourcePosition: Position,
+  targetPosition: Position,
+): FlowPoint[] {
+  const midX = (source.x + target.x) / 2;
+  const midY = (source.y + target.y) / 2;
+  
+  if (sourcePosition === "left" || sourcePosition === "right") {
+    return [
+      { x: midX, y: source.y },
+      { x: midX, y: target.y }
+    ];
+  } else {
+    return [
+      { x: source.x, y: midY },
+      { x: target.x, y: midY }
+    ];
+  }
+}
+
+/**
+ * Build an SVG path for topology edges, routed through waypoints orthogonally.
+ * Returns [path, labelX, labelY].
+ */
 export function getTopologyEdgePath(params: {
   sourceX: number;
   sourceY: number;
@@ -71,63 +156,34 @@ export function getTopologyEdgePath(params: {
     targetY,
     sourcePosition,
     targetPosition,
-    waypoints,
+    waypoints = [],
     offset = 0,
   } = params;
 
-  if (!waypoints?.length) {
-    const [path, labelX, labelY] = getSmoothStepPath({
-      sourceX,
-      sourceY,
-      targetX,
-      targetY,
-      sourcePosition,
-      targetPosition,
-      borderRadius: 12,
-      offset,
-    });
-    return [path, labelX, labelY];
+  const source = { x: sourceX, y: sourceY };
+  const target = { x: targetX, y: targetY };
+
+  const pathPoints = getOrthogonalPathPoints(source, target, waypoints, sourcePosition, targetPosition, offset);
+
+  // Build the SVG polyline path
+  let path = `M ${pathPoints[0].x} ${pathPoints[0].y}`;
+  for (let i = 1; i < pathPoints.length; i++) {
+    path += ` L ${pathPoints[i].x} ${pathPoints[i].y}`;
   }
 
-  const points = waypoints;
-  let path = segmentPath(
-    sourceX,
-    sourceY,
-    points[0].x,
-    points[0].y,
-    sourcePosition,
-    targetPosition,
-    offset,
-  );
-
-  for (let i = 0; i < points.length - 1; i += 1) {
-    const next = segmentPath(
-      points[i].x,
-      points[i].y,
-      points[i + 1].x,
-      points[i + 1].y,
-      targetPosition,
-      targetPosition,
-      offset,
-    );
-    path = joinPaths(path, next);
+  // Label coordinate at the middle point of the path
+  let labelX = (sourceX + targetX) / 2;
+  let labelY = (sourceY + targetY) / 2;
+  if (pathPoints.length > 2) {
+    const midIdx = Math.floor(pathPoints.length / 2);
+    const midPoint = pathPoints[midIdx];
+    if (midPoint) {
+      labelX = midPoint.x;
+      labelY = midPoint.y;
+    }
   }
 
-  const last = points[points.length - 1];
-  const tail = segmentPath(
-    last.x,
-    last.y,
-    targetX,
-    targetY,
-    targetPosition,
-    targetPosition,
-    offset,
-  );
-  path = joinPaths(path, tail);
-
-  const midIdx = Math.floor((points.length - 1) / 2);
-  const labelPoint = points[midIdx] ?? last;
-  return [path, labelPoint.x, labelPoint.y];
+  return [path, labelX, labelY];
 }
 
 export type EdgePathAnchorRole = "source-side" | "target-side";

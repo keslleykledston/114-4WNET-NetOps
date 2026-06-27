@@ -23,6 +23,7 @@ export async function startL2DiscoveryJob(deviceId: number, runId: string): Prom
     .insert(l2DiscoveryJobsTable)
     .values({
       runId,
+      jobType: "discovery",
       deviceId,
       status: "running",
       startedAt,
@@ -209,6 +210,11 @@ function inferDot1qView(row: typeof l2CircuitsTable.$inferSelect): {
   const hasDescription = Boolean(row.description?.trim()) || Boolean(flags.hasDescription);
 
   if (!hasBinding && !hasDescription) {
+    const isVlanif =
+      Boolean(row.localInterface?.toLowerCase().startsWith("vlanif")) || Boolean(flags.hasVlanif);
+    if (isVlanif) {
+      return { classification: "vlanif_orphan", circuitType: "vlan_orphan", l2Transport: "none" };
+    }
     return { classification: "vlan_orphan", circuitType: "vlan_orphan", l2Transport: "none" };
   }
 
@@ -344,6 +350,7 @@ export async function getL2DiscoveryJob(runId: string): Promise<L2DiscoveryJob |
   return {
     id: row.id,
     runId: row.runId,
+    jobType: (row.jobType ?? "discovery") as L2DiscoveryJob["jobType"],
     deviceId: row.deviceId,
     status: row.status as L2DiscoveryJob["status"],
     startedAt: row.startedAt,

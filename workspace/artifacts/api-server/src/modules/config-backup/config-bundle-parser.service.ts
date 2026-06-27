@@ -17,6 +17,8 @@ import { parseConfig } from "../../lib/ssh.js";
 import { resolveDeviceConnectorContext } from "../connectors/connector-execution.service.js";
 import { parseHuaweiBgpPeers } from "../netops/huawei-vrp/parsers/bgp-peer-parser.js";
 import { parseHuaweiInterfaces } from "../netops/huawei-vrp/parsers/interface-parser.js";
+import { parseRaisecomBgpPeers } from "../netops/raisecom-ros/parsers/bgp-peer-parser.js";
+import { parseRaisecomInterfaces } from "../netops/raisecom-ros/parsers/interface-parser.js";
 import { parseHuaweiL2Circuits } from "../l2circuits/parsers/huawei-vrp-l2.js";
 import { buildCircuitKey } from "../l2circuits/normalizers/circuit-key.helpers.js";
 import { enrichCircuitsWithFindings, resolveL2Findings } from "../l2circuits/normalizers/findings.resolver.js";
@@ -24,6 +26,7 @@ import { normalizeCircuits } from "../l2circuits/normalizers/status.normalizer.j
 import { mergeVsiOperationalEvidence } from "../l2circuits/parsers/vsi-multipoint.helpers.js";
 import type { NormalizedL2Circuit } from "../l2circuits/l2circuits.types.js";
 import { normalizeServiceVlanId } from "../netops/service-vlan-policy.js";
+import { getRunningConfigCommand, normalizeVendorKey, type VendorKey } from "../netops/vendor-registry.js";
 
 export type ParserStatus = "SUCCESS" | "PARTIAL" | "FAILED" | "PENDING";
 
@@ -110,7 +113,11 @@ export async function persistL2CircuitsFromCommandOutputs(input: {
   device: Device;
   outputs: Record<string, string>;
   collectedConfigId: number;
+  vendorKey: VendorKey;
 }): Promise<{ circuitCount: number; findingsCount: number }> {
+  if (input.vendorKey !== "huawei") {
+    return { circuitCount: 0, findingsCount: 0 };
+  }
   const rawOutputs = mapOutputsForL2Parser(input.outputs);
   const parsed = parseHuaweiL2Circuits(rawOutputs);
   const normalized = normalizeCircuits(parsed);
@@ -181,19 +188,33 @@ export async function persistBgpFromCommandOutputs(input: {
   connectorId: number;
   outputs: Record<string, string>;
   collectedConfigId: number;
+  vendorKey: VendorKey;
 }): Promise<{ peerCount: number }> {
-  const peerMap = new Map<string, ReturnType<typeof parseHuaweiBgpPeers>[number]>();
+  const peerMap = new Map<string, ReturnType<typeof parseHuaweiBgpPeers>[number] | ReturnType<typeof parseRaisecomBgpPeers>[number]>();
 
   for (const [command, output] of Object.entries(input.outputs)) {
-    if (!/display bgp peer/i.test(command) || !output.trim()) continue;
-    for (const peer of parseHuaweiBgpPeers(output)) {
+    if (!output.trim()) continue;
+    const isHuaweiBgp = /display bgp peer/i.test(command);
+    const isRaisecomBgp = /show (?:ip bgp summary|bgp all summary)/i.test(command);
+    if (input.vendorKey === "huawei" && !isHuaweiBgp) continue;
+    if (input.vendorKey === "raisecom" && !isRaisecomBgp) continue;
+    if (input.vendorKey !== "huawei" && input.vendorKey !== "raisecom") continue;
+
+    const parsedPeers = input.vendorKey === "raisecom"
+      ? parseRaisecomBgpPeers(output)
+      : parseHuaweiBgpPeers(output);
+    for (const peer of parsedPeers) {
       peerMap.set(`${peer.peerIp}|${peer.vrf ?? ""}`, peer);
     }
   }
 
   const peers = [...peerMap.values()];
-  const briefOutput = input.outputs["display interface brief"] ?? "";
-  const interfaces = briefOutput ? parseHuaweiInterfaces(briefOutput) : [];
+  const interfaceOutput = input.vendorKey === "raisecom"
+    ? `${input.outputs["show ip interface brief"] ?? ""}\n${input.outputs["show interface"] ?? ""}`
+    : input.outputs["display interface brief"] ?? "";
+  const interfaces = interfaceOutput
+    ? (input.vendorKey === "raisecom" ? parseRaisecomInterfaces(interfaceOutput) : parseHuaweiInterfaces(interfaceOutput))
+    : [];
 
   await db.insert(snmpSnapshotsTable).values({
     deviceId: input.deviceId,
@@ -220,7 +241,7 @@ export async function parseAndPersistConfigBundle(input: {
 }): Promise<{ parserStatus: ParserStatus; summary: ParsedSummary }> {
   const errors: string[] = [];
   const outputs = splitCommandBundle(input.rawBundle);
-  const vendorKey = input.vendor.toLowerCase().includes("huawei") ? "huawei" : input.vendor;
+  const vendorKey = normalizeVendorKey(input.vendor, input.platform ?? undefined);
 
   const [device] = await db.select().from(devicesTable).where(eq(devicesTable.id, input.deviceId)).limit(1);
   if (!device) {
@@ -259,6 +280,7 @@ export async function parseAndPersistConfigBundle(input: {
       connectorId: input.connectorId,
       outputs,
       collectedConfigId: input.collectedConfigId,
+      vendorKey,
     });
     bgpPeerCount = bgp.peerCount;
   } catch (error) {
@@ -271,6 +293,7 @@ export async function parseAndPersistConfigBundle(input: {
       device,
       outputs,
       collectedConfigId: input.collectedConfigId,
+      vendorKey,
     });
     l2CircuitCount = l2.circuitCount;
   } catch (error) {
@@ -285,10 +308,12 @@ export async function parseAndPersistConfigBundle(input: {
     errors,
   };
 
+  const runningConfigCommand = getRunningConfigCommand(vendorKey);
+  const hasRunningConfig = Boolean(outputs[runningConfigCommand]?.trim());
   let parserStatus: ParserStatus = "FAILED";
-  if (errors.length === 0 && (bgpPeerCount > 0 || l2CircuitCount > 0 || outputs["display current-configuration"])) {
+  if (errors.length === 0 && (bgpPeerCount > 0 || l2CircuitCount > 0 || hasRunningConfig)) {
     parserStatus = "SUCCESS";
-  } else if (bgpPeerCount > 0 || l2CircuitCount > 0 || outputs["display current-configuration"]) {
+  } else if (bgpPeerCount > 0 || l2CircuitCount > 0 || hasRunningConfig) {
     parserStatus = "PARTIAL";
   }
 

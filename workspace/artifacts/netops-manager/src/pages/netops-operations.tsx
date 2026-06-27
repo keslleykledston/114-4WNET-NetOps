@@ -28,6 +28,7 @@ import { InterfacesPanel } from "@/features/device-inventory/interfaces-panel";
 import { OperationalLogsPanel } from "@/features/device-inventory/operational-logs-panel";
 import { OperationalSummary } from "@/features/device-inventory/operational-summary";
 import { DeviceImportModal } from "@/features/devices/device-import-modal";
+import { appendSnmpToDevicePayload, buildDeviceAccessPayload } from "@/features/devices/device-connector-utils";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
 import { NetopsTree, type NetopsTreeSelection, viewLabel } from "@/features/netops-tree";
 import { Button } from "@/components/ui/button";
@@ -146,8 +147,9 @@ export default function NetopsOperations() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || undefined,
-      snmpCommunity: values.snmpCommunity || undefined,
+      ...buildDeviceAccessPayload(values),
     };
+    appendSnmpToDevicePayload(payload, values.snmpCommunity, "create");
 
     createDevice.mutate({ data: payload as DeviceInput }, {
       onSuccess: async (newDevice: Device) => {
@@ -205,8 +207,10 @@ export default function NetopsOperations() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || "",
-      snmpCommunity: values.snmpCommunity,
+      ...buildDeviceAccessPayload(values),
     };
+
+    appendSnmpToDevicePayload(payload, values.snmpCommunity, "edit");
 
     if (values.password.trim().length > 0) {
       payload.password = values.password;

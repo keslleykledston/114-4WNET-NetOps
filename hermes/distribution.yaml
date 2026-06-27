@@ -1,0 +1,29 @@
+name: netops
+version: 0.1.0
+description: "Orquestrador multi-agente Hermes para a plataforma 114-4WNET NetOps — SSH read-only via connector, consultas API/DB e validação por selftests."
+hermes_requires: ">=0.12.0"
+author: "4WNET NetOps"
+license: "Proprietary"
+env_requires:
+  - name: NETOPS_REPO_ROOT
+    description: "Caminho absoluto do repositório 114-4WNET_NetOps"
+    required: false
+    default: "/home/suporte/projects/114-4WNET_NetOps"
+  - name: NETOPS_API_URL
+    description: "URL base da API NetOps (ex. http://127.0.0.1:8080)"
+    required: false
+    default: "http://127.0.0.1:8080"
+  - name: ADMIN_EMAIL
+    description: "Email admin para autenticação na API"
+    required: false
+  - name: ADMIN_PASSWORD
+    description: "Senha admin para autenticação na API"
+    required: false
+distribution_owned:
+  - SOUL.md
+  - profile.yaml
+  - skills/
+  - skill-bundles/
+  - agents/
+  - scripts/
+  - TELEGRAM.md

@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   discoverL2CircuitsHandler,
   getL2DiscoveryJobHandler,
+  getL2OperationalRefreshJobHandler,
   listL2CircuitsHandler,
   getL2CircuitHandler,
   refreshL2CircuitsHandler,
@@ -12,6 +13,7 @@ const router = Router();
 router.post("/l2-circuits/discover", discoverL2CircuitsHandler);
 router.post("/l2-circuits/refresh", refreshL2CircuitsHandler);
 router.get("/l2-circuits/discovery-jobs/:runId", getL2DiscoveryJobHandler);
+router.get("/l2-circuits/refresh-jobs/:runId", getL2OperationalRefreshJobHandler);
 router.get("/l2-circuits", listL2CircuitsHandler);
 router.get("/l2-circuits/:id", getL2CircuitHandler);
 

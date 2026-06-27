@@ -4,15 +4,19 @@ import { useQuery } from "@tanstack/react-query";
 import type { Device } from "@workspace/api-client-react";
 import { listConnectorGroups, listTenants } from "@/features/connectors/connectors-api";
 import {
+  appendSnmpToDevicePayload,
+  buildDeviceAccessPayload,
   getTenantIdForConnectorGroup,
   groupsForTenant,
   pickConnectorGroupForTenant,
 } from "@/features/devices/device-connector-utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { platformOptionsForVendor, VENDOR_OPTIONS } from "@/lib/vendor-options";
 
 export interface DeviceFormValues {
   hostname: string;
@@ -35,7 +39,12 @@ interface DeviceFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: DeviceFormValues) => void;
   isPending: boolean;
-  device?: Device | null;
+  device?: (Device & {
+    connectorId?: number | null;
+    connectorGroupId?: number | null;
+    tenantId?: number | null;
+    snmpConfigured?: boolean;
+  }) | null;
   trigger?: ReactNode;
 }
 
@@ -79,16 +88,16 @@ export function DeviceFormDialog({
     () => groups.find((group) => String(group.id) === form.connectorGroupId) ?? null,
     [groups, form.connectorGroupId],
   );
+  const platformOptions = useMemo(
+    () => platformOptionsForVendor(form.vendor),
+    [form.vendor],
+  );
 
   useEffect(() => {
     if (!open) return;
 
     if (mode === "edit" && device) {
-      const extended = device as Device & {
-        connectorId?: number | null;
-        connectorGroupId?: number | null;
-        tenantId?: number | null;
-      };
+      const extended = device;
       const tenantId =
         extended.tenantId ??
         getTenantIdForConnectorGroup(extended.connectorGroupId, groups) ??
@@ -113,6 +122,12 @@ export function DeviceFormDialog({
     setForm(DEFAULT_VALUES);
   }, [device, mode, open, groups]);
 
+  useEffect(() => {
+    if (platformOptions.length === 0) return;
+    if (platformOptions.some((option) => option.value === form.platform)) return;
+    setForm((prev) => ({ ...prev, platform: platformOptions[0].value }));
+  }, [platformOptions, form.platform]);
+
   const applyTenantSelection = (tenantId: string) => {
     if (!tenantId) {
       setForm((prev) => ({ ...prev, tenantId: "", connectorGroupId: "" }));
@@ -133,6 +148,7 @@ export function DeviceFormDialog({
   const submitLabel = mode === "create" ? "Adicionar Dispositivo" : "Salvar Alterações";
 
   const tenantMissingGroup = Boolean(form.tenantId && !form.connectorGroupId);
+  const snmpConfigured = mode === "edit" && Boolean(device?.snmpConfigured);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -174,10 +190,9 @@ export function DeviceFormDialog({
               <Select value={form.vendor} onValueChange={(value) => setForm({ ...form, vendor: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cisco">Cisco</SelectItem>
-                  <SelectItem value="juniper">Juniper</SelectItem>
-                  <SelectItem value="huawei">Huawei</SelectItem>
-                  <SelectItem value="nokia">Nokia</SelectItem>
+                  {VENDOR_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </FormField>
@@ -186,12 +201,9 @@ export function DeviceFormDialog({
               <Select value={form.platform} onValueChange={(value) => setForm({ ...form, platform: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ios">IOS</SelectItem>
-                  <SelectItem value="ios-xe">IOS-XE</SelectItem>
-                  <SelectItem value="ios-xr">IOS-XR</SelectItem>
-                  <SelectItem value="junos">Junos</SelectItem>
-                  <SelectItem value="vrp">VRP</SelectItem>
-                  <SelectItem value="sros">SR-OS</SelectItem>
+                  {platformOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </FormField>
@@ -241,11 +253,28 @@ export function DeviceFormDialog({
             </FormField>
 
             <FormField label="Comunidade SNMP">
-              <Input
-                value={form.snmpCommunity}
-                onChange={(event) => setForm({ ...form, snmpCommunity: event.target.value })}
-                placeholder={mode === "edit" ? "Deixe em branco para manter" : "public"}
-              />
+              {snmpConfigured && !form.snmpCommunity ? (
+                <p className="text-xs text-muted-foreground">
+                  Comunidade configurada no dispositivo. Deixe em branco para manter ou digite um novo valor para substituir.
+                </p>
+              ) : null}
+              <div className="flex items-center gap-2">
+                <Input
+                  className="flex-1"
+                  value={form.snmpCommunity}
+                  onChange={(event) => setForm({ ...form, snmpCommunity: event.target.value })}
+                  placeholder={
+                    mode === "edit"
+                      ? (snmpConfigured ? "•••••••• (configurada)" : "Não configurada")
+                      : "public"
+                  }
+                />
+                {snmpConfigured && !form.snmpCommunity ? (
+                  <Badge variant="outline" className="shrink-0 text-green-600 border-green-600/40">
+                    Ativa
+                  </Badge>
+                ) : null}
+              </div>
             </FormField>
 
             <FormField label="Tenant">

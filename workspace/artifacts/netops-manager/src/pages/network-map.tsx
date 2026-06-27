@@ -14,6 +14,9 @@ import ReactFlow, {
   type Node,
   type NodeMouseHandler,
   type ReactFlowInstance,
+  type NodeChange,
+  type NodePositionChange,
+  ConnectionLineType,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { toast } from "sonner";
@@ -139,6 +142,96 @@ function normalizeLinkHandles(link: LinkData): LinkData {
   };
 }
 
+function getHandlePosition(
+  nodePos: { x: number; y: number } | undefined,
+  handleId: string,
+): { x: number; y: number } {
+  const defaultPos = nodePos ?? { x: 0, y: 0 };
+  const W = 220; // default node width
+  const H = 90;  // default node height
+
+  let side: "top" | "right" | "bottom" | "left" = "right";
+  let offsetPct = 50;
+
+  if (handleId.startsWith("top")) {
+    side = "top";
+    if (handleId === "top-0") offsetPct = 20;
+    else if (handleId === "top-2") offsetPct = 80;
+  } else if (handleId.startsWith("right")) {
+    side = "right";
+    if (handleId === "right-0") offsetPct = 25;
+    else if (handleId === "right-2") offsetPct = 75;
+  } else if (handleId.startsWith("bottom")) {
+    side = "bottom";
+    if (handleId === "bottom-0") offsetPct = 20;
+    else if (handleId === "bottom-2") offsetPct = 80;
+  } else if (handleId.startsWith("left")) {
+    side = "left";
+    if (handleId === "left-0") offsetPct = 25;
+    else if (handleId === "left-2") offsetPct = 75;
+  }
+
+  switch (side) {
+    case "top":
+      return { x: defaultPos.x + W * (offsetPct / 100), y: defaultPos.y };
+    case "bottom":
+      return { x: defaultPos.x + W * (offsetPct / 100), y: defaultPos.y + H };
+    case "left":
+      return { x: defaultPos.x, y: defaultPos.y + H * (offsetPct / 100) };
+    case "right":
+    default:
+      return { x: defaultPos.x + W, y: defaultPos.y + H * (offsetPct / 100) };
+  }
+}
+
+function migrateWaypointsToRelative(
+  links: LinkData[],
+  nodePositions: Record<string, { x: number; y: number }>,
+): LinkData[] {
+  return links.map((link) => {
+    if (!link.waypoints || link.waypoints.length === 0) return link;
+
+    const sourcePos = nodePositions[link.source];
+    const targetPos = nodePositions[link.target];
+
+    const sourceHandlePos = getHandlePosition(sourcePos, link.sourceHandle ?? "right");
+    const targetHandlePos = getHandlePosition(targetPos, link.targetHandle ?? "left");
+
+    const newWaypoints = link.waypoints.map((wp, idx) => {
+      if (idx === 0) {
+        return { x: wp.x - sourceHandlePos.x, y: wp.y - sourceHandlePos.y };
+      }
+      return { x: wp.x - targetHandlePos.x, y: wp.y - targetHandlePos.y };
+    });
+
+    return { ...link, waypoints: newWaypoints };
+  });
+}
+
+function migrateWaypointsToAbsolute(
+  links: LinkData[],
+  nodePositions: Record<string, { x: number; y: number }>,
+): LinkData[] {
+  return links.map((link) => {
+    if (!link.waypoints || link.waypoints.length === 0) return link;
+
+    const sourcePos = nodePositions[link.source];
+    const targetPos = nodePositions[link.target];
+
+    const sourceHandlePos = getHandlePosition(sourcePos, link.sourceHandle ?? "right");
+    const targetHandlePos = getHandlePosition(targetPos, link.targetHandle ?? "left");
+
+    const newWaypoints = link.waypoints.map((wp, idx) => {
+      if (idx === 0) {
+        return { x: wp.x + sourceHandlePos.x, y: wp.y + sourceHandlePos.y };
+      }
+      return { x: wp.x + targetHandlePos.x, y: wp.y + targetHandlePos.y };
+    });
+
+    return { ...link, waypoints: newWaypoints };
+  });
+}
+
 function buildNode(d: DeviceData, pos: { x: number; y: number }, extra: any = {}): Node {
   return { id: d.id, type: "device", position: pos, data: { ...d, ...extra } };
 }
@@ -216,6 +309,28 @@ function NetworkMapInner() {
   const [layoutName, setLayoutName] = useState("Layout principal");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
+
+  // Connect (edit mode only)
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [plannedLink, setPlannedLink] = useState(false);
+  const [connectDraft, setConnectDraft] = useState<{
+    source?: string;
+    target?: string;
+    sourceHandle?: string;
+    targetHandle?: string;
+  }>({});
+
+  const onConnect = useCallback((c: Connection) => {
+    if (mode !== "edit") return;
+    setConnectDraft({
+      source: c.source ?? undefined,
+      target: c.target ?? undefined,
+      sourceHandle: c.sourceHandle ?? undefined,
+      targetHandle: c.targetHandle ?? undefined,
+    });
+    setPlannedLink(false);
+    setLinkModalOpen(true);
+  }, [mode]);
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
   const [pendingDeviceId, setPendingDeviceId] = useState<string | null>(null);
   const [loadingTopology, setLoadingTopology] = useState(true);
@@ -228,6 +343,14 @@ function NetworkMapInner() {
   const [fOrigin, setFOrigin] = useState<string>("all");
   const [fType, setFType] = useState<string>("all");
   const [search, setSearch] = useState("");
+
+  const [connectingSource, setConnectingSource] = useState<{
+    nodeId: string;
+    handleId: string;
+    handleType: "source" | "target";
+  } | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  void mousePos;
 
   const positions = useRef<Record<string, { x: number; y: number }>>({});
 
@@ -247,7 +370,13 @@ function NetworkMapInner() {
     const realDevices = res.devices.filter((d) => !d.id.startsWith("device:pending-"));
     positions.current = { ...autoPosition(realDevices), ...res.positions };
     setDevices(realDevices);
-    setLinks(res.links.map(normalizeLinkHandles));
+    
+    const migratedLinks = migrateWaypointsToRelative(
+      res.links.map(normalizeLinkHandles),
+      positions.current
+    );
+    setLinks(migratedLinks);
+
     setLayoutId(res.layoutId ?? null);
     setLayoutName(res.layoutName ?? "Layout principal");
     setSnapshot({
@@ -349,10 +478,136 @@ function NetworkMapInner() {
   // Selection
   const [selectedNode, setSelectedNode] = useState<DeviceData | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<LinkData | null>(null);
+  const [activeModalLink, setActiveModalLink] = useState<LinkData | null>(null);
   const [stencilDevice, setStencilDevice] = useState<DeviceData | null>(null);
 
   const openStencil = useCallback((d: DeviceData) => {
     setStencilDevice(d);
+  }, []);
+
+  const handleNodesChange = useCallback((changes: NodeChange[]) => {
+    if (mode === "edit") {
+      onNodesChange(changes);
+    } else {
+      onNodesChange(changes.filter((c) => c.type === "select" || c.type === "dimensions"));
+    }
+  }, [mode, onNodesChange]);
+
+  const cleanupConnecting = useCallback(() => {
+    setConnectingSource(null);
+    setMousePos(null);
+    setNodes((prevNodes) => prevNodes.filter((n) => n.id !== "temp-mouse-node"));
+    setEdges((prevEdges) => prevEdges.filter((e) => e.id !== "temp-connecting-edge"));
+  }, [setNodes, setEdges]);
+
+  const handleHandleClick = useCallback((nodeId: string, handleId: string, handleType: "source" | "target") => {
+    if (mode !== "edit") return;
+
+    if (!connectingSource) {
+      setConnectingSource({ nodeId, handleId, handleType });
+      const initialPos = positions.current[nodeId] ?? { x: 0, y: 0 };
+      
+      setNodes((prevNodes) => [
+        ...prevNodes,
+        {
+          id: "temp-mouse-node",
+          type: "device",
+          position: initialPos,
+          style: { opacity: 0, pointerEvents: "none", zIndex: -100 },
+          draggable: false,
+          selectable: false,
+          data: {
+            id: "temp-mouse-node",
+            name: "Mouse Pointer",
+            type: "router",
+            vendor: "",
+            role: "",
+            site: "",
+            tenant: "",
+            status: "UNKNOWN",
+          },
+        },
+      ]);
+
+      setEdges((prevEdges) => [
+        ...prevEdges,
+        {
+          id: "temp-connecting-edge",
+          source: handleType === "source" ? nodeId : "temp-mouse-node",
+          target: handleType === "source" ? "temp-mouse-node" : nodeId,
+          sourceHandle: handleType === "source" ? handleId : "left",
+          targetHandle: handleType === "source" ? "right" : handleId,
+          type: "topology",
+          animated: true,
+          style: { stroke: "#38bdf8", strokeWidth: 2, strokeDasharray: "5,5" },
+          data: {
+            id: "temp-connecting-edge",
+            source: handleType === "source" ? nodeId : "temp-mouse-node",
+            target: handleType === "source" ? "temp-mouse-node" : nodeId,
+            edgeType: "planned",
+            status: "PLANNED",
+            origin: "planned",
+            capacity: "1G",
+            intfA: "",
+            intfB: "",
+          },
+        },
+      ]);
+    } else {
+      if (connectingSource.nodeId !== nodeId) {
+        const sourceNodeId = connectingSource.handleType === "source" ? connectingSource.nodeId : nodeId;
+        const targetNodeId = connectingSource.handleType === "source" ? nodeId : connectingSource.nodeId;
+        const sourceHandleId = connectingSource.handleType === "source" ? connectingSource.handleId : handleId;
+        const targetHandleId = connectingSource.handleType === "source" ? handleId : connectingSource.handleId;
+
+        onConnect({
+          source: sourceNodeId,
+          target: targetNodeId,
+          sourceHandle: sourceHandleId,
+          targetHandle: targetHandleId,
+        });
+      }
+      cleanupConnecting();
+    }
+  }, [connectingSource, mode, onConnect, cleanupConnecting, setNodes, setEdges]);
+
+  const handleMouseMove = useCallback((event: React.MouseEvent) => {
+    if (connectingSource && rfInstance) {
+      const flowPos = rfInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      setMousePos(flowPos);
+      setNodes((prevNodes) =>
+        prevNodes.map((n) =>
+          n.id === "temp-mouse-node" ? { ...n, position: flowPos } : n
+        )
+      );
+    }
+  }, [connectingSource, rfInstance, setNodes]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        cleanupConnecting();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [cleanupConnecting]);
+
+  const onEdgeUpdate = useCallback((oldEdge: Edge, newConnection: Connection) => {
+    setLinks((prev: LinkData[]) =>
+      prev.map((l: LinkData) =>
+        l.id === oldEdge.id
+          ? {
+              ...l,
+              source: newConnection.source ?? l.source,
+              target: newConnection.target ?? l.target,
+              sourceHandle: newConnection.sourceHandle ?? l.sourceHandle,
+              targetHandle: newConnection.targetHandle ?? l.targetHandle,
+            }
+          : l
+      )
+    );
+    toast.success("Enlace reconectado.");
   }, []);
 
   const handleReplaceMapDevice = useCallback((oldDevice: DeviceData, newDevice: DeviceData) => {
@@ -417,6 +672,7 @@ function NetworkMapInner() {
       buildNode(d, positions.current[d.id] ?? { x: 0, y: 0 }, {
         _linkCount: linkCount[d.id] ?? 0,
         _onOpenStencil: openStencil,
+        _onHandleClick: handleHandleClick,
         _connectable: mode === "edit",
         _dimmed:
           (selNodeId
@@ -455,48 +711,37 @@ function NetworkMapInner() {
         };
       }),
     );
-  }, [visibleDevices, visibleLinks, selectedNode, selectedEdge, groupBySite, mode, openStencil, handleWaypointChange, setNodes, setEdges]);
+  }, [visibleDevices, visibleLinks, selectedNode, selectedEdge, groupBySite, mode, openStencil, handleHandleClick, handleWaypointChange, setNodes, setEdges]);
 
   const onNodeClick: NodeMouseHandler = useCallback((_, n) => {
     if (n.type === "siteGroup") return;
     setSelectedEdge(null);
+    setActiveModalLink(null);
     setSelectedNode((n.data as DeviceData) ?? null);
   }, []);
   const onEdgeClick: EdgeMouseHandler = useCallback((_, e) => {
     setSelectedNode(null);
     setSelectedEdge((e.data as LinkData) ?? null);
   }, []);
+  const onEdgeDoubleClick: EdgeMouseHandler = useCallback((_, e) => {
+    setSelectedNode(null);
+    setActiveModalLink((e.data as LinkData) ?? null);
+  }, []);
   const onPaneClick = useCallback(() => {
     setSelectedNode(null);
     setSelectedEdge(null);
-  }, []);
+    setActiveModalLink(null);
+    if (connectingSource) {
+      cleanupConnecting();
+    }
+  }, [connectingSource, cleanupConnecting]);
 
   // Node drag persistence
   const onNodeDragStop = useCallback((_: any, n: Node) => {
     positions.current[n.id] = n.position;
   }, []);
 
-  // Connect (edit mode only)
-  const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [plannedLink, setPlannedLink] = useState(false);
-  const [connectDraft, setConnectDraft] = useState<{
-    source?: string;
-    target?: string;
-    sourceHandle?: string;
-    targetHandle?: string;
-  }>({});
 
-  const onConnect = useCallback((c: Connection) => {
-    if (mode !== "edit") return;
-    setConnectDraft({
-      source: c.source ?? undefined,
-      target: c.target ?? undefined,
-      sourceHandle: c.sourceHandle ?? undefined,
-      targetHandle: c.targetHandle ?? undefined,
-    });
-    setPlannedLink(false);
-    setLinkModalOpen(true);
-  }, [mode]);
 
   const handleManualLink = async (v: ManualLinkValues) => {
     setDevices((prev) => {
@@ -578,11 +823,15 @@ function NetworkMapInner() {
           positionsPayload[device.id] = fromRef;
         }
       }
+
+      // Convert relative waypoints in links back to absolute waypoints before saving to backend
+      const absoluteLinks = migrateWaypointsToAbsolute(links, positionsPayload);
+
       const result = await topologyService.saveLayout({
         id: layoutId ?? undefined,
         name,
         devices: persistedDevices,
-        links,
+        links: absoluteLinks,
         positions: positionsPayload,
       });
       setLayoutId(result.layoutId);
@@ -894,8 +1143,8 @@ function NetworkMapInner() {
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               connectionMode={mode === "edit" ? ConnectionMode.Loose : ConnectionMode.Strict}
-              onNodesChange={mode === "edit" ? onNodesChange : (changes) =>
-                onNodesChange(changes.filter((c) => c.type === "select" || c.type === "dimensions"))}
+              onNodesChange={mode === "edit" ? handleNodesChange : (changes) =>
+                handleNodesChange(changes.filter((c) => c.type === "select" || c.type === "dimensions"))}
               onEdgesChange={(changes) => {
                 const safe = changes.filter((c) => c.type !== "remove");
                 if (safe.length > 0) onEdgesChange(safe);
@@ -903,12 +1152,16 @@ function NetworkMapInner() {
               onConnect={onConnect}
               onNodeClick={onNodeClick}
               onEdgeClick={onEdgeClick}
+              onEdgeDoubleClick={onEdgeDoubleClick}
               onPaneClick={onPaneClick}
               onNodeDragStop={onNodeDragStop}
               onInit={setRfInstance}
               nodesDraggable={mode === "edit"}
               nodesConnectable={mode === "edit"}
-              edgesUpdatable={false}
+              edgesUpdatable={mode === "edit"}
+              onEdgeUpdate={onEdgeUpdate}
+              onMouseMove={handleMouseMove}
+              connectionLineType={ConnectionLineType.SmoothStep}
               fitView
               proOptions={{ hideAttribution: true }}
               className="bg-zinc-950"
@@ -946,14 +1199,15 @@ function NetworkMapInner() {
       </div>
 
       <LinkInterfaceModal
-        link={selectedEdge}
+        link={activeModalLink}
         devices={devices}
         inventoryDevices={inventoryDevices}
         links={links}
-        onOpenChange={(o) => { if (!o) setSelectedEdge(null); }}
+        onOpenChange={(o) => { if (!o) setActiveModalLink(null); }}
         onLinkUpdated={(updated) => {
           setLinks((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
-          setSelectedEdge(updated);
+          setActiveModalLink(updated);
+          setSelectedEdge((prev) => (prev?.id === updated.id ? updated : prev));
         }}
       />
       <ManualLinkModal

@@ -13,6 +13,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
 import {
   useL2Circuits,
+  formatL2OperationalRefreshToast,
   useRefreshL2Circuits,
   type L2Circuit,
   type L2CircuitType,
@@ -114,7 +115,7 @@ export default function L2Circuits() {
   ]);
 
   const deviceId = deviceFilter === FILTER_ALL ? undefined : Number(deviceFilter);
-  const { data, isLoading, isError, error, refetch, isFetching } = useL2Circuits(deviceId);
+  const { data, isLoading, isError, error, refetch } = useL2Circuits(deviceId);
   const { data: devices } = useListDevices();
 
   const deviceNameById = useMemo(() => {
@@ -179,15 +180,16 @@ export default function L2Circuits() {
       return;
     }
 
-    refreshMutation.mutate(deviceId, {
-      onSuccess: (result) => {
+    void refreshMutation
+      .mutateAsync(deviceId)
+      .then((result) => {
         toast({
           title: "Refresh operacional concluído",
-          description: `${result.circuits_updated} circuitos · ${result.findings_count} findings · ${result.freshness}`,
+          description: formatL2OperationalRefreshToast(result),
         });
         void refetch();
-      },
-      onError: (error) => {
+      })
+      .catch((error: unknown) => {
         const code = (error as Error & { code?: string }).code;
         const status = (error as Error & { status?: number }).status;
         toast({
@@ -195,12 +197,11 @@ export default function L2Circuits() {
           description: error instanceof Error ? error.message : "Erro desconhecido",
           variant: "destructive",
         });
-      },
-    });
+      });
   };
 
   const operational = data?.operational;
-  const refreshBusy = refreshMutation.isPending || isFetching;
+  const refreshBusy = refreshMutation.isPending;
 
   return (
     <div className="space-y-6">

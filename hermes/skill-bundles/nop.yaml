@@ -1,0 +1,16 @@
+name: nop
+description: "NetOps — SSH, consultas e testes (atalho Telegram)."
+skills:
+  - nop
+  - ndiag
+  - nssh
+  - nq
+  - ntest
+  - netops-orchestrator
+  - netops-diag
+  - netops-ssh
+  - netops-queries
+  - netops-tests
+instruction: |
+  Modo NetOps ativo. Ping/latência/jitter → netops-diag. SSH display → nssh.
+  Comandos Telegram: /ndiag /nssh /nq /ntest /health /devices.

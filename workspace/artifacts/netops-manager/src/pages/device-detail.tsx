@@ -17,6 +17,7 @@ import { Server, Activity, ShieldCheck, Rocket, History, ChevronRight, Pencil, N
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
+import { appendSnmpToDevicePayload, buildDeviceAccessPayload } from "@/features/devices/device-connector-utils";
 import { DiscoveryPanel } from "@/features/device-discovery/discovery-panel";
 import { CommunityLibraryTab } from "@/features/bgp/community-library-tab";
 import { CommunitySetsTab } from "@/features/bgp/community-sets-tab";
@@ -90,6 +91,7 @@ export default function DeviceDetail() {
     tenantId?: number | null;
     tenantName?: string | null;
     accessMode?: "connector_group" | "connector" | "direct";
+    snmpConfigured?: boolean;
   };
   const accessLabel =
     extendedDevice.accessMode === "connector_group" && extendedDevice.connectorGroupName
@@ -109,11 +111,10 @@ export default function DeviceDetail() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || "",
+      ...buildDeviceAccessPayload(values),
     };
 
-    if (values.snmpCommunity.trim().length > 0) {
-      payload.snmpCommunity = values.snmpCommunity;
-    }
+    appendSnmpToDevicePayload(payload, values.snmpCommunity, "edit");
 
     if (values.password.trim().length > 0) {
       payload.password = values.password;
@@ -240,7 +241,13 @@ export default function DeviceDetail() {
                   </div>
                   <div>
                     <div className="text-muted-foreground mb-1">SNMP Community</div>
-                    <div>Not exposed</div>
+                    <div>
+                      {extendedDevice.snmpConfigured ? (
+                        <Badge variant="outline" className="text-green-600 border-green-600/40">Configurada</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">Não configurada</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>

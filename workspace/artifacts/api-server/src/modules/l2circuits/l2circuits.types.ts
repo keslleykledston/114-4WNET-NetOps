@@ -167,9 +167,12 @@ export interface L2Circuit {
   updatedAt: Date;
 }
 
+export type L2JobType = "discovery" | "refresh";
+
 export interface L2DiscoveryJob {
   id: number;
   runId: string;
+  jobType: L2JobType;
   deviceId: number;
   status: "pending" | "running" | "completed" | "failed";
   startedAt: Date;
@@ -221,6 +224,13 @@ export interface L2OperationalRefreshRequest {
   device_id: number;
 }
 
+export interface L2OperationalRefreshStartResponse {
+  run_id: string;
+  device_id: number;
+  status: "running";
+  started_at: string;
+}
+
 export interface L2OperationalRefreshResponse {
   device_id: number;
   last_refresh_at: string;
@@ -229,6 +239,20 @@ export interface L2OperationalRefreshResponse {
   findings_count: number;
   operational_state: Record<string, unknown>;
   warnings: string[];
+}
+
+export interface L2OperationalRefreshJobResponse {
+  run_id: string;
+  device_id: number;
+  status: "pending" | "running" | "completed" | "failed";
+  started_at: string;
+  finished_at?: string | null;
+  circuits_updated?: number | null;
+  findings_count?: number | null;
+  error_message?: string | null;
+  last_refresh_at?: string | null;
+  freshness?: L2OperationalFreshnessStatus;
+  operational_state?: Record<string, unknown>;
 }
 
 export interface L2DiscoveryJobResponse {

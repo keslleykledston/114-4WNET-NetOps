@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -7,11 +7,13 @@ import {
 } from "reactflow";
 import type { LinkData, LinkWaypoint } from "@/lib/network-map/types";
 import {
-  defaultEdgeAnchors,
   getTopologyEdgePath,
-  type EdgePathAnchorRole,
+  getOrthogonalPathPoints,
+  getInitialWaypoints,
+  type FlowPoint,
 } from "@/lib/network-map/edge-routing";
 import { edgeLabel, edgeStyle } from "./edge-styles";
+import { toast } from "sonner";
 
 interface ExtendedLinkData extends LinkData {
   _dimmed?: boolean;
@@ -20,13 +22,6 @@ interface ExtendedLinkData extends LinkData {
   _edgeOffset?: number;
   _onWaypointChange?: (edgeId: string, waypoints: LinkWaypoint[]) => void;
 }
-
-const ANCHOR_STYLES: Record<EdgePathAnchorRole, string> = {
-  "source-side":
-    "group-hover/anchor:border-emerald-400/60 group-hover/anchor:bg-emerald-500/20 group-active/anchor:border-emerald-300",
-  "target-side":
-    "group-hover/anchor:border-violet-400/60 group-hover/anchor:bg-violet-500/20 group-active/anchor:border-violet-300",
-};
 
 export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
   const {
@@ -42,35 +37,8 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
     markerEnd,
   } = props;
   const { screenToFlowPosition } = useReactFlow();
-  const dragRef = useRef<{ anchorIndex: number } | null>(null);
-  const [dragPoint, setDragPoint] = useState<LinkWaypoint | null>(null);
-  const [draggingAnchorIndex, setDraggingAnchorIndex] = useState<number | null>(null);
+
   const onWaypointChange = data?._onWaypointChange;
-
-  const commitWaypoint = useCallback(
-    (anchorIndex: number, point: LinkWaypoint, defaultPoints: LinkWaypoint[]) => {
-      const stored = data?.waypoints ?? [];
-      const base =
-        stored.length >= defaultPoints.length
-          ? [...stored]
-          : defaultPoints.map((p, i) => stored[i] ?? p);
-      base[anchorIndex] = point;
-      onWaypointChange?.(id, base);
-    },
-    [data?.waypoints, id, onWaypointChange],
-  );
-
-  const finishDrag = useCallback(
-    (anchorIndex: number, clientX: number, clientY: number, defaultPoints: LinkWaypoint[]) => {
-      if (!dragRef.current) return;
-      dragRef.current = null;
-      setDraggingAnchorIndex(null);
-      const flow = screenToFlowPosition({ x: clientX, y: clientY });
-      setDragPoint(null);
-      commitWaypoint(anchorIndex, flow, defaultPoints);
-    },
-    [commitWaypoint, screenToFlowPosition],
-  );
 
   if (!data) return null;
 
@@ -78,66 +46,161 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
   const storedWaypoints = data.waypoints ?? [];
   const editMode = data._editMode ?? false;
 
-  const defaultAnchors = useMemo(
-    () =>
-      defaultEdgeAnchors(
-        sourceX,
-        sourceY,
-        targetX,
-        targetY,
-        sourcePosition,
-        targetPosition,
-        offset,
-      ),
-    [sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, offset],
+  const source = { x: sourceX, y: sourceY };
+  const target = { x: targetX, y: targetY };
+
+  // Keep values updated in a ref to avoid stale closures in event listeners
+  const stateRef = useRef({ storedWaypoints, sourceX, sourceY, targetX, targetY, onWaypointChange, id });
+  stateRef.current = { storedWaypoints, sourceX, sourceY, targetX, targetY, onWaypointChange, id };
+
+  // Convert relative waypoints to absolute coordinates for calculations
+  const absoluteWaypoints = useMemo(() => {
+    return storedWaypoints.map((wp, idx) => {
+      if (idx === 0) return { x: sourceX + wp.x, y: sourceY + wp.y };
+      return { x: targetX + wp.x, y: targetY + wp.y };
+    });
+  }, [storedWaypoints, sourceX, sourceY, targetX, targetY]);
+
+  // Strict orthogonal path calculation using absolute coordinates
+  const pathPoints = getOrthogonalPathPoints(
+    source,
+    target,
+    absoluteWaypoints,
+    sourcePosition,
+    targetPosition,
+    offset,
   );
 
-  const defaultPoints = useMemo(
-    () => defaultAnchors.map((a) => a.point),
-    [defaultAnchors],
-  );
+  // SVG path and label position using absolute coordinates
+  const [edgePath, labelX, labelY] = getTopologyEdgePath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    waypoints: absoluteWaypoints,
+    offset,
+  });
 
-  const anchorPoints = useMemo(() => {
-    if (storedWaypoints.length >= defaultAnchors.length) {
-      return storedWaypoints.map((wp, i) => ({
-        index: i,
-        role: defaultAnchors[i]?.role ?? ("source-side" as EdgePathAnchorRole),
-        point: draggingAnchorIndex === i && dragPoint ? dragPoint : wp,
-      }));
-    }
-    return defaultAnchors.map((anchor) => ({
-      index: anchor.index,
-      role: anchor.role,
-      point:
-        draggingAnchorIndex === anchor.index && dragPoint
-          ? dragPoint
-          : storedWaypoints[anchor.index] ?? anchor.point,
-    }));
-  }, [storedWaypoints, defaultAnchors, dragPoint, draggingAnchorIndex]);
+  // Calculate segments for middle handles using absolute path points
+  const segments = pathPoints.slice(0, -1).map((p1, i) => {
+    const p2 = pathPoints[i + 1];
+    const isH = Math.abs(p1.x - p2.x) > Math.abs(p1.y - p2.y);
+    return {
+      index: i,
+      p1,
+      p2,
+      type: isH ? ("horizontal" as const) : ("vertical" as const),
+      midpoint: {
+        x: (p1.x + p2.x) / 2,
+        y: (p1.y + p2.y) / 2,
+      },
+    };
+  });
 
-  const activeWaypoints = anchorPoints.map((a) => a.point);
-  const hasCustomRoute = storedWaypoints.length > 0 || Boolean(dragPoint);
+  // Waypoint Drag Handlers
+  const startWaypointDrag = (index: number, e: React.PointerEvent) => {
+    if (!editMode) return;
+    e.stopPropagation();
+    e.preventDefault();
 
-  const [edgePath, labelX, labelY] = hasCustomRoute
-    ? getTopologyEdgePath({
-        sourceX,
-        sourceY,
-        targetX,
-        targetY,
-        sourcePosition,
-        targetPosition,
-        waypoints: activeWaypoints,
-        offset,
-      })
-    : getTopologyEdgePath({
-        sourceX,
-        sourceY,
-        targetX,
-        targetY,
-        sourcePosition,
-        targetPosition,
-        offset,
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const { sourceX, sourceY, targetX, targetY, onWaypointChange, id, storedWaypoints } = stateRef.current;
+      const flowPos = screenToFlowPosition({ x: moveEvent.clientX, y: moveEvent.clientY });
+      
+      const nextWps = [...storedWaypoints];
+      if (index === 0) {
+        nextWps[index] = { x: flowPos.x - sourceX, y: flowPos.y - sourceY };
+      } else {
+        nextWps[index] = { x: flowPos.x - targetX, y: flowPos.y - targetY };
+      }
+      onWaypointChange?.(id, nextWps);
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
+
+  // Segment Drag Handlers
+  const startSegmentDrag = (segmentIndex: number, type: "horizontal" | "vertical", e: React.PointerEvent) => {
+    if (!editMode) return;
+    e.stopPropagation();
+    e.preventDefault();
+
+    const { storedWaypoints, sourceX, sourceY, targetX, targetY } = stateRef.current;
+    const sourceVal = { x: sourceX, y: sourceY };
+    const targetVal = { x: targetX, y: targetY };
+
+    const currentWps = storedWaypoints.length > 0
+      ? [...storedWaypoints]
+      : getInitialWaypoints(sourceVal, targetVal, sourcePosition, targetPosition).map((wp, idx) => {
+          if (idx === 0) return { x: wp.x - sourceVal.x, y: wp.y - sourceVal.y };
+          return { x: wp.x - targetVal.x, y: wp.y - targetVal.y };
+        });
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const { sourceX, sourceY, targetX, targetY, onWaypointChange, id } = stateRef.current;
+      const startFlow = screenToFlowPosition({ x: startX, y: startY });
+      const currentFlow = screenToFlowPosition({ x: moveEvent.clientX, y: moveEvent.clientY });
+      const deltaX = currentFlow.x - startFlow.x;
+      const deltaY = currentFlow.y - startFlow.y;
+
+      // Convert initial relative waypoints to absolute for applying delta
+      const absInitialWps = currentWps.map((wp, idx) => {
+        if (idx === 0) return { x: sourceX + wp.x, y: sourceY + wp.y };
+        return { x: targetX + wp.x, y: targetY + wp.y };
       });
+
+      const nextWpsAbsolute = absInitialWps.map((wp, idx) => {
+        const newWp = { ...wp };
+        const isFirst = segmentIndex === 0;
+        const isLast = segmentIndex === currentWps.length;
+
+        if (isFirst) {
+          if (idx === 0) {
+            if (type === "horizontal") newWp.y += deltaY;
+            else newWp.x += deltaX;
+          }
+        } else if (isLast) {
+          if (idx === currentWps.length - 1) {
+            if (type === "horizontal") newWp.y += deltaY;
+            else newWp.x += deltaX;
+          }
+        } else {
+          if (idx === segmentIndex - 1 || idx === segmentIndex) {
+            if (type === "horizontal") newWp.y += deltaY;
+            else newWp.x += deltaX;
+          }
+        }
+        return newWp;
+      });
+
+      // Convert back to relative waypoints before committing
+      const nextWpsRelative = nextWpsAbsolute.map((wp, idx) => {
+        if (idx === 0) return { x: wp.x - sourceX, y: wp.y - sourceY };
+        return { x: wp.x - targetX, y: wp.y - targetY };
+      });
+
+      onWaypointChange?.(id, nextWpsRelative);
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
 
   const baseStyle = edgeStyle(data.edgeType, data.status, data.utilizationPct);
   const dim = data._dimmed;
@@ -152,43 +215,10 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
 
   const tooltip = `${data.edgeType.toUpperCase()} • ${data.capacity}\n${data.intfA} ↔ ${data.intfB}\nStatus: ${data.status} • Origem: ${data.origin}${data.utilizationPct != null ? `\nUso: ${data.utilizationPct}%` : ""}`;
 
-  const startDrag = (anchorIndex: number, e: React.PointerEvent) => {
-    if (!editMode) return;
-    e.stopPropagation();
-    e.preventDefault();
-    dragRef.current = { anchorIndex };
-    setDraggingAnchorIndex(anchorIndex);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    const pt = anchorPoints[anchorIndex]?.point;
-    if (pt) setDragPoint(pt);
-  };
-
-  const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragRef.current) return;
-    e.stopPropagation();
-    e.preventDefault();
-    setDragPoint(screenToFlowPosition({ x: e.clientX, y: e.clientY }));
-  };
-
-  const onPointerUp = (anchorIndex: number, e: React.PointerEvent) => {
-    if (!dragRef.current) return;
-    e.stopPropagation();
-    e.preventDefault();
-    finishDrag(anchorIndex, e.clientX, e.clientY, defaultPoints);
-  };
-
-  const onPointerCancel = (e: React.PointerEvent) => {
-    if (!dragRef.current) return;
-    e.stopPropagation();
-    dragRef.current = null;
-    setDraggingAnchorIndex(null);
-    setDragPoint(null);
-  };
-
   return (
     <>
-      <path d={edgePath} fill="none" stroke="transparent" strokeWidth={18} className="nopan" />
-      <BaseEdge path={edgePath} style={style} markerEnd={markerEnd} interactionWidth={0} />
+      <path d={edgePath} fill="none" stroke="transparent" strokeWidth={24} className="nopan react-flow__edge-interaction" />
+      <BaseEdge path={edgePath} style={style} markerEnd={markerEnd} />
       <EdgeLabelRenderer>
         <div
           title={tooltip}
@@ -207,31 +237,56 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
         >
           {edgeLabel(data.edgeType, data.capacity, data.utilizationPct)}
         </div>
+
+        {/* Waypoint Handles */}
         {editMode &&
-          anchorPoints.map(({ index, role, point }) => (
+          selected &&
+          absoluteWaypoints.map((wp, index) => (
             <div
-              key={`anchor-${role}-${index}`}
+              key={`wp-handle-${index}`}
               role="presentation"
-              onPointerDown={(e) => startDrag(index, e)}
-              onPointerMove={onPointerMove}
-              onPointerUp={(e) => onPointerUp(index, e)}
-              onPointerCancel={onPointerCancel}
-              title={
-                role === "source-side"
-                  ? "Âncora origem — arraste para curvar o link perto do device de origem"
-                  : "Âncora destino — arraste para curvar o link perto do device de destino"
-              }
+              onPointerDown={(e) => startWaypointDrag(index, e)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                const nextWps = storedWaypoints.filter((_, idx) => idx !== index);
+                onWaypointChange?.(id, nextWps);
+                toast.success("Ponto de curva removido.");
+              }}
               style={{
                 position: "absolute",
-                transform: `translate(-50%, -50%) translate(${point.x}px, ${point.y}px)`,
+                transform: `translate(-50%, -50%) translate(${wp.x}px, ${wp.y}px)`,
                 pointerEvents: "all",
-                zIndex: selected || hi ? 30 : 20,
+                zIndex: 40,
               }}
               className="nodrag nopan nowheel group/anchor h-6 w-6 cursor-grab active:cursor-grabbing"
+              title="Arraste para mover o ponto. Clique duplo para apagar."
             >
-              <span
-                className={`absolute inset-0 rounded-sm border-2 border-zinc-600/40 bg-zinc-800/30 transition-colors ${ANCHOR_STYLES[role]}`}
-              />
+              <span className="absolute inset-1.5 rounded-full border border-white/30 bg-sky-500 hover:bg-sky-400 active:border-sky-300 shadow-[0_0_8px_rgba(14,165,233,0.7)] transition-all" />
+            </div>
+          ))}
+
+        {/* Segment Drag Handles */}
+        {editMode &&
+          selected &&
+          segments.map((seg) => (
+            <div
+              key={`seg-handle-${seg.index}`}
+              role="presentation"
+              onPointerDown={(e) => startSegmentDrag(seg.index, seg.type, e)}
+              style={{
+                position: "absolute",
+                transform: `translate(-50%, -50%) translate(${seg.midpoint.x}px, ${seg.midpoint.y}px)`,
+                pointerEvents: "all",
+                zIndex: 35,
+              }}
+              className={`nodrag nopan nowheel group/anchor h-5 w-5 flex items-center justify-center cursor-${
+                seg.type === "horizontal" ? "ns" : "ew"
+              }-resize`}
+              title="Arraste para mover o segmento. Clique para adicionar ponto de curva."
+            >
+              <span className="h-3.5 w-3.5 rounded-full border border-white/20 bg-zinc-700 hover:bg-sky-500 flex items-center justify-center text-[10px] font-bold text-white transition-all shadow-[0_0_6px_rgba(0,0,0,0.6)]">
+                +
+              </span>
             </div>
           ))}
       </EdgeLabelRenderer>

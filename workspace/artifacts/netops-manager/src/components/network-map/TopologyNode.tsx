@@ -109,6 +109,7 @@ interface ExtendedDeviceData extends DeviceData {
   _dimmed?: boolean;
   _highlighted?: boolean;
   _onOpenStencil?: (d: DeviceData) => void;
+  _onHandleClick?: (nodeId: string, handleId: string, type: "source" | "target") => void;
   _connectable?: boolean;
 }
 
@@ -126,8 +127,9 @@ export function TopologyNode({ data, selected }: NodeProps<ExtendedDeviceData>) 
     `Vendor: ${data.vendor}`,
     data.uptime ? `Uptime: ${data.uptime}` : null,
   ].filter(Boolean).join("\n");
-  const { _onOpenStencil, _linkCount, _dimmed, _highlighted, _connectable, ...device } =
+  const { _onOpenStencil, _onHandleClick, _linkCount, _dimmed, _highlighted, _connectable, ...device } =
     data as ExtendedDeviceData;
+  void _onHandleClick;
   void _linkCount;
   void _dimmed;
   void _highlighted;
@@ -158,6 +160,12 @@ export function TopologyNode({ data, selected }: NodeProps<ExtendedDeviceData>) 
             isConnectableEnd={connectable}
             className={`${handleBase} ${handleVisible}`}
             style={slotStyle(position, offsetPct)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (data._onHandleClick) {
+                data._onHandleClick(data.id, id, "target");
+              }
+            }}
           />,
           <Handle
             key={`${id}-source`}
@@ -169,6 +177,12 @@ export function TopologyNode({ data, selected }: NodeProps<ExtendedDeviceData>) 
             isConnectableEnd={connectable}
             className={`${handleBase} ${handleVisible}`}
             style={slotStyle(position, offsetPct)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (data._onHandleClick) {
+                data._onHandleClick(data.id, id, "source");
+              }
+            }}
           />,
         ]),
       )}

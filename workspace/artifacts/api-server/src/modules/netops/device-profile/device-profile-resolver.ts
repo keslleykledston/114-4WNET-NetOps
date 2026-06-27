@@ -45,9 +45,14 @@ export function resolveDeviceKind(deviceInfo: DeviceInfo): DeviceKind {
       if (hostname?.toLowerCase().includes("switch")) return "switch";
       return "router";
     }
+    if (vendorLower.includes("raisecom")) {
+      if (hostname?.toLowerCase().includes("sw")) return "switch";
+      return "router";
+    }
     if (vendorLower.includes("cisco")) return "router";
     if (vendorLower.includes("juniper")) return "router";
     if (vendorLower.includes("datacom")) return "switch";
+    if (vendorLower.includes("zte")) return "router";
   }
 
   // Try by hostname patterns (common naming conventions)

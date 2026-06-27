@@ -16,8 +16,12 @@ import {
   L2OperationalSnmpDisabledError,
   OperationalPilotError,
   SnmpCredentialsNotConfiguredError,
+  createL2OperationalRefreshRunId,
   getL2DeviceOperationalMeta,
-  runL2OperationalRefresh,
+  getL2OperationalRefreshJob,
+  runL2OperationalRefreshJob,
+  startL2OperationalRefreshJob,
+  validateL2OperationalRefreshRequest,
 } from "./operational-refresh/l2-operational-refresh.service.js";
 import {
   DEVICE_CREDENTIALS_NOT_CONFIGURED,
@@ -169,6 +173,48 @@ export async function listL2CircuitsHandler(req: Request, res: Response) {
   }
 }
 
+function parseRunIdParam(req: Request): string | undefined {
+  const paramValue = req.params.runId;
+  const raw = Array.isArray(paramValue) ? paramValue[0] : paramValue;
+  return raw?.trim() || undefined;
+}
+
+function handleL2OperationalRefreshError(error: unknown, res: Response, logPrefix: string): boolean {
+  if (error instanceof L2OperationalRefreshDisabledError) {
+    res.status(503).json({ error: error.message, code: L2_OPERATIONAL_REFRESH_DISABLED });
+    return true;
+  }
+  if (error instanceof L2OperationalSnmpDisabledError) {
+    res.status(503).json({ error: error.message, code: L2_OPERATIONAL_SNMP_DISABLED });
+    return true;
+  }
+  if (error instanceof OperationalPilotError) {
+    res.status(403).json({ error: error.message });
+    return true;
+  }
+  if (error instanceof SnmpCredentialsNotConfiguredError) {
+    res.status(422).json({ error: error.message });
+    return true;
+  }
+  if (error instanceof L2DeviceCredentialsError) {
+    res.status(422).json({ error: DEVICE_CREDENTIALS_NOT_CONFIGURED, message: error.message });
+    return true;
+  }
+  if (error instanceof Error && error.message === "Device not found") {
+    res.status(404).json({ error: error.message });
+    return true;
+  }
+  if (error instanceof Error && error.message.includes("No L2 circuits stored")) {
+    res.status(404).json({ error: error.message });
+    return true;
+  }
+  console.error(`${logPrefix}:`, error instanceof Error ? error.message : error);
+  res.status(500).json({
+    error: error instanceof Error ? error.message : "Unknown error",
+  });
+  return true;
+}
+
 export async function refreshL2CircuitsHandler(req: Request, res: Response) {
   const body = req.body as unknown;
 
@@ -184,38 +230,86 @@ export async function refreshL2CircuitsHandler(req: Request, res: Response) {
   }
 
   try {
-    const result = await runL2OperationalRefresh(deviceId);
-    res.json(result);
+    await validateL2OperationalRefreshRequest(deviceId);
+
+    const runId = createL2OperationalRefreshRunId(deviceId);
+    const { startedAt } = await startL2OperationalRefreshJob(deviceId, runId);
+
+    res.status(202).json({
+      run_id: runId,
+      device_id: deviceId,
+      status: "running",
+      started_at: startedAt.toISOString(),
+    });
+
+    runL2OperationalRefreshJob(deviceId, runId).catch((error) => {
+      console.error(
+        `L2 operational refresh failed for device ${deviceId} run ${runId}:`,
+        error instanceof Error ? error.message : error,
+      );
+    });
   } catch (error) {
-    if (error instanceof L2OperationalRefreshDisabledError) {
-      res.status(503).json({ error: error.message, code: L2_OPERATIONAL_REFRESH_DISABLED });
+    handleL2OperationalRefreshError(error, res, "L2 operational refresh error");
+  }
+}
+
+export async function getL2OperationalRefreshJobHandler(req: Request, res: Response) {
+  const runId = parseRunIdParam(req);
+  if (!runId) {
+    res.status(400).json({ error: "Missing runId" });
+    return;
+  }
+
+  try {
+    const job = await getL2OperationalRefreshJob(runId);
+    if (!job) {
+      res.status(404).json({ error: "Job not found" });
       return;
     }
-    if (error instanceof L2OperationalSnmpDisabledError) {
-      res.status(503).json({ error: error.message, code: L2_OPERATIONAL_SNMP_DISABLED });
-      return;
+
+    const payload: {
+      run_id: string;
+      device_id: number;
+      status: typeof job.status;
+      started_at: string;
+      finished_at: string | null;
+      circuits_updated: number | null;
+      findings_count: number | null;
+      error_message: string | null;
+      last_refresh_at?: string | null;
+      freshness?: string;
+      operational_state?: Record<string, unknown>;
+    } = {
+      run_id: job.runId,
+      device_id: job.deviceId,
+      status: job.status,
+      started_at: job.startedAt.toISOString(),
+      finished_at: job.finishedAt ? job.finishedAt.toISOString() : null,
+      circuits_updated: job.circuitCount ?? null,
+      findings_count: job.findingsCount ?? null,
+      error_message: job.errorMessage ?? null,
+    };
+
+    if (job.status === "completed") {
+      const operational = await getL2DeviceOperationalMeta(job.deviceId);
+      if (operational) {
+        payload.last_refresh_at = operational.last_refresh_at;
+        payload.freshness = operational.freshness;
+        payload.operational_state = operational.operational_state;
+        const state = operational.operational_state ?? {};
+        if (payload.circuits_updated == null && typeof state.circuits_updated === "number") {
+          payload.circuits_updated = state.circuits_updated;
+        }
+        if (payload.findings_count == null && typeof state.findings_count === "number") {
+          payload.findings_count = state.findings_count;
+        }
+      }
     }
-    if (error instanceof OperationalPilotError) {
-      res.status(403).json({ error: error.message });
-      return;
-    }
-    if (error instanceof SnmpCredentialsNotConfiguredError) {
-      res.status(422).json({ error: error.message });
-      return;
-    }
-    if (error instanceof L2DeviceCredentialsError) {
-      res.status(422).json({ error: DEVICE_CREDENTIALS_NOT_CONFIGURED, message: error.message });
-      return;
-    }
-    if (error instanceof Error && error.message === "Device not found") {
-      res.status(404).json({ error: error.message });
-      return;
-    }
-    if (error instanceof Error && error.message.includes("No L2 circuits stored")) {
-      res.status(404).json({ error: error.message });
-      return;
-    }
-    console.error("L2 operational refresh error:", error instanceof Error ? error.message : error);
+
+    res.set("Cache-Control", "no-store");
+    res.json(payload);
+  } catch (error) {
+    console.error("L2 refresh job lookup error:", error instanceof Error ? error.message : error);
     res.status(500).json({
       error: error instanceof Error ? error.message : "Unknown error",
     });

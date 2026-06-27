@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FileCode, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { platformOptionsForVendor, VENDOR_OPTIONS } from "@/lib/vendor-options";
 
 export default function Templates() {
   const { data: templates, isLoading } = useListConfigTemplates();
@@ -89,14 +90,35 @@ export default function Templates() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Vendor/Platform</label>
                 <div className="flex gap-2">
-                  <Select value={newTemplate.vendor} onValueChange={v => setNewTemplate({...newTemplate, vendor: v})}>
+                  <Select
+                    value={newTemplate.vendor}
+                    onValueChange={(v) => {
+                      const platforms = platformOptionsForVendor(v);
+                      setNewTemplate({
+                        ...newTemplate,
+                        vendor: v,
+                        platform: platforms[0]?.value ?? newTemplate.platform,
+                      });
+                    }}
+                  >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="cisco">Cisco</SelectItem>
-                      <SelectItem value="juniper">Juniper</SelectItem>
+                      {VENDOR_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  <Input value={newTemplate.platform} onChange={e => setNewTemplate({...newTemplate, platform: e.target.value})} placeholder="e.g. ios-xr" />
+                  <Select
+                    value={newTemplate.platform}
+                    onValueChange={(v) => setNewTemplate({ ...newTemplate, platform: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {platformOptionsForVendor(newTemplate.vendor).map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="col-span-2 space-y-2">

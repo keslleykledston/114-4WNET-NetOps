@@ -32,7 +32,7 @@ export function parseVlanLocalCircuits(
     ? parseInterfaceDescriptionMap(descriptionOutput)
     : new Map<string, InterfaceDescriptionRow>();
   const role = context?.deviceRoleFamily ?? "UNKNOWN";
-  const vlanUsageCount = countReferencedVlans(blocks, context);
+  const vlanUsageCount = countInterfaceVlanReferences(blocks);
 
   const circuits: ParsedL2Circuit[] = [];
   const seen = new Set<string>();
@@ -66,16 +66,16 @@ export function parseVlanLocalCircuits(
     const hasGlobalVlan = context?.globalVlans?.has(vlanId) ?? false;
     const hasMultiInterfaceUse = (vlanUsageCount.get(vlanId) ?? 0) > 1;
     const hasValidDescription = Boolean(mergedDescription?.trim()) && !block.isVlanif;
-    const hasRealL2Use =
+    const hasStrongL2Use =
       hasL2vc ||
       hasVsi ||
       hasMac ||
-      hasSwitchingUse ||
       block.hasBridge ||
       block.hasL2Binding ||
       Boolean(veGroup) ||
       hasMultiInterfaceUse ||
       hasValidDescription;
+    const hasRealL2Use = hasStrongL2Use || hasSwitchingUse;
     const missingSwitchBatch =
       ((role === "SWITCH") || (role === "ROUTER" && (context?.hasGlobalVlanEvidence ?? false))) &&
       (block.outerVlan !== undefined || block.isVlanif || hasSwitchingUse) &&
@@ -95,6 +95,7 @@ export function parseVlanLocalCircuits(
       role,
       hasL2vc,
       hasVsi,
+      hasStrongL2Use,
       hasRealL2Use,
       missingSwitchBatch,
       evidenceFlags,
@@ -372,17 +373,13 @@ function extractVlanifId(interfaceName: string): number | undefined {
   return normalizeServiceVlanId(match?.[1]) ?? undefined;
 }
 
-function countReferencedVlans(blocks: ConfigInterfaceBlock[], context?: Partial<ParserContext>): Map<number, number> {
+/** Count VLAN references per interface block (excludes switching-only membership). */
+function countInterfaceVlanReferences(blocks: ConfigInterfaceBlock[]): Map<number, number> {
   const counts = new Map<number, number>();
   for (const block of blocks) {
     const vlan = normalizeServiceVlanId(block.outerVlan ?? extractVlanifId(block.interfaceName));
     if (vlan === null) continue;
     counts.set(vlan, (counts.get(vlan) ?? 0) + 1);
-  }
-  for (const vlan of context?.switchingVlans ?? []) {
-    const normalized = normalizeServiceVlanId(vlan);
-    if (normalized === null) continue;
-    counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
   }
   return counts;
 }
@@ -392,6 +389,7 @@ function classifyInterfaceBlock(input: {
   role: L2DeviceRoleFamily;
   hasL2vc: boolean;
   hasVsi: boolean;
+  hasStrongL2Use: boolean;
   hasRealL2Use: boolean;
   missingSwitchBatch: boolean;
   evidenceFlags: L3EvidenceSnapshot;
@@ -400,7 +398,7 @@ function classifyInterfaceBlock(input: {
   classification: NonNullable<ParsedL2Circuit["classification"]>;
   l2Transport: NonNullable<ParsedL2Circuit["l2Transport"]>;
 } {
-  const { block, hasL2vc, hasVsi, hasRealL2Use, missingSwitchBatch, evidenceFlags } = input;
+  const { block, hasL2vc, hasVsi, hasStrongL2Use, hasRealL2Use, missingSwitchBatch, evidenceFlags } = input;
 
   if (hasL2vc) return { circuitType: "config_only", classification: "config_only", l2Transport: "config_only" };
   if (hasVsi) return { circuitType: "config_only", classification: "config_only", l2Transport: "config_only" };
@@ -412,6 +410,11 @@ function classifyInterfaceBlock(input: {
     return { circuitType: "l3_interface", classification: "l3_interface", l2Transport: "l3" };
   }
 
+  // L2 binding / VSI / bridge etc. — real service even if missing from vlan batch evidence.
+  if (hasStrongL2Use) {
+    return { circuitType: "vlan_local", classification: "vlan_local", l2Transport: "local_vlan" };
+  }
+  // Port/trunk reference without global vlan (summary/batch) is a batch anomaly.
   if (missingSwitchBatch) {
     return { circuitType: "vlan_orphan", classification: "vlan_not_in_switch_batch", l2Transport: "none" };
   }

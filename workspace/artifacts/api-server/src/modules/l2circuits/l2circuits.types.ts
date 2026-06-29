@@ -276,6 +276,7 @@ export interface SSHCollectorOutput extends Record<string, string | undefined> {
   "display current-configuration interface"?: string;
   "display ip interface brief"?: string;
   "display ip vpn-instance"?: string;
+  "display vlan summary"?: string;
   "display vlan"?: string;
   "display mac-address vsi"?: string;
   "display mac-address vlan"?: string;

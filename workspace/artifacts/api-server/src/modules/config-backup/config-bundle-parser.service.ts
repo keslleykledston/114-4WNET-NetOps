@@ -71,7 +71,8 @@ function mapOutputsForL2Parser(outputs: Record<string, string>): Record<string, 
     "display interface description": outputs["display interface description"],
     "display interface brief": outputs["display interface brief"],
     "display current-configuration interface": outputs["display current-configuration interface"] ?? runningConfig,
-    "display vlan": outputs["display vlan"],
+    "display vlan summary": outputs["display vlan summary"],
+    "display vlan": outputs["display vlan summary"] ?? outputs["display vlan"],
   };
 }
 

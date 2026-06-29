@@ -146,15 +146,18 @@ export function FindingsCountBadge({ findings }: { findings: L2Finding[] }) {
 }
 
 export function FindingSeverityBadge({ severity }: { severity: L2Finding["severity"] }) {
+  const { t } = useTranslation();
   const cls =
     severity === "error"
       ? "bg-red-500/10 text-red-400 border-red-500/20"
       : severity === "warning"
         ? "bg-amber-500/10 text-amber-300 border-amber-500/20"
         : "bg-blue-500/10 text-blue-300 border-blue-500/20";
+  const labelKey = `l2Circuits.detailSheet.severityLevels.${severity}`;
+  const label = t(labelKey);
   return (
     <Badge variant="outline" className={cls}>
-      {severity}
+      {label !== labelKey ? label : severity}
     </Badge>
   );
 }

@@ -479,6 +479,7 @@ export default function L2Circuits() {
       <L2CircuitDetailSheet
         circuitId={selectedCircuit?.id ?? null}
         fallback={selectedCircuit}
+        deviceName={selectedCircuit ? deviceNameById.get(selectedCircuit.deviceId) : undefined}
         open={detailOpen}
         onOpenChange={setDetailOpen}
       />

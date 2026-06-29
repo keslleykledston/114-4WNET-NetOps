@@ -30,6 +30,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useTranslation } from "@/i18n";
 import { formatBgpUptime } from "./format-bgp-uptime";
 
 export type BgpPeerActionKind =
@@ -40,13 +41,13 @@ export type BgpPeerActionKind =
   | "communities"
   | "diagnostics";
 
-const actionTitles: Record<BgpPeerActionKind, string> = {
-  details: "Detalhes do peer",
-  received: "Prefixos recebidos",
-  advertised: "Prefixos exportados",
-  policies: "Policies",
-  communities: "Communities",
-  diagnostics: "Diagnostico",
+const actionTitleKeys: Record<BgpPeerActionKind, string> = {
+  details: "bgp.peerSheet.actions.details",
+  received: "bgp.peerSheet.actions.received",
+  advertised: "bgp.peerSheet.actions.advertised",
+  policies: "bgp.peerSheet.actions.policies",
+  communities: "bgp.peerSheet.actions.communities",
+  diagnostics: "bgp.peerSheet.actions.diagnostics",
 };
 
 interface BgpPeerSheetProps {
@@ -58,6 +59,7 @@ interface BgpPeerSheetProps {
 }
 
 export function BgpPeerSheet({ device, peer, action, open, onOpenChange }: BgpPeerSheetProps) {
+  const { t } = useTranslation();
   const peerIp = peer?.peerIp ?? "";
   const deviceId = device.id;
   const fetchEnabled = open && !!peer && !!action;
@@ -112,9 +114,11 @@ export function BgpPeerSheet({ device, peer, action, open, onOpenChange }: BgpPe
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
         <SheetHeader>
-          <SheetTitle>{action ? actionTitles[action] : "Peer BGP"}</SheetTitle>
+          <SheetTitle>{action ? t(actionTitleKeys[action]) : t("bgp.peerSheet.defaultTitle")}</SheetTitle>
           <SheetDescription className="font-mono text-xs">
-            {peer ? `${peer.peerIp} · ${peer.addressFamily} · AS ${peer.remoteAs ?? "-"}` : "Selecione um peer"}
+            {peer
+              ? `${peer.peerIp} · ${peer.addressFamily} · AS ${peer.remoteAs ?? "-"}`
+              : t("bgp.peerSheet.selectPeer")}
           </SheetDescription>
         </SheetHeader>
 
@@ -122,7 +126,7 @@ export function BgpPeerSheet({ device, peer, action, open, onOpenChange }: BgpPe
           {!peer || !action ? null : activeQuery.isLoading ? (
             <Skeleton className="h-40 w-full" />
           ) : activeQuery.isError ? (
-            <EmptyState message="Falha ao carregar dados read-only deste peer." />
+            <EmptyState message={t("bgp.peerSheet.loadError")} />
           ) : (
             <ActionBody
               action={action}
@@ -160,23 +164,25 @@ function ActionBody({
   communitiesData?: NetopsBgpCommunities;
   diagnosticsData?: NetopsBgpDiagnostics;
 }) {
+  const { t } = useTranslation();
+
   switch (action) {
     case "details": {
       const data = detailsData ?? peer;
       return (
         <dl className="grid gap-3 text-sm">
-          <DetailRow label="Peer IP" value={data.peerIp} mono />
-          <DetailRow label="Nome" value={data.description ?? data.name ?? "-"} />
-          <DetailRow label="ASN remoto" value={data.remoteAs?.toString() ?? "-"} />
-          <DetailRow label="Estado" value={data.state} />
-          <DetailRow label="Papel" value={`${data.role} (${data.roleSource})`} />
-          <DetailRow label="Address family" value={data.addressFamily} />
-          <DetailRow label="Sessao" value={data.sessionType} />
-          <DetailRow label="VRF" value={data.vrf ?? "-"} />
-          <DetailRow label="Import policy" value={data.importPolicy ?? "-"} />
-          <DetailRow label="Export policy" value={data.exportPolicy ?? "-"} />
-          <DetailRow label="Uptime" value={formatBgpUptime(data.uptime)} />
-          <DetailRow label="Fonte" value={data.source} />
+          <DetailRow label={t("bgp.peerSheet.fields.peerIp")} value={data.peerIp} mono />
+          <DetailRow label={t("bgp.peerSheet.fields.name")} value={data.description ?? data.name ?? "-"} />
+          <DetailRow label={t("bgp.peerSheet.fields.remoteAsn")} value={data.remoteAs?.toString() ?? "-"} />
+          <DetailRow label={t("bgp.peerSheet.fields.state")} value={data.state} />
+          <DetailRow label={t("bgp.peerSheet.fields.role")} value={`${data.role} (${data.roleSource})`} />
+          <DetailRow label={t("bgp.peerSheet.fields.addressFamily")} value={data.addressFamily} />
+          <DetailRow label={t("bgp.peerSheet.fields.session")} value={data.sessionType} />
+          <DetailRow label={t("bgp.peerSheet.fields.vrf")} value={data.vrf ?? "-"} />
+          <DetailRow label={t("bgp.peerSheet.fields.importPolicy")} value={data.importPolicy ?? "-"} />
+          <DetailRow label={t("bgp.peerSheet.fields.exportPolicy")} value={data.exportPolicy ?? "-"} />
+          <DetailRow label={t("bgp.peerSheet.fields.uptime")} value={formatBgpUptime(data.uptime)} />
+          <DetailRow label={t("bgp.peerSheet.fields.source")} value={data.source} />
         </dl>
       );
     }
@@ -184,19 +190,19 @@ function ActionBody({
     case "advertised": {
       const rows = action === "received" ? receivedData : advertisedData;
       if (!rows?.length) {
-        return <EmptyState message="Nenhum prefixo retornado (stub ou coleta futura)." />;
+        return <EmptyState message={t("bgp.peerSheet.empty.noPrefixes")} />;
       }
       return <PrefixTable rows={rows} />;
     }
     case "policies": {
-      if (!policiesData) return <EmptyState message="Policies indisponiveis." />;
+      if (!policiesData) return <EmptyState message={t("bgp.peerSheet.empty.policiesUnavailable")} />;
       return (
         <div className="space-y-3 text-sm">
           <DetailRow label="Import" value={policiesData.importPolicy ?? "-"} />
           <DetailRow label="Export" value={policiesData.exportPolicy ?? "-"} />
           <p className="text-xs text-muted-foreground">{policiesData.message}</p>
           {!policiesData.filters.length ? (
-            <EmptyState message="Nenhum filter associado." />
+            <EmptyState message={t("bgp.peerSheet.empty.noFilters")} />
           ) : (
             <ul className="space-y-2">
               {policiesData.filters.map((filter) => (
@@ -211,12 +217,12 @@ function ActionBody({
       );
     }
     case "communities": {
-      if (!communitiesData) return <EmptyState message="Communities indisponiveis." />;
+      if (!communitiesData) return <EmptyState message={t("bgp.peerSheet.empty.communitiesUnavailable")} />;
       return (
         <div className="space-y-3 text-sm">
           <p className="text-xs text-muted-foreground">{communitiesData.message}</p>
           {!communitiesData.communities.length ? (
-            <EmptyState message="Nenhuma community retornada." />
+            <EmptyState message={t("bgp.peerSheet.empty.noCommunities")} />
           ) : (
             <ul className="space-y-2">
               {communitiesData.communities.map((entry) => (
@@ -232,7 +238,7 @@ function ActionBody({
     }
     case "diagnostics": {
       if (!diagnosticsData?.checks.length) {
-        return <EmptyState message="Nenhum check de diagnostico disponivel." />;
+        return <EmptyState message={t("bgp.peerSheet.empty.noDiagnostics")} />;
       }
       return (
         <ul className="space-y-2">
@@ -252,14 +258,16 @@ function ActionBody({
 }
 
 function PrefixTable({ rows }: { rows: NetopsBgpPrefixEntry[] }) {
+  const { t } = useTranslation();
+
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Prefixo</TableHead>
-            <TableHead>Next-hop</TableHead>
-            <TableHead>AS path</TableHead>
+            <TableHead>{t("bgp.peerSheet.prefixTable.prefix")}</TableHead>
+            <TableHead>{t("bgp.peerSheet.prefixTable.nextHop")}</TableHead>
+            <TableHead>{t("bgp.peerSheet.prefixTable.asPath")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

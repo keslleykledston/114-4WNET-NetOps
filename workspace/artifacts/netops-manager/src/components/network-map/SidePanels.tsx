@@ -7,10 +7,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { DeviceData, LinkData } from "@/lib/network-map/types";
 import { RECENT_CHANGES } from "@/lib/network-map/mock-data";
+import { CollectSnmpButton } from "@/features/device-inventory/collect-snmp-button";
+import { useTranslation } from "@/i18n";
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
@@ -43,6 +44,7 @@ export function EmptySelectionPanel({
   devices: DeviceData[];
   links: LinkData[];
 }) {
+  const { t } = useTranslation();
   const up = devices.filter((d) => d.status === "UP").length;
   const down = devices.filter((d) => d.status === "DOWN").length;
   const partial = devices.filter((d) => d.status === "PARTIAL").length;
@@ -59,8 +61,8 @@ export function EmptySelectionPanel({
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto p-4 text-zinc-100">
       <div>
-        <h3 className="text-sm font-semibold">Resumo da topologia</h3>
-        <p className="text-xs text-zinc-400">Sem seleção. Clique em um device ou link.</p>
+        <h3 className="text-sm font-semibold">{t("networkMap.sidePanels.topologySummary")}</h3>
+        <p className="text-xs text-zinc-400">{t("networkMap.sidePanels.noSelection")}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
@@ -80,7 +82,7 @@ export function EmptySelectionPanel({
 
       <div>
         <h4 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
-          <Server className="h-3.5 w-3.5" /> Nós por tipo
+          <Server className="h-3.5 w-3.5" /> {t("networkMap.sidePanels.nodesByType")}
         </h4>
         <div className="flex flex-wrap gap-1">
           {Object.entries(byType).map(([k, v]) => (
@@ -93,7 +95,7 @@ export function EmptySelectionPanel({
 
       <div>
         <h4 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
-          <Cable className="h-3.5 w-3.5" /> Links por tipo
+          <Cable className="h-3.5 w-3.5" /> {t("networkMap.sidePanels.linksByType")}
         </h4>
         <div className="flex flex-wrap gap-1">
           {Object.entries(linksByType).map(([k, v]) => (
@@ -106,16 +108,16 @@ export function EmptySelectionPanel({
 
       <div>
         <h4 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
-          <AlertTriangle className="h-3.5 w-3.5 text-amber-400" /> Alertas principais
+          <AlertTriangle className="h-3.5 w-3.5 text-amber-400" /> {t("networkMap.sidePanels.mainAlerts")}
         </h4>
         <div className="rounded-md border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-300">
-          {alarms} alarme(s) ativos na topologia visível.
+          {t("networkMap.sidePanels.activeAlarms", { count: alarms })}
         </div>
       </div>
 
       <div>
         <h4 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
-          <History className="h-3.5 w-3.5" /> Últimas mudanças
+          <History className="h-3.5 w-3.5" /> {t("networkMap.sidePanels.recentChanges")}
         </h4>
         <ul className="space-y-1">
           {RECENT_CHANGES.map((c) => (
@@ -139,9 +141,19 @@ export function NodeDetailsPanel({
   links: LinkData[];
   devices: DeviceData[];
 }) {
+  const { t } = useTranslation();
   const connected = links.filter((l) => l.source === device.id || l.target === device.id);
   const bgpLinks = connected.filter((l) => l.edgeType === "bgp");
   const serviceLinks = connected.filter((l) => l.edgeType === "service");
+  const tabKeys = ["resumo", "interfaces", "circuitos", "bgp", "evid"] as const;
+  const tabLabels = [
+    t("networkMap.sidePanels.tabs.summary"),
+    t("networkMap.sidePanels.tabs.interfaces"),
+    t("networkMap.sidePanels.tabs.circuits"),
+    t("networkMap.sidePanels.tabs.bgp"),
+    t("networkMap.sidePanels.tabs.evidence"),
+  ];
+
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-4 text-zinc-100">
       <div className="flex items-start justify-between gap-2">
@@ -158,23 +170,23 @@ export function NodeDetailsPanel({
       </div>
       <Tabs defaultValue="resumo" className="flex min-h-0 flex-1 flex-col">
         <TabsList className="h-8 w-full justify-start gap-0.5 bg-zinc-900/60 p-0.5">
-          {["resumo","interfaces","circuitos","bgp","evid"].map((t, i) => (
-            <TabsTrigger key={t} value={t}
+          {tabKeys.map((tabKey, i) => (
+            <TabsTrigger key={tabKey} value={tabKey}
               className="h-7 px-2 text-[11px] data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100 text-zinc-400">
-              {["Resumo","Interfaces","Circuitos","BGP","Evidências"][i]}
+              {tabLabels[i]}
             </TabsTrigger>
           ))}
         </TabsList>
         <div className="min-h-0 flex-1 overflow-y-auto pt-3">
         <TabsContent value="resumo" className="m-0 space-y-3">
           <div>
-            <Row k="IP de gerência" v={device.mgmtIp ?? "—"} />
-            <Row k="Site" v={device.site} />
-            <Row k="Tenant" v={device.tenant} />
-            <Row k="Uptime" v={device.uptime ?? "—"} />
-            <Row k="Interfaces" v={device.interfaces ?? 0} />
-            <Row k="Alarmes" v={device.alarms ?? 0} />
-            <Row k="Links conectados" v={connected.length} />
+            <Row k={t("networkMap.sidePanels.mgmtIp")} v={device.mgmtIp ?? "—"} />
+            <Row k={t("networkMap.sidePanels.site")} v={device.site} />
+            <Row k={t("networkMap.sidePanels.tenant")} v={device.tenant} />
+            <Row k={t("networkMap.sidePanels.uptime")} v={device.uptime ?? "—"} />
+            <Row k={t("networkMap.sidePanels.interfaces")} v={device.interfaces ?? 0} />
+            <Row k={t("networkMap.sidePanels.alarms")} v={device.alarms ?? 0} />
+            <Row k={t("networkMap.sidePanels.connectedLinks")} v={connected.length} />
           </div>
         </TabsContent>
         <TabsContent value="interfaces" className="m-0">
@@ -192,7 +204,7 @@ export function NodeDetailsPanel({
                 </li>
               );
             })}
-            {connected.length === 0 && <EmptyMsg>Sem interfaces conectadas.</EmptyMsg>}
+            {connected.length === 0 && <EmptyMsg>{t("networkMap.sidePanels.noConnectedInterfaces")}</EmptyMsg>}
           </ul>
         </TabsContent>
         <TabsContent value="circuitos" className="m-0">
@@ -200,13 +212,13 @@ export function NodeDetailsPanel({
             {serviceLinks.map((l) => (
               <li key={l.id} className="rounded-md border border-zinc-800 bg-zinc-900/60 p-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-zinc-100">Serviço L2VC {l.capacity}</span>
+                  <span className="text-zinc-100">{t("networkMap.sidePanels.l2vcService", { capacity: l.capacity })}</span>
                   <StatusBadge s={l.status} />
                 </div>
                 <div className="text-[10px] text-zinc-500">{l.intfA} ↔ {l.intfB}</div>
               </li>
             ))}
-            {serviceLinks.length === 0 && <EmptyMsg>Sem circuitos associados.</EmptyMsg>}
+            {serviceLinks.length === 0 && <EmptyMsg>{t("networkMap.sidePanels.noCircuits")}</EmptyMsg>}
           </ul>
         </TabsContent>
         <TabsContent value="bgp" className="m-0">
@@ -223,19 +235,32 @@ export function NodeDetailsPanel({
                 </li>
               );
             })}
-            {bgpLinks.length === 0 && <EmptyMsg>Nenhum peer BGP.</EmptyMsg>}
+            {bgpLinks.length === 0 && <EmptyMsg>{t("networkMap.sidePanels.noBgpPeers")}</EmptyMsg>}
           </ul>
         </TabsContent>
         <TabsContent value="evid" className="m-0 space-y-1 text-xs">
-          <EvidenceItem text="Descoberta SNMP confirmou neighbors" when="há 5 min" />
-          <EvidenceItem text="LLDP coletado em todas as interfaces ativas" when="há 12 min" />
-          <EvidenceItem text="Polling Zabbix OK" when="há 1 min" />
+          <EvidenceItem text={t("networkMap.sidePanels.evidenceSnmp")} when={t("networkMap.sidePanels.ago5min")} />
+          <EvidenceItem text={t("networkMap.sidePanels.evidenceLldp")} when={t("networkMap.sidePanels.ago12min")} />
+          <EvidenceItem text={t("networkMap.sidePanels.evidenceZabbix")} when={t("networkMap.sidePanels.ago1min")} />
         </TabsContent>
         </div>
       </Tabs>
       <div className="mt-2 flex gap-2 border-t border-zinc-800 pt-3">
+        <CollectSnmpButton
+          device={{
+            id: Number(device.id.replace(/[^0-9]/g, "")) || 0,
+            hostname: device.name,
+            site: device.site,
+            vendor: device.vendor,
+            platform: device.model ?? device.type,
+            status: device.status === "DOWN" ? "inactive" : "active",
+            ipAddress: device.mgmtIp ?? "",
+          } as never}
+          variant="outline"
+          size="sm"
+        />
         <Button size="sm" variant="outline" className="flex-1 border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
-          Ver evidências
+          {t("networkMap.sidePanels.viewEvidence")}
         </Button>
       </div>
     </div>
@@ -249,8 +274,17 @@ export function EdgeDetailsPanel({
   link: LinkData;
   devices: DeviceData[];
 }) {
+  const { t } = useTranslation();
   const src = devices.find((d) => d.id === link.source);
   const dst = devices.find((d) => d.id === link.target);
+  const tabKeys = ["resumo", "deps", "hist", "evid"] as const;
+  const tabLabels = [
+    t("networkMap.sidePanels.tabs.summary"),
+    t("networkMap.sidePanels.tabs.dependencies"),
+    t("networkMap.sidePanels.tabs.history"),
+    t("networkMap.sidePanels.tabs.evidence"),
+  ];
+
   return (
     <div className="flex h-full flex-col gap-3 overflow-y-auto p-4 text-zinc-100">
       <div className="flex items-start justify-between gap-2">
@@ -259,51 +293,54 @@ export function EdgeDetailsPanel({
             <Cable className="h-4 w-4 text-sky-400" />
             <h3 className="text-sm font-semibold uppercase">{link.edgeType}</h3>
           </div>
-          <p className="text-xs text-zinc-400">{link.capacity} • origem: {link.origin}</p>
+          <p className="text-xs text-zinc-400">{link.capacity} • {t("networkMap.sidePanels.originLabel")} {link.origin}</p>
         </div>
         <StatusBadge s={link.status} />
       </div>
       <Tabs defaultValue="resumo" className="flex min-h-0 flex-1 flex-col">
         <TabsList className="h-8 w-full justify-start gap-0.5 bg-zinc-900/60 p-0.5">
-          {["resumo","deps","hist","evid"].map((t, i) => (
-            <TabsTrigger key={t} value={t}
+          {tabKeys.map((tabKey, i) => (
+            <TabsTrigger key={tabKey} value={tabKey}
               className="h-7 px-2 text-[11px] data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100 text-zinc-400">
-              {["Resumo","Dependências","Histórico","Evidências"][i]}
+              {tabLabels[i]}
             </TabsTrigger>
           ))}
         </TabsList>
         <div className="min-h-0 flex-1 overflow-y-auto pt-3">
           <TabsContent value="resumo" className="m-0">
-            <Row k="Origem" v={src?.name} />
-            <Row k="Destino" v={dst?.name} />
-            <Row k="Interface A" v={<span className="font-mono">{link.intfA}</span>} />
-            <Row k="Interface B" v={<span className="font-mono">{link.intfB}</span>} />
-            <Row k="Capacidade" v={link.capacity} />
-            <Row k="Confidence" v={`${link.confidence}%`} />
-            <Row k="Última vez visto" v={link.lastSeen ?? "há 2 min"} />
+            <Row k={t("networkMap.sidePanels.source")} v={src?.name} />
+            <Row k={t("networkMap.sidePanels.destination")} v={dst?.name} />
+            <Row k={t("networkMap.sidePanels.interfaceA")} v={<span className="font-mono">{link.intfA}</span>} />
+            <Row k={t("networkMap.sidePanels.interfaceB")} v={<span className="font-mono">{link.intfB}</span>} />
+            <Row k={t("networkMap.sidePanels.capacity")} v={link.capacity} />
+            <Row k={t("networkMap.sidePanels.confidence")} v={`${link.confidence}%`} />
+            <Row k={t("networkMap.sidePanels.lastSeen")} v={link.lastSeen ?? t("networkMap.sidePanels.lastSeenDefault")} />
           </TabsContent>
           <TabsContent value="deps" className="m-0 text-xs">
-            <EmptyMsg>Nenhum circuito dependente mapeado.</EmptyMsg>
+            <EmptyMsg>{t("networkMap.sidePanels.noDependentCircuits")}</EmptyMsg>
           </TabsContent>
           <TabsContent value="hist" className="m-0">
             <ul className="space-y-1 text-xs">
               <li className="rounded-md border border-zinc-800 bg-zinc-900/60 p-2">
-                <div>Link visto via discovery</div>
-                <div className="text-[10px] text-zinc-500">há 5 min</div>
+                <div>{t("networkMap.sidePanels.historyDiscovery")}</div>
+                <div className="text-[10px] text-zinc-500">{t("networkMap.sidePanels.ago5min")}</div>
               </li>
               <li className="rounded-md border border-zinc-800 bg-zinc-900/60 p-2">
-                <div>Status alterado para {link.status}</div>
-                <div className="text-[10px] text-zinc-500">há 12 min</div>
+                <div>{t("networkMap.sidePanels.historyStatusChanged", { status: link.status })}</div>
+                <div className="text-[10px] text-zinc-500">{t("networkMap.sidePanels.ago12min")}</div>
               </li>
               <li className="rounded-md border border-zinc-800 bg-zinc-900/60 p-2">
-                <div>Capacidade alterada para {link.capacity}</div>
-                <div className="text-[10px] text-zinc-500">há 1 h</div>
+                <div>{t("networkMap.sidePanels.historyCapacityChanged", { capacity: link.capacity })}</div>
+                <div className="text-[10px] text-zinc-500">{t("networkMap.sidePanels.ago1h")}</div>
               </li>
             </ul>
           </TabsContent>
           <TabsContent value="evid" className="m-0 space-y-1 text-xs">
-            <EvidenceItem text={`LLDP entre ${src?.name} e ${dst?.name}`} when="há 4 min" />
-            <EvidenceItem text="MAC table consistente nas duas pontas" when="há 7 min" />
+            <EvidenceItem
+              text={t("networkMap.sidePanels.evidenceLldpBetween", { source: src?.name ?? "", target: dst?.name ?? "" })}
+              when={t("networkMap.sidePanels.ago4min")}
+            />
+            <EvidenceItem text={t("networkMap.sidePanels.evidenceMacTable")} when={t("networkMap.sidePanels.ago7min")} />
           </TabsContent>
         </div>
       </Tabs>

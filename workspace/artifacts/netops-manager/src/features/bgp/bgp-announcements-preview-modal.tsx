@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { useTranslation } from "@/i18n";
 
 type MatrixRow = {
   targetPolicyName?: string;
@@ -126,6 +126,7 @@ export interface BgpAnnouncementPreviewModalProps {
 }
 
 export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snapshotId, row, cell, onSaved }: BgpAnnouncementPreviewModalProps) {
+  const { t } = useTranslation();
   const [desiredState, setDesiredState] = useState<string>("Clear");
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
@@ -142,7 +143,7 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
   const previewMutation = useMutation({
     mutationFn: () => {
       if (!deviceId || !snapshotId || !row || !cell || row.node == null) {
-        throw new Error("Seleção incompleta");
+        throw new Error(t("bgp.announcementsPreview.incompleteSelection"));
       }
       return apiFetch<PreviewResponse>("/api/bgp/announcements/preview-change", {
         method: "POST",
@@ -162,13 +163,13 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
       setError(null);
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Falha ao gerar preview");
+      setError(err instanceof Error ? err.message : t("bgp.announcementsPreview.previewFailed"));
     },
   });
 
   const draftMutation = useMutation({
     mutationFn: () => {
-      if (!preview) throw new Error("Gere um preview antes de salvar");
+      if (!preview) throw new Error(t("bgp.announcementsPreview.previewRequired"));
       return apiFetch("/api/bgp/announcements/change-plans", {
         method: "POST",
         body: JSON.stringify({ previewId: preview.previewId, note: note.trim() || null }),
@@ -179,7 +180,7 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
       onOpenChange(false);
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Falha ao salvar draft");
+      setError(err instanceof Error ? err.message : t("bgp.announcementsPreview.saveDraftFailed"));
     },
   });
 
@@ -190,53 +191,60 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl">
         <DialogHeader>
-          <DialogTitle>Preview read-only</DialogTitle>
+          <DialogTitle>{t("bgp.announcementsPreview.title")}</DialogTitle>
           <DialogDescription>
-            Célula da matriz. Preview só simula diff e draft. Nada é aplicado.
+            {t("bgp.announcementsPreview.description")}
           </DialogDescription>
         </DialogHeader>
 
         {!row || !cell ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
-            Selecione uma célula da matriz.
+            {t("bgp.announcementsPreview.selectCell")}
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
             <div className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <Label>Target policy</Label>
+                  <Label>{t("bgp.announcementsPreview.targetPolicy")}</Label>
                   <Input readOnly value={row.targetPolicyName ?? row.routePolicyName} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Target type</Label>
+                  <Label>{t("bgp.announcementsPreview.targetType")}</Label>
                   <Input readOnly value={row.targetType} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Node</Label>
+                  <Label>{t("bgp.announcementsPreview.node")}</Label>
                   <Input readOnly value={row.node ?? "—"} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Upstream</Label>
+                  <Label>{t("bgp.announcementsPreview.upstream")}</Label>
                   <Input readOnly value={`${cell.upstreamName} / ${cell.circuitId}`} />
                 </div>
                 <div className="space-y-1 md:col-span-2">
-                  <Label>Prefix scope</Label>
-                  <Input readOnly value={`${row.prefixScope.type} · ${row.prefixScope.name} · ${row.prefixScope.affectedPrefixCount} prefixos`} />
+                  <Label>{t("bgp.announcementsPreview.prefixScope")}</Label>
+                  <Input
+                    readOnly
+                    value={t("bgp.announcementsPreview.prefixScopeValue", {
+                      type: row.prefixScope.type,
+                      name: row.prefixScope.name,
+                      count: row.prefixScope.affectedPrefixCount,
+                    })}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label>Estado atual</Label>
+                  <Label>{t("bgp.announcementsPreview.currentState")}</Label>
                   <Input readOnly value={`${cell.label ?? cell.state} · ${cell.community ?? "—"}`} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Origem atual</Label>
+                  <Label>{t("bgp.announcementsPreview.currentOrigin")}</Label>
                   <Input readOnly value={`${cell.communitySourceType ?? "unknown"}${cell.communitySourceName ? ` / ${cell.communitySourceName}` : ""}`} />
                 </div>
               </div>
 
               <div className="grid gap-3 md:grid-cols-[1fr_auto]">
                 <div className="space-y-1">
-                  <Label>Estado desejado</Label>
+                  <Label>{t("bgp.announcementsPreview.desiredState")}</Label>
                   <Select value={desiredState} onValueChange={setDesiredState}>
                     <SelectTrigger>
                       <SelectValue />
@@ -249,22 +257,22 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label>Nota</Label>
-                  <Input value={note} onChange={(event) => setNote(event.target.value)} placeholder="Opcional" />
+                  <Label>{t("bgp.announcementsPreview.note")}</Label>
+                  <Input value={note} onChange={(event) => setNote(event.target.value)} placeholder={t("bgp.announcementsPreview.notePlaceholder")} />
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => void previewMutation.mutateAsync()} disabled={previewMutation.isPending || !deviceId || !snapshotId || !row || !cell || row.node == null}>
                   {previewMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Gerar preview
+                  {t("bgp.announcementsPreview.generatePreview")}
                 </Button>
                 <Button variant="secondary" onClick={() => void draftMutation.mutateAsync()} disabled={!preview || draftMutation.isPending}>
                   {draftMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Salvar change-plan draft
+                  {t("bgp.announcementsPreview.saveDraft")}
                 </Button>
-                <Badge variant="outline">Read-only</Badge>
-                <Badge variant="outline">Snapshot #{snapshotId ?? "n/a"}</Badge>
+                <Badge variant="outline">{t("bgp.announcementsPreview.readOnly")}</Badge>
+                <Badge variant="outline">{t("bgp.announcementsPreview.snapshot", { id: snapshotId ?? "n/a" })}</Badge>
               </div>
 
               {error ? (
@@ -277,20 +285,22 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
               {preview ? (
                 <div className="space-y-4 rounded-xl border border-border bg-background/40 p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">risk {preview.riskLevel}</Badge>
-                    <Badge variant="secondary">community set {preview.communitySetMatch.matched ? "exact" : "none"}</Badge>
-                    <Badge variant="secondary">command {preview.commandConfidence}</Badge>
+                    <Badge variant="secondary">{t("bgp.announcementsPreview.riskBadge", { level: preview.riskLevel })}</Badge>
+                    <Badge variant="secondary">
+                      {t("bgp.announcementsPreview.communitySetBadge", { match: preview.communitySetMatch.matched ? "exact" : "none" })}
+                    </Badge>
+                    <Badge variant="secondary">{t("bgp.announcementsPreview.commandBadge", { confidence: preview.commandConfidence })}</Badge>
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <div className="text-xs uppercase text-muted-foreground">Diff</div>
+                      <div className="text-xs uppercase text-muted-foreground">{t("bgp.announcementsPreview.diff")}</div>
                       <pre className="mt-2 overflow-auto rounded-lg border border-border bg-muted/40 p-3 text-[11px] leading-5">
 {JSON.stringify(preview.diff, null, 2)}
                       </pre>
                     </div>
                     <div>
-                      <div className="text-xs uppercase text-muted-foreground">Rollback</div>
+                      <div className="text-xs uppercase text-muted-foreground">{t("bgp.announcementsPreview.rollback")}</div>
                       <pre className="mt-2 overflow-auto rounded-lg border border-border bg-muted/40 p-3 text-[11px] leading-5">
 {JSON.stringify(preview.rollbackDiff, null, 2)}
                       </pre>
@@ -299,13 +309,13 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <div className="text-xs uppercase text-muted-foreground">Commands propostos</div>
+                      <div className="text-xs uppercase text-muted-foreground">{t("bgp.announcementsPreview.proposedCommands")}</div>
                       <pre className="mt-2 overflow-auto rounded-lg border border-border bg-muted/40 p-3 text-[11px] leading-5">
 {commands.map((command) => `# ${command.confidence}${command.note ? ` · ${command.note}` : ""}\n${command.command}`).join("\n")}
                       </pre>
                     </div>
                     <div>
-                      <div className="text-xs uppercase text-muted-foreground">Rollback</div>
+                      <div className="text-xs uppercase text-muted-foreground">{t("bgp.announcementsPreview.rollback")}</div>
                       <pre className="mt-2 overflow-auto rounded-lg border border-border bg-muted/40 p-3 text-[11px] leading-5">
 {(preview.rollbackCommands ?? []).map((command) => `# ${command.confidence}${command.note ? ` · ${command.note}` : ""}\n${command.command}`).join("\n")}
                       </pre>
@@ -313,10 +323,10 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
                   </div>
 
                   <div className="space-y-2">
-                    <div className="text-xs uppercase text-muted-foreground">Findings</div>
+                    <div className="text-xs uppercase text-muted-foreground">{t("bgp.announcementsPreview.findings")}</div>
                     <div className="space-y-2">
                       {findings.length === 0 ? (
-                        <div className="text-sm text-muted-foreground">Nenhum finding.</div>
+                        <div className="text-sm text-muted-foreground">{t("bgp.announcementsPreview.noFindings")}</div>
                       ) : findings.map((finding) => (
                         <div key={`${finding.code}-${finding.message}`} className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
                           <div className="flex flex-wrap items-center gap-2">
@@ -335,17 +345,17 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
 
             <div className="space-y-4">
               <div className="rounded-xl border border-border bg-background/40 p-4">
-                <div className="text-xs uppercase text-muted-foreground">Estado atual</div>
+                <div className="text-xs uppercase text-muted-foreground">{t("bgp.announcementsPreview.currentStatePanel")}</div>
                 <div className="mt-2 space-y-1 text-sm">
-                  <div><span className="text-muted-foreground">Cell:</span> {cell.label ?? cell.state}</div>
-                  <div><span className="text-muted-foreground">Community:</span> {cell.community ?? "—"}</div>
-                  <div><span className="text-muted-foreground">Source:</span> {cell.communitySourceType ?? "unknown"}{cell.communitySourceName ? ` / ${cell.communitySourceName}` : ""}</div>
-                  <div><span className="text-muted-foreground">Célula:</span> {cell.circuitId}</div>
+                  <div><span className="text-muted-foreground">{t("bgp.announcementsPreview.cellLabel")}</span> {cell.label ?? cell.state}</div>
+                  <div><span className="text-muted-foreground">{t("bgp.announcementsPreview.communityLabel")}</span> {cell.community ?? "—"}</div>
+                  <div><span className="text-muted-foreground">{t("bgp.announcementsPreview.sourceLabel")}</span> {cell.communitySourceType ?? "unknown"}{cell.communitySourceName ? ` / ${cell.communitySourceName}` : ""}</div>
+                  <div><span className="text-muted-foreground">{t("bgp.announcementsPreview.cellIdLabel")}</span> {cell.circuitId}</div>
                 </div>
               </div>
 
               <div className="rounded-xl border border-border bg-background/40 p-4">
-                <div className="text-xs uppercase text-muted-foreground">Prefixos afetados</div>
+                <div className="text-xs uppercase text-muted-foreground">{t("bgp.announcementsPreview.affectedPrefixes")}</div>
                 <div className="mt-2 space-y-2">
                   {row.prefixScope.expandedPrefixes.length === 0 ? (
                     <div className="text-sm text-muted-foreground">—</div>
@@ -360,7 +370,7 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
 
               {preview?.communitySetMatch.matched ? (
                 <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-                  Match exato: {preview.communitySetMatch.communityListName}
+                  {t("bgp.announcementsPreview.exactMatch", { name: preview.communitySetMatch.communityListName ?? "—" })}
                 </div>
               ) : null}
             </div>
@@ -369,7 +379,7 @@ export function BgpAnnouncementPreviewModal({ open, onOpenChange, deviceId, snap
 
         <Separator />
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("bgp.announcementsPreview.close")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

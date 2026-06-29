@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getListNetopsDeviceBgpPeersQueryKey,
@@ -35,6 +35,7 @@ import { BgpPeerCleanupModal } from "./bgp-peer-cleanup-modal";
 import { formatBgpUptime } from "./format-bgp-uptime";
 import { CollectSnmpButton } from "@/features/device-inventory/collect-snmp-button";
 import { useDiscoveryBgpPeers, type DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api";
+import { useTranslation } from "@/i18n";
 
 interface BgpPanelProps {
   device: Device;
@@ -48,45 +49,7 @@ type AfFilter = "all" | NetopsBgpPeer["addressFamily"];
 
 const STORAGE_PREFIX = "netops:bgp-filters:";
 
-const roleLabel: Partial<Record<NetopsBgpPeerRole, string>> = {
-  provider: "Operadora",
-  customer: "Cliente",
-  cdn: "CDN",
-  ix: "IX",
-  cdn_ix: "CDN/IX",
-  ibgp: "iBGP",
-};
-
-function formatRoleLabel(role: NetopsBgpPeerRole) {
-  return roleLabel[role] ?? "Cliente";
-}
-
-const roleOptions: Array<{ value: RoleFilter; label: string }> = [
-  { value: "all", label: "Todos" },
-  { value: "customer", label: "Cliente" },
-  { value: "provider", label: "Operadora" },
-  { value: "ix", label: "IX" },
-  { value: "cdn", label: "CDN" },
-  { value: "cdn_ix", label: "CDN/IX" },
-  { value: "ibgp", label: "iBGP" },
-];
-
 const editableRoleOptions: NetopsBgpPeerRole[] = ["customer", "provider", "ix", "cdn", "ibgp"];
-
-const stateOptions: Array<{ value: StateFilter; label: string }> = [
-  { value: "all", label: "Todos" },
-  { value: "Established", label: "Established" },
-  { value: "Active", label: "Active" },
-  { value: "Idle", label: "Idle" },
-  { value: "Connect", label: "Connect" },
-  { value: "Down", label: "Down / Not Established" },
-];
-
-const afOptions: Array<{ value: AfFilter; label: string }> = [
-  { value: "all", label: "Todos" },
-  { value: "ipv4", label: "IPv4" },
-  { value: "ipv6", label: "IPv6" },
-];
 
 interface StoredBgpFilters {
   search: string;
@@ -137,8 +100,53 @@ function buildListParams(
 }
 
 export function BgpPanel({ device, title, role }: BgpPanelProps) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const formatRoleLabel = useCallback(
+    (peerRole: NetopsBgpPeerRole) => {
+      const key = `bgp.roleLabels.${peerRole}`;
+      const label = t(key);
+      return label !== key ? label : t("bgp.peerModalExtended.defaultPeerName");
+    },
+    [t],
+  );
+
+  const roleOptions = useMemo(
+    (): Array<{ value: RoleFilter; label: string }> => [
+      { value: "all", label: t("bgp.panel.filterAll") },
+      { value: "customer", label: t("bgp.roleLabels.customer") },
+      { value: "provider", label: t("bgp.roleLabels.provider") },
+      { value: "ix", label: t("bgp.roleLabels.ix") },
+      { value: "cdn", label: t("bgp.roleLabels.cdn") },
+      { value: "cdn_ix", label: t("bgp.roleLabels.cdn_ix") },
+      { value: "ibgp", label: t("bgp.roleLabels.ibgp") },
+    ],
+    [t],
+  );
+
+  const stateOptions = useMemo(
+    (): Array<{ value: StateFilter; label: string }> => [
+      { value: "all", label: t("bgp.panel.filterAll") },
+      { value: "Established", label: "Established" },
+      { value: "Active", label: "Active" },
+      { value: "Idle", label: "Idle" },
+      { value: "Connect", label: "Connect" },
+      { value: "Down", label: t("bgp.panel.stateDown") },
+    ],
+    [t],
+  );
+
+  const afOptions = useMemo(
+    (): Array<{ value: AfFilter; label: string }> => [
+      { value: "all", label: t("bgp.panel.filterAll") },
+      { value: "ipv4", label: "IPv4" },
+      { value: "ipv6", label: "IPv6" },
+    ],
+    [t],
+  );
+
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>(role ?? "all");
@@ -247,12 +255,12 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
         });
         await queryClient.invalidateQueries({ queryKey: getListNetopsDeviceBgpPeersQueryKey(device.id) });
         await queryClient.invalidateQueries({ queryKey: getListDeviceBgpPeersQueryKey(device.id) });
-        toast({ title: "Papel BGP salvo" });
+        toast({ title: t("bgp.panel.toastRoleSaved") });
       },
       onError: (err) => {
         toast({
-          title: "Erro ao salvar papel BGP",
-          description: err instanceof Error ? err.message : "Falha desconhecida",
+          title: t("bgp.panel.toastRoleSaveError"),
+          description: err instanceof Error ? err.message : t("bgp.panel.toastUnknownError"),
           variant: "destructive",
         });
       },
@@ -346,7 +354,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
           </CardTitle>
           <div className="flex items-center gap-2">
             <CollectSnmpButton device={device} />
-            <Badge variant="outline">{role ? formatRoleLabel(role) : "Todos peers"}</Badge>
+            <Badge variant="outline">{role ? formatRoleLabel(role) : t("bgp.panel.allPeers")}</Badge>
           </div>
         </div>
       </CardHeader>
@@ -357,13 +365,13 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar IP, ASN..."
+              placeholder={t("bgp.panel.searchPlaceholder")}
               className="pl-9"
             />
           </div>
 
           <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase text-muted-foreground">Estado</div>
+            <div className="text-xs font-semibold uppercase text-muted-foreground">{t("bgp.panel.stateFilter")}</div>
             <div className="flex flex-wrap gap-2">
               {stateOptions.map((option) => (
                 <button
@@ -382,7 +390,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
           </div>
 
           <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase text-muted-foreground">Família de endereço</div>
+            <div className="text-xs font-semibold uppercase text-muted-foreground">{t("bgp.panel.addressFamilyFilter")}</div>
             <div className="flex flex-wrap gap-2">
               {afOptions.map((option) => (
                 <button
@@ -402,11 +410,11 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <div className="text-xs font-semibold uppercase text-muted-foreground">Papel</div>
+              <div className="text-xs font-semibold uppercase text-muted-foreground">{t("bgp.panel.roleFilter")}</div>
               {!role && (
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Checkbox checked={includeIbgp} onCheckedChange={(checked) => setIncludeIbgp(checked === true)} />
-                  Incluir iBGP
+                  {t("bgp.panel.includeIbgp")}
                 </label>
               )}
             </div>
@@ -432,16 +440,16 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-12">
-          <Counter label="Total" value={counters.total} />
+          <Counter label={t("bgp.panel.counterTotal")} value={counters.total} />
           <Counter label="Established" value={counters.established} />
           <Counter label="Down" value={counters.down} />
           <Counter label="eBGP" value={counters.ebgp} />
           <Counter label="iBGP" value={counters.ibgp} />
-          <Counter label="Cliente" value={counters.customer} />
-          <Counter label="Operadora" value={counters.provider} />
-          <Counter label="IX" value={counters.ix} />
-          <Counter label="CDN" value={counters.cdn} />
-          <Counter label="CDN/IX" value={counters.cdnIx} />
+          <Counter label={t("bgp.roleLabels.customer")} value={counters.customer} />
+          <Counter label={t("bgp.roleLabels.provider")} value={counters.provider} />
+          <Counter label={t("bgp.roleLabels.ix")} value={counters.ix} />
+          <Counter label={t("bgp.roleLabels.cdn")} value={counters.cdn} />
+          <Counter label={t("bgp.roleLabels.cdn_ix")} value={counters.cdnIx} />
           <Counter label="IPv4" value={counters.ipv4} />
           <Counter label="IPv6" value={counters.ipv6} />
         </div>
@@ -450,25 +458,25 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
           <Skeleton className="h-44 w-full" />
         ) : isError ? (
           <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-            Execute discovery para carregar peers BGP.
+            {t("bgp.panel.errorDiscovery")}
           </div>
         ) : !filteredPeers.length ? (
           <div className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">
-            Nenhum peer BGP encontrado para {device.hostname}.
+            {t("bgp.panel.emptyPeers", { hostname: device.hostname })}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Peer IP</TableHead>
-                  <TableHead>Nome / Descrição</TableHead>
-                  <TableHead>ASN remoto</TableHead>
-                  <TableHead>Sessão</TableHead>
-                  <TableHead>VRF</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Uptime</TableHead>
-                  <TableHead>Papel</TableHead>
+                  <TableHead>{t("bgp.panel.table.peerIp")}</TableHead>
+                  <TableHead>{t("bgp.panel.table.nameDescription")}</TableHead>
+                  <TableHead>{t("bgp.panel.table.remoteAsn")}</TableHead>
+                  <TableHead>{t("bgp.panel.table.session")}</TableHead>
+                  <TableHead>{t("bgp.panel.table.vrf")}</TableHead>
+                  <TableHead>{t("bgp.panel.table.state")}</TableHead>
+                  <TableHead>{t("bgp.panel.table.uptime")}</TableHead>
+                  <TableHead>{t("bgp.panel.table.role")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -483,7 +491,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                           <span>{peer.peerIp}</span>
                           <Link
                             href={`/bgp/peer-drilldown?deviceId=${device.id}&peer=${encodeURIComponent(peer.peerIp)}&auto=1`}
-                            title="Drilldown snapshot (sem SSH)"
+                            title={t("bgp.panel.drilldownTitle")}
                           >
                             <Button
                               type="button"
@@ -500,7 +508,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                             size="sm"
                             className="h-6 w-6 p-0 hover:bg-slate-800"
                             onClick={() => openDetailModal(peer)}
-                            title="Detalhes do peer"
+                            title={t("bgp.panel.peerDetailsTitle")}
                           >
                             <FileSearch className="h-3.5 w-3.5" />
                           </Button>
@@ -513,7 +521,7 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                               const direction = peer.role === "customer" ? "received" : "advertised";
                               openRoutesModal(peer, direction);
                             }}
-                            title={peer.role === "customer" ? "Prefixos recebidos (SSH)" : "Prefixos anunciados (SSH)"}
+                            title={peer.role === "customer" ? t("bgp.panel.prefixesReceivedTitle") : t("bgp.panel.prefixesAdvertisedTitle")}
                           >
                             <Download className="h-3.5 w-3.5" />
                           </Button>
@@ -559,10 +567,10 @@ export function BgpPanel({ device, title, role }: BgpPanelProps) {
                               className="h-8 px-2"
                               onClick={() => saveRole(peer)}
                               disabled={saving}
-                              title="Salvar papel"
+                              title={t("bgp.panel.saveRoleTitle")}
                             >
                               <Save className="h-3.5 w-3.5" />
-                              {saving ? "..." : "Salvar"}
+                              {saving ? t("bgp.panel.saving") : t("bgp.panel.saveRole")}
                             </Button>
                           )}
                         </div>

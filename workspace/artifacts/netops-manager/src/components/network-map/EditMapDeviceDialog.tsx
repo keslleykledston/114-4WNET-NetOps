@@ -19,6 +19,7 @@ import {
 import { useListDevices } from "@workspace/api-client-react";
 import type { DeviceData } from "@/lib/network-map/types";
 import { inventoryNodeId, mapInventoryDeviceToMapNode } from "@/lib/network-map/inventory-bridge";
+import { useTranslation } from "@/i18n";
 
 export function EditMapDeviceDialog({
   open,
@@ -35,6 +36,7 @@ export function EditMapDeviceDialog({
   onReplace: (oldDevice: DeviceData, newDevice: DeviceData) => void;
   onDelete: (device: DeviceData) => void;
 }) {
+  const { t } = useTranslation();
   const { data: inventoryDevices = [], isLoading } = useListDevices();
   const [deviceId, setDeviceId] = useState<string>("");
 
@@ -62,17 +64,23 @@ export function EditMapDeviceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar device no mapa</DialogTitle>
+          <DialogTitle>{t("networkMap.editDevice.title")}</DialogTitle>
           <DialogDescription className="text-zinc-400">
-            Troque <span className="font-medium text-zinc-200">{device.name}</span> por outro do inventário ou remova do canvas.
+            {t("networkMap.editDevice.description", { name: device.name })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1">
-            <Label>Substituir por (inventário)</Label>
+            <Label>{t("networkMap.editDevice.replaceLabel")}</Label>
             <Select value={deviceId} onValueChange={setDeviceId}>
               <SelectTrigger className="border-zinc-800 bg-zinc-900">
-                <SelectValue placeholder={isLoading ? "Carregando..." : "Selecionar device"} />
+                <SelectValue
+                  placeholder={
+                    isLoading
+                      ? `${t("common.loading")}...`
+                      : t("networkMap.editDevice.selectDevicePlaceholder")
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {sorted.map((d) => {
@@ -99,14 +107,14 @@ export function EditMapDeviceDialog({
               onOpenChange(false);
             }}
           >
-            Excluir do mapa
+            {t("networkMap.editDevice.removeFromMap")}
           </Button>
           <div className="flex w-full gap-2 sm:w-auto">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              Cancelar
+              {t("common.cancel")}
             </Button>
             <Button type="button" disabled={!deviceId} onClick={handleReplace}>
-              Substituir
+              {t("networkMap.editDevice.replace")}
             </Button>
           </div>
         </DialogFooter>

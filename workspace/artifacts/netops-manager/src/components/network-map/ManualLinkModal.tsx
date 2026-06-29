@@ -25,6 +25,7 @@ import {
   parseInventoryNodeId,
   physicalInterfaces,
 } from "@/lib/network-map/inventory-bridge";
+import { useTranslation } from "@/i18n";
 
 export interface ManualLinkValues {
   source: string;
@@ -52,6 +53,7 @@ export function InterfaceSelect({
   links: LinkData[];
   side: "source" | "target";
 }) {
+  const { t } = useTranslation();
   const deviceId = parseInventoryNodeId(deviceNodeId);
   const { data: interfaces, isLoading, isError } = useListNetopsDeviceInterfaces(deviceId ?? 0, {
     query: {
@@ -67,7 +69,7 @@ export function InterfaceSelect({
         <Label>{label}</Label>
         <Select disabled>
           <SelectTrigger className="border-zinc-800 bg-zinc-900">
-            <SelectValue placeholder="Selecione o device primeiro" />
+            <SelectValue placeholder={t("networkMap.manualLink.selectDeviceFirst")} />
           </SelectTrigger>
         </Select>
       </div>
@@ -80,7 +82,7 @@ export function InterfaceSelect({
         <Label>{label}</Label>
         <Select disabled>
           <SelectTrigger className="border-zinc-800 bg-zinc-900">
-            <SelectValue placeholder="Carregando interfaces..." />
+            <SelectValue placeholder={t("networkMap.manualLink.loadingInterfaces")} />
           </SelectTrigger>
         </Select>
       </div>
@@ -98,7 +100,7 @@ export function InterfaceSelect({
           className="border-zinc-800 bg-zinc-900"
         />
         <p className="text-[10px] text-zinc-500">
-          {isError ? "Falha ao carregar interfaces." : "Nenhuma interface física coletada — informe manualmente."}
+          {isError ? t("networkMap.manualLink.loadInterfacesFailed") : t("networkMap.manualLink.noPhysicalInterfaces")}
         </p>
       </div>
     );
@@ -109,7 +111,7 @@ export function InterfaceSelect({
       <Label>{label}</Label>
       <Select value={value || undefined} onValueChange={onChange}>
         <SelectTrigger className="border-zinc-800 bg-zinc-900">
-          <SelectValue placeholder="Selecionar interface" />
+          <SelectValue placeholder={t("networkMap.manualLink.selectInterface")} />
         </SelectTrigger>
         <SelectContent>
           {physical.map((iface) => {
@@ -123,7 +125,7 @@ export function InterfaceSelect({
               >
                 {iface.name}
                 {iface.operStatus ? ` (${iface.operStatus})` : ""}
-                {inUse ? " — em uso" : ""}
+                {inUse ? t("networkMap.manualLink.inUse") : ""}
               </SelectItem>
             );
           })}
@@ -150,6 +152,7 @@ export function ManualLinkModal({
   initialSource?: string;
   initialTarget?: string;
 }) {
+  const { t } = useTranslation();
   const { data: inventoryDevices = [], isLoading: loadingDevices } = useListDevices();
   const [v, setV] = useState<ManualLinkValues>({
     source: initialSource ?? "",
@@ -188,20 +191,22 @@ export function ManualLinkModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{planned ? "Criar link planejado" : "Criar link manual"}</DialogTitle>
+          <DialogTitle>{planned ? t("networkMap.manualLink.plannedTitle") : t("networkMap.manualLink.title")}</DialogTitle>
           <DialogDescription className="text-zinc-400">
-            Devices do inventário NetOps. Interfaces físicas das coletas SNMP/SSH.
+            {t("networkMap.manualLink.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-1 space-y-1">
-            <Label>Device origem</Label>
+            <Label>{t("networkMap.manualLink.sourceDevice")}</Label>
             <Select
               value={v.source}
               onValueChange={(x) => setV((p) => ({ ...p, source: x, intfA: "" }))}
             >
               <SelectTrigger className="border-zinc-800 bg-zinc-900">
-                <SelectValue placeholder={loadingDevices ? "Carregando..." : "Selecionar"} />
+                <SelectValue
+                  placeholder={loadingDevices ? `${t("common.loading")}...` : t("networkMap.manualLink.select")}
+                />
               </SelectTrigger>
               <SelectContent>
                 {sortedInventory.map((d) => (
@@ -214,13 +219,15 @@ export function ManualLinkModal({
             </Select>
           </div>
           <div className="col-span-1 space-y-1">
-            <Label>Device destino</Label>
+            <Label>{t("networkMap.manualLink.targetDevice")}</Label>
             <Select
               value={v.target}
               onValueChange={(x) => setV((p) => ({ ...p, target: x, intfB: "" }))}
             >
               <SelectTrigger className="border-zinc-800 bg-zinc-900">
-                <SelectValue placeholder={loadingDevices ? "Carregando..." : "Selecionar"} />
+                <SelectValue
+                  placeholder={loadingDevices ? `${t("common.loading")}...` : t("networkMap.manualLink.select")}
+                />
               </SelectTrigger>
               <SelectContent>
                 {sortedInventory.map((d) => (
@@ -233,7 +240,7 @@ export function ManualLinkModal({
             </Select>
           </div>
           <InterfaceSelect
-            label="Interface origem"
+            label={t("networkMap.manualLink.sourceInterface")}
             deviceNodeId={v.source}
             value={v.intfA}
             onChange={(intfA) => update("intfA", intfA)}
@@ -241,7 +248,7 @@ export function ManualLinkModal({
             side="source"
           />
           <InterfaceSelect
-            label="Interface destino"
+            label={t("networkMap.manualLink.targetInterface")}
             deviceNodeId={v.target}
             value={v.intfB}
             onChange={(intfB) => update("intfB", intfB)}
@@ -249,48 +256,48 @@ export function ManualLinkModal({
             side="target"
           />
           <div className="space-y-1">
-            <Label>Tipo</Label>
+            <Label>{t("networkMap.manualLink.type")}</Label>
             <Select value={v.edgeType} onValueChange={(x) => update("edgeType", x as EdgeType)}>
               <SelectTrigger className="border-zinc-800 bg-zinc-900"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {["physical", "lag", "bgp", "service", "optical", "planned", "manual"].map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                {["physical", "lag", "bgp", "service", "optical", "planned", "manual"].map((edgeType) => (
+                  <SelectItem key={edgeType} value={edgeType}>{edgeType}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Capacidade</Label>
+            <Label>{t("networkMap.manualLink.capacity")}</Label>
             <Input value={v.capacity} onChange={(e) => update("capacity", e.target.value)} className="border-zinc-800 bg-zinc-900" />
           </div>
           <div className="space-y-1">
-            <Label>Status</Label>
+            <Label>{t("networkMap.manualLink.status")}</Label>
             <Select value={v.status} onValueChange={(x) => update("status", x as NodeStatus)}>
               <SelectTrigger className="border-zinc-800 bg-zinc-900"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {["UP", "DOWN", "PARTIAL", "UNKNOWN", "PLANNED"].map((t) => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                {["UP", "DOWN", "PARTIAL", "UNKNOWN", "PLANNED"].map((status) => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="col-span-2 space-y-1">
-            <Label>Motivo</Label>
+            <Label>{t("networkMap.manualLink.reason")}</Label>
             <Input
               value={v.reason}
               onChange={(e) => update("reason", e.target.value)}
-              placeholder="Documentação de capacidade futura..."
+              placeholder={t("networkMap.manualLink.reasonPlaceholder")}
               className="border-zinc-800 bg-zinc-900"
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>{t("common.cancel")}</Button>
           <Button
             disabled={!v.source || !v.target || v.source === v.target}
             onClick={() => { onConfirm(v); onOpenChange(false); }}
           >
-            Criar link
+            {t("networkMap.manualLink.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

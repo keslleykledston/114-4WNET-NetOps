@@ -1,5 +1,5 @@
 /** SNMP_FAST live traffic poll interval — avoid hammering POST /collect. */
-export const SNMP_FAST_POLL_MS = 10_000;
+export const SNMP_FAST_POLL_MS = 5_000;
 
 export type OperationalInterfaceDto = {
   ifIndex: number;

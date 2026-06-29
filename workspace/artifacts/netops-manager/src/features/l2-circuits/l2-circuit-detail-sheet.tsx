@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useTranslation } from "@/i18n";
 import { useL2Circuit, type L2Circuit } from "./l2-circuits-api";
 import {
   CircuitTypeBadge,
@@ -34,39 +35,42 @@ function OptionalField({ label, value }: { label: string; value?: string | numbe
 }
 
 function DetailFields({ circuit }: { circuit: L2Circuit }) {
+  const { t } = useTranslation();
   const group = circuitTypeGroup(circuit.circuitType);
+  const ds = "l2Circuits.detailSheet";
 
   return (
     <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
-      <FieldBlock label="Device ID" value={String(circuit.deviceId)} />
-      <FieldBlock label="Service ID" value={circuit.serviceId ?? "—"} mono />
-      <OptionalField label="Name" value={circuit.name} />
-      <OptionalField label="Description" value={circuit.description} />
-      <OptionalField label="Classification" value={circuit.classification} />
-      <OptionalField label="L2 transport" value={circuit.l2Transport} />
-      <OptionalField label="Parent interface" value={circuit.parentInterface} />
-      {(group === "local" || group === "mpls") && <OptionalField label="Outer VLAN" value={circuit.outerVlan} />}
-      {group === "local" && <OptionalField label="Inner VLAN" value={circuit.innerVlan} />}
-      {group === "mpls" && <OptionalField label="VC ID" value={circuit.vcId} />}
-      {group === "mpls" && <OptionalField label="Peer IP" value={circuit.peerIp} />}
-      {group === "vsi" && <OptionalField label="VSI name" value={circuit.vsiName} />}
-      {group === "vsi" && <OptionalField label="VSI ID" value={circuit.vsiId} />}
-      {group === "vsi" && <OptionalField label="Peer IP" value={circuit.peerIp} />}
-      <FieldBlock label="Admin status" value={circuit.adminStatus} />
-      <FieldBlock label="Oper status" value={circuit.operStatus} />
-      <OptionalField label="PW status" value={circuit.pwStatus} />
-      <FieldBlock label="Source" value={circuit.source} />
+      <FieldBlock label={t(`${ds}.deviceId`)} value={String(circuit.deviceId)} />
+      <FieldBlock label={t(`${ds}.serviceId`)} value={circuit.serviceId ?? "—"} mono />
+      <OptionalField label={t(`${ds}.name`)} value={circuit.name} />
+      <OptionalField label={t(`${ds}.descriptionField`)} value={circuit.description} />
+      <OptionalField label={t(`${ds}.classification`)} value={circuit.classification} />
+      <OptionalField label={t(`${ds}.l2Transport`)} value={circuit.l2Transport} />
+      <OptionalField label={t(`${ds}.parentInterface`)} value={circuit.parentInterface} />
+      {(group === "local" || group === "mpls") && <OptionalField label={t(`${ds}.outerVlan`)} value={circuit.outerVlan} />}
+      {group === "local" && <OptionalField label={t(`${ds}.innerVlan`)} value={circuit.innerVlan} />}
+      {group === "mpls" && <OptionalField label={t(`${ds}.vcId`)} value={circuit.vcId} />}
+      {group === "mpls" && <OptionalField label={t(`${ds}.peerIp`)} value={circuit.peerIp} />}
+      {group === "vsi" && <OptionalField label={t(`${ds}.vsiName`)} value={circuit.vsiName} />}
+      {group === "vsi" && <OptionalField label={t(`${ds}.vsiId`)} value={circuit.vsiId} />}
+      {group === "vsi" && <OptionalField label={t(`${ds}.peerIp`)} value={circuit.peerIp} />}
+      <FieldBlock label={t(`${ds}.adminStatus`)} value={circuit.adminStatus} />
+      <FieldBlock label={t(`${ds}.operStatus`)} value={circuit.operStatus} />
+      <OptionalField label={t(`${ds}.pwStatus`)} value={circuit.pwStatus} />
+      <FieldBlock label={t(`${ds}.source`)} value={circuit.source} />
       <div className="col-span-2 md:col-span-3">
-        <FieldBlock label="Discovery run" value={circuit.discoveryRunId} mono />
+        <FieldBlock label={t(`${ds}.discoveryRun`)} value={circuit.discoveryRunId} mono />
       </div>
-      <FieldBlock label="First seen" value={formatTs(circuit.firstSeen)} />
-      <FieldBlock label="Last seen" value={formatTs(circuit.lastSeen)} />
+      <FieldBlock label={t(`${ds}.firstSeen`)} value={formatTs(circuit.firstSeen)} />
+      <FieldBlock label={t(`${ds}.lastSeen`)} value={formatTs(circuit.lastSeen)} />
       <L3RoleContextFields roleContext={circuit.roleContext} />
     </div>
   );
 }
 
 function L3RoleContextFields({ roleContext }: { roleContext?: string | null }) {
+  const { t } = useTranslation();
   if (!roleContext) return null;
   try {
     const parsed = JSON.parse(roleContext) as Record<string, unknown>;
@@ -83,7 +87,7 @@ function L3RoleContextFields({ roleContext }: { roleContext?: string | null }) {
     if (!parts.length) return null;
     return (
       <div className="col-span-2 md:col-span-3">
-        <FieldBlock label="L3 service context" value={parts.join(" · ")} />
+        <FieldBlock label={t("l2Circuits.detailSheet.l3ServiceContext")} value={parts.join(" · ")} />
       </div>
     );
   } catch {
@@ -99,6 +103,7 @@ interface L2CircuitDetailSheetProps {
 }
 
 export function L2CircuitDetailSheet({ circuitId, fallback, open, onOpenChange }: L2CircuitDetailSheetProps) {
+  const { t } = useTranslation();
   const { data: fetched, isLoading, isError, error } = useL2Circuit(open ? circuitId : null);
   const circuit = fetched ?? fallback ?? null;
 
@@ -106,13 +111,13 @@ export function L2CircuitDetailSheet({ circuitId, fallback, open, onOpenChange }
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
         <SheetHeader className="pr-8">
-          <SheetTitle>L2 Circuit Detail</SheetTitle>
-          <SheetDescription>Read-only view — evidence redacted at collection time.</SheetDescription>
+          <SheetTitle>{t("l2Circuits.detailSheet.title")}</SheetTitle>
+          <SheetDescription>{t("l2Circuits.detailSheet.description")}</SheetDescription>
         </SheetHeader>
 
-        {isLoading && !circuit && <p className="mt-6 text-sm text-muted-foreground">Loading...</p>}
+        {isLoading && !circuit && <p className="mt-6 text-sm text-muted-foreground">{t("l2Circuits.detailSheet.loading")}</p>}
         {isError && !circuit && (
-          <p className="mt-6 text-sm text-destructive">{error instanceof Error ? error.message : "Failed to load circuit"}</p>
+          <p className="mt-6 text-sm text-destructive">{error instanceof Error ? error.message : t("l2Circuits.detailSheet.loadFailed")}</p>
         )}
 
         {circuit && (
@@ -127,9 +132,9 @@ export function L2CircuitDetailSheet({ circuitId, fallback, open, onOpenChange }
 
             <Separator />
 
-            <Section title={`Findings (${circuit.findings.length})`}>
+            <Section title={t("l2Circuits.detailSheet.findingsTitle", { count: circuit.findings.length })}>
               {circuit.findings.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No findings</p>
+                <p className="text-sm text-muted-foreground">{t("l2Circuits.detailSheet.noFindings")}</p>
               ) : (
                 <ul className="space-y-2">
                   {circuit.findings.map((finding, idx) => (
@@ -149,9 +154,9 @@ export function L2CircuitDetailSheet({ circuitId, fallback, open, onOpenChange }
 
             <Separator />
 
-            <Section title="Raw evidence (redacted)">
+            <Section title={t("l2Circuits.detailSheet.rawEvidence")}>
               <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap break-all">
-                {circuit.rawEvidence?.trim() || "No evidence stored"}
+                {circuit.rawEvidence?.trim() || t("l2Circuits.detailSheet.noEvidence")}
               </pre>
             </Section>
           </div>

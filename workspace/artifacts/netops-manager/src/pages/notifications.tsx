@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 
 function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   if (status === "SENT") return "default";
@@ -34,6 +35,7 @@ function emptyForm() {
 }
 
 export default function NotificationsPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [tenantId, setTenantId] = useState("");
@@ -80,9 +82,9 @@ export default function NotificationsPage() {
       setForm((state) => ({ ...state, telegram_bot_token: "" }));
       await queryClient.invalidateQueries({ queryKey: ["tenant-notifications", "settings", tenantId] });
       await queryClient.invalidateQueries({ queryKey: ["tenant-notifications", "history", tenantId] });
-      toast({ title: "Notificações salvas" });
+      toast({ title: t("notifications.saved") });
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("common.error"), description: error.message, variant: "destructive" }),
   });
 
   const history = historyQuery.data ?? [];
@@ -97,21 +99,21 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <BellRing className="h-6 w-6 text-primary" />
-            Tenant Notifications
+            {t("notifications.tenantTitle")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Alertas críticos via Telegram e webhook com rate-limit de 30 minutos por evento idêntico.
+            {t("notifications.tenantSubtitle")}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void historyQuery.refetch()}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
+          {t("common.refresh")}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Selecionar tenant</CardTitle>
+          <CardTitle className="text-base">{t("notifications.selectTenant")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <select
@@ -119,7 +121,7 @@ export default function NotificationsPage() {
             value={tenantId}
             onChange={(e) => setTenantId(e.target.value)}
           >
-            <option value="">Tenant…</option>
+            <option value="">{t("notifications.tenantPlaceholder")}</option>
             {(tenantsQuery.data ?? []).map((tenant) => (
               <option key={tenant.id} value={tenant.id}>
                 {tenant.name}
@@ -127,7 +129,7 @@ export default function NotificationsPage() {
             ))}
           </select>
           <div className="text-sm text-muted-foreground self-center">
-            {selectedTenantName ? `Configuração de ${selectedTenantName}` : "Escolha um tenant para editar configuração e histórico"}
+            {selectedTenantName ? t("notifications.tenantConfigFor", { name: selectedTenantName }) : t("notifications.tenantConfigHint")}
           </div>
         </CardContent>
       </Card>
@@ -136,22 +138,22 @@ export default function NotificationsPage() {
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Configuração</CardTitle>
+              <CardTitle className="text-base">{t("notifications.configuration")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Input
                 type="password"
-                placeholder={selectedSettings?.telegram_bot_token_configured ? "Token configurado. Digite para rotacionar." : "Telegram Bot Token"}
+                placeholder={selectedSettings?.telegram_bot_token_configured ? t("notifications.tokenConfiguredPlaceholder") : t("notifications.telegramBotToken")}
                 value={form.telegram_bot_token}
                 onChange={(e) => setForm({ ...form, telegram_bot_token: e.target.value })}
               />
               <Input
-                placeholder="Telegram Chat ID"
+                placeholder={t("notifications.telegramChatId")}
                 value={form.telegram_chat_id}
                 onChange={(e) => setForm({ ...form, telegram_chat_id: e.target.value })}
               />
               <Input
-                placeholder="Webhook URL"
+                placeholder={t("notifications.webhookUrl")}
                 value={form.webhook_url}
                 onChange={(e) => setForm({ ...form, webhook_url: e.target.value })}
               />
@@ -162,36 +164,36 @@ export default function NotificationsPage() {
                   onChange={(e) => setForm({ ...form, email_enabled: e.target.checked })}
                 />
                 <div>
-                  <div className="text-sm font-medium">Email structure</div>
-                  <div className="text-xs text-muted-foreground">Campo preparado para entrega futura.</div>
+                  <div className="text-sm font-medium">{t("notifications.emailStructure")}</div>
+                  <div className="text-xs text-muted-foreground">{t("notifications.emailStructureHint")}</div>
                 </div>
               </div>
               <Input
-                placeholder="Email recipients"
+                placeholder={t("notifications.emailRecipients")}
                 value={form.email_recipients}
                 onChange={(e) => setForm({ ...form, email_recipients: e.target.value })}
               />
               <Button disabled={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
                 <Save className="h-4 w-4 mr-2" />
-                Salvar
+                {t("common.save")}
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Histórico de alertas</CardTitle>
+              <CardTitle className="text-base">{t("notifications.alertHistory")}</CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Canal</TableHead>
-                    <TableHead>Alerta</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Destino</TableHead>
-                    <TableHead>Mensagem</TableHead>
+                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead>{t("notifications.channel")}</TableHead>
+                    <TableHead>{t("notifications.alert")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead>{t("notifications.destination")}</TableHead>
+                    <TableHead>{t("notifications.message")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -217,7 +219,7 @@ export default function NotificationsPage() {
                   {!historyQuery.isLoading && history.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        Nenhuma notificação registrada.
+                        {t("notifications.noNotificationsRecorded")}
                       </TableCell>
                     </TableRow>
                   )}

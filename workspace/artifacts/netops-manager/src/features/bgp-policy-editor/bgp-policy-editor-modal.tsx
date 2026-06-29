@@ -14,6 +14,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { BgpPeerContextCard } from "@/features/bgp/bgp-peer-context-card";
 import type {
@@ -74,6 +75,8 @@ function PolicyNodeCard({
   onToggle,
   onEditCommunity,
 }: PolicyNodeCardProps) {
+  const { t } = useTranslation();
+  const pe = "bgpPolicyEditor";
   const currentList = extractCommunityListFromMatches(node.matches);
   const originalCommunities = extractAppliedCommunities(node);
   const effectiveCommunities = pendingEdit?.selectedCommunities ?? originalCommunities;
@@ -91,11 +94,11 @@ function PolicyNodeCard({
             <Badge variant="outline">node {node.sequence ?? index + 1}</Badge>
             <Badge variant="outline">{node.action ?? "—"}</Badge>
             <Badge variant="outline">{policy.afiSafi}</Badge>
-            {changed ? <Badge variant="destructive">Alteração pendente</Badge> : null}
+            {changed ? <Badge variant="destructive">{t(`${pe}.pendingChange`)}</Badge> : null}
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span>if-match: {node.matches.length ? node.matches.map((match) => `${match.type} ${match.name}`).join(" | ") : "—"}</span>
-            <span>apply: {node.applies.length ? node.applies.map((apply) => apply.raw).join(" | ") : "—"}</span>
+            <span>{t(`${pe}.ifMatch`)}: {node.matches.length ? node.matches.map((match) => `${match.type} ${match.name}`).join(" | ") : "—"}</span>
+            <span>{t(`${pe}.apply`)}: {node.applies.length ? node.applies.map((apply) => apply.raw).join(" | ") : "—"}</span>
           </div>
         </div>
         <div className="pt-1 text-muted-foreground">
@@ -106,18 +109,18 @@ function PolicyNodeCard({
       {expanded ? (
         <div className="border-t border-border px-3 py-3 space-y-3">
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">community-list: {currentList ?? "—"}</Badge>
-            <Badge variant="outline">community refs: {extractCommunityRefs(node.matches).length}</Badge>
-            <Badge variant="outline">dependencies: {policy.dependencies.filter((dep) => dep.fromNode === node.sequence).length}</Badge>
+            <Badge variant="outline">{t(`${pe}.communityList`)}: {currentList ?? "—"}</Badge>
+            <Badge variant="outline">{t(`${pe}.communityRefs`)}: {extractCommunityRefs(node.matches).length}</Badge>
+            <Badge variant="outline">{t(`${pe}.dependencies`)}: {policy.dependencies.filter((dep) => dep.fromNode === node.sequence).length}</Badge>
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Raw config reconstruído</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t(`${pe}.rawConfigReconstructed`)}</div>
               <Textarea readOnly value={summariseNode(node)} className="min-h-32 font-mono text-xs" />
             </div>
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Dependencies / warnings</div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t(`${pe}.dependenciesWarnings`)}</div>
               <div className="space-y-2 rounded-md border border-border bg-background/40 p-3 text-xs">
                 {policy.dependencies.filter((dep) => dep.fromNode === node.sequence).length ? (
                   policy.dependencies
@@ -131,15 +134,13 @@ function PolicyNodeCard({
                       </div>
                     ))
                 ) : (
-                  <p className="text-muted-foreground">Sem dependências específicas do node detectadas.</p>
+                  <p className="text-muted-foreground">{t(`${pe}.noNodeDependencies`)}</p>
                 )}
                 {node.matches.length === 0 || node.applies.length === 0 ? (
                   <Alert className="border-amber-500/30 bg-amber-500/5">
                     <ShieldAlert className="h-4 w-4 text-amber-400" />
-                    <AlertTitle>Dados incompletos</AlertTitle>
-                    <AlertDescription>
-                      Nem todos os campos do node estão disponíveis no snapshot. O shell usa apenas o material já coletado.
-                    </AlertDescription>
+                    <AlertTitle>{t(`${pe}.incompleteDataTitle`)}</AlertTitle>
+                    <AlertDescription>{t(`${pe}.incompleteDataDesc`)}</AlertDescription>
                   </Alert>
                 ) : null}
               </div>
@@ -147,25 +148,23 @@ function PolicyNodeCard({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="text-xs text-muted-foreground">
-              A edição de community é apenas local nesta fase.
-            </div>
+            <div className="text-xs text-muted-foreground">{t(`${pe}.communityEditLocalOnly`)}</div>
             <Button type="button" variant="outline" size="sm" onClick={onEditCommunity}>
               <Settings2 className="h-4 w-4 mr-2" />
-              Editar community
+              {t(`${pe}.editCommunity`)}
             </Button>
           </div>
 
           {pendingEdit ? (
             <div className="grid gap-3 lg:grid-cols-2">
               <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Antes</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t(`${pe}.before`)}</div>
                 <pre className="overflow-auto rounded-md border border-border bg-background/50 p-3 text-xs whitespace-pre-wrap">
                   {summariseNode(node)}
                 </pre>
               </div>
               <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Depois</div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t(`${pe}.after`)}</div>
                 <pre className="overflow-auto rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs whitespace-pre-wrap">
                   {pendingEdit.previewText}
                 </pre>
@@ -190,6 +189,9 @@ export function BgpPolicyEditorModal({
   communityLibraryItems,
   communitySets,
 }: BgpPolicyEditorModalProps) {
+  const { t } = useTranslation();
+  const pe = "bgpPolicyEditor";
+  const customLabel = t(`${pe}.custom`);
   const importPolicies = useMemo(() => getImportPolicies(drilldown ?? null), [drilldown]);
   const communityOptions = useMemo(
     () => buildCommunityOptions(communityLibraryItems ?? null),
@@ -443,7 +445,7 @@ export function BgpPolicyEditorModal({
     const basePreview = backendPreview ?? localPreview;
     const findings = [...basePreview.findings];
     if (backendError) {
-      findings.unshift(buildBackendPreviewUnavailableFinding(`Preview backend indisponível: ${backendError}`));
+      findings.unshift(buildBackendPreviewUnavailableFinding(t(`${pe}.backendPreviewUnavailable`, { message: backendError })));
     }
     if (driftDetected) {
       findings.unshift(buildPreviewDriftFinding(driftSummary));
@@ -456,23 +458,23 @@ export function BgpPolicyEditorModal({
       driftDetected,
       driftSummary,
     };
-  }, [backendError, backendPreview, driftDetected, driftSummary, localPreview, previewSource]);
+  }, [backendError, backendPreview, driftDetected, driftSummary, localPreview, previewSource, t]);
 
   const activePolicyCount = importPolicies.length;
   const activeNodeCount = importPolicies.reduce((total, policy) => total + policy.nodes.length, 0);
   const changedNodeCount = previewView.nodeEdits.filter((item) => item.changed).length;
   const previewBadgeLabel = previewView.previewSource === "backend"
-    ? "Preview backend"
+    ? t(`${pe}.previewBackend`)
     : previewView.previewSource === "local_fallback"
-      ? "Preview local fallback"
-      : "Preview local";
+      ? t(`${pe}.previewLocalFallback`)
+      : t(`${pe}.previewLocal`);
 
   return (
     <>
       <Dialog open={open} onOpenChange={handleCloseAttempt}>
         <DialogContent className="max-w-6xl">
           <DialogHeader>
-            <DialogTitle>Editor de Policy de Importação</DialogTitle>
+            <DialogTitle>{t(`${pe}.title`)}</DialogTitle>
             <DialogDescription>
               {deviceName} · peer {peerIp} · {peerRemoteAs ?? "AS—"}{peerVrf ? ` · VRF ${peerVrf}` : ""}
             </DialogDescription>
@@ -481,10 +483,8 @@ export function BgpPolicyEditorModal({
           <div className="space-y-4">
             <Alert className="border-amber-500/30 bg-amber-500/5">
               <AlertTriangle className="h-4 w-4 text-amber-400" />
-              <AlertTitle>Shell read-only / local-state</AlertTitle>
-              <AlertDescription>
-                Apply real desabilitado nesta fase. Esta edição é apenas local/read-only.
-              </AlertDescription>
+              <AlertTitle>{t(`${pe}.shellAlertTitle`)}</AlertTitle>
+              <AlertDescription>{t(`${pe}.shellAlertDesc`)}</AlertDescription>
             </Alert>
 
             <BgpPeerContextCard
@@ -521,34 +521,34 @@ export function BgpPolicyEditorModal({
             />
 
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline">policies: {activePolicyCount}</Badge>
-              <Badge variant="outline">nodes: {activeNodeCount}</Badge>
-              <Badge variant="outline">pending: {changedNodeCount}</Badge>
-              <Badge variant="outline">custom: {summaryCounts.customs}</Badge>
-              <Badge variant="outline">preview rev {previewRevision}</Badge>
-              {lastPreviewAt ? <Badge variant="outline">preview {new Date(lastPreviewAt).toLocaleString()}</Badge> : null}
+              <Badge variant="outline">{t(`${pe}.policiesBadge`, { count: activePolicyCount })}</Badge>
+              <Badge variant="outline">{t(`${pe}.nodesBadge`, { count: activeNodeCount })}</Badge>
+              <Badge variant="outline">{t(`${pe}.pendingBadge`, { count: changedNodeCount })}</Badge>
+              <Badge variant="outline">{t(`${pe}.customBadge`, { count: summaryCounts.customs })}</Badge>
+              <Badge variant="outline">{t(`${pe}.previewRevBadge`, { count: previewRevision })}</Badge>
+              {lastPreviewAt ? <Badge variant="outline">{t(`${pe}.previewAtBadge`, { at: new Date(lastPreviewAt).toLocaleString() })}</Badge> : null}
               <Badge variant="outline">{previewBadgeLabel}</Badge>
-              {previewLoading ? <Badge variant="outline">Gerando preview</Badge> : null}
-              <Badge variant="outline">{previewView.safety.applyDisabled ? "Apply desabilitado" : "Apply liberado"}</Badge>
-              <Badge variant="outline">{previewView.safety.rollbackDisabled ? "Rollback desabilitado" : "Rollback liberado"}</Badge>
+              {previewLoading ? <Badge variant="outline">{t(`${pe}.generatingPreview`)}</Badge> : null}
+              <Badge variant="outline">{previewView.safety.applyDisabled ? t(`${pe}.applyDisabled`) : t(`${pe}.applyEnabled`)}</Badge>
+              <Badge variant="outline">{previewView.safety.rollbackDisabled ? t(`${pe}.rollbackDisabled`) : t(`${pe}.rollbackEnabled`)}</Badge>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-md border border-border bg-background/60 px-3 py-2">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Origem do último preview</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t(`${pe}.lastPreviewSource`)}</div>
                 <div className="mt-1 text-sm font-medium">{previewBadgeLabel}</div>
               </div>
               <div className="rounded-md border border-border bg-background/60 px-3 py-2">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Drift detectado</div>
-                <div className="mt-1 text-sm font-medium">{previewView.driftDetected ? "Sim" : "Não"}</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t(`${pe}.driftDetected`)}</div>
+                <div className="mt-1 text-sm font-medium">{previewView.driftDetected ? t("common.yes") : t("common.no")}</div>
               </div>
               <div className="rounded-md border border-border bg-background/60 px-3 py-2">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Último erro backend</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t(`${pe}.lastBackendError`)}</div>
                 <div className="mt-1 break-words text-sm font-medium">{previewView.backendError ?? "—"}</div>
               </div>
               <div className="rounded-md border border-border bg-background/60 px-3 py-2">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Safety</div>
-                <div className="mt-1 text-sm font-medium">dry-run · apply off · rollback off</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t(`${pe}.safety`)}</div>
+                <div className="mt-1 text-sm font-medium">{t(`${pe}.safetySummary`)}</div>
               </div>
             </div>
 
@@ -591,20 +591,16 @@ export function BgpPolicyEditorModal({
               </div>
             ) : (
               <Alert>
-                <AlertTitle>Sem route-policy import detalhada</AlertTitle>
-                <AlertDescription>
-                  O snapshot atual não trouxe policies de import para este peer. O shell continua read-only.
-                </AlertDescription>
+                <AlertTitle>{t(`${pe}.noImportPolicyTitle`)}</AlertTitle>
+                <AlertDescription>{t(`${pe}.noImportPolicyDesc`)}</AlertDescription>
               </Alert>
             )}
 
             <div className="space-y-3 rounded-md border border-border bg-muted/10 p-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold">Preview normalizado</div>
-                  <div className="text-xs text-muted-foreground">
-                    Combinação de communities ordenada, deduplicada e comparada contra community-lists existentes.
-                  </div>
+                  <div className="text-sm font-semibold">{t(`${pe}.normalizedPreview`)}</div>
+                  <div className="text-xs text-muted-foreground">{t(`${pe}.normalizedPreviewDesc`)}</div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">{previewView.routePolicyName}</Badge>
@@ -614,14 +610,14 @@ export function BgpPolicyEditorModal({
 
               <div className="grid gap-3 lg:grid-cols-2">
                 <div className="rounded-md border border-border bg-background/60 p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Findings</div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t(`${pe}.findings`)}</div>
                   <div className="mt-2 space-y-2">
                     {previewView.findings.map((finding) => (
                       <div key={`${finding.code}-${finding.message}`} className="rounded-md border border-border px-3 py-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant={finding.severity === "error" ? "destructive" : "outline"}>{finding.code}</Badge>
                           <Badge variant="outline">{finding.severity}</Badge>
-                          {finding.blocking ? <Badge variant="destructive">blocking</Badge> : <Badge variant="outline">non-blocking</Badge>}
+                          {finding.blocking ? <Badge variant="destructive">{t(`${pe}.blocking`)}</Badge> : <Badge variant="outline">{t(`${pe}.nonBlocking`)}</Badge>}
                         </div>
                         <div className="mt-2 text-sm">{finding.message}</div>
                         <div className="mt-1 text-xs text-muted-foreground">{finding.recommendation}</div>
@@ -631,38 +627,38 @@ export function BgpPolicyEditorModal({
                 </div>
 
                 <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Safety</div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">{t(`${pe}.safety`)}</div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {previewView.safety.messages.map((message) => (
                       <Badge key={message} variant="outline">
                         {message}
                       </Badge>
                     ))}
-                    <Badge variant="outline">{previewView.safety.dryRun ? "Dry-run" : "Live"}</Badge>
+                    <Badge variant="outline">{previewView.safety.dryRun ? t(`${pe}.dryRun`) : t(`${pe}.live`)}</Badge>
                   </div>
-                  <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">Aggregate diff</div>
+                  <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">{t(`${pe}.aggregateDiff`)}</div>
                   <pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs">{previewView.diff.summary}</pre>
-                  <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">Community resolution</div>
+                  <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">{t(`${pe}.communityResolution`)}</div>
                   <pre className="mt-2 overflow-auto whitespace-pre-wrap text-xs">
                     {previewView.nodeEdits.length
                       ? previewView.nodeEdits
-                          .map((item) => `${item.nodeId}: ${item.matchedCommunityListName ?? "Customizado"} (${item.isCustom ? "custom" : "matched"})`)
+                          .map((item) => `${item.nodeId}: ${item.matchedCommunityListName ?? customLabel} (${item.isCustom ? "custom" : "matched"})`)
                           .join("\n")
-                      : "Nenhum node disponível"}
+                      : t(`${pe}.noNodesAvailable`)}
                   </pre>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Diff por node</div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">{t(`${pe}.diffPerNode`)}</div>
                 <div className="space-y-2">
                   {previewView.nodeEdits.map((node) => (
                     <div key={node.nodeId} className={cn("rounded-md border px-3 py-2", node.changed ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-background/60")}>
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline">{node.nodeId}</Badge>
                         <Badge variant="outline">{node.action ?? "—"}</Badge>
-                        <Badge variant="outline">{node.matchedCommunityListName ?? "Customizado"}</Badge>
-                        {node.changed ? <Badge variant="destructive">changed</Badge> : <Badge variant="outline">unchanged</Badge>}
+                        <Badge variant="outline">{node.matchedCommunityListName ?? customLabel}</Badge>
+                        {node.changed ? <Badge variant="destructive">{t(`${pe}.changed`)}</Badge> : <Badge variant="outline">{t(`${pe}.unchanged`)}</Badge>}
                         {node.unsupportedReason ? <Badge variant="destructive">{node.unsupportedReason}</Badge> : null}
                       </div>
                       <div className="mt-2 grid gap-2 lg:grid-cols-2">
@@ -683,24 +679,22 @@ export function BgpPolicyEditorModal({
             <Separator />
 
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="text-sm text-muted-foreground">
-                Gerar preview normalizado tenta o backend e preserva fallback local. Apply e rollback continuam desabilitados.
-              </div>
+              <div className="text-sm text-muted-foreground">{t(`${pe}.closeFooterHint`)}</div>
               <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" variant="outline" onClick={() => { void triggerPreview(); }} disabled={previewLoading}>
                   <Sparkles className="h-4 w-4 mr-2" />
-                  {previewLoading ? "Gerando..." : "Gerar preview"}
+                  {previewLoading ? t(`${pe}.generating`) : t(`${pe}.generatePreview`)}
                 </Button>
-                <Button type="button" variant="outline" disabled title="Rollback real desabilitado nesta fase.">
+                <Button type="button" variant="outline" disabled title={t(`${pe}.rollbackDisabledTitle`)}>
                   <Copy className="h-4 w-4 mr-2" />
-                  Rollback
+                  {t(`${pe}.rollback`)}
                 </Button>
-                <Button type="button" disabled title="Apply real desabilitado nesta fase. Esta edição é apenas local/read-only.">
+                <Button type="button" disabled title={t(`${pe}.applyDisabledTitle`)}>
                   <Save className="h-4 w-4 mr-2" />
-                  Aplicar alterações
+                  {t(`${pe}.applyChanges`)}
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => handleCloseAttempt(false)}>
-                  Fechar
+                  {t(`${pe}.close`)}
                 </Button>
               </div>
             </div>
@@ -730,29 +724,25 @@ export function BgpPolicyEditorModal({
       <Dialog open={closeConfirmOpen} onOpenChange={setCloseConfirmOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Alterações pendentes</DialogTitle>
-            <DialogDescription>
-              Existem edições locais sem apply. Escolha como continuar.
-            </DialogDescription>
+            <DialogTitle>{t(`${pe}.pendingChangesTitle`)}</DialogTitle>
+            <DialogDescription>{t(`${pe}.pendingChangesDesc`)}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Alert>
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Fechar com mudanças pendentes</AlertTitle>
-              <AlertDescription>
-                Você pode continuar editando, descartar as alterações ou fechar sem aplicar.
-              </AlertDescription>
+              <AlertTitle>{t(`${pe}.closeWithPendingTitle`)}</AlertTitle>
+              <AlertDescription>{t(`${pe}.closeWithPendingDesc`)}</AlertDescription>
             </Alert>
           </div>
           <DialogFooter className="flex flex-wrap items-center justify-end gap-2">
             <Button type="button" variant="outline" onClick={continueEditing}>
-              Continuar editando
+              {t(`${pe}.continueEditing`)}
             </Button>
             <Button type="button" variant="destructive" onClick={discardAndClose}>
-              Descartar alterações
+              {t(`${pe}.discardChanges`)}
             </Button>
             <Button type="button" variant="secondary" onClick={() => { setCloseConfirmOpen(false); onOpenChange(false); }}>
-              Fechar sem aplicar
+              {t(`${pe}.closeWithoutApply`)}
             </Button>
           </DialogFooter>
         </DialogContent>

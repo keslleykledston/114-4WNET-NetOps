@@ -13,6 +13,7 @@ import {
   Cable,
 } from "lucide-react";
 import type { DeviceData, NodeStatus } from "@/lib/network-map/types";
+import { useTranslation } from "@/i18n";
 
 const ICONS = {
   router: Router,
@@ -114,6 +115,7 @@ interface ExtendedDeviceData extends DeviceData {
 }
 
 export function TopologyNode({ data, selected }: NodeProps<ExtendedDeviceData>) {
+  const { t } = useTranslation();
   const Icon = ICONS[data.type] ?? Router;
   const linkCount = data._linkCount ?? 0;
   const dimmed = data._dimmed;
@@ -121,11 +123,11 @@ export function TopologyNode({ data, selected }: NodeProps<ExtendedDeviceData>) 
   const connectable = data._connectable ?? false;
   const tooltip = [
     data.name,
-    data.mgmtIp ? `IP: ${data.mgmtIp}` : null,
-    `Site: ${data.site}`,
-    `Status: ${data.status}`,
-    `Vendor: ${data.vendor}`,
-    data.uptime ? `Uptime: ${data.uptime}` : null,
+    data.mgmtIp ? t("networkMap.topologyNode.tooltipIp", { ip: data.mgmtIp }) : null,
+    t("networkMap.topologyNode.tooltipSite", { site: data.site }),
+    t("networkMap.topologyNode.tooltipStatus", { status: data.status }),
+    t("networkMap.topologyNode.tooltipVendor", { vendor: data.vendor }),
+    data.uptime ? t("networkMap.topologyNode.tooltipUptime", { uptime: data.uptime }) : null,
   ].filter(Boolean).join("\n");
   const { _onOpenStencil, _onHandleClick, _linkCount, _dimmed, _highlighted, _connectable, ...device } =
     data as ExtendedDeviceData;
@@ -189,7 +191,7 @@ export function TopologyNode({ data, selected }: NodeProps<ExtendedDeviceData>) 
       <div className="flex items-start gap-2.5">
         <button
           type="button"
-          title="Abrir faceplate do dispositivo"
+          title={t("networkMap.topologyNode.openFaceplateTitle")}
           onClick={(e) => {
             e.stopPropagation();
             _onOpenStencil?.(device as DeviceData);
@@ -219,7 +221,7 @@ export function TopologyNode({ data, selected }: NodeProps<ExtendedDeviceData>) 
             <span className="flex items-center gap-1 text-zinc-400">
               <Cable className="h-2.5 w-2.5" /> {linkCount}
               <span className="text-zinc-600">·</span>
-              {data.interfaces ?? 0} intf
+              {t("networkMap.topologyNode.interfaceCount", { count: data.interfaces ?? 0 })}
             </span>
           </div>
         </div>

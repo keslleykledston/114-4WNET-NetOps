@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n";
 import {
   fetchTopologySummary,
   fetchOrphans,
@@ -10,6 +11,7 @@ import {
 } from "@/features/topology/topology-api";
 
 export default function Topology() {
+  const { t } = useTranslation();
   const [summary, setSummary] = useState<any>(null);
   const [orphans, setOrphans] = useState<any[]>([]);
   const [orphansSummary, setOrphansSummary] = useState<any>(null);
@@ -50,69 +52,69 @@ export default function Topology() {
   }
 
   if (loading) {
-    return <div className="p-0">Carregando...</div>;
+    return <div className="p-0">{t("common.loading")}...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Topology Intelligence</h1>
-          <p className="text-sm text-muted-foreground">Grafo analítico do inventário (separado do mapa manual)</p>
+          <h1 className="text-2xl font-bold">{t("topology.title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("topology.subtitle")}</p>
         </div>
         <Button onClick={handleRebuild} disabled={rebuilding}>
-          {rebuilding ? "Rebuilding..." : "Rebuild"}
+          {rebuilding ? t("topology.rebuilding") : t("topology.rebuild")}
         </Button>
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="devices">Devices</TabsTrigger>
-          <TabsTrigger value="orphans">Orphans</TabsTrigger>
+          <TabsTrigger value="overview">{t("topology.overview")}</TabsTrigger>
+          <TabsTrigger value="devices">{t("topology.devices")}</TabsTrigger>
+          <TabsTrigger value="orphans">{t("topology.orphans")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6 space-y-4">
           {summary ? (
             <div className="grid grid-cols-3 gap-4">
               <Card>
-                <CardHeader><CardTitle className="text-lg">Devices</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">{t("topology.devices")}</CardTitle></CardHeader>
                 <CardContent><p className="text-2xl font-bold">{summary.deviceCount || 0}</p></CardContent>
               </Card>
               <Card>
-                <CardHeader><CardTitle className="text-lg">Interfaces</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">{t("topology.interfaces")}</CardTitle></CardHeader>
                 <CardContent><p className="text-2xl font-bold">{summary.interfaceCount || 0}</p></CardContent>
               </Card>
               <Card>
-                <CardHeader><CardTitle className="text-lg">BGP Peers</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">{t("topology.bgpPeers")}</CardTitle></CardHeader>
                 <CardContent><p className="text-2xl font-bold">{summary.bgpPeerCount || 0}</p></CardContent>
               </Card>
               <Card>
-                <CardHeader><CardTitle className="text-lg">L2 Circuits</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">{t("topology.l2Circuits")}</CardTitle></CardHeader>
                 <CardContent><p className="text-2xl font-bold">{summary.l2CircuitCount || 0}</p></CardContent>
               </Card>
               <Card>
-                <CardHeader><CardTitle className="text-lg">Nodes</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">{t("topology.nodes")}</CardTitle></CardHeader>
                 <CardContent><p className="text-2xl font-bold">{summary.totalNodes || 0}</p></CardContent>
               </Card>
               <Card>
-                <CardHeader><CardTitle className="text-lg">Edges</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg">{t("topology.edges")}</CardTitle></CardHeader>
                 <CardContent><p className="text-2xl font-bold">{summary.totalEdges || 0}</p></CardContent>
               </Card>
             </div>
           ) : (
-            <Card><CardContent className="pt-6"><p className="text-muted-foreground">No topology data</p></CardContent></Card>
+            <Card><CardContent className="pt-6"><p className="text-muted-foreground">{t("topology.noTopologyData")}</p></CardContent></Card>
           )}
         </TabsContent>
 
         <TabsContent value="devices" className="mt-6 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Device Topology</CardTitle>
-              <CardDescription>Detalhes por dispositivo via API</CardDescription>
+              <CardTitle>{t("topology.deviceTopology")}</CardTitle>
+              <CardDescription>{t("topology.deviceTopologyDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Use o mapa manual em /map para desenhar topologia visual.</p>
+              <p className="text-sm text-muted-foreground">{t("topology.useManualMap")}</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -121,16 +123,16 @@ export default function Topology() {
           {orphansSummary && orphansSummary.totalOrphans > 0 ? (
             <Card>
               <CardHeader>
-                <CardTitle>Orphans</CardTitle>
-                <CardDescription>{orphansSummary.totalOrphans} orphaned nodes</CardDescription>
+                <CardTitle>{t("topology.orphansTitle")}</CardTitle>
+                <CardDescription>{t("topology.orphansCount", { count: orphansSummary.totalOrphans })}</CardDescription>
               </CardHeader>
               <CardContent>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="py-2 text-left">Type</th>
-                      <th className="py-2 text-left">Label</th>
-                      <th className="py-2 text-left">Reason</th>
+                      <th className="py-2 text-left">{t("topology.orphanType")}</th>
+                      <th className="py-2 text-left">{t("topology.orphanLabel")}</th>
+                      <th className="py-2 text-left">{t("topology.orphanReason")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -146,7 +148,7 @@ export default function Topology() {
               </CardContent>
             </Card>
           ) : (
-            <Card><CardContent className="pt-6"><p className="font-semibold text-emerald-500">Sem órfãos</p></CardContent></Card>
+            <Card><CardContent className="pt-6"><p className="font-semibold text-emerald-500">{t("topology.noOrphans")}</p></CardContent></Card>
           )}
         </TabsContent>
       </Tabs>

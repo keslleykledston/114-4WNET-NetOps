@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Download, Eye, Filter, Layers, Network, RefreshCw } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { useTranslation } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
 import {
   useL2Circuits,
@@ -63,6 +64,7 @@ const STATUSES: L2Status[] = ["UP", "DOWN", "PARTIAL", "UNKNOWN", "CONFIG_ONLY"]
 
 export default function L2Circuits() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [filtersLoaded, setFiltersLoaded] = useState(false);
   const [deviceFilter, setDeviceFilter] = useState<string>(FILTER_ALL);
   const [circuitTypeFilter, setCircuitTypeFilter] = useState<string>(FILTER_ALL);
@@ -173,8 +175,8 @@ export default function L2Circuits() {
   const handleOperationalRefresh = () => {
     if (!deviceId) {
       toast({
-        title: "Selecione um device",
-        description: "Refresh operacional exige filtro de device (1 por vez).",
+        title: t("l2Circuits.toastSelectDevice"),
+        description: t("l2Circuits.toastSelectDeviceDesc"),
         variant: "destructive",
       });
       return;
@@ -184,7 +186,7 @@ export default function L2Circuits() {
       .mutateAsync(deviceId)
       .then((result) => {
         toast({
-          title: "Refresh operacional concluído",
+          title: t("l2Circuits.toastRefreshDone"),
           description: formatL2OperationalRefreshToast(result),
         });
         void refetch();
@@ -193,8 +195,8 @@ export default function L2Circuits() {
         const code = (error as Error & { code?: string }).code;
         const status = (error as Error & { status?: number }).status;
         toast({
-          title: code === "L2_OPERATIONAL_REFRESH_DISABLED" || status === 503 ? "Refresh desabilitado" : "Falha no refresh",
-          description: error instanceof Error ? error.message : "Erro desconhecido",
+          title: code === "L2_OPERATIONAL_REFRESH_DISABLED" || status === 503 ? t("l2Circuits.toastRefreshDisabled") : t("l2Circuits.toastRefreshFailed"),
+          description: error instanceof Error ? error.message : t("l2Circuits.unknownError"),
           variant: "destructive",
         });
       });
@@ -209,17 +211,17 @@ export default function L2Circuits() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Network className="h-6 w-6 text-primary" />
-            L2 Circuits
+            {t("l2Circuits.title")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            NOC read-only — default só problemas. Refresh operacional (SNMP + SSH ops) por device.
+            {t("l2Circuits.subtitle")}
           </p>
           {deviceId && operational && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <FreshnessBadge freshness={operational.freshness} />
               <span className="text-muted-foreground">
-                Última atualização operacional:{" "}
-                {operational.last_refresh_at ? formatTs(operational.last_refresh_at) : "nunca"}
+                {t("l2Circuits.lastOperationalRefresh")}{" "}
+                {operational.last_refresh_at ? formatTs(operational.last_refresh_at) : t("common.never")}
               </span>
             </div>
           )}
@@ -232,11 +234,11 @@ export default function L2Circuits() {
             disabled={sortedCircuits.length === 0}
           >
             <Download className="h-4 w-4 mr-2" />
-            Export CSV
+            {t("l2Circuits.exportCsv")}
           </Button>
           <Button variant="outline" size="sm" onClick={handleOperationalRefresh} disabled={refreshBusy || !deviceId}>
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshBusy ? "animate-spin" : ""}`} />
-            Atualizar operacional
+            {t("l2Circuits.refreshOperational")}
           </Button>
         </div>
       </div>
@@ -244,16 +246,16 @@ export default function L2Circuits() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Total (filtrado)</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("l2Circuits.totalFiltered")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary.total}</div>
-            <CardDescription>{data?.total ?? 0} carregados da API</CardDescription>
+            <CardDescription>{t("l2Circuits.loadedFromApi", { count: data?.total ?? 0 })}</CardDescription>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Familia</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("l2Circuits.family")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2 text-sm">
             <Badge variant="outline" className="bg-cyan-500/10 text-cyan-300 border-cyan-500/20">Local {summary.local}</Badge>
@@ -263,7 +265,7 @@ export default function L2Circuits() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Oper status</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("l2Circuits.operStatus")}</CardTitle>
           </CardHeader>
           <CardContent className="flex gap-3 text-sm">
             <span className="text-green-400">UP {summary.up}</span>
@@ -272,7 +274,7 @@ export default function L2Circuits() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Com findings</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("l2Circuits.withFindings")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary.withFindings}</div>
@@ -284,17 +286,17 @@ export default function L2Circuits() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Filter className="h-4 w-4" />
-            Filtros
+            {t("l2Circuits.filtersTitle")}
           </CardTitle>
-          <CardDescription>Device refaz query API. Demais filtros locais. Persistidos neste navegador.</CardDescription>
+          <CardDescription>{t("l2Circuits.filtersDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <Select value={deviceFilter} onValueChange={setDeviceFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Device" />
+              <SelectValue placeholder={t("l2Circuits.device")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={FILTER_ALL}>Todos devices</SelectItem>
+              <SelectItem value={FILTER_ALL}>{t("l2Circuits.allDevices")}</SelectItem>
               {devices?.map((device) => (
                 <SelectItem key={device.id} value={String(device.id)}>
                   #{device.id} {device.hostname}
@@ -305,13 +307,13 @@ export default function L2Circuits() {
 
           <Select value={circuitTypeFilter} onValueChange={setCircuitTypeFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Tipo" />
+              <SelectValue placeholder={t("l2Circuits.type")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={FILTER_ALL}>Todos tipos</SelectItem>
+              <SelectItem value={FILTER_ALL}>{t("l2Circuits.allTypes")}</SelectItem>
               {CIRCUIT_TYPES.map((type) => (
                 <SelectItem key={type} value={type}>
-                  {circuitTypeLabel(type)}
+                  {circuitTypeLabel(type, t)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -319,10 +321,10 @@ export default function L2Circuits() {
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={t("l2Circuits.status")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={FILTER_ALL}>Todos status</SelectItem>
+              <SelectItem value={FILTER_ALL}>{t("l2Circuits.allStatuses")}</SelectItem>
               {STATUSES.map((status) => (
                 <SelectItem key={status} value={status}>
                   {status}
@@ -331,9 +333,9 @@ export default function L2Circuits() {
             </SelectContent>
           </Select>
 
-          <Input placeholder="VLAN" value={vlanFilter} onChange={(e) => setVlanFilter(e.target.value)} />
-          <Input placeholder="VC-ID" value={vcIdFilter} onChange={(e) => setVcIdFilter(e.target.value)} />
-          <Input placeholder="Peer IP" value={peerIpFilter} onChange={(e) => setPeerIpFilter(e.target.value)} />
+          <Input placeholder={t("l2Circuits.vlan")} value={vlanFilter} onChange={(e) => setVlanFilter(e.target.value)} />
+          <Input placeholder={t("l2Circuits.vcId")} value={vcIdFilter} onChange={(e) => setVcIdFilter(e.target.value)} />
+          <Input placeholder={t("l2Circuits.peerIp")} value={peerIpFilter} onChange={(e) => setPeerIpFilter(e.target.value)} />
         </CardContent>
         <CardContent className="pt-0 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -343,11 +345,11 @@ export default function L2Circuits() {
               onCheckedChange={(checked) => setShowHealthy(checked === true)}
             />
             <Label htmlFor="l2-show-healthy" className="text-sm font-normal cursor-pointer">
-              Mostrar circuitos saudáveis
+              {t("l2Circuits.showHealthy")}
             </Label>
           </div>
           <Button variant="ghost" size="sm" onClick={handleClearFilters}>
-            Limpar filtros
+            {t("l2Circuits.clearFilters")}
           </Button>
         </CardContent>
       </Card>
@@ -356,16 +358,16 @@ export default function L2Circuits() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Layers className="h-4 w-4" />
-            Circuitos
+            {t("l2Circuits.circuits")}
           </CardTitle>
           <CardDescription className="hidden sm:block">
-            Linhas com CIRCUIT_DOWN ou REMOTE_NOT_FORWARDING destacadas. Clique para detalhe.
+            {t("l2Circuits.circuitsDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isLoading && <p className="text-sm text-muted-foreground">Carregando circuitos...</p>}
+          {isLoading && <p className="text-sm text-muted-foreground">{t("l2Circuits.loading")}</p>}
           {isError && (
-            <p className="text-sm text-destructive">{error instanceof Error ? error.message : "Falha ao carregar circuitos"}</p>
+            <p className="text-sm text-destructive">{error instanceof Error ? error.message : t("l2Circuits.loadFailed")}</p>
           )}
 
           {showNoData && <L2CircuitsEmptyState variant="no-data" />}
@@ -407,15 +409,15 @@ export default function L2Circuits() {
                 <Table className="min-w-[900px] text-sm">
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead className="sticky left-0 z-10 bg-background h-8 px-2 w-14">ID</TableHead>
-                      <TableHead className="h-8 px-2 min-w-[200px]">Device</TableHead>
-                      <TableHead className="h-8 px-2 w-24">Tipo</TableHead>
-                      <TableHead className="hidden lg:table-cell h-8 px-2 min-w-[120px]">Nome</TableHead>
-                      <TableHead className="h-8 px-2 w-28">VLAN/VC/VSI</TableHead>
-                      <TableHead className="h-8 px-2 min-w-[150px]">Peer</TableHead>
-                      <TableHead className="h-8 px-2 w-24">Status</TableHead>
-                      <TableHead className="h-8 px-2 min-w-[160px]">Findings</TableHead>
-                      <TableHead className="hidden sm:table-cell h-8 px-2 w-36">Last seen</TableHead>
+                      <TableHead className="sticky left-0 z-10 bg-background h-8 px-2 w-14">{t("l2Circuits.tableId")}</TableHead>
+                      <TableHead className="h-8 px-2 min-w-[200px]">{t("l2Circuits.tableDevice")}</TableHead>
+                      <TableHead className="h-8 px-2 w-24">{t("l2Circuits.tableType")}</TableHead>
+                      <TableHead className="hidden lg:table-cell h-8 px-2 min-w-[120px]">{t("l2Circuits.tableName")}</TableHead>
+                      <TableHead className="h-8 px-2 w-28">{t("l2Circuits.tableVlanVcVsi")}</TableHead>
+                      <TableHead className="h-8 px-2 min-w-[150px]">{t("l2Circuits.tablePeer")}</TableHead>
+                      <TableHead className="h-8 px-2 w-24">{t("l2Circuits.tableStatus")}</TableHead>
+                      <TableHead className="h-8 px-2 min-w-[160px]">{t("l2Circuits.tableFindings")}</TableHead>
+                      <TableHead className="hidden sm:table-cell h-8 px-2 w-36">{t("l2Circuits.tableLastSeen")}</TableHead>
                       <TableHead className="h-8 w-10 px-1" />
                     </TableRow>
                   </TableHeader>

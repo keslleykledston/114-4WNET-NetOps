@@ -4,7 +4,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { I18nProvider } from "@/i18n";
 import { AuthProvider, useAuth } from "@/components/auth-provider";
+import { useTranslation } from "@/i18n";
 import { Layout } from "@/components/layout";
 import LoginPage from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -51,6 +53,7 @@ const queryClient = new QueryClient({
 
 function Router() {
   const { user, loading } = useAuth();
+  const { t } = useTranslation();
   const [location, setLocation] = useLocation();
 
   useEffect(() => {
@@ -65,7 +68,7 @@ function Router() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-        Carregando sessão...
+        {t("app.loadingSession")}
       </div>
     );
   }
@@ -117,18 +120,20 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="netops-theme">
-      <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-          </TooltipProvider>
-        </QueryClientProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider defaultTheme="dark" storageKey="netops-theme">
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+            </TooltipProvider>
+          </QueryClientProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </I18nProvider>
   );
 }
 

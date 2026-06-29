@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { 
-  useListCollectedConfigs, getListCollectedConfigsQueryKey,
+import {
+  useListCollectedConfigs,
+  getListCollectedConfigsQueryKey,
   useCollectDeviceConfig,
-  useListDevices
+  useListDevices,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DownloadCloud, Terminal } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 
 export default function ConfigCollection() {
+  const { t } = useTranslation();
   const { data: configs, isLoading } = useListCollectedConfigs();
   const { data: devices } = useListDevices();
   const collectConfig = useCollectDeviceConfig();
@@ -23,24 +26,31 @@ export default function ConfigCollection() {
 
   const handleCollect = () => {
     if (!selectedDevice) return;
-    toast({ title: "Initiating collection..." });
-    collectConfig.mutate({ data: { deviceId: parseInt(selectedDevice) } }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListCollectedConfigsQueryKey() });
-        toast({ title: "Config collected successfully" });
+    toast({ title: t("configCollection.initiatingCollection") });
+    collectConfig.mutate(
+      { data: { deviceId: parseInt(selectedDevice) } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListCollectedConfigsQueryKey() });
+          toast({ title: t("configCollection.collectedSuccess") });
+        },
+        onError: (err: { message?: string }) => {
+          toast({
+            title: t("configCollection.collectionFailed"),
+            description: err.message,
+            variant: "destructive",
+          });
+        },
       },
-      onError: (err: any) => {
-        toast({ title: "Collection failed", description: err.message, variant: "destructive" });
-      }
-    });
+    );
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Config Collection</h1>
-          <p className="text-muted-foreground mt-1">Retrieve and parse device configurations</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("configCollection.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("configCollection.subtitle")}</p>
         </div>
       </div>
 
@@ -48,19 +58,23 @@ export default function ConfigCollection() {
         <CardContent className="p-6">
           <div className="flex items-end gap-4">
             <div className="space-y-2 flex-1 max-w-md">
-              <label className="text-sm font-medium">Target Device</label>
+              <label className="text-sm font-medium">{t("configCollection.targetDevice")}</label>
               <Select value={selectedDevice} onValueChange={setSelectedDevice}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Select a device" /></SelectTrigger>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder={t("configCollection.selectDevice")} />
+                </SelectTrigger>
                 <SelectContent>
-                  {devices?.map(d => (
-                    <SelectItem key={d.id} value={d.id.toString()}>{d.hostname} ({d.ipAddress})</SelectItem>
+                  {devices?.map((d) => (
+                    <SelectItem key={d.id} value={d.id.toString()}>
+                      {d.hostname} ({d.ipAddress})
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <Button onClick={handleCollect} disabled={!selectedDevice || collectConfig.isPending}>
               <DownloadCloud className="h-4 w-4 mr-2" />
-              {collectConfig.isPending ? "Collecting..." : "Collect Now"}
+              {collectConfig.isPending ? t("configCollection.collecting") : t("configCollection.collectNow")}
             </Button>
           </div>
         </CardContent>
@@ -68,37 +82,45 @@ export default function ConfigCollection() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Collections</CardTitle>
+          <CardTitle>{t("configCollection.recentCollections")}</CardTitle>
         </CardHeader>
         <div className="border-t">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Device</TableHead>
-                <TableHead>Collected At</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("snmpHistory.device")}</TableHead>
+                <TableHead>{t("configCollection.collectedAt")}</TableHead>
+                <TableHead>{t("configCollection.size")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8">Loading...</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8">
+                    {t("common.loading")}...
+                  </TableCell>
+                </TableRow>
               ) : configs?.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No collected configs.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    {t("configCollection.noCollections")}
+                  </TableCell>
+                </TableRow>
               ) : (
-                configs?.map(c => (
+                configs?.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.deviceHostname}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(c.collectedAt).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-sm font-mono text-muted-foreground">
-                      {c.rawConfig ? `${(c.rawConfig.length / 1024).toFixed(1)} KB` : '0 KB'}
+                      {c.rawConfig ? `${(c.rawConfig.length / 1024).toFixed(1)} KB` : "0 KB"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm">
                         <Terminal className="h-4 w-4 mr-2" />
-                        View Raw
+                        {t("configCollection.viewRaw")}
                       </Button>
                     </TableCell>
                   </TableRow>

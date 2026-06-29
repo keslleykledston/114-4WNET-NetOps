@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useTranslation } from "@/i18n";
 import {
   getConnectorHealthSummary,
   getConnectorMetrics,
@@ -27,6 +28,7 @@ function formatAge(seconds: number | null | undefined): string {
 }
 
 export default function ConnectorDashboardPage() {
+  const { t } = useTranslation();
   const summaryQuery = useQuery({ queryKey: ["connector-health-summary"], queryFn: getConnectorHealthSummary, refetchInterval: 30_000 });
   const metricsQuery = useQuery({ queryKey: ["connector-metrics"], queryFn: getConnectorMetrics, refetchInterval: 30_000 });
   const connectorsQuery = useQuery({ queryKey: ["connectors"], queryFn: listConnectors, refetchInterval: 30_000 });
@@ -51,29 +53,29 @@ export default function ConnectorDashboardPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Waypoints className="h-6 w-6" />
-            Dashboard Connectors
+            {t("connectorDashboard.title")}
           </h1>
-          <p className="text-sm text-muted-foreground">Saúde operacional, alertas e fila de jobs dos bastions.</p>
+          <p className="text-sm text-muted-foreground">{t("connectorDashboard.subtitle")}</p>
         </div>
         <Link href="/infrastructure/connectors">
-          <Button variant="outline">Gerenciar connectors</Button>
+          <Button variant="outline">{t("connectorDashboard.manageConnectors")}</Button>
         </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Connectors Online</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("connectorDashboard.connectorsOnline")}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-green-600" />
             <span className="text-2xl font-bold">{summary?.healthy ?? "—"}</span>
-            <span className="text-xs text-muted-foreground">/ {summary?.total ?? 0} saudáveis</span>
+            <span className="text-xs text-muted-foreground">{t("connectorDashboard.healthyOf", { total: summary?.total ?? 0 })}</span>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Warning</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("connectorDashboard.warning")}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
@@ -82,7 +84,7 @@ export default function ConnectorDashboardPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Critical</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("connectorDashboard.critical")}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-orange-600" />
@@ -91,7 +93,7 @@ export default function ConnectorDashboardPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Offline</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("connectorDashboard.offline")}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
             <ServerCrash className="h-5 w-5 text-destructive" />
@@ -100,7 +102,7 @@ export default function ConnectorDashboardPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Jobs Pendentes</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("connectorDashboard.pendingJobs")}</CardTitle>
           </CardHeader>
           <CardContent>
             <span className="text-2xl font-bold">{summary?.jobsPending ?? "—"}</span>
@@ -108,7 +110,7 @@ export default function ConnectorDashboardPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Jobs Falhos 1h</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("connectorDashboard.failedJobs1h")}</CardTitle>
           </CardHeader>
           <CardContent>
             <span className="text-2xl font-bold">{summary?.jobsFailedLastHour ?? "—"}</span>
@@ -116,7 +118,7 @@ export default function ConnectorDashboardPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Alertas Abertos</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("connectorDashboard.openAlerts")}</CardTitle>
           </CardHeader>
           <CardContent>
             <span className="text-2xl font-bold">{summary?.openAlerts ?? "—"}</span>
@@ -126,22 +128,22 @@ export default function ConnectorDashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Connectors</CardTitle>
+          <CardTitle className="text-base">{t("connectors.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Connector</TableHead>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Health Score</TableHead>
-                <TableHead>Último Heartbeat</TableHead>
-                <TableHead>Último Handshake WG</TableHead>
-                <TableHead>Jobs Pendentes</TableHead>
-                <TableHead>Falhas 1h</TableHead>
-                <TableHead>Alertas</TableHead>
-                <TableHead>Ações</TableHead>
+                <TableHead>{t("connectorDashboard.tableConnector")}</TableHead>
+                <TableHead>{t("connectorDashboard.tableTenant")}</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
+                <TableHead>{t("connectorDashboard.healthScore")}</TableHead>
+                <TableHead>{t("connectorDashboard.lastHeartbeat")}</TableHead>
+                <TableHead>{t("connectorDashboard.lastWgHandshake")}</TableHead>
+                <TableHead>{t("connectorDashboard.pendingJobsCol")}</TableHead>
+                <TableHead>{t("connectorDashboard.failures1h")}</TableHead>
+                <TableHead>{t("connectorDashboard.alerts")}</TableHead>
+                <TableHead>{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -165,17 +167,17 @@ export default function ConnectorDashboardPage() {
                   <TableCell className="space-x-1">
                     <Link href={`/infrastructure/connectors/${row.connector_id}`}>
                       <Button variant="ghost" size="sm">
-                        Ver Connector
+                        {t("connectorDashboard.viewConnector")}
                       </Button>
                     </Link>
                     <Link href={`/infrastructure/connectors/${row.connector_id}?tab=alerts`}>
                       <Button variant="ghost" size="sm">
-                        Ver Alertas
+                        {t("connectorDashboard.viewAlerts")}
                       </Button>
                     </Link>
                     <Link href={`/infrastructure/connectors/${row.connector_id}?tab=diagnostics`}>
                       <Button variant="ghost" size="sm">
-                        Diagnóstico
+                        {t("connectorDashboard.diagnostics")}
                       </Button>
                     </Link>
                   </TableCell>
@@ -184,7 +186,7 @@ export default function ConnectorDashboardPage() {
               {rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
-                    Nenhum connector cadastrado.
+                    {t("connectorDashboard.noConnectors")}
                   </TableCell>
                 </TableRow>
               )}

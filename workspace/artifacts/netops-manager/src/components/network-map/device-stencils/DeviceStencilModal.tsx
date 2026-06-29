@@ -27,6 +27,7 @@ import {
 } from "./stencils";
 import { DeviceStencil } from "./DeviceStencil";
 import { PortMiniChart } from "./PortMiniChart";
+import { useTranslation } from "@/i18n";
 
 interface Props {
   device: DeviceData | null;
@@ -45,6 +46,7 @@ export function DeviceStencilModal({
   onReplaceDevice,
   onDeleteDevice,
 }: Props) {
+  const { t } = useTranslation();
   const open = !!device;
   const deviceId = device ? parseInventoryNodeId(device.id) : null;
   const { data: summary } = useGetNetopsDeviceSummary(deviceId ?? 0, {
@@ -163,7 +165,9 @@ export function DeviceStencilModal({
                 </Badge>
                 {downPorts > 0 && (
                   <Badge variant="outline" className="border-0 bg-red-500/15 px-1.5 py-0 text-[10px] text-red-400">
-                    {downPorts} porta{downPorts > 1 ? "s" : ""} DOWN
+                    {downPorts > 1
+                      ? t("networkMap.stencilModal.portsDownPlural", { count: downPorts })
+                      : t("networkMap.stencilModal.portsDown", { count: downPorts })}
                   </Badge>
                 )}
               </div>
@@ -191,11 +195,11 @@ export function DeviceStencilModal({
             <Activity className="h-3 w-3 text-sky-400" />
             {hasLiveData
               ? trafficLoading
-                ? "Coletando status SNMP e uso de banda (10s)…"
+                ? t("networkMap.stencilModal.collectingSnmp")
                 : trafficError
                   ? trafficError
-                  : "Faceplate com oper/admin SNMP e utilização % por porta (poll 10s)."
-              : "Faceplate do modelo. Execute discovery/SNMP_FAST para dados reais nas portas."}
+                  : t("networkMap.stencilModal.liveFaceplate")
+              : t("networkMap.stencilModal.modelFaceplate")}
           </div>
 
           {selected && (
@@ -208,7 +212,14 @@ export function DeviceStencilModal({
 
         <Separator className="bg-zinc-800" />
         <div className="flex items-center justify-between gap-3 px-5 py-2 text-[10px] text-zinc-500">
-          <span>Biblioteca: {spec.model} · {hasLiveData ? `${interfaces?.length ?? polledPorts.size} interfaces` : "sem coleta"}</span>
+          <span>
+            {t("networkMap.stencilModal.library", {
+              model: spec.model,
+              info: hasLiveData
+                ? t("networkMap.stencilModal.interfacesCount", { count: interfaces?.length ?? polledPorts.size })
+                : t("networkMap.stencilModal.noCollection"),
+            })}
+          </span>
           <div className="flex items-center gap-2">
             {mapEditMode && onReplaceDevice && onDeleteDevice && (
               <Button
@@ -219,10 +230,10 @@ export function DeviceStencilModal({
                 onClick={() => setEditOpen(true)}
               >
                 <Pencil className="mr-1 h-3 w-3" />
-                Editar device
+                {t("networkMap.stencilModal.editDevice")}
               </Button>
             )}
-            <span>{spec.ports.length} portas · {spec.rackUnits}</span>
+            <span>{t("networkMap.stencilModal.portsSummary", { count: spec.ports.length, rackUnits: spec.rackUnits })}</span>
           </div>
         </div>
       </DialogContent>
@@ -247,6 +258,7 @@ export function DeviceStencilModal({
 }
 
 function PortPopover({ port, onClose }: { port: PortSpec; onClose: () => void }) {
+  const { t } = useTranslation();
   const c = PORT_STATUS_COLOR[port.status];
   const capacityMbps = parseSpeed(port.speed);
   const baseline = Math.max(2, (capacityMbps * port.utilPct) / 100);
@@ -266,16 +278,16 @@ function PortPopover({ port, onClose }: { port: PortSpec; onClose: () => void })
         <button
           onClick={onClose}
           className="rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
-          aria-label="Fechar"
+          aria-label={t("networkMap.stencilModal.close")}
         >
           <X className="h-3 w-3" />
         </button>
       </div>
 
       <div className="mt-2 grid grid-cols-3 gap-1 text-[10px]">
-        <Stat label="Status" value={c.label} valueClass="text-zinc-100" />
-        <Stat label="Speed" value={port.speed} />
-        <Stat label="Uso" value={`${port.utilPct}%`} />
+        <Stat label={t("networkMap.stencilModal.statStatus")} value={c.label} valueClass="text-zinc-100" />
+        <Stat label={t("networkMap.stencilModal.statSpeed")} value={port.speed} />
+        <Stat label={t("networkMap.stencilModal.statUsage")} value={`${port.utilPct}%`} />
       </div>
 
       <div className="mt-2 rounded border border-zinc-800 bg-zinc-950 p-2">
@@ -289,8 +301,8 @@ function PortPopover({ port, onClose }: { port: PortSpec; onClose: () => void })
       <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px]">
         <Pill icon={<ArrowUpRight className="h-3 w-3 text-sky-400" />} label="TX" value={`${(baseline * 0.95).toFixed(0)} Mb/s`} />
         <Pill icon={<ArrowDownLeft className="h-3 w-3 text-emerald-400" />} label="RX" value={`${(baseline * 0.78).toFixed(0)} Mb/s`} />
-        <Pill icon={<AlertCircle className="h-3 w-3 text-amber-400" />} label="Util" value={`${port.utilPct}%`} />
-        <Pill icon={<Wifi className="h-3 w-3 text-zinc-500" />} label="Peer" value={port.neighbor ?? "—"} />
+        <Pill icon={<AlertCircle className="h-3 w-3 text-amber-400" />} label={t("networkMap.stencilModal.statUtil")} value={`${port.utilPct}%`} />
+        <Pill icon={<Wifi className="h-3 w-3 text-zinc-500" />} label={t("networkMap.stencilModal.statPeer")} value={port.neighbor ?? "—"} />
       </div>
     </div>
   );

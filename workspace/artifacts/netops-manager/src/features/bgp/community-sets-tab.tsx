@@ -7,6 +7,7 @@ import {
   useCommunitySets,
   type CommunitySet,
 } from "@/features/device-discovery/community-api";
+import { useTranslation } from "@/i18n";
 
 interface CommunitySetsTabProps {
   deviceId: number;
@@ -24,6 +25,8 @@ function statusVariant(status: string) {
 }
 
 function SetMemberRow({ member }: { member: CommunitySet["members"][number] }) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background/50 px-3 py-2">
       <div className="min-w-0">
@@ -40,11 +43,11 @@ function SetMemberRow({ member }: { member: CommunitySet["members"][number] }) {
         ) : null}
         {member.missingInLibrary ? (
           <Badge variant="secondary" className="bg-amber-500/10 text-amber-300">
-            missing
+            {t("communities.panel.member.missing")}
           </Badge>
         ) : (
           <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">
-            linked
+            {t("communities.panel.member.linked")}
           </Badge>
         )}
       </div>
@@ -53,6 +56,7 @@ function SetMemberRow({ member }: { member: CommunitySet["members"][number] }) {
 }
 
 export function CommunitySetsTab({ deviceId }: CommunitySetsTabProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const setsQuery = useCommunitySets(deviceId);
@@ -99,7 +103,7 @@ export function CommunitySetsTab({ deviceId }: CommunitySetsTabProps) {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive flex items-start gap-2">
         <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-        <span>Erro ao carregar community sets.</span>
+        <span>{t("communities.panel.loadError")}</span>
       </div>
     );
   }
@@ -110,14 +114,13 @@ export function CommunitySetsTab({ deviceId }: CommunitySetsTabProps) {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-foreground">Community sets</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("communities.panel.tabs.sets")}</h3>
               <Badge variant="secondary" className="text-[10px]">
-                {setsQuery.data?.length ?? 0} sets · {importedCount} importados
+                {t("communities.panel.badges.sets", { count: setsQuery.data?.length ?? 0 })} ·{" "}
+                {t("communities.panel.badges.imported", { count: importedCount })}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Sets importados a partir do running-config ou SSH live aparecem como somente leitura. Os detalhes mostram members, origem e estado.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("communities.panel.sets.listDescription")}</p>
           </div>
 
           <div className="relative w-full max-w-md">
@@ -125,7 +128,7 @@ export function CommunitySetsTab({ deviceId }: CommunitySetsTabProps) {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar set..."
+              placeholder={t("communities.panel.sets.searchPlaceholder")}
               className="pl-9"
             />
           </div>
@@ -135,17 +138,17 @@ export function CommunitySetsTab({ deviceId }: CommunitySetsTabProps) {
       <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
         <div className="rounded-xl border border-border bg-card">
           <div className="border-b border-border px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground">
-            Lista de sets
+            {t("communities.panel.sets.listTitle")}
           </div>
           <ScrollArea className="h-[540px]">
             <div className="space-y-2 p-3">
               {setsQuery.isLoading ? (
                 <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-                  Carregando community sets...
+                  {t("communities.panel.sets.loading")}
                 </div>
               ) : filteredSets.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-                  Nenhum set encontrado.
+                  {t("communities.panel.sets.empty")}
                 </div>
               ) : (
                 filteredSets.map((set) => {
@@ -173,7 +176,7 @@ export function CommunitySetsTab({ deviceId }: CommunitySetsTabProps) {
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                         <span className="font-mono">{set.origin}</span>
-                        <span>{set.membersTotal} members</span>
+                        <span>{t("communities.panel.sets.membersCount", { count: set.membersTotal })}</span>
                       </div>
                     </button>
                   );
@@ -185,12 +188,12 @@ export function CommunitySetsTab({ deviceId }: CommunitySetsTabProps) {
 
         <div className="rounded-xl border border-border bg-card">
           <div className="border-b border-border px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground">
-            Detalhes do set
+            {t("communities.panel.details.title")}
           </div>
 
           {!selectedSet ? (
             <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-              Selecione um set para ver members, origem e estado.
+              {t("communities.panel.details.selectSetHint")}
             </div>
           ) : (
             <div className="space-y-4 p-4">
@@ -211,25 +214,26 @@ export function CommunitySetsTab({ deviceId }: CommunitySetsTabProps) {
                   ) : null}
                 </div>
                 <div className="rounded-lg border border-border bg-background/50 px-3 py-2 text-xs text-muted-foreground">
-                  <div>{selectedSet.membersTotal} members</div>
-                  <div>{selectedSet.membersResolved} resolvidos</div>
-                  <div>{selectedSet.membersMissing} faltando na biblioteca</div>
+                  <div>{t("communities.panel.sets.membersCount", { count: selectedSet.membersTotal })}</div>
+                  <div>{t("communities.panel.details.resolved", { count: selectedSet.membersResolved })}</div>
+                  <div>{t("communities.panel.details.missingInLibrary", { count: selectedSet.membersMissing })}</div>
                 </div>
               </div>
 
               {isImportedOrigin(selectedSet.origin) ? (
                 <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                  Set importado: leitura apenas. O sync atualiza este conjunto a partir do running-config ou do SSH live.
+                  {t("communities.panel.details.importedReadOnly")}{" "}
+                  {t("communities.panel.details.importedSyncHint")}
                 </div>
               ) : null}
 
               <div className="space-y-2">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Members
+                  {t("communities.panel.details.members")}
                 </div>
                 {selectedSet.members.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                    Este set não possui members.
+                    {t("communities.panel.details.noMembers")}
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -243,7 +247,7 @@ export function CommunitySetsTab({ deviceId }: CommunitySetsTabProps) {
               {selectedSet.impliedConfigPreview ? (
                 <div className="space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Preview implícito
+                    {t("communities.panel.details.impliedPreview")}
                   </div>
                   <pre className="overflow-auto rounded-lg border border-border bg-muted/40 p-3 text-xs leading-5 text-foreground">
                     {selectedSet.impliedConfigPreview}

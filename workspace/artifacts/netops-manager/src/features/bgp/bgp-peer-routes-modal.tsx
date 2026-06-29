@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { AsPathTokens } from "@/components/AsPathTokens";
+import { useTranslation } from "@/i18n";
 
 const PAGE_SIZE = 200;
 
@@ -25,9 +26,10 @@ export function BgpPeerRoutesModal({
   isOpen,
   onClose,
 }: BgpPeerRoutesModalProps) {
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const peerIp = peer?.peerIp ?? "";
-  const peerName = peer?.name || peer?.description || "Cliente";
+  const peerName = peer?.name || peer?.description || t("bgp.peerModalExtended.defaultPeerName");
   const deviceId = device.id;
   const fetchEnabled = isOpen && !!peer;
 
@@ -48,11 +50,11 @@ export function BgpPeerRoutesModal({
 
   const isReceivedDirection = direction === "received";
   const title = isReceivedDirection
-    ? `Prefixos recebidos (SSH) — ${peerName}`
-    : `Prefixos anunciados (SSH) — ${peerName}`;
+    ? t("bgp.peerRoutesModal.receivedTitle", { name: peerName })
+    : t("bgp.peerRoutesModal.advertisedTitle", { name: peerName });
   const counterLabel = isReceivedDirection
-    ? `Total de prefixos recebidos: ${routesData?.total ?? 0}`
-    : `Total de prefixos anunciados: ${routesData?.total ?? 0}`;
+    ? t("bgp.peerRoutesModal.receivedTotal", { count: routesData?.total ?? 0 })
+    : t("bgp.peerRoutesModal.advertisedTotal", { count: routesData?.total ?? 0 });
 
   const handlePreviousPage = () => {
     setPage(p => Math.max(1, p - 1));
@@ -67,7 +69,7 @@ export function BgpPeerRoutesModal({
   const currentPage = routesData?.page ?? page;
   const startIdx = totalRoutes > 0 ? (currentPage - 1) * effectiveLimit + 1 : 0;
   const endIdx = Math.min(currentPage * effectiveLimit, totalRoutes);
-  const pageRange = `${startIdx}–${endIdx} de ${totalRoutes}`;
+  const pageRange = t("bgp.peerRoutesModal.pageRange", { start: startIdx, end: endIdx, total: totalRoutes });
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -81,7 +83,7 @@ export function BgpPeerRoutesModal({
               <div className="text-xs text-slate-400 mt-2">
                 <span className="text-slate-300 font-mono">{peerIp}</span>
                 <span className="text-slate-600"> · </span>
-                <span>Principal</span>
+                <span>{t("bgp.peerRoutesModal.primary")}</span>
               </div>
             </div>
           </div>
@@ -95,29 +97,25 @@ export function BgpPeerRoutesModal({
             </div>
           ) : (
             <div className="px-6 py-5 space-y-5">
-              {/* Counter */}
               <div className="text-sm font-medium text-slate-300">
                 {counterLabel}
               </div>
 
-              {/* Excess Warning */}
               {routesData?.excessWarning && (
                 <div className="flex gap-3 rounded-lg bg-amber-500/10 border border-amber-500/25 p-4">
                   <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <div className="text-xs">
-                    <div className="font-medium text-amber-200">Alto volume de prefixos</div>
+                    <div className="font-medium text-amber-200">{t("bgp.peerRoutesModal.highVolumePrefixes")}</div>
                     <p className="text-amber-300/70 mt-1">
-                      {routesData.warningMessage ||
-                        "Esta consulta foi limitada a 200 prefixos por página para proteger o dispositivo."}
+                      {routesData.warningMessage || t("bgp.peerRoutesModal.limitedPageWarning")}
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* Routes Table */}
               <div className="space-y-2">
                 {routesData?.items && routesData.items.length > 0 ? (
-                  routesData.items.map((item: any, idx: number) => (
+                  routesData.items.map((item: { prefix: string; asPath?: string[] }, idx: number) => (
                     <div
                       key={idx}
                       className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-lg bg-slate-900/50 border border-slate-800 p-3 text-xs"
@@ -136,12 +134,11 @@ export function BgpPeerRoutesModal({
                   ))
                 ) : (
                   <div className="text-xs text-slate-400 p-4 rounded-lg bg-slate-900/50 border border-slate-800 italic">
-                    Nenhum prefixo encontrado
+                    {t("bgp.peerRoutesModal.noPrefixesFound")}
                   </div>
                 )}
               </div>
 
-              {/* Pagination */}
               <div className="flex items-center justify-between pt-4 border-t border-slate-800">
                 <div className="text-xs text-slate-400">
                   {pageRange}
@@ -155,7 +152,7 @@ export function BgpPeerRoutesModal({
                     onClick={handlePreviousPage}
                   >
                     <ChevronLeft className="h-3 w-3 mr-1" />
-                    Anterior
+                    {t("bgp.peerRoutesModal.previous")}
                   </Button>
                   <Button
                     size="sm"
@@ -164,7 +161,7 @@ export function BgpPeerRoutesModal({
                     disabled={!routesData?.hasNextPage}
                     onClick={handleNextPage}
                   >
-                    Próxima
+                    {t("bgp.peerRoutesModal.next")}
                     <ChevronRight className="h-3 w-3 ml-1" />
                   </Button>
                 </div>

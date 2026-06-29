@@ -1,5 +1,6 @@
 import type { LiveTrafficSample } from "@/features/network-map/operational-interfaces-api";
 import { formatMbps } from "@/features/network-map/operational-interfaces-api";
+import { useTranslation } from "@/i18n";
 
 interface Props {
   series: LiveTrafficSample[];
@@ -10,6 +11,7 @@ interface Props {
 
 /** Real-time TX/RX sparkline from SNMP counter deltas (no synthetic data). */
 export function LiveTrafficChart({ series, capacityMbps, txMbps, rxMbps }: Props) {
+  const { t } = useTranslation();
   const W = 280;
   const H = 72;
   const max = Math.max(capacityMbps, ...series.flatMap((s) => [s.tx, s.rx]), txMbps ?? 0, rxMbps ?? 0, 1);
@@ -40,7 +42,7 @@ export function LiveTrafficChart({ series, capacityMbps, txMbps, rxMbps }: Props
         )}
         {series.length < 2 && (
           <text x={W / 2} y={H / 2} textAnchor="middle" fill="#71717a" fontSize={10}>
-            Aguardando 2ª amostra SNMP…
+            {t("networkMap.liveTraffic.waitingSecondSample")}
           </text>
         )}
       </svg>
@@ -53,7 +55,7 @@ export function LiveTrafficChart({ series, capacityMbps, txMbps, rxMbps }: Props
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
           RX <span className="text-zinc-200">{formatMbps(rxMbps)}</span>
         </span>
-        <span className="text-zinc-500">cap {formatMbps(capacityMbps)}</span>
+        <span className="text-zinc-500">{t("networkMap.liveTraffic.capacity", { value: formatMbps(capacityMbps) })}</span>
       </div>
     </div>
   );

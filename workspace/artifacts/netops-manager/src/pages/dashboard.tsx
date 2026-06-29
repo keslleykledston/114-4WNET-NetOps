@@ -2,8 +2,10 @@ import { useHealthCheck, useGetDeviceStats, useGetComplianceSummary, useGetProvi
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Server, Activity, AlertTriangle, ShieldCheck, Rocket } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/i18n";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { data: stats, isLoading: statsLoading } = useGetDeviceStats();
   const { data: compliance, isLoading: complianceLoading } = useGetComplianceSummary();
   const { data: provisioning, isLoading: provisioningLoading } = useGetProvisioningStats();
@@ -12,21 +14,20 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("dashboard.title")}</h1>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">API Status:</span>
+          <span className="text-sm text-muted-foreground">{t("dashboard.apiStatus")}</span>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
             <div className={`h-2 w-2 rounded-full ${health?.status === "ok" ? "bg-green-500" : "bg-red-500"}`} />
-            {health?.status === "ok" ? "Online" : "Offline"}
+            {health?.status === "ok" ? t("common.online") : t("common.offline")}
           </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Devices</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("dashboard.totalDevices")}</CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -36,8 +37,8 @@ export default function Dashboard() {
               <>
                 <div className="text-2xl font-bold" data-testid="text-total-devices">{stats?.total || 0}</div>
                 <div className="flex items-center gap-2 mt-1 text-xs">
-                  <span className="text-green-500 font-medium">{stats?.active || 0} active</span>
-                  <span className="text-red-500 font-medium">{stats?.unreachable || 0} unreachable</span>
+                  <span className="text-green-500 font-medium">{stats?.active || 0} {t("dashboard.active")}</span>
+                  <span className="text-red-500 font-medium">{stats?.unreachable || 0} {t("dashboard.unreachable")}</span>
                 </div>
               </>
             )}
@@ -46,7 +47,7 @@ export default function Dashboard() {
 
         <Card className="bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Compliance Health</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("dashboard.complianceHealth")}</CardTitle>
             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -55,7 +56,7 @@ export default function Dashboard() {
             ) : (
               <>
                 <div className="text-2xl font-bold" data-testid="text-compliance-passed">{compliance?.passed || 0}</div>
-                <div className="text-xs text-muted-foreground mt-1">Policies passed across fleet</div>
+                <div className="text-xs text-muted-foreground mt-1">{t("dashboard.policiesPassed")}</div>
               </>
             )}
           </CardContent>
@@ -63,7 +64,7 @@ export default function Dashboard() {
 
         <Card className="bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Compliance Failures</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("dashboard.complianceFailures")}</CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -72,7 +73,7 @@ export default function Dashboard() {
             ) : (
               <>
                 <div className="text-2xl font-bold text-destructive" data-testid="text-compliance-failed">{compliance?.failed || 0}</div>
-                <div className="text-xs text-muted-foreground mt-1">Active policy violations</div>
+                <div className="text-xs text-muted-foreground mt-1">{t("dashboard.activeViolations")}</div>
               </>
             )}
           </CardContent>
@@ -80,7 +81,7 @@ export default function Dashboard() {
 
         <Card className="bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Provisioning</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("dashboard.activeProvisioning")}</CardTitle>
             <Rocket className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -89,7 +90,7 @@ export default function Dashboard() {
             ) : (
               <>
                 <div className="text-2xl font-bold" data-testid="text-provisioning-active">{provisioning?.executing || 0}</div>
-                <div className="text-xs text-muted-foreground mt-1">Jobs currently executing</div>
+                <div className="text-xs text-muted-foreground mt-1">{t("dashboard.jobsExecuting")}</div>
               </>
             )}
           </CardContent>
@@ -99,7 +100,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Compliance Jobs</CardTitle>
+            <CardTitle>{t("dashboard.recentComplianceJobs")}</CardTitle>
           </CardHeader>
           <CardContent>
              {complianceLoading ? (
@@ -118,8 +119,8 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-xs flex gap-2">
-                        <span className="text-green-500">{job.passCount} pass</span>
-                        <span className="text-red-500">{job.failCount} fail</span>
+                        <span className="text-green-500">{job.passCount} {t("dashboard.pass")}</span>
+                        <span className="text-red-500">{job.failCount} {t("dashboard.fail")}</span>
                       </div>
                       <div className={`px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider ${
                         job.status === 'passed' ? 'bg-green-500/10 text-green-500' : 
@@ -134,14 +135,14 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 text-muted-foreground text-sm">No recent compliance jobs</div>
+              <div className="text-center py-6 text-muted-foreground text-sm">{t("dashboard.noRecentJobs")}</div>
             )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Fleet Composition</CardTitle>
+            <CardTitle>{t("dashboard.fleetComposition")}</CardTitle>
           </CardHeader>
           <CardContent>
             {statsLoading ? (
@@ -149,7 +150,7 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium mb-2 text-muted-foreground">By Vendor</h4>
+                  <h4 className="text-sm font-medium mb-2 text-muted-foreground">{t("dashboard.byVendor")}</h4>
                   <div className="space-y-2">
                     {stats?.byVendor.map(v => (
                       <div key={v.key} className="flex items-center justify-between">

@@ -33,39 +33,41 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "./theme-provider";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "./auth-provider";
+import { useTranslation } from "@/i18n";
 
 const navItems = [
-  { href: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/map", icon: Map, label: "Mapa" },
-  { href: "/l2-circuits", icon: Network, label: "L2 Circuits" },
-  { href: "/compliance", icon: ShieldCheck, label: "Compliance" },
-  { href: "/provisioning", icon: Rocket, label: "Provisioning" },
-  { href: "/provisioning/templates", icon: FileCode, label: "Template Registry" },
-  { href: "/provisioning/template-studio", icon: FileCode, label: "Template Studio" },
-  { href: "/provisioning/service-catalog", icon: FileCode, label: "Service Catalog" },
-  { href: "/templates", icon: FileCode, label: "Templates" },
-  { href: "/policies", icon: ScrollText, label: "Policies" },
-  { href: "/config-collection", icon: DownloadCloud, label: "Config Collection" },
-  { href: "/snmp-history", icon: RadioTower, label: "SNMP History" },
-  { href: "/netops-operations", icon: Workflow, label: "NetOps Operations" },
-  { href: "/operational/bgp", icon: GitBranch, label: "BGP Operations" },
-  { href: "/bgp/peer-drilldown", icon: GitBranch, label: "BGP Drilldown" },
-  { href: "/bgp/announcements", icon: ClipboardList, label: "Anúncios BGP" },
-  { href: "/audit", icon: ShieldAlert, label: "Audit" },
-  { href: "/security/credentials", icon: KeyRound, label: "Credential Vault" },
-  { href: "/tenants/notifications", icon: BellRing, label: "Notifications" },
-  { href: "/reports", icon: FileBarChart, label: "Reports" },
-  { href: "/integrations", icon: PlugZap, label: "Integrations" },
-  { href: "/infrastructure/connectors", icon: Waypoints, label: "Conectores" },
-  { href: "/infrastructure/connector-groups", icon: Waypoints, label: "Connector Groups" },
-  { href: "/scheduler", icon: CalendarClock, label: "Scheduler" },
-];
+  { href: "/", icon: LayoutDashboard, labelKey: "nav.dashboard" },
+  { href: "/map", icon: Map, labelKey: "nav.map" },
+  { href: "/l2-circuits", icon: Network, labelKey: "nav.l2Circuits" },
+  { href: "/compliance", icon: ShieldCheck, labelKey: "nav.compliance" },
+  { href: "/provisioning", icon: Rocket, labelKey: "nav.provisioning" },
+  { href: "/provisioning/templates", icon: FileCode, labelKey: "nav.templateRegistry" },
+  { href: "/provisioning/template-studio", icon: FileCode, labelKey: "nav.templateStudio" },
+  { href: "/provisioning/service-catalog", icon: FileCode, labelKey: "nav.serviceCatalog" },
+  { href: "/templates", icon: FileCode, labelKey: "nav.templates" },
+  { href: "/policies", icon: ScrollText, labelKey: "nav.policies" },
+  { href: "/config-collection", icon: DownloadCloud, labelKey: "nav.configCollection" },
+  { href: "/snmp-history", icon: RadioTower, labelKey: "nav.snmpHistory" },
+  { href: "/netops-operations", icon: Workflow, labelKey: "nav.netopsOperations" },
+  { href: "/operational/bgp", icon: GitBranch, labelKey: "nav.bgpOperations" },
+  { href: "/bgp/peer-drilldown", icon: GitBranch, labelKey: "nav.bgpDrilldown" },
+  { href: "/bgp/announcements", icon: ClipboardList, labelKey: "nav.bgpAnnouncements" },
+  { href: "/audit", icon: ShieldAlert, labelKey: "nav.audit" },
+  { href: "/security/credentials", icon: KeyRound, labelKey: "nav.credentialVault" },
+  { href: "/tenants/notifications", icon: BellRing, labelKey: "nav.notifications" },
+  { href: "/reports", icon: FileBarChart, labelKey: "nav.reports" },
+  { href: "/integrations", icon: PlugZap, labelKey: "nav.integrations" },
+  { href: "/infrastructure/connectors", icon: Waypoints, labelKey: "nav.connectors" },
+  { href: "/infrastructure/connector-groups", icon: Waypoints, labelKey: "nav.connectorGroups" },
+  { href: "/scheduler", icon: CalendarClock, labelKey: "nav.scheduler" },
+] as const;
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const isFullscreenMap = location === "/map";
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const { t, locale, setLocale } = useTranslation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const connectorSummaryQuery = useQuery({
     queryKey: ["connector-health-summary"],
@@ -86,13 +88,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
       >
         <div className="h-12 flex items-center px-4 border-b border-sidebar-border gap-2">
           <Activity className="h-4 w-4 text-primary" />
-          {!sidebarCollapsed ? <span className="text-[13px] font-bold tracking-tight text-sidebar-foreground">NetOps Manager</span> : null}
+          {!sidebarCollapsed ? <span className="text-[13px] font-bold tracking-tight text-sidebar-foreground">{t("app.brandName")}</span> : null}
           <Button
             variant="ghost"
             size="icon"
             className="ml-auto h-7 w-7 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             onClick={() => setSidebarCollapsed((current) => !current)}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={sidebarCollapsed ? t("layout.expandSidebar") : t("layout.collapseSidebar")}
           >
             {sidebarCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
           </Button>
@@ -104,8 +106,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             const Icon = item.icon;
             const label =
               item.href === "/infrastructure/connectors" && openConnectorAlerts > 0
-                ? `${item.label} (${openConnectorAlerts})`
-                : item.label;
+                ? t("nav.connectorAlerts", { count: openConnectorAlerts })
+                : t(item.labelKey);
 
             return (
               <Link key={item.href} href={item.href}>
@@ -117,7 +119,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       ? "bg-[#1e2a45] text-primary"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
-                  data-testid={`link-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                  data-testid={`link-nav-${item.labelKey.split(".").pop()}`}
                   title={sidebarCollapsed ? label : undefined}
                 >
                   {isActive ? <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" /> : null}
@@ -131,7 +133,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {user?.role === "admin" && (
             <div className="pt-4 border-t border-sidebar-border">
               {!sidebarCollapsed ? (
-                <div className="text-[11px] font-semibold tracking-[0.18em] text-sidebar-foreground/60 px-3 py-2 mb-1">ADMINISTRATION</div>
+                <div className="text-[11px] font-semibold tracking-[0.18em] text-sidebar-foreground/60 px-3 py-2 mb-1">{t("layout.administration")}</div>
               ) : null}
               <Link href="/users">
                 <div
@@ -142,11 +144,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       ? "bg-[#1e2a45] text-primary"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
-                  title={sidebarCollapsed ? "Users" : undefined}
+                  title={sidebarCollapsed ? t("nav.users") : undefined}
                 >
                   {location === "/users" ? <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" /> : null}
                   <Users className="h-4 w-4 shrink-0" />
-                  {!sidebarCollapsed ? <span className="truncate">Users</span> : null}
+                  {!sidebarCollapsed ? <span className="truncate">{t("nav.users")}</span> : null}
                 </div>
               </Link>
             </div>
@@ -156,23 +158,40 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="p-4 border-t border-sidebar-border">
           {!sidebarCollapsed ? (
             <div className="mb-3 rounded-lg border border-sidebar-border bg-sidebar-accent/40 p-3 text-[11px] text-sidebar-foreground">
-              <div className="font-semibold text-[12px]">{user?.name ?? "Usuário"}</div>
-              <div className="truncate opacity-80">{user?.email ?? "sem sessão"}</div>
+              <div className="font-semibold text-[12px]">{user?.name ?? t("layout.user")}</div>
+              <div className="truncate opacity-80">{user?.email ?? t("layout.noSession")}</div>
               <div className="mt-1 uppercase tracking-[0.18em] opacity-70">{user?.role ?? "viewer"}</div>
             </div>
           ) : null}
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className={cn(
               "w-full text-[12px] text-sidebar-foreground bg-transparent border-sidebar-border hover:bg-sidebar-accent",
               sidebarCollapsed ? "justify-center px-0" : "justify-start",
             )}
+            onClick={() => setLocale(locale === "pt-BR" ? "en" : "pt-BR")}
+            data-testid="button-toggle-language"
+            title={sidebarCollapsed ? (locale === "pt-BR" ? t("layout.languageEn") : t("layout.languagePt")) : undefined}
+          >
+            <span className={cn("text-[11px] font-semibold", sidebarCollapsed ? "" : "mr-2")}>
+              {locale === "pt-BR" ? t("layout.languagePt") : t("layout.languageEn")}
+            </span>
+            {!sidebarCollapsed ? (
+              <span className="text-[11px] opacity-70">↔ {locale === "pt-BR" ? t("layout.languageEn") : t("layout.languagePt")}</span>
+            ) : null}
+          </Button>
+          <Button 
+            variant="outline" 
+            className={cn(
+              "mt-2 w-full text-[12px] text-sidebar-foreground bg-transparent border-sidebar-border hover:bg-sidebar-accent",
+              sidebarCollapsed ? "justify-center px-0" : "justify-start",
+            )}
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             data-testid="button-toggle-theme"
-            title={sidebarCollapsed ? "Toggle Theme" : undefined}
+            title={sidebarCollapsed ? t("layout.toggleTheme") : undefined}
           >
             <Settings className={cn("h-3.5 w-3.5", sidebarCollapsed ? "" : "mr-2")} />
-            {!sidebarCollapsed ? "Toggle Theme" : null}
+            {!sidebarCollapsed ? t("layout.toggleTheme") : null}
           </Button>
           <Button
             variant="outline"
@@ -181,10 +200,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               sidebarCollapsed ? "justify-center px-0" : "justify-start",
             )}
             onClick={() => void logout()}
-            title={sidebarCollapsed ? "Logout" : undefined}
+            title={sidebarCollapsed ? t("layout.logout") : undefined}
           >
             <LogOut className={cn("h-3.5 w-3.5", sidebarCollapsed ? "" : "mr-2")} />
-            {!sidebarCollapsed ? "Logout" : null}
+            {!sidebarCollapsed ? t("layout.logout") : null}
           </Button>
         </div>
       </aside>

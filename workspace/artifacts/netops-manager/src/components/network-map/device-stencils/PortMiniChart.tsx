@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "@/i18n";
 
 interface Props {
   seed: number;
@@ -12,6 +13,7 @@ interface Props {
  * Tiny TX/RX sparkline. Uses inline SVG (no external chart lib). Two lines: TX (sky), RX (emerald).
  */
 export function PortMiniChart({ seed, baselineMbps, capacityMbps, liveSeries }: Props) {
+  const { t } = useTranslation();
   const [series, setSeries] = useState<{ tx: number[]; rx: number[] }>(() => {
     if (liveSeries?.tx.length) return liveSeries;
     const r = mulberry32(seed);
@@ -72,7 +74,6 @@ export function PortMiniChart({ seed, baselineMbps, capacityMbps, liveSeries }: 
     <div>
       <svg width={W} height={H} className="block">
         <rect x={0} y={0} width={W} height={H} fill="#09090b" rx={4} />
-        {/* grid */}
         {[0.25, 0.5, 0.75].map((g) => (
           <line key={g} x1={0} x2={W} y1={H * g} y2={H * g} stroke="#1f2937" strokeWidth={0.5} />
         ))}
@@ -88,7 +89,7 @@ export function PortMiniChart({ seed, baselineMbps, capacityMbps, liveSeries }: 
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" /> RX{" "}
           <span className="text-zinc-200">{fmt(rxCur)}</span>
         </span>
-        <span className="text-zinc-500">cap {fmt(capacityMbps)}</span>
+        <span className="text-zinc-500">{t("networkMap.liveTraffic.capacity", { value: fmt(capacityMbps) })}</span>
       </div>
     </div>
   );

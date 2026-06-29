@@ -14,6 +14,7 @@ import {
   exportTemplate,
 } from "@/features/provisioning-templates/provisioning-templates-api";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 import { ArrowLeft, Download, AlertCircle } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -28,7 +29,7 @@ export default function ProvisioningTemplateDetailPage() {
   const [match, params] = useRoute("/provisioning/templates/:id");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [selectedVersion, setSelectedVersion] = useState<string>("");
+  const { t } = useTranslation();
   const [diffVersionA, setDiffVersionA] = useState<string>("");
   const [diffVersionB, setDiffVersionB] = useState<string>("");
 
@@ -50,11 +51,11 @@ export default function ProvisioningTemplateDetailPage() {
       a.download = `template-${id}-${new Date().toISOString().split("T")[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "Template exported successfully" });
+      toast({ title: t("provisioningTemplateDetail.toastExported") });
     } catch (err) {
       toast({
-        title: "Export failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: t("provisioningTemplateDetail.toastExportFailed"),
+        description: err instanceof Error ? err.message : t("provisioningTemplateDetail.unknownError"),
         variant: "destructive",
       });
     }
@@ -63,7 +64,7 @@ export default function ProvisioningTemplateDetailPage() {
   if (isLoading || !template) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Loading template…</p>
+        <p className="text-muted-foreground">{t("provisioningTemplateDetail.loading")}</p>
       </div>
     );
   }
@@ -104,12 +105,12 @@ export default function ProvisioningTemplateDetailPage() {
         <Badge className={statusColors[template.status] || "bg-gray-100"}>{template.status}</Badge>
         {!template.editable && (
           <Badge variant="outline" className="bg-amber-50 border-amber-200">
-            System — Read-only
+            {t("provisioningTemplateDetail.systemReadOnly")}
           </Badge>
         )}
         <Button variant="outline" size="sm" onClick={handleExport}>
           <Download className="h-4 w-4 mr-2" />
-          Export
+          {t("provisioningTemplateDetail.export")}
         </Button>
       </div>
 
@@ -117,29 +118,29 @@ export default function ProvisioningTemplateDetailPage() {
 
       <Tabs defaultValue="variables" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="variables">Variables</TabsTrigger>
-          <TabsTrigger value="validation">Validation</TabsTrigger>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="versions">Versions</TabsTrigger>
-          <TabsTrigger value="audit">Audit</TabsTrigger>
+          <TabsTrigger value="variables">{t("provisioningTemplateDetail.tabs.variables")}</TabsTrigger>
+          <TabsTrigger value="validation">{t("provisioningTemplateDetail.tabs.validation")}</TabsTrigger>
+          <TabsTrigger value="preview">{t("provisioningTemplateDetail.tabs.preview")}</TabsTrigger>
+          <TabsTrigger value="versions">{t("provisioningTemplateDetail.tabs.versions")}</TabsTrigger>
+          <TabsTrigger value="audit">{t("provisioningTemplateDetail.tabs.audit")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="variables" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Template Variables</CardTitle>
+              <CardTitle>{t("provisioningTemplateDetail.templateVariables")}</CardTitle>
             </CardHeader>
             <CardContent>
               {Object.keys(variablesData).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No variables defined</p>
+                <p className="text-sm text-muted-foreground">{t("provisioningTemplateDetail.noVariables")}</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Field</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Required</TableHead>
-                      <TableHead>Description</TableHead>
+                      <TableHead>{t("provisioningTemplateDetail.field")}</TableHead>
+                      <TableHead>{t("provisioningTemplateDetail.type")}</TableHead>
+                      <TableHead>{t("provisioningTemplateDetail.required")}</TableHead>
+                      <TableHead>{t("provisioningTemplateDetail.description")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -150,10 +151,10 @@ export default function ProvisioningTemplateDetailPage() {
                         <TableCell>
                           {value.required ? (
                             <Badge variant="outline" className="bg-red-50">
-                              Yes
+                              {t("provisioningTemplateDetail.yes")}
                             </Badge>
                           ) : (
-                            <span className="text-xs text-muted-foreground">No</span>
+                            <span className="text-xs text-muted-foreground">{t("provisioningTemplateDetail.no")}</span>
                           )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{value.description || "—"}</TableCell>
@@ -169,12 +170,12 @@ export default function ProvisioningTemplateDetailPage() {
         <TabsContent value="validation" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Validation Rules</CardTitle>
+              <CardTitle>{t("provisioningTemplateDetail.validationRules")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {validationData.risks && validationData.risks.length > 0 && (
                 <div>
-                  <p className="font-semibold mb-2">Risks</p>
+                  <p className="font-semibold mb-2">{t("provisioningTemplateDetail.risks")}</p>
                   <ul className="space-y-1 text-sm">
                     {validationData.risks.map((risk: any, idx: number) => (
                       <li key={idx} className="flex gap-2">
@@ -188,7 +189,7 @@ export default function ProvisioningTemplateDetailPage() {
 
               {validationData.precheckHints && validationData.precheckHints.length > 0 && (
                 <div>
-                  <p className="font-semibold mb-2">Pre-check Hints</p>
+                  <p className="font-semibold mb-2">{t("provisioningTemplateDetail.precheckHints")}</p>
                   <ul className="space-y-1 text-sm">
                     {validationData.precheckHints.map((hint: string, idx: number) => (
                       <li key={idx} className="flex gap-2">
@@ -202,7 +203,7 @@ export default function ProvisioningTemplateDetailPage() {
 
               {validationData.postcheckHints && validationData.postcheckHints.length > 0 && (
                 <div>
-                  <p className="font-semibold mb-2">Post-check Hints</p>
+                  <p className="font-semibold mb-2">{t("provisioningTemplateDetail.postcheckHints")}</p>
                   <ul className="space-y-1 text-sm">
                     {validationData.postcheckHints.map((hint: string, idx: number) => (
                       <li key={idx} className="flex gap-2">
@@ -217,7 +218,7 @@ export default function ProvisioningTemplateDetailPage() {
               {!validationData.risks?.length &&
                 !validationData.precheckHints?.length &&
                 !validationData.postcheckHints?.length && (
-                  <p className="text-sm text-muted-foreground">No validation rules defined</p>
+                  <p className="text-sm text-muted-foreground">{t("provisioningTemplateDetail.noValidationRules")}</p>
                 )}
             </CardContent>
           </Card>
@@ -226,18 +227,16 @@ export default function ProvisioningTemplateDetailPage() {
         <TabsContent value="preview" className="space-y-4">
           <Alert>
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Read-only preview — template body is not executed. Variables shown as literals.
-            </AlertDescription>
+            <AlertDescription>{t("provisioningTemplateDetail.previewAlert")}</AlertDescription>
           </Alert>
 
           <Card>
             <CardHeader>
-              <CardTitle>Template Body</CardTitle>
+              <CardTitle>{t("provisioningTemplateDetail.templateBody")}</CardTitle>
             </CardHeader>
             <CardContent>
               <pre className="bg-slate-900 text-slate-100 p-4 rounded text-xs font-mono overflow-auto max-h-96 whitespace-pre-wrap break-words">
-                {template.templateBody || "No template body"}
+                {template.templateBody || t("provisioningTemplateDetail.noTemplateBody")}
               </pre>
             </CardContent>
           </Card>
@@ -246,21 +245,21 @@ export default function ProvisioningTemplateDetailPage() {
         <TabsContent value="versions" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Version History</CardTitle>
+              <CardTitle>{t("provisioningTemplateDetail.versionHistory")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!versions || versions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No versions found</p>
+                <p className="text-sm text-muted-foreground">{t("provisioningTemplateDetail.noVersions")}</p>
               ) : (
                 <>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Version</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Changed By</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead>Action</TableHead>
+                        <TableHead>{t("provisioningTemplateDetail.version")}</TableHead>
+                        <TableHead>{t("provisioningTemplateDetail.status")}</TableHead>
+                        <TableHead>{t("provisioningTemplateDetail.changedBy")}</TableHead>
+                        <TableHead>{t("provisioningTemplateDetail.created")}</TableHead>
+                        <TableHead>{t("provisioningTemplateDetail.action")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -272,7 +271,7 @@ export default function ProvisioningTemplateDetailPage() {
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">{version.changedBy || "—"}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {new Date(version.createdAt).toLocaleDateString("pt-BR")}
+                            {new Date(version.createdAt).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -283,7 +282,7 @@ export default function ProvisioningTemplateDetailPage() {
                                 setDiffVersionB(versions[0]?.version || "");
                               }}
                             >
-                              Diff
+                              {t("provisioningTemplateDetail.diff")}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -294,7 +293,7 @@ export default function ProvisioningTemplateDetailPage() {
                   {diffVersionA && diffVersionB && diffs && (
                     <div className="mt-4 p-4 bg-slate-50 rounded border">
                       <p className="text-sm font-semibold mb-2">
-                        Diff: {diffVersionA} vs {diffVersionB}
+                        {t("provisioningTemplateDetail.diffVs", { a: diffVersionA, b: diffVersionB })}
                       </p>
                       <pre className="text-xs font-mono max-h-40 overflow-auto bg-slate-900 text-slate-100 p-2 rounded">
                         {diffs.map((diff, idx) => (
@@ -324,18 +323,18 @@ export default function ProvisioningTemplateDetailPage() {
         <TabsContent value="audit" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Audit Logs</CardTitle>
+              <CardTitle>{t("provisioningTemplateDetail.auditLogs")}</CardTitle>
             </CardHeader>
             <CardContent>
               {!auditLogs || auditLogs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No audit logs</p>
+                <p className="text-sm text-muted-foreground">{t("provisioningTemplateDetail.noAuditLogs")}</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Actor</TableHead>
-                      <TableHead>Timestamp</TableHead>
+                      <TableHead>{t("provisioningTemplateDetail.action")}</TableHead>
+                      <TableHead>{t("provisioningTemplateDetail.actor")}</TableHead>
+                      <TableHead>{t("provisioningTemplateDetail.timestamp")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -346,7 +345,7 @@ export default function ProvisioningTemplateDetailPage() {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{log.actor}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {new Date(log.createdAt).toLocaleString("pt-BR")}
+                          {new Date(log.createdAt).toLocaleString()}
                         </TableCell>
                       </TableRow>
                     ))}

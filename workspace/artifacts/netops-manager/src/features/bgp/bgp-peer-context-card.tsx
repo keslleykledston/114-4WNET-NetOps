@@ -4,6 +4,7 @@ import { ArrowLeftRight, GitBranch, Workflow } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n";
 
 interface BgpPeerContextCardProps {
   device: Device | null;
@@ -20,6 +21,13 @@ function labelOrDash(value: string | number | null | undefined): string {
   return String(value);
 }
 
+function roleLabel(role: string | null | undefined, t: (key: string) => string): string {
+  if (!role) return "—";
+  const key = `bgp.roleLabels.${role}`;
+  const translated = t(key);
+  return translated === key ? role : translated;
+}
+
 export function BgpPeerContextCard({
   device,
   peer,
@@ -29,52 +37,55 @@ export function BgpPeerContextCard({
   onEditPolicy,
   className,
 }: BgpPeerContextCardProps) {
+  const { t } = useTranslation();
+
+  const deviceLabel = device?.hostname
+    ?? (device?.id != null ? t("bgp.peerContext.deviceFallback", { id: device.id }) : "—");
+
   return (
     <Card className={cn("border-border/70 bg-card/80", className)}>
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle className="text-base">BGP Peer Context</CardTitle>
-            <div className="mt-1 text-sm text-muted-foreground">
-              Ponte entre cockpit, operations e drilldown.
-            </div>
+            <CardTitle className="text-base">{t("bgp.peerContext.title")}</CardTitle>
+            <div className="mt-1 text-sm text-muted-foreground">{t("bgp.peerContext.subtitle")}</div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm">
               <Link href={operationalHref}>
                 <ArrowLeftRight className="h-4 w-4" />
-                BGP Operations
+                {t("bgp.peerContext.bgpOperations")}
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link href={netopsHref}>
                 <Workflow className="h-4 w-4" />
-                NetOps Operations
+                {t("bgp.peerContext.netopsOperations")}
               </Link>
             </Button>
             <Button asChild variant="default" size="sm">
               <Link href={drilldownHref}>
                 <GitBranch className="h-4 w-4" />
-                BGP Drilldown
+                {t("bgp.peerContext.bgpDrilldown")}
               </Link>
             </Button>
             {onEditPolicy ? (
               <Button variant="secondary" size="sm" onClick={onEditPolicy}>
-                Editar policy
+                {t("bgp.peerContext.editPolicy")}
               </Button>
             ) : null}
           </div>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <InfoTile label="Device" value={device?.hostname ?? `Device #${device?.id ?? "—"}`} mono={false} />
-        <InfoTile label="Peer IP" value={peer?.peerIp ?? "—"} mono />
-        <InfoTile label="ASN remoto" value={peer?.remoteAs ?? "—"} mono />
-        <InfoTile label="VRF" value={labelOrDash(peer?.vrf)} mono />
-        <InfoTile label="Role" value={labelOrDash(peer?.role)} />
-        <InfoTile label="State" value={labelOrDash(peer?.state)} />
-        <InfoTile label="Import policy" value={labelOrDash(peer?.importPolicy)} mono />
-        <InfoTile label="Export policy" value={labelOrDash(peer?.exportPolicy)} mono />
+        <InfoTile label={t("bgp.peerContext.device")} value={deviceLabel} mono={false} />
+        <InfoTile label={t("bgp.peerContext.peerIp")} value={peer?.peerIp ?? "—"} mono />
+        <InfoTile label={t("bgp.peerContext.remoteAsn")} value={peer?.remoteAs ?? "—"} mono />
+        <InfoTile label={t("bgp.peerContext.vrf")} value={labelOrDash(peer?.vrf)} mono />
+        <InfoTile label={t("bgp.peerContext.role")} value={roleLabel(peer?.role, t)} />
+        <InfoTile label={t("bgp.peerContext.state")} value={labelOrDash(peer?.state)} />
+        <InfoTile label={t("bgp.peerContext.importPolicy")} value={labelOrDash(peer?.importPolicy)} mono />
+        <InfoTile label={t("bgp.peerContext.exportPolicy")} value={labelOrDash(peer?.exportPolicy)} mono />
       </CardContent>
     </Card>
   );

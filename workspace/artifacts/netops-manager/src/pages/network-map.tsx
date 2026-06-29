@@ -15,11 +15,11 @@ import ReactFlow, {
   type NodeMouseHandler,
   type ReactFlowInstance,
   type NodeChange,
-  type NodePositionChange,
   ConnectionLineType,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { toast } from "sonner";
+import { useTranslation } from "@/i18n";
 import {
   Activity,
   Cable,
@@ -77,7 +77,7 @@ import type {
   LinkWaypoint,
   NodeStatus,
 } from "@/lib/network-map/types";
-import { edgePairOffset } from "@/lib/network-map/edge-routing";
+import { edgePairOffset, normalizeEdgeWaypoints } from "@/lib/network-map/edge-routing";
 import { topologyService, type MapLayoutSummary } from "@/lib/network-map/topologyService";
 import { filterTopology, getNodeStatusColor } from "@/lib/network-map/utils";
 import { mapInventoryDeviceToMapNode, parseInventoryNodeId } from "@/lib/network-map/inventory-bridge";
@@ -126,110 +126,28 @@ function buildEdge(l: LinkData): Edge {
     id: l.id,
     source: l.source,
     target: l.target,
-    sourceHandle: l.sourceHandle ?? "right",
-    targetHandle: l.targetHandle ?? "left",
+    sourceHandle: l.sourceHandle,
+    targetHandle: l.targetHandle,
     type: "topology",
     animated: l.status === "PARTIAL",
     data: l,
   };
 }
 
-function normalizeLinkHandles(link: LinkData): LinkData {
-  return {
-    ...link,
-    sourceHandle: link.sourceHandle ?? "right",
-    targetHandle: link.targetHandle ?? "left",
-  };
+function isValidEdge(link: LinkData, nodeIds: Set<string>): boolean {
+  return nodeIds.has(link.source) && nodeIds.has(link.target);
 }
 
-function getHandlePosition(
-  nodePos: { x: number; y: number } | undefined,
-  handleId: string,
-): { x: number; y: number } {
-  const defaultPos = nodePos ?? { x: 0, y: 0 };
-  const W = 220; // default node width
-  const H = 90;  // default node height
-
-  let side: "top" | "right" | "bottom" | "left" = "right";
-  let offsetPct = 50;
-
-  if (handleId.startsWith("top")) {
-    side = "top";
-    if (handleId === "top-0") offsetPct = 20;
-    else if (handleId === "top-2") offsetPct = 80;
-  } else if (handleId.startsWith("right")) {
-    side = "right";
-    if (handleId === "right-0") offsetPct = 25;
-    else if (handleId === "right-2") offsetPct = 75;
-  } else if (handleId.startsWith("bottom")) {
-    side = "bottom";
-    if (handleId === "bottom-0") offsetPct = 20;
-    else if (handleId === "bottom-2") offsetPct = 80;
-  } else if (handleId.startsWith("left")) {
-    side = "left";
-    if (handleId === "left-0") offsetPct = 25;
-    else if (handleId === "left-2") offsetPct = 75;
-  }
-
-  switch (side) {
-    case "top":
-      return { x: defaultPos.x + W * (offsetPct / 100), y: defaultPos.y };
-    case "bottom":
-      return { x: defaultPos.x + W * (offsetPct / 100), y: defaultPos.y + H };
-    case "left":
-      return { x: defaultPos.x, y: defaultPos.y + H * (offsetPct / 100) };
-    case "right":
-    default:
-      return { x: defaultPos.x + W, y: defaultPos.y + H * (offsetPct / 100) };
-  }
-}
-
-function migrateWaypointsToRelative(
-  links: LinkData[],
-  nodePositions: Record<string, { x: number; y: number }>,
-): LinkData[] {
-  return links.map((link) => {
-    if (!link.waypoints || link.waypoints.length === 0) return link;
-
-    const sourcePos = nodePositions[link.source];
-    const targetPos = nodePositions[link.target];
-
-    const sourceHandlePos = getHandlePosition(sourcePos, link.sourceHandle ?? "right");
-    const targetHandlePos = getHandlePosition(targetPos, link.targetHandle ?? "left");
-
-    const newWaypoints = link.waypoints.map((wp, idx) => {
-      if (idx === 0) {
-        return { x: wp.x - sourceHandlePos.x, y: wp.y - sourceHandlePos.y };
-      }
-      return { x: wp.x - targetHandlePos.x, y: wp.y - targetHandlePos.y };
-    });
-
-    return { ...link, waypoints: newWaypoints };
-  });
-}
-
-function migrateWaypointsToAbsolute(
-  links: LinkData[],
-  nodePositions: Record<string, { x: number; y: number }>,
-): LinkData[] {
-  return links.map((link) => {
-    if (!link.waypoints || link.waypoints.length === 0) return link;
-
-    const sourcePos = nodePositions[link.source];
-    const targetPos = nodePositions[link.target];
-
-    const sourceHandlePos = getHandlePosition(sourcePos, link.sourceHandle ?? "right");
-    const targetHandlePos = getHandlePosition(targetPos, link.targetHandle ?? "left");
-
-    const newWaypoints = link.waypoints.map((wp, idx) => {
-      if (idx === 0) {
-        return { x: wp.x + sourceHandlePos.x, y: wp.y + sourceHandlePos.y };
-      }
-      return { x: wp.x + targetHandlePos.x, y: wp.y + targetHandlePos.y };
-    });
-
-    return { ...link, waypoints: newWaypoints };
-  });
+function isDuplicateLink(link: LinkData, links: LinkData[]): boolean {
+  return links.some(
+    (other) =>
+      other.id !== link.id &&
+      other.source === link.source &&
+      other.target === link.target &&
+      (other.sourceHandle ?? "right") === (link.sourceHandle ?? "right") &&
+      (other.targetHandle ?? "left") === (link.targetHandle ?? "left") &&
+      other.edgeType === link.edgeType,
+  );
 }
 
 function buildNode(d: DeviceData, pos: { x: number; y: number }, extra: any = {}): Node {
@@ -295,20 +213,28 @@ function NetworkMapPage() {
 export default NetworkMapPage;
 
 function NetworkMapInner() {
+  const { t } = useTranslation();
+  const debugMap = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debugMap") === "1";
   const { data: inventoryDevices = [] } = useListDevices();
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [devices, setDevices] = useState<DeviceData[]>([]);
   const [links, setLinks] = useState<LinkData[]>([]);
-  const [snapshot, setSnapshot] = useState<{ at: string; status: "Operacional" | "Atenção" | "Crítico" }>({
+  const [snapshot, setSnapshot] = useState<{ at: string; status: "operational" | "attention" | "critical" }>({
     at: "há 5 minutos",
-    status: "Atenção",
+    status: "attention",
   });
   const [groupBySite, setGroupBySite] = useState(false);
   const [savedLayouts, setSavedLayouts] = useState<MapLayoutSummary[]>([]);
   const [layoutId, setLayoutId] = useState<number | null>(null);
-  const [layoutName, setLayoutName] = useState("Layout principal");
+  const [layoutName, setLayoutName] = useState("");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
+
+  const qaDebug = useCallback((event: string, payload?: Record<string, unknown>) => {
+    if (!debugMap) return;
+    setLastQaAction(event);
+    console.debug(`[network-map][qa] ${event}`, payload ?? {});
+  }, [debugMap]);
 
   // Connect (edit mode only)
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -322,6 +248,8 @@ function NetworkMapInner() {
 
   const onConnect = useCallback((c: Connection) => {
     if (mode !== "edit") return;
+    if (!c.source || !c.target || c.source === c.target) return;
+    qaDebug("onConnect", { source: c.source, target: c.target, sourceHandle: c.sourceHandle, targetHandle: c.targetHandle });
     setConnectDraft({
       source: c.source ?? undefined,
       target: c.target ?? undefined,
@@ -330,7 +258,7 @@ function NetworkMapInner() {
     });
     setPlannedLink(false);
     setLinkModalOpen(true);
-  }, [mode]);
+  }, [mode, qaDebug]);
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
   const [pendingDeviceId, setPendingDeviceId] = useState<string | null>(null);
   const [loadingTopology, setLoadingTopology] = useState(true);
@@ -351,6 +279,9 @@ function NetworkMapInner() {
   } | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   void mousePos;
+  const [viewport, setViewport] = useState({ x: 0, y: 0, zoom: 1 });
+  const [lastQaAction, setLastQaAction] = useState("init");
+  const [filteredInvalidEdgeCount, setFilteredInvalidEdgeCount] = useState(0);
 
   const positions = useRef<Record<string, { x: number; y: number }>>({});
 
@@ -360,7 +291,7 @@ function NetworkMapInner() {
       setSavedLayouts(layouts);
     } catch (error) {
       console.error("Failed to list map layouts:", error);
-      toast.error("Falha ao listar layouts salvos.", {
+      toast.error(t("networkMap.toasts.listLayoutsFailed"), {
         description: error instanceof Error ? error.message : undefined,
       });
     }
@@ -370,22 +301,33 @@ function NetworkMapInner() {
     const realDevices = res.devices.filter((d) => !d.id.startsWith("device:pending-"));
     positions.current = { ...autoPosition(realDevices), ...res.positions };
     setDevices(realDevices);
-    
-    const migratedLinks = migrateWaypointsToRelative(
-      res.links.map(normalizeLinkHandles),
-      positions.current
-    );
-    setLinks(migratedLinks);
+
+    const nodeIds = new Set(realDevices.map((d) => d.id));
+    // Geometry contract:
+    // - React Flow owns node positions and computed source/target coordinates.
+    // - Edge handles identify attachment points.
+    // - Waypoints, when present, are canonical absolute canvas coordinates.
+    // - Zoom/pan must not mutate persisted geometry.
+    const canonicalLinks = res.links
+      .map((link) => ({
+        ...link,
+        sourceHandle: link.sourceHandle ?? "right",
+        targetHandle: link.targetHandle ?? "left",
+      }))
+      .filter((link) => isValidEdge(link, nodeIds))
+      .map((link) => normalizeEdgeWaypoints(link, positions.current));
+    setFilteredInvalidEdgeCount(res.links.length - canonicalLinks.length);
+    setLinks(canonicalLinks);
 
     setLayoutId(res.layoutId ?? null);
-    setLayoutName(res.layoutName ?? "Layout principal");
+    setLayoutName(res.layoutName ?? t("networkMap.defaultLayoutName"));
     setSnapshot({
       at: formatLayoutDate(res.snapshot.collectedAt),
       status: res.snapshot.statusSummary.DOWN > 0
-        ? "Crítico"
+        ? "critical"
         : res.snapshot.statusSummary.PARTIAL > 0
-          ? "Atenção"
-          : "Operacional",
+          ? "attention"
+          : "operational",
     });
   }, []);
 
@@ -402,7 +344,7 @@ function NetworkMapInner() {
         applyTopology(res);
       } catch (error) {
         console.error("Failed to load topology:", error);
-        toast.error("Falha ao carregar layout do mapa.");
+        toast.error(t("networkMap.toasts.loadFailed"));
       } finally {
         if (!cancelled) setLoadingTopology(false);
       }
@@ -500,6 +442,12 @@ function NetworkMapInner() {
     setEdges((prevEdges) => prevEdges.filter((e) => e.id !== "temp-connecting-edge"));
   }, [setNodes, setEdges]);
 
+  const clearEditingState = useCallback(() => {
+    cleanupConnecting();
+    setLinkModalOpen(false);
+    setActiveModalLink(null);
+  }, [cleanupConnecting]);
+
   const handleHandleClick = useCallback((nodeId: string, handleId: string, handleType: "source" | "target") => {
     if (mode !== "edit") return;
 
@@ -594,6 +542,7 @@ function NetworkMapInner() {
   }, [cleanupConnecting]);
 
   const onEdgeUpdate = useCallback((oldEdge: Edge, newConnection: Connection) => {
+    qaDebug("onEdgeUpdate", { edgeId: oldEdge.id, source: newConnection.source, target: newConnection.target, sourceHandle: newConnection.sourceHandle, targetHandle: newConnection.targetHandle });
     setLinks((prev: LinkData[]) =>
       prev.map((l: LinkData) =>
         l.id === oldEdge.id
@@ -607,8 +556,8 @@ function NetworkMapInner() {
           : l
       )
     );
-    toast.success("Enlace reconectado.");
-  }, []);
+    toast.success(t("networkMap.toasts.edgeReconnected"));
+  }, [qaDebug]);
 
   const handleReplaceMapDevice = useCallback((oldDevice: DeviceData, newDevice: DeviceData) => {
     const pos = positions.current[oldDevice.id];
@@ -618,25 +567,37 @@ function NetworkMapInner() {
     }
     setDevices((prev) => prev.filter((d) => d.id !== newDevice.id && d.id !== oldDevice.id).concat(newDevice));
     setLinks((prev) =>
-      prev.map((l) => ({
-        ...l,
-        source: l.source === oldDevice.id ? newDevice.id : l.source,
-        target: l.target === oldDevice.id ? newDevice.id : l.target,
-      })),
+      prev
+        .map((l) => ({
+          ...l,
+          source: l.source === oldDevice.id ? newDevice.id : l.source,
+          target: l.target === oldDevice.id ? newDevice.id : l.target,
+        }))
+        .filter((l) => l.source !== l.target),
     );
     setSelectedNode((n) => (n?.id === oldDevice.id ? newDevice : n));
     setStencilDevice((d) => (d?.id === oldDevice.id ? newDevice : d));
-    toast.success(`${newDevice.name} substituiu ${oldDevice.name} no mapa.`);
+    toast.success(t("networkMap.toasts.deviceReplaced", { newName: newDevice.name, oldName: oldDevice.name }));
   }, []);
 
   const handleRemoveMapDevice = useCallback((device: DeviceData) => {
     setDevices((prev) => prev.filter((d) => d.id !== device.id));
     setLinks((prev) => prev.filter((l) => l.source !== device.id && l.target !== device.id));
+    setSelectedEdge((prev) => (prev && (prev.source === device.id || prev.target === device.id) ? null : prev));
+    setActiveModalLink((prev) => (prev && (prev.source === device.id || prev.target === device.id) ? null : prev));
     delete positions.current[device.id];
     setSelectedNode((n) => (n?.id === device.id ? null : n));
     setStencilDevice((d) => (d?.id === device.id ? null : d));
-    toast.success(`${device.name} removido do mapa.`);
+    toast.success(t("networkMap.toasts.deviceRemoved", { name: device.name }));
   }, []);
+
+  const handleDeleteLink = useCallback((linkId: string) => {
+    qaDebug("deleteLink", { linkId });
+    setLinks((prev) => prev.filter((l) => l.id !== linkId));
+    setActiveModalLink(null);
+    setSelectedEdge((prev) => (prev && prev.id === linkId ? null : prev));
+    toast.success(t("networkMap.toasts.linkRemoved"));
+  }, [qaDebug]);
 
   const handleWaypointChange = useCallback((edgeId: string, waypoints: LinkWaypoint[]) => {
     setLinks((prev) =>
@@ -689,8 +650,9 @@ function NetworkMapInner() {
     );
     const groupNodes = groupBySite ? buildSiteGroupNodes(visibleDevices, positions.current) : [];
     setNodes([...groupNodes, ...deviceNodes]);
+    const validVisibleLinks = visibleLinks.filter((l) => isValidEdge(l, new Set(visibleDevices.map((d) => d.id))));
     setEdges(
-      visibleLinks.map((l) => {
+      validVisibleLinks.map((l) => {
         const e = buildEdge(l);
         const dimmed =
           (connectedEdgeIds && !connectedEdgeIds.has(l.id)) ||
@@ -736,10 +698,17 @@ function NetworkMapInner() {
     }
   }, [connectingSource, cleanupConnecting]);
 
+  useEffect(() => {
+    if (mode !== "edit") {
+      clearEditingState();
+    }
+  }, [mode, clearEditingState]);
+
   // Node drag persistence
   const onNodeDragStop = useCallback((_: any, n: Node) => {
+    qaDebug("onNodeDragStop", { nodeId: n.id, position: n.position });
     positions.current[n.id] = n.position;
-  }, []);
+  }, [qaDebug]);
 
 
 
@@ -777,18 +746,18 @@ function NetworkMapInner() {
       status: v.status,
       planned: plannedLink,
     });
+    if (!created.source || !created.target) return;
+    qaDebug("createLink", { planned: plannedLink, source: created.source, target: created.target });
     // Preserve the user-typed capacity label in the UI.
-    setLinks((prev) => [
-      ...prev,
-      normalizeLinkHandles({
-        ...created,
-        capacity: v.capacity,
-        sourceHandle: connectDraft.sourceHandle ?? created.sourceHandle,
-        targetHandle: connectDraft.targetHandle ?? created.targetHandle,
-      }),
-    ]);
-    toast.success(plannedLink ? "Link planejado adicionado" : "Link manual adicionado", {
-      description: "Alteração apenas visual/manual. Não altera a rede real.",
+    const nextLink: LinkData = {
+      ...created,
+      capacity: v.capacity,
+      sourceHandle: connectDraft.sourceHandle ?? created.sourceHandle ?? "right",
+      targetHandle: connectDraft.targetHandle ?? created.targetHandle ?? "left",
+    };
+    setLinks((prev) => (isDuplicateLink(nextLink, prev) ? prev : [...prev, nextLink]));
+    toast.success(plannedLink ? t("networkMap.toasts.plannedLinkAdded") : t("networkMap.toasts.manualLinkAdded"), {
+      description: t("networkMap.toasts.linkVisualOnly"),
     });
   };
 
@@ -798,8 +767,8 @@ function NetworkMapInner() {
     setDiscovering(true);
     try {
       const res = await topologyService.runDiscovery();
-      setSnapshot({ at: "agora", status: "Atenção" });
-      toast.success("Descoberta concluída", {
+      setSnapshot({ at: t("networkMap.now"), status: "attention" });
+      toast.success(t("networkMap.toasts.discoveryDone"), {
         description: `${res.nodeCount} nós, ${res.edgeCount} links, ${res.changes} mudanças detectadas.`,
       });
     } finally {
@@ -824,26 +793,25 @@ function NetworkMapInner() {
         }
       }
 
-      // Convert relative waypoints in links back to absolute waypoints before saving to backend
-      const absoluteLinks = migrateWaypointsToAbsolute(links, positionsPayload);
-
+      qaDebug("saveLayout", { name, deviceCount: persistedDevices.length, edgeCount: links.length });
+      // Persist node positions + canonical edge geometry only.
       const result = await topologyService.saveLayout({
         id: layoutId ?? undefined,
         name,
         devices: persistedDevices,
-        links: absoluteLinks,
+        links,
         positions: positionsPayload,
       });
       setLayoutId(result.layoutId);
       setLayoutName(result.layoutName);
       await refreshLayouts();
       setSaveDialogOpen(false);
-      toast.success("Layout salvo com sucesso.", {
+      toast.success(t("networkMap.toasts.layoutSaved"), {
         description: `${result.layoutName} — ${persistedDevices.length} nós, ${links.length} links.`,
       });
     } catch (error) {
       console.error("Failed to save map layout:", error);
-      toast.error("Falha ao salvar layout.", {
+      toast.error(t("networkMap.toasts.saveFailed"), {
         description: error instanceof Error ? error.message : undefined,
       });
     } finally {
@@ -858,11 +826,11 @@ function NetworkMapInner() {
       setSelectedNode(null);
       setSelectedEdge(null);
       await refreshLayouts();
-      toast.success(`Layout "${res.layoutName}" carregado.`);
+      toast.success(t("networkMap.toasts.layoutLoaded", { name: res.layoutName ?? "" }));
       setTimeout(() => rfInstance?.fitView({ duration: 400, padding: 0.15 }), 50);
     } catch (error) {
       console.error("Failed to load map layout:", error);
-      toast.error("Falha ao carregar layout.", {
+      toast.error(t("networkMap.toasts.layoutLoadFailed"), {
         description: error instanceof Error ? error.message : undefined,
       });
     }
@@ -908,7 +876,7 @@ function NetworkMapInner() {
     });
     setPendingDeviceId(null);
     setSelectedNode(device);
-    toast.success(`${device.name} adicionado ao mapa.`);
+    toast.success(t("networkMap.toasts.deviceAdded", { name: device.name }));
     if (connectToNeighborId) {
       setConnectDraft({ source: device.id, target: connectToNeighborId });
       setPlannedLink(false);
@@ -931,37 +899,47 @@ function NetworkMapInner() {
     setSelectedEdge((s) => s);
     setNodes(visibleDevices.map((d) => buildNode(d, positions.current[d.id])));
     setTimeout(() => rfInstance?.fitView({ duration: 400, padding: 0.15 }), 50);
-    toast.success("Layout reorganizado por site e role.");
+    toast.success(t("networkMap.toasts.layoutReorganized"));
   };
 
   const centerMap = () => {
     rfInstance?.fitView({ duration: 500, padding: 0.15 });
-    toast("Mapa centralizado.");
+    toast(t("networkMap.toasts.mapCentered"));
   };
 
   const toggleGroupBySite = () => {
     setGroupBySite((v) => {
       const next = !v;
-      toast(next ? "Agrupamento por site ativado." : "Agrupamento por site desativado.");
+      toast(next ? t("networkMap.toasts.groupEnabled") : t("networkMap.toasts.groupDisabled"));
       return next;
     });
   };
+
+  useEffect(() => {
+    qaDebug("mode change", { mode });
+  }, [mode, qaDebug]);
 
   const clearSelection = () => { setSelectedEdge(null); setSelectedNode(null); };
 
   const [diffOpen, setDiffOpen] = useState(false);
 
   const statusBadgeColor =
-    snapshot.status === "Operacional"
+    snapshot.status === "operational"
       ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-      : snapshot.status === "Atenção"
+      : snapshot.status === "attention"
         ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
         : "bg-red-500/15 text-red-400 border-red-500/30";
+  const statusLabel =
+    snapshot.status === "operational"
+      ? t("networkMap.statusOperational")
+      : snapshot.status === "attention"
+        ? t("networkMap.statusAttention")
+        : t("networkMap.statusCritical");
 
   if (loadingTopology) {
     return (
       <div className="flex h-full items-center justify-center bg-zinc-950 text-sm text-zinc-400">
-        Carregando mapa...
+        {t("networkMap.loading")}
       </div>
     );
   }
@@ -975,22 +953,22 @@ function NetworkMapInner() {
             <Boxes className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-base font-semibold tracking-tight text-zinc-100">Mapa de Rede</h1>
-            <p className="text-xs text-zinc-400">Topologia física, lógica e serviços da rede</p>
+            <h1 className="text-base font-semibold tracking-tight text-zinc-100">{t("networkMap.title")}</h1>
+            <p className="text-xs text-zinc-400">{t("networkMap.pageSubtitle")}</p>
           </div>
           <Separator orientation="vertical" className="h-8 bg-zinc-800" />
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="border-zinc-700 bg-zinc-900 text-[10px] text-zinc-300">
-              Última coleta: {snapshot.at}
+              {t("networkMap.lastCollection", { at: snapshot.at })}
             </Badge>
             <Badge variant="outline" className="border-zinc-700 bg-zinc-900 text-[10px] text-zinc-300">
-              {visibleDevices.length} nós
+              {t("networkMap.nodeCount", { count: visibleDevices.length })}
             </Badge>
             <Badge variant="outline" className="border-zinc-700 bg-zinc-900 text-[10px] text-zinc-300">
-              {visibleLinks.length} links
+              {t("networkMap.linkCount", { count: visibleLinks.length })}
             </Badge>
             <span className={`rounded border px-1.5 py-0.5 text-[10px] font-medium ${statusBadgeColor}`}>
-              {snapshot.status}
+              {statusLabel}
             </span>
           </div>
         </div>
@@ -998,23 +976,23 @@ function NetworkMapInner() {
           <Button size="sm" variant="outline" onClick={refreshDiscovery} disabled={discovering}
             className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
             <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${discovering ? "animate-spin" : ""}`} />
-            Atualizar descoberta
+            {t("networkMap.refreshDiscovery")}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="outline"
                 className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
                 <LayoutGrid className="mr-1.5 h-3.5 w-3.5" />
-                {layoutName}
+                {layoutName || t("networkMap.defaultLayoutName")}
                 <ChevronDown className="ml-1.5 h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="border-zinc-800 bg-zinc-950 text-zinc-100">
-              <DropdownMenuLabel className="text-xs text-zinc-400">Layouts salvos</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-zinc-400">{t("networkMap.savedLayouts")}</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-zinc-800" />
               {savedLayouts.length === 0 ? (
                 <DropdownMenuItem disabled className="text-zinc-500">
-                  Nenhum layout salvo
+                  {t("networkMap.noSavedLayouts")}
                 </DropdownMenuItem>
               ) : (
                 savedLayouts.map((layout) => (
@@ -1034,15 +1012,15 @@ function NetworkMapInner() {
           </DropdownMenu>
           <Button size="sm" variant="outline" onClick={() => setSaveDialogOpen(true)}
             className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
-            <Save className="mr-1.5 h-3.5 w-3.5" /> Salvar layout
+            <Save className="mr-1.5 h-3.5 w-3.5" /> {t("networkMap.saveLayout.label")}
           </Button>
           <Button size="sm" variant="outline" onClick={() => setDiffOpen(true)}
             className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
-            <GitCompare className="mr-1.5 h-3.5 w-3.5" /> Comparar snapshots
+            <GitCompare className="mr-1.5 h-3.5 w-3.5" /> {t("networkMap.compareSnapshots")}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => toast("Export gerado (mock).")}
+          <Button size="sm" variant="outline" onClick={() => toast(t("networkMap.exportMock"))}
             className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
-            <Download className="mr-1.5 h-3.5 w-3.5" /> Exportar
+            <Download className="mr-1.5 h-3.5 w-3.5" /> {t("networkMap.export")}
           </Button>
           <div className="ml-1 flex items-center gap-0 rounded-md border border-zinc-700 bg-zinc-900 p-0.5">
             <Toggle
@@ -1051,7 +1029,7 @@ function NetworkMapInner() {
               onPressedChange={() => setMode("view")}
               className="data-[state=on]:bg-zinc-800 data-[state=on]:text-zinc-100 text-zinc-400"
             >
-              <Eye className="mr-1 h-3.5 w-3.5" /> Visualização
+              <Eye className="mr-1 h-3.5 w-3.5" /> {t("networkMap.viewMode")}
             </Toggle>
             <Toggle
               size="sm"
@@ -1059,7 +1037,7 @@ function NetworkMapInner() {
               onPressedChange={() => setMode("edit")}
               className="data-[state=on]:bg-sky-500/20 data-[state=on]:text-sky-300 text-zinc-400"
             >
-              <Pencil className="mr-1 h-3.5 w-3.5" /> Edição
+              <Pencil className="mr-1 h-3.5 w-3.5" /> {t("networkMap.editMode")}
             </Toggle>
           </div>
         </div>
@@ -1067,18 +1045,18 @@ function NetworkMapInner() {
 
       {/* FILTERS */}
       <div className="flex flex-wrap items-center gap-2 border-b border-zinc-800 bg-zinc-950/80 px-4 py-2">
-        <FilterSelect label="Tenant" value={fTenant} onChange={setFTenant} options={TENANTS} />
-        <FilterSelect label="Site" value={fSite} onChange={setFSite} options={SITES} />
-        <FilterSelect label="Camada" value={fLayer} onChange={setFLayer} options={LAYERS} />
-        <FilterSelect label="Status" value={fStatus} onChange={setFStatus} options={STATUSES} />
-        <FilterSelect label="Origem" value={fOrigin} onChange={setFOrigin} options={ORIGINS} />
-        <FilterSelect label="Tipo" value={fType} onChange={setFType} options={DEVICE_TYPES} />
+        <FilterSelect label={t("networkMap.filterTenant")} value={fTenant} onChange={setFTenant} options={TENANTS} />
+        <FilterSelect label={t("networkMap.filterSite")} value={fSite} onChange={setFSite} options={SITES} />
+        <FilterSelect label={t("networkMap.filterLayer")} value={fLayer} onChange={setFLayer} options={LAYERS} />
+        <FilterSelect label={t("networkMap.filterStatus")} value={fStatus} onChange={setFStatus} options={STATUSES} />
+        <FilterSelect label={t("networkMap.filterOrigin")} value={fOrigin} onChange={setFOrigin} options={ORIGINS} />
+        <FilterSelect label={t("networkMap.filterType")} value={fType} onChange={setFType} options={DEVICE_TYPES} />
         <div className="relative ml-auto w-64">
           <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar nodes (ex: BVA, NE8000, Huawei)..."
+            placeholder={t("networkMap.searchPlaceholder")}
             className="h-8 border-zinc-800 bg-zinc-900 pl-7 text-xs text-zinc-100 placeholder:text-zinc-500"
           />
         </div>
@@ -1088,47 +1066,47 @@ function NetworkMapInner() {
       <div className="flex min-h-0 flex-1">
         {/* LEFT TOOLBAR */}
         <aside className="hidden w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950/60 p-3 lg:flex">
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500">Ferramentas</div>
+          <div className="text-[10px] uppercase tracking-wider text-zinc-500">{t("networkMap.tools")}</div>
           <div className="mt-2 grid grid-cols-1 gap-1.5">
-            <ToolBtn icon={<MousePointer2 className="h-3.5 w-3.5" />} label="Selecionar" onClick={clearSelection} />
-            <ToolBtn icon={<Plus className="h-3.5 w-3.5" />} label="Adicionar device"
+            <ToolBtn icon={<MousePointer2 className="h-3.5 w-3.5" />} label={t("networkMap.select")} onClick={clearSelection} />
+            <ToolBtn icon={<Plus className="h-3.5 w-3.5" />} label={t("networkMap.addDevice.label")}
               disabled={mode !== "edit"}
               onClick={handleAddDeviceClick} />
-            <ToolBtn icon={<Cable className="h-3.5 w-3.5" />} label="Criar link"
+            <ToolBtn icon={<Cable className="h-3.5 w-3.5" />} label={t("networkMap.createLink")}
               disabled={mode !== "edit"}
               onClick={() => { setPlannedLink(false); setConnectDraft({}); setLinkModalOpen(true); }} />
-            <ToolBtn icon={<Cable className="h-3.5 w-3.5" />} label="Criar link planejado"
+            <ToolBtn icon={<Cable className="h-3.5 w-3.5" />} label={t("networkMap.createPlannedLink")}
               disabled={mode !== "edit"}
               onClick={() => { setPlannedLink(true); setConnectDraft({}); setLinkModalOpen(true); }} />
             <ToolBtn
               icon={<LayoutGrid className="h-3.5 w-3.5" />}
-              label={groupBySite ? "Desagrupar sites" : "Agrupar por site"}
+              label={groupBySite ? t("networkMap.ungroupSites") : t("networkMap.groupBySite")}
               onClick={toggleGroupBySite}
               active={groupBySite}
             />
-            <ToolBtn icon={<Wand2 className="h-3.5 w-3.5" />} label="Auto layout" onClick={autoLayout} />
-            <ToolBtn icon={<Crosshair className="h-3.5 w-3.5" />} label="Centralizar" onClick={centerMap} />
-            <ToolBtn icon={<Eraser className="h-3.5 w-3.5" />} label="Limpar seleção" onClick={clearSelection} />
+            <ToolBtn icon={<Wand2 className="h-3.5 w-3.5" />} label={t("networkMap.autoLayout")} onClick={autoLayout} />
+            <ToolBtn icon={<Crosshair className="h-3.5 w-3.5" />} label={t("networkMap.center")} onClick={centerMap} />
+            <ToolBtn icon={<Eraser className="h-3.5 w-3.5" />} label={t("networkMap.clearSelection")} onClick={clearSelection} />
           </div>
 
           <Separator className="my-4 bg-zinc-800" />
 
-          <div className="text-[10px] uppercase tracking-wider text-zinc-500">Legenda</div>
+          <div className="text-[10px] uppercase tracking-wider text-zinc-500">{t("networkMap.legend")}</div>
           <div className="mt-2 space-y-1.5 text-[11px] text-zinc-300">
             <LegendItem color="bg-emerald-500" label="UP" />
             <LegendItem color="bg-red-500" label="DOWN" />
             <LegendItem color="bg-amber-500" label="PARTIAL" />
             <LegendItem color="bg-zinc-500" label="UNKNOWN" />
-            <LegendItem color="bg-sky-500" label="PLANNED (tracejado)" />
-            <LegendItem color="bg-violet-400" label="BGP / Serviço" />
-            <LegendItem color="bg-orange-400" label="DWDM / Optical" />
+            <LegendItem color="bg-sky-500" label={t("networkMap.legendPlanned")} />
+            <LegendItem color="bg-violet-400" label={t("networkMap.legendBgp")} />
+            <LegendItem color="bg-orange-400" label={t("networkMap.legendDwdm")} />
           </div>
 
           <Separator className="my-4 bg-zinc-800" />
 
           <div className="rounded-md border border-zinc-800 bg-zinc-900/60 p-2 text-[11px] text-zinc-400">
-            <Activity className="mb-1 inline h-3 w-3 text-emerald-400" /> Modo:{" "}
-            <span className="font-medium text-zinc-200">{mode === "view" ? "Visualização" : "Edição"}</span>
+            <Activity className="mb-1 inline h-3 w-3 text-emerald-400" /> {t("networkMap.modeLabel")}{" "}
+            <span className="font-medium text-zinc-200">{mode === "view" ? t("networkMap.viewMode") : t("networkMap.editMode")}</span>
           </div>
         </aside>
 
@@ -1156,6 +1134,7 @@ function NetworkMapInner() {
               onPaneClick={onPaneClick}
               onNodeDragStop={onNodeDragStop}
               onInit={setRfInstance}
+              onMove={(_, nextViewport) => setViewport(nextViewport)}
               nodesDraggable={mode === "edit"}
               nodesConnectable={mode === "edit"}
               edgesUpdatable={mode === "edit"}
@@ -1181,7 +1160,7 @@ function NetworkMapInner() {
 
           {mode === "edit" && (
             <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs text-sky-300">
-              Modo edição — ligue pelos conectores do device; arraste as âncoras verde/roxo nas pontas da linha (não a etiqueta de velocidade).
+              {t("networkMap.editHint")}
             </div>
           )}
         </div>
@@ -1209,6 +1188,12 @@ function NetworkMapInner() {
           setActiveModalLink(updated);
           setSelectedEdge((prev) => (prev?.id === updated.id ? updated : prev));
         }}
+        onLinkDeleted={(linkId) => {
+          setLinks((prev) => prev.filter((l) => l.id !== linkId));
+          setActiveModalLink(null);
+          setSelectedEdge((prev) => (prev?.id === linkId ? null : prev));
+          toast.success("Link removido.");
+        }}
       />
       <ManualLinkModal
         open={linkModalOpen}
@@ -1235,7 +1220,7 @@ function NetworkMapInner() {
         onSave={(name) => void saveLayout(name)}
         saving={savingLayout}
       />
-      <AddDeviceModal
+        <AddDeviceModal
         open={addDeviceOpen}
         onOpenChange={(open) => {
           if (!open) cancelPendingDevice();
@@ -1244,6 +1229,92 @@ function NetworkMapInner() {
         mapDevices={devices}
         onConfirm={handleAddDeviceConfirm}
       />
+      {debugMap ? (
+        <MapQaDebugPanel
+          mode={mode}
+          nodeCount={visibleDevices.length}
+          edgeCount={visibleLinks.length}
+          selectedNode={selectedNode}
+          selectedEdge={selectedEdge}
+          viewport={viewport}
+          connectingSource={connectingSource}
+          invalidEdgeCount={filteredInvalidEdgeCount}
+          lastAction={lastQaAction}
+          onCopy={() => {
+            const snapshot = {
+              timestamp: new Date().toISOString(),
+              mode,
+              viewport,
+              nodes: nodes.map((n) => ({ id: n.id, position: n.position })),
+              edges: edges.map((e) => ({
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                sourceHandle: e.sourceHandle,
+                targetHandle: e.targetHandle,
+                waypoints: (e.data as LinkData | undefined)?.waypoints ?? [],
+              })),
+              selectedNode: selectedNode?.id ?? null,
+              selectedEdge: selectedEdge?.id ?? null,
+              invalidEdgeCount: filteredInvalidEdgeCount,
+            };
+            void navigator.clipboard?.writeText(JSON.stringify(snapshot, null, 2));
+            qaDebug("copySnapshot", { ok: true });
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function MapQaDebugPanel({
+  mode,
+  nodeCount,
+  edgeCount,
+  selectedNode,
+  selectedEdge,
+  viewport,
+  connectingSource,
+  invalidEdgeCount,
+  lastAction,
+  onCopy,
+}: {
+  mode: "view" | "edit";
+  nodeCount: number;
+  edgeCount: number;
+  selectedNode: DeviceData | null;
+  selectedEdge: LinkData | null;
+  viewport: { x: number; y: number; zoom: number };
+  connectingSource: { nodeId: string; handleId: string; handleType: "source" | "target" } | null;
+  invalidEdgeCount: number;
+  lastAction: string;
+  onCopy: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="fixed bottom-3 right-3 z-50 w-[280px] rounded-md border border-zinc-700 bg-zinc-950/95 p-3 text-[11px] text-zinc-200 shadow-xl shadow-black/40 backdrop-blur">
+      <div className="mb-2 font-semibold text-sky-300">Map QA Debug</div>
+      <div className="space-y-1 text-zinc-300">
+        <div>modo: {mode}</div>
+        <div>nodes: {nodeCount}</div>
+        <div>edges: {edgeCount}</div>
+        <div>node sel: {selectedNode?.id ?? "-"}</div>
+        <div>edge sel: {selectedEdge?.id ?? "-"}</div>
+        <div>zoom: {viewport.zoom.toFixed(2)}</div>
+        <div>waypoints: {(selectedEdge?.waypoints ?? []).length}</div>
+        <div>src handle: {selectedEdge?.sourceHandle ?? "-"}</div>
+        <div>tgt handle: {selectedEdge?.targetHandle ?? "-"}</div>
+        <div>link temp: {connectingSource ? "yes" : "no"}</div>
+        <div>invalid edges: {invalidEdgeCount}</div>
+        <div>last action: {lastAction}</div>
+      </div>
+      <button
+        type="button"
+        onClick={onCopy}
+        className="mt-3 w-full rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-left text-[11px] text-zinc-100 hover:bg-zinc-800"
+      >
+        {t("networkMap.copyQaSnapshot")}
+      </button>
     </div>
   );
 }
@@ -1251,6 +1322,7 @@ function NetworkMapInner() {
 function FilterSelect({
   label, value, onChange, options,
 }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
+  const { t } = useTranslation();
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger className="h-8 w-auto min-w-[120px] border-zinc-800 bg-zinc-900 text-xs text-zinc-200">
@@ -1258,7 +1330,7 @@ function FilterSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">Todos</SelectItem>
+        <SelectItem value="all">{t("networkMap.filterAll")}</SelectItem>
         {options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
       </SelectContent>
     </Select>
@@ -1294,23 +1366,24 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 }
 
 function EmptyState({ onRefresh, onPlanned }: { onRefresh: () => void; onPlanned: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full items-center justify-center p-8">
       <div className="max-w-md rounded-lg border border-zinc-800 bg-zinc-900/60 p-6 text-center">
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-zinc-800 text-zinc-400">
           <Grid3x3 className="h-5 w-5" />
         </div>
-        <h3 className="text-base font-semibold text-zinc-100">Nenhuma topologia encontrada</h3>
+        <h3 className="text-base font-semibold text-zinc-100">{t("networkMap.emptyTopologyTitle")}</h3>
         <p className="mt-1 text-sm text-zinc-400">
-          Ative o modo edição para adicionar devices e links manualmente no mapa.
+          {t("networkMap.emptyTopologyDescription")}
         </p>
         <div className="mt-4 flex justify-center gap-2">
           <Button size="sm" onClick={onRefresh}>
-            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Atualizar descoberta
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> {t("networkMap.refreshDiscovery")}
           </Button>
           <Button size="sm" variant="outline" onClick={onPlanned}
             className="border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800">
-            <Cable className="mr-1.5 h-3.5 w-3.5" /> Criar link planejado
+            <Cable className="mr-1.5 h-3.5 w-3.5" /> {t("networkMap.createPlannedLink")}
           </Button>
         </div>
       </div>

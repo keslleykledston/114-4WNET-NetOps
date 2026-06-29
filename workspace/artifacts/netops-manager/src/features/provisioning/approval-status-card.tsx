@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { ProvisioningJob } from "@/lib/provisioning-api";
+import { useTranslation } from "@/i18n";
 
 interface ApprovalStatusCardProps {
   job: ProvisioningJob;
@@ -26,17 +27,6 @@ const statusColors: Record<string, string> = {
   failed: "bg-red-100",
 };
 
-const statusLabels: Record<string, string> = {
-  draft: "Rascunho",
-  validated: "Validado",
-  pending_approval: "Aguardando Aprovação",
-  approved: "Aprovado",
-  executing: "Executando",
-  completed: "Concluído",
-  blocked: "Bloqueado",
-  failed: "Falhou",
-};
-
 export function ApprovalStatusCard({
   job,
   onApprove,
@@ -46,78 +36,76 @@ export function ApprovalStatusCard({
   isApproving = false,
   executeEnabled = true,
 }: ApprovalStatusCardProps) {
-  const isWindowActive = job.maintenanceWindowStart && job.maintenanceWindowEnd
-    ? new Date() >= new Date(job.maintenanceWindowStart) && new Date() <= new Date(job.maintenanceWindowEnd)
-    : true;
+  const { t } = useTranslation();
 
-  const maintenanceWindow = job.maintenanceWindowStart && job.maintenanceWindowEnd
-    ? `${new Date(job.maintenanceWindowStart).toLocaleString('pt-BR')} → ${new Date(job.maintenanceWindowEnd).toLocaleString('pt-BR')}`
-    : null;
+  const statusLabel = (status: string) => {
+    const key = `provisioningFeatures.approval.statusLabels.${status}`;
+    const translated = t(key);
+    return translated === key ? status : translated;
+  };
+
+  const isWindowActive =
+    job.maintenanceWindowStart && job.maintenanceWindowEnd
+      ? new Date() >= new Date(job.maintenanceWindowStart) && new Date() <= new Date(job.maintenanceWindowEnd)
+      : true;
+
+  const maintenanceWindow =
+    job.maintenanceWindowStart && job.maintenanceWindowEnd
+      ? `${new Date(job.maintenanceWindowStart).toLocaleString()} → ${new Date(job.maintenanceWindowEnd).toLocaleString()}`
+      : null;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Status de Aprovação</span>
-          <Badge className={statusColors[job.status] || "bg-gray-200"}>
-            {statusLabels[job.status] || job.status}
-          </Badge>
+          <span>{t("provisioningFeatures.approval.cardTitle")}</span>
+          <Badge className={statusColors[job.status] || "bg-gray-200"}>{statusLabel(job.status)}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {!executeEnabled && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Execução desabilitada: PROVISIONING_EXECUTE_ENABLED=false. Configure no servidor para habilitar.
-            </AlertDescription>
+            <AlertDescription>{t("provisioningFeatures.approval.executeDisabled")}</AlertDescription>
           </Alert>
         )}
 
         {job.approvedByUserId && job.approvedAt && (
           <div className="text-sm text-gray-600">
-            <p className="font-semibold">Aprovado</p>
-            <p>Usuário #{job.approvedByUserId} em {new Date(job.approvedAt).toLocaleString('pt-BR')}</p>
+            <p className="font-semibold">{t("provisioningFeatures.approval.approvedBy")}</p>
+            <p>
+              {t("provisioningFeatures.approval.approvedByUser", {
+                id: job.approvedByUserId,
+                at: new Date(job.approvedAt).toLocaleString(),
+              })}
+            </p>
           </div>
         )}
 
         {maintenanceWindow && (
           <div className="text-sm text-gray-600">
-            <p className="font-semibold">Janela de Manutenção</p>
+            <p className="font-semibold">{t("provisioningFeatures.approval.maintenanceWindow")}</p>
             <p>{maintenanceWindow}</p>
-            {!isWindowActive && (
-              <p className="text-amber-600 mt-1">⚠️ Fora da janela de manutenção</p>
-            )}
-            {isWindowActive && (
-              <p className="text-green-600 mt-1">✓ Dentro da janela de manutenção</p>
-            )}
+            {!isWindowActive && <p className="text-amber-600 mt-1">⚠️ {t("provisioningFeatures.approval.outsideWindow")}</p>}
+            {isWindowActive && <p className="text-green-600 mt-1">✓ {t("provisioningFeatures.approval.insideWindow")}</p>}
           </div>
         )}
 
         <div className="flex gap-2">
           {job.status === "validated" && canRequestApproval && (
-            <Button
-              onClick={onRequestApproval}
-              variant="outline"
-              size="sm"
-            >
-              Solicitar Aprovação
+            <Button onClick={onRequestApproval} variant="outline" size="sm">
+              {t("provisioningFeatures.approval.requestApproval")}
             </Button>
           )}
 
           {job.status === "pending_approval" && canApprove && (
-            <Button
-              onClick={onApprove}
-              disabled={isApproving}
-              size="sm"
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isApproving ? "Aprovando..." : "Aprovar"}
+            <Button onClick={onApprove} disabled={isApproving} size="sm" className="bg-green-600 hover:bg-green-700">
+              {isApproving ? t("provisioningFeatures.approval.approving") : t("provisioningFeatures.approval.approve")}
             </Button>
           )}
 
           {job.status === "pending_approval" && !canApprove && (
-            <p className="text-sm text-gray-500">Requer permissão de admin/operator para aprovar</p>
+            <p className="text-sm text-gray-500">{t("provisioningFeatures.approval.requiresPermission")}</p>
           )}
         </div>
       </CardContent>

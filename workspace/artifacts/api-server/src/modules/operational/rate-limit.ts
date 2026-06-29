@@ -1,7 +1,7 @@
 const lastCollectAtByDevice = new Map<number, number>();
 
 function rateLimitMs(): number {
-  const minutes = Number(process.env["SNMP_FAST_RATE_LIMIT_MINUTES"] ?? 5);
+  const minutes = Number(process.env["SNMP_FAST_RATE_LIMIT_MINUTES"] ?? 0.08333333333333333);
   return (Number.isFinite(minutes) && minutes > 0 ? minutes : 5) * 60 * 1000;
 }
 

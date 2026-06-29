@@ -45,6 +45,7 @@ import { ExecutionResultTimeline } from "@/features/provisioning/execution-resul
 import { PostcheckResultCard } from "@/features/provisioning/postcheck-result-card";
 import { RollbackPreviewCard } from "@/features/provisioning/rollback-preview-card";
 import { useAuth } from "@/components/auth-provider";
+import { useTranslation } from "@/i18n";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -55,15 +56,26 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
-const SERVICE_LABELS: Record<string, string> = {
-  l2vpn: "L2VPN Preview",
-  l3vpn: "L3VPN Preview",
-  l2vpn_vpws: "L2VPN VPWS",
-  l2vpn_vpls: "L2VPN VPLS/VSI",
-  l3vpn_vrf: "L3VPN / VRF",
-  bgp_peer_customer: "BGP — Cliente",
-  bgp_peer_provider: "BGP — Operadora",
-};
+const SERVICE_TYPE_CODES = [
+  "l2vpn",
+  "l3vpn",
+  "l2vpn_vpws",
+  "l2vpn_vpls",
+  "l3vpn_vrf",
+  "bgp_peer_customer",
+  "bgp_peer_provider",
+] as const;
+
+function getServiceTypeLabel(
+  serviceType: string,
+  t: (key: string) => string,
+  fallback?: string,
+): string {
+  if ((SERVICE_TYPE_CODES as readonly string[]).includes(serviceType)) {
+    return t(`provisioning.serviceTypes.${serviceType}`);
+  }
+  return fallback ?? serviceType;
+}
 
 function statusBadgeVariant(status: string) {
   if (status === "approved" || status === "completed") return "default";
@@ -84,6 +96,7 @@ function parseStructuredTargets(values: Record<string, string>): number[] {
 }
 
 export default function Provisioning() {
+  const { t } = useTranslation();
   const { data: jobs, isLoading: jobsLoading } = useListProvisioningJobs();
   const { data: devices } = useListDevices();
   const createJob = useCreateProvisioningJob();
@@ -125,8 +138,8 @@ export default function Provisioning() {
   useEffect(() => {
     listProvisioningServiceTemplates()
       .then(setTemplates)
-      .catch(() => toast({ title: "Falha ao carregar templates", variant: "destructive" }));
-  }, [toast]);
+      .catch(() => toast({ title: t("provisioning.toasts.templatesLoadFailed"), variant: "destructive" }));
+  }, [toast, t]);
 
   useEffect(() => {
     if (!selectedTemplate) return;
@@ -145,11 +158,11 @@ export default function Provisioning() {
 
   async function runPreview() {
     if (!deviceId) {
-      toast({ title: "Selecione um device", variant: "destructive" });
+      toast({ title: t("provisioning.toasts.selectDevice"), variant: "destructive" });
       return;
     }
     if (!selectedTemplate) {
-      toast({ title: "Selecione um template", variant: "destructive" });
+      toast({ title: t("provisioning.toasts.selectTemplate"), variant: "destructive" });
       return;
     }
     setPreviewLoading(true);
@@ -163,11 +176,11 @@ export default function Provisioning() {
         rollbackPlan: rollbackPlan || undefined,
       });
       setPreview(result);
-      toast({ title: "Preview gerado" });
+      toast({ title: t("provisioning.toasts.previewGenerated") });
     } catch (err) {
       toast({
-        title: "Erro no preview",
-        description: err instanceof Error ? err.message : "Falha",
+        title: t("provisioning.toasts.previewError"),
+        description: err instanceof Error ? err.message : t("provisioning.toasts.failure"),
         variant: "destructive",
       });
     } finally {
@@ -187,7 +200,7 @@ export default function Provisioning() {
 
   async function saveDraft() {
     if (!jobName.trim() || !deviceId) {
-      toast({ title: "Nome e device obrigatórios", variant: "destructive" });
+      toast({ title: t("provisioning.toasts.nameAndDeviceRequired"), variant: "destructive" });
       return;
     }
     const structured = isStructuredServiceType(selectedTemplate?.serviceType);
@@ -213,12 +226,12 @@ export default function Provisioning() {
       });
     setActiveJobId(created.id);
     await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
-    toast({ title: `Rascunho #${created.id} criado` });
+    toast({ title: t("provisioning.toasts.draftCreated", { id: created.id }) });
   }
 
   async function validateActiveJob() {
     if (!activeJobId) {
-      toast({ title: "Salve um rascunho primeiro", variant: "destructive" });
+      toast({ title: t("provisioning.toasts.saveDraftFirst"), variant: "destructive" });
       return;
     }
     const structured = isStructuredServiceType(jobDetail?.serviceType ?? jobDetail?.type);
@@ -226,13 +239,18 @@ export default function Provisioning() {
       const result = await precheckStructuredProvisioningJob(activeJobId);
       setJobDetail(result.job);
       setPreview(result.preview);
-      toast({ title: "Pre-check executado", description: result.preview.findings?.some((finding) => finding.blocking) ? "Bloqueado" : "Validado" });
+      toast({
+        title: t("provisioning.toasts.precheckExecuted"),
+        description: result.preview.findings?.some((finding) => finding.blocking)
+          ? t("provisioning.toasts.blocked")
+          : t("provisioning.toasts.validated"),
+      });
     } else {
       const result = await validateJob.mutateAsync({ id: activeJobId });
       if (result.valid) {
-        toast({ title: "Job validado" });
+        toast({ title: t("provisioning.toasts.jobValidated") });
       } else {
-        toast({ title: "Validação falhou", variant: "destructive" });
+        toast({ title: t("provisioning.toasts.validationFailed"), variant: "destructive" });
       }
     }
     await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
@@ -246,14 +264,20 @@ export default function Provisioning() {
         const result = await precheckStructuredProvisioningJob(activeJobId);
         setJobDetail(result.job);
         setPreview(result.preview);
-        toast({ title: "Pre-check executado", description: "Use Approve para aprovar o serviço." });
+        toast({
+          title: t("provisioning.toasts.precheckExecuted"),
+          description: t("provisioning.toasts.useApproveToApprove"),
+        });
       } else {
         await requestProvisioningApproval(activeJobId);
-        toast({ title: "Aprovação solicitada", description: "Status: pending_approval" });
+        toast({
+          title: t("provisioning.toasts.approvalRequested"),
+          description: t("provisioning.toasts.approvalRequestedDesc"),
+        });
       }
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
-      toast({ title: "Erro", description: err instanceof Error ? err.message : "", variant: "destructive" });
+      toast({ title: t("common.error"), description: err instanceof Error ? err.message : "", variant: "destructive" });
     }
   }
 
@@ -265,10 +289,17 @@ export default function Provisioning() {
         credentials: "include",
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({})) as { error?: string }).error ?? res.statusText);
-      toast({ title: "Job aprovado", description: "Apply real continua bloqueado por padrão." });
+      toast({
+        title: t("provisioning.toasts.jobApproved"),
+        description: t("provisioning.toasts.applyStillBlocked"),
+      });
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
-      toast({ title: "Erro ao aprovar", description: err instanceof Error ? err.message : "", variant: "destructive" });
+      toast({
+        title: t("provisioning.toasts.approveError"),
+        description: err instanceof Error ? err.message : "",
+        variant: "destructive",
+      });
     }
   }
 
@@ -292,7 +323,7 @@ export default function Provisioning() {
         downloadMarkdown(md, "provisioning-preview.md");
         return;
       }
-      toast({ title: "Gere preview ou salve rascunho", variant: "destructive" });
+      toast({ title: t("provisioning.toasts.generatePreviewOrDraft"), variant: "destructive" });
       return;
     }
     try {
@@ -306,9 +337,13 @@ export default function Provisioning() {
       if (!structured) {
         await createReport.mutateAsync({ id: activeJobId });
       }
-      toast({ title: "Plano exportado e report salvo" });
+      toast({ title: t("provisioning.toasts.planExported") });
     } catch (err) {
-      toast({ title: "Export falhou", description: err instanceof Error ? err.message : "", variant: "destructive" });
+      toast({
+        title: t("provisioning.toasts.exportFailed"),
+        description: err instanceof Error ? err.message : "",
+        variant: "destructive",
+      });
     }
   }
 
@@ -317,12 +352,16 @@ export default function Provisioning() {
     try {
       await executeJob.mutateAsync({ id: activeJobId });
       toast({
-        title: "Execute chamado",
-        description: "Deve retornar blocked com CONFIG_APPLY_ENABLED=false",
+        title: t("provisioning.toasts.executeCalled"),
+        description: t("provisioning.toasts.executeBlockedDesc"),
       });
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
-      toast({ title: "Execute erro", description: err instanceof Error ? err.message : "", variant: "destructive" });
+      toast({
+        title: t("provisioning.toasts.executeError"),
+        description: err instanceof Error ? err.message : "",
+        variant: "destructive",
+      });
     }
   }
 
@@ -330,11 +369,15 @@ export default function Provisioning() {
     if (!activeJobId) return;
     try {
       await cancelProvisioningJob(activeJobId);
-      toast({ title: "Job cancelado" });
+      toast({ title: t("provisioning.toasts.jobCancelled") });
       setActiveJobId(null);
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
-      toast({ title: "Cancel falhou", description: err instanceof Error ? err.message : "", variant: "destructive" });
+      toast({
+        title: t("provisioning.toasts.cancelFailed"),
+        description: err instanceof Error ? err.message : "",
+        variant: "destructive",
+      });
     }
   }
 
@@ -349,10 +392,14 @@ export default function Provisioning() {
       } else {
         await approveProvisioningJob(activeJobId);
       }
-      toast({ title: "Job aprovado" });
+      toast({ title: t("provisioning.toasts.jobApproved") });
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
-      toast({ title: "Erro ao aprovar", description: err instanceof Error ? err.message : "", variant: "destructive" });
+      toast({
+        title: t("provisioning.toasts.approveError"),
+        description: err instanceof Error ? err.message : "",
+        variant: "destructive",
+      });
     } finally {
       setApproveLoading(false);
     }
@@ -368,14 +415,18 @@ export default function Provisioning() {
       } else {
         await executeProvisioningJob(activeJobId);
       }
-      toast({ title: "Execução iniciada" });
+      toast({ title: t("provisioning.toasts.executionStarted") });
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
       const message = err instanceof Error ? err.message : "";
       if (message.includes("PROVISIONING_EXECUTE_ENABLED=false")) {
         setExecuteEnabled(false);
       }
-      toast({ title: "Erro na execução", description: message, variant: "destructive" });
+      toast({
+        title: t("provisioning.toasts.executionError"),
+        description: message,
+        variant: "destructive",
+      });
     } finally {
       setExecuteLoading(false);
     }
@@ -393,10 +444,14 @@ export default function Provisioning() {
       } else {
         await postcheckProvisioningJob(activeJobId);
       }
-      toast({ title: "Post-check executado" });
+      toast({ title: t("provisioning.toasts.postcheckExecuted") });
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
-      toast({ title: "Erro no post-check", description: err instanceof Error ? err.message : "", variant: "destructive" });
+      toast({
+        title: t("provisioning.toasts.postcheckError"),
+        description: err instanceof Error ? err.message : "",
+        variant: "destructive",
+      });
     } finally {
       setPostcheckLoading(false);
     }
@@ -416,9 +471,13 @@ export default function Provisioning() {
         const result = await getRollbackPreview(activeJobId);
         setRollbackPreview(result.rollbackPlan);
       }
-      toast({ title: "Rollback preview carregado" });
+      toast({ title: t("provisioning.toasts.rollbackPreviewLoaded") });
     } catch (err) {
-      toast({ title: "Erro ao carregar preview", description: err instanceof Error ? err.message : "", variant: "destructive" });
+      toast({
+        title: t("provisioning.toasts.loadPreviewError"),
+        description: err instanceof Error ? err.message : "",
+        variant: "destructive",
+      });
     } finally {
       setPreviewRollbackLoading(false);
     }
@@ -429,10 +488,14 @@ export default function Provisioning() {
     setRollbackLoading(true);
     try {
       await rollbackProvisioningJob(activeJobId);
-      toast({ title: "Rollback iniciado" });
+      toast({ title: t("provisioning.toasts.rollbackStarted") });
       await queryClient.invalidateQueries({ queryKey: getListProvisioningJobsQueryKey() });
     } catch (err) {
-      toast({ title: "Erro no rollback", description: err instanceof Error ? err.message : "", variant: "destructive" });
+      toast({
+        title: t("provisioning.toasts.rollbackError"),
+        description: err instanceof Error ? err.message : "",
+        variant: "destructive",
+      });
     } finally {
       setRollbackLoading(false);
     }
@@ -446,26 +509,28 @@ export default function Provisioning() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Rocket className="h-8 w-8" />
-            Provisioning
+            {t("provisioning.title")}
           </h1>
           <p className="text-muted-foreground mt-1">
-            v0.6.1 — preview via connector, sem apply real
+            {t("provisioning.pageSubtitle")}
           </p>
         </div>
         {preview?.applyBlocked && (
           <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-600">
             <ShieldAlert className="h-3.5 w-3.5" />
-            Apply bloqueado
+            {t("provisioning.applyBlockedBadge")}
           </Badge>
         )}
       </div>
 
       <Tabs defaultValue="wizard">
         <TabsList>
-          <TabsTrigger value="wizard">Preview</TabsTrigger>
-          <TabsTrigger value="jobs">Jobs</TabsTrigger>
+          <TabsTrigger value="wizard">{t("provisioning.tabs.preview")}</TabsTrigger>
+          <TabsTrigger value="jobs">{t("provisioning.tabs.jobs")}</TabsTrigger>
           <TabsTrigger value="execution" disabled={!activeJobId}>
-            Execução {activeJobId ? `#${activeJobId}` : ""}
+            {activeJobId
+              ? t("provisioning.tabs.executionWithId", { id: activeJobId })
+              : t("provisioning.tabs.execution")}
           </TabsTrigger>
         </TabsList>
 
@@ -473,13 +538,17 @@ export default function Provisioning() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>1. Device e template</CardTitle>
-                <CardDescription>Escolha alvo e template de provisionamento</CardDescription>
+                <CardTitle>{t("provisioning.steps.deviceAndTemplate.title")}</CardTitle>
+                <CardDescription>{t("provisioning.steps.deviceAndTemplate.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Input placeholder="Nome do job" value={jobName} onChange={(e) => setJobName(e.target.value)} />
+                <Input
+                  placeholder={t("provisioning.placeholders.jobName")}
+                  value={jobName}
+                  onChange={(e) => setJobName(e.target.value)}
+                />
                 <Select value={deviceId} onValueChange={setDeviceId}>
-                  <SelectTrigger><SelectValue placeholder="Device" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("provisioning.placeholders.device")} /></SelectTrigger>
                   <SelectContent>
                     {devices?.map((d) => (
                       <SelectItem key={d.id} value={String(d.id)}>{d.hostname}</SelectItem>
@@ -489,9 +558,9 @@ export default function Provisioning() {
                 <Select value={serviceType} onValueChange={setServiceType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {templates.map((t) => (
-                      <SelectItem key={t.serviceType} value={t.serviceType}>
-                        {SERVICE_LABELS[t.serviceType] ?? t.name}
+                    {templates.map((template) => (
+                      <SelectItem key={template.serviceType} value={template.serviceType}>
+                        {getServiceTypeLabel(template.serviceType, t, template.name)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -501,7 +570,7 @@ export default function Provisioning() {
 
             <Card>
               <CardHeader>
-                <CardTitle>2. Parâmetros</CardTitle>
+                <CardTitle>{t("provisioning.steps.parameters.title")}</CardTitle>
                 <CardDescription>{selectedTemplate?.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 max-h-72 overflow-y-auto">
@@ -528,13 +597,13 @@ export default function Provisioning() {
 
             <Card>
               <CardHeader>
-                <CardTitle>3. Janela e rollback</CardTitle>
+                <CardTitle>{t("provisioning.steps.windowAndRollback.title")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <Input type="datetime-local" value={maintenanceStart} onChange={(e) => setMaintenanceStart(e.target.value)} />
                 <Input type="datetime-local" value={maintenanceEnd} onChange={(e) => setMaintenanceEnd(e.target.value)} />
                 <Textarea
-                  placeholder="Plano de rollback textual (opcional)"
+                  placeholder={t("provisioning.placeholders.rollbackPlan")}
                   value={rollbackPlan}
                   onChange={(e) => setRollbackPlan(e.target.value)}
                   rows={4}
@@ -544,16 +613,16 @@ export default function Provisioning() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Ações</CardTitle>
+                <CardTitle>{t("provisioning.steps.actions")}</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 <Button onClick={runPreview} disabled={previewLoading}>
                   {previewLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Preview
+                  {t("provisioning.buttons.preview")}
                 </Button>
                 <Button variant="outline" onClick={exportPlan}>
                   <Download className="h-4 w-4 mr-1" />
-                  Exportar plano
+                  {t("provisioning.buttons.exportPlan")}
                 </Button>
               </CardContent>
             </Card>
@@ -562,13 +631,13 @@ export default function Provisioning() {
           {preview && (
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>
-                <CardHeader><CardTitle>Comandos gerados</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t("provisioning.previewPanel.generatedCommands")}</CardTitle></CardHeader>
                 <CardContent>
                   <pre className="text-xs bg-muted/30 p-3 rounded-md overflow-auto max-h-64">{preview.commandsGenerated.join("\n")}</pre>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader><CardTitle>Warnings</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t("provisioning.previewPanel.warnings")}</CardTitle></CardHeader>
                 <CardContent>
                   {preview.warnings.length > 0 ? (
                     <ul className="space-y-2 text-sm">
@@ -580,35 +649,35 @@ export default function Provisioning() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Sem warnings.</p>
+                    <p className="text-sm text-muted-foreground">{t("provisioning.previewPanel.noWarnings")}</p>
                   )}
                 </CardContent>
               </Card>
               <Card className="lg:col-span-2">
-                <CardHeader><CardTitle>Conflicts e missing resources</CardTitle></CardHeader>
+                <CardHeader><CardTitle>{t("provisioning.previewPanel.conflictsAndMissing")}</CardTitle></CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Conflicts</p>
+                    <p className="text-sm font-medium">{t("provisioning.previewPanel.conflicts")}</p>
                     {preview.conflicts.length > 0 ? (
                       <ul className="list-disc pl-5 text-sm text-muted-foreground">
                         {preview.conflicts.map((item) => <li key={item}>{item}</li>)}
                       </ul>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Nenhum conflito.</p>
+                      <p className="text-sm text-muted-foreground">{t("provisioning.previewPanel.noConflicts")}</p>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Missing resources</p>
+                    <p className="text-sm font-medium">{t("provisioning.previewPanel.missingResources")}</p>
                     {preview.missingResources.length > 0 ? (
                       <ul className="list-disc pl-5 text-sm text-muted-foreground">
                         {preview.missingResources.map((item) => <li key={item}>{item}</li>)}
                       </ul>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Nenhum recurso faltante.</p>
+                      <p className="text-sm text-muted-foreground">{t("provisioning.previewPanel.noMissingResources")}</p>
                     )}
                   </div>
                   <div className="md:col-span-2">
-                    <p className="text-sm font-medium mb-2">Validações</p>
+                    <p className="text-sm font-medium mb-2">{t("provisioning.previewPanel.validations")}</p>
                     <div className="space-y-2">
                       {preview.validations.map((v) => (
                         <div key={v.name} className="flex items-center gap-2 text-sm">
@@ -621,7 +690,7 @@ export default function Provisioning() {
                   </div>
                   {preview.findings?.length ? (
                     <div className="md:col-span-2 space-y-2">
-                      <p className="text-sm font-medium">Findings estruturados</p>
+                      <p className="text-sm font-medium">{t("provisioning.previewPanel.structuredFindings")}</p>
                       <div className="space-y-2">
                         {preview.findings.map((finding) => (
                           <div key={finding.code} className="rounded-md border p-3 text-sm">
@@ -630,7 +699,9 @@ export default function Provisioning() {
                               <Badge variant={finding.blocking ? "destructive" : "secondary"}>{finding.severity}</Badge>
                             </div>
                             <p className="mt-1 text-muted-foreground">{finding.message}</p>
-                            <p className="mt-1 text-xs text-muted-foreground">Recomendação: {finding.recommendation}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {t("provisioning.previewPanel.recommendation")} {finding.recommendation}
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -638,7 +709,7 @@ export default function Provisioning() {
                   ) : null}
                   {preview.renderedValidationJson ? (
                     <div className="md:col-span-2 space-y-2">
-                      <p className="text-sm font-medium">Validation JSON</p>
+                      <p className="text-sm font-medium">{t("provisioning.previewPanel.validationJson")}</p>
                       <pre className="text-xs max-h-48 overflow-auto rounded-md bg-muted/40 p-3">
                         {preview.renderedValidationJson.slice(0, 4000)}
                       </pre>
@@ -653,7 +724,7 @@ export default function Provisioning() {
             <Card>
               <CardHeader className="flex flex-row items-center gap-2">
                 <FileText className="h-5 w-5" />
-                <CardTitle>Último export</CardTitle>
+                <CardTitle>{t("provisioning.export.lastExport")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <pre className="text-xs max-h-40 overflow-auto">{exportMarkdown.slice(0, 2000)}{exportMarkdown.length > 2000 ? "…" : ""}</pre>
@@ -664,23 +735,23 @@ export default function Provisioning() {
 
         <TabsContent value="jobs" className="mt-4">
           <Card>
-            <CardHeader><CardTitle>Provisioning jobs</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t("provisioning.jobs.title")}</CardTitle></CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Criado</TableHead>
+                    <TableHead>{t("provisioning.jobs.columns.id")}</TableHead>
+                    <TableHead>{t("provisioning.jobs.columns.name")}</TableHead>
+                    <TableHead>{t("provisioning.jobs.columns.type")}</TableHead>
+                    <TableHead>{t("provisioning.jobs.columns.status")}</TableHead>
+                    <TableHead>{t("provisioning.jobs.columns.created")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {jobsLoading ? (
-                    <TableRow><TableCell colSpan={5}>Carregando…</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5}>{t("provisioning.jobs.loading")}</TableCell></TableRow>
                   ) : provisioningJobs.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-muted-foreground">Nenhum job</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-muted-foreground">{t("provisioning.jobs.empty")}</TableCell></TableRow>
                   ) : (
                     provisioningJobs.map((job) => (
                         <TableRow
@@ -690,7 +761,7 @@ export default function Provisioning() {
                       >
                         <TableCell>#{job.id}</TableCell>
                         <TableCell>{job.name}</TableCell>
-                        <TableCell><Badge variant="outline">{SERVICE_LABELS[job.serviceType ?? job.type] ?? (job.serviceType ?? job.type)}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{getServiceTypeLabel(job.serviceType ?? job.type ?? "", t, job.serviceType ?? job.type ?? "")}</Badge></TableCell>
                         <TableCell><Badge variant={statusBadgeVariant(job.status)}>{job.status}</Badge></TableCell>
                         <TableCell className="text-xs">{new Date(job.createdAt).toLocaleString()}</TableCell>
                       </TableRow>
@@ -707,8 +778,8 @@ export default function Provisioning() {
             <Card className="border-amber-200 bg-amber-50">
               <CardContent className="pt-6">
                 <p className="text-sm text-amber-700">
-                  <strong>Execução desabilitada:</strong> PROVISIONING_EXECUTE_ENABLED=false (padrão).
-                  Configure no servidor para habilitar.
+                  <strong>{t("provisioning.execution.disabledTitle")}</strong>{" "}
+                  {t("provisioning.execution.disabledMessage")}
                 </p>
               </CardContent>
             </Card>
@@ -731,7 +802,7 @@ export default function Provisioning() {
               {jobDetail.status === "approved" && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Ações de Execução</CardTitle>
+                    <CardTitle>{t("provisioning.execution.actionsTitle")}</CardTitle>
                   </CardHeader>
                   <CardContent className="flex gap-2">
                     <Button
@@ -742,10 +813,10 @@ export default function Provisioning() {
                       {executeLoading ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Executando...
+                          {t("provisioning.buttons.executing")}
                         </>
                       ) : (
-                        "Executar"
+                        t("provisioning.buttons.execute")
                       )}
                     </Button>
                   </CardContent>

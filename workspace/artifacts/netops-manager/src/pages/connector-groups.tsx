@@ -22,11 +22,13 @@ import {
   updateConnectorGroup,
   upsertConnectorGroupMember,
 } from "@/features/connectors/connectors-api";
+import { useTranslation } from "@/i18n";
 
 const STRATEGIES: ConnectorGroupStrategy[] = ["ACTIVE_PASSIVE", "ROUND_ROBIN", "PRIORITY"];
 
 export default function ConnectorGroupsPage() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   const [tenantName, setTenantName] = useState("");
@@ -52,9 +54,9 @@ export default function ConnectorGroupsPage() {
     onSuccess: () => {
       setTenantName("");
       void queryClient.invalidateQueries({ queryKey: ["connectors", "tenants"] });
-      toast({ title: "Tenant criado" });
+      toast({ title: t("connectorGroups.toastTenantCreated") });
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("connectorGroups.error"), description: error.message, variant: "destructive" }),
   });
 
   const createGroupMutation = useMutation({
@@ -67,9 +69,9 @@ export default function ConnectorGroupsPage() {
       setGroupName("");
       setSelectedGroupId(group.id);
       void queryClient.invalidateQueries({ queryKey: ["connector-groups"] });
-      toast({ title: "Grupo criado" });
+      toast({ title: t("connectorGroups.toastGroupCreated") });
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("connectorGroups.error"), description: error.message, variant: "destructive" }),
   });
 
   const updateGroupMutation = useMutation({
@@ -83,9 +85,9 @@ export default function ConnectorGroupsPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["connector-groups"] });
       void queryClient.invalidateQueries({ queryKey: ["connector-group", selectedGroupId] });
-      toast({ title: "Grupo atualizado" });
+      toast({ title: t("connectorGroups.toastGroupUpdated") });
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("connectorGroups.error"), description: error.message, variant: "destructive" }),
   });
 
   const deleteGroupMutation = useMutation({
@@ -93,9 +95,9 @@ export default function ConnectorGroupsPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["connector-groups"] });
       setSelectedGroupId(null);
-      toast({ title: "Grupo removido" });
+      toast({ title: t("connectorGroups.toastGroupRemoved") });
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("connectorGroups.error"), description: error.message, variant: "destructive" }),
   });
 
   const addMemberMutation = useMutation({
@@ -110,9 +112,9 @@ export default function ConnectorGroupsPage() {
       void queryClient.invalidateQueries({ queryKey: ["connector-groups"] });
       void queryClient.invalidateQueries({ queryKey: ["connector-group", selectedGroupId] });
       setMemberConnectorId("");
-      toast({ title: "Membro salvo" });
+      toast({ title: t("connectorGroups.toastMemberSaved") });
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("connectorGroups.error"), description: error.message, variant: "destructive" }),
   });
 
   const removeMemberMutation = useMutation({
@@ -123,9 +125,9 @@ export default function ConnectorGroupsPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["connector-groups"] });
       void queryClient.invalidateQueries({ queryKey: ["connector-group", selectedGroupId] });
-      toast({ title: "Membro removido" });
+      toast({ title: t("connectorGroups.toastMemberRemoved") });
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("connectorGroups.error"), description: error.message, variant: "destructive" }),
   });
 
   const selectedGroup = selectedGroupQuery.data ?? null;
@@ -143,24 +145,24 @@ export default function ConnectorGroupsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Waypoints className="h-6 w-6 text-primary" />
-            Connector Groups
+            {t("connectorGroups.title")}
           </h1>
-          <p className="text-muted-foreground mt-1">Agrupamento e failover de connectors por tenant.</p>
+          <p className="text-muted-foreground mt-1">{t("connectorGroups.pageSubtitle")}</p>
         </div>
         <Button variant="outline" onClick={() => void groupsQuery.refetch()}>
           <RefreshCw className="mr-2 h-4 w-4" />
-          Atualizar
+          {t("connectorGroups.refresh")}
         </Button>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Novo tenant</CardTitle>
+            <CardTitle className="text-base">{t("connectorGroups.newTenant")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex gap-2">
-              <Input value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder="Tenant A" />
+              <Input value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder={t("connectorGroups.tenantPlaceholder")} />
               <Button disabled={!tenantName.trim() || createTenantMutation.isPending} onClick={() => createTenantMutation.mutate()}>
                 <Plus className="h-4 w-4" />
               </Button>
@@ -170,16 +172,16 @@ export default function ConnectorGroupsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Novo grupo</CardTitle>
+            <CardTitle className="text-base">{t("connectorGroups.newGroup")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
-                <Label>Tenant</Label>
+                <Label>{t("connectorGroups.tenant")}</Label>
                 <Select value={groupTenantId || "none"} onValueChange={(value) => setGroupTenantId(value === "none" ? "" : value)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("connectorGroups.select")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Selecione</SelectItem>
+                    <SelectItem value="none">{t("connectorGroups.select")}</SelectItem>
                     {(tenantsQuery.data ?? []).map((tenant) => (
                       <SelectItem key={tenant.id} value={String(tenant.id)}>{tenant.name}</SelectItem>
                     ))}
@@ -187,11 +189,11 @@ export default function ConnectorGroupsPage() {
                 </Select>
               </div>
               <div className="space-y-2 md:col-span-1">
-                <Label>Nome</Label>
-                <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder="Default HA" />
+                <Label>{t("connectorGroups.name")}</Label>
+                <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} placeholder={t("connectorGroups.groupNamePlaceholder")} />
               </div>
               <div className="space-y-2">
-                <Label>Strategy</Label>
+                <Label>{t("connectorGroups.strategy")}</Label>
                 <Select value={groupStrategy} onValueChange={(value) => setGroupStrategy(value as ConnectorGroupStrategy)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -206,7 +208,7 @@ export default function ConnectorGroupsPage() {
               disabled={!groupTenantId || !groupName.trim() || createGroupMutation.isPending}
               onClick={() => createGroupMutation.mutate()}
             >
-              Criar grupo
+              {t("connectorGroups.createGroup")}
             </Button>
           </CardContent>
         </Card>
@@ -214,17 +216,17 @@ export default function ConnectorGroupsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Grupos</CardTitle>
+          <CardTitle className="text-base">{t("connectorGroups.groups")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tenant</TableHead>
-                <TableHead>Strategy</TableHead>
-                <TableHead>Membros</TableHead>
-                <TableHead>Ativos</TableHead>
+                <TableHead>{t("connectorGroups.name")}</TableHead>
+                <TableHead>{t("connectorGroups.tenant")}</TableHead>
+                <TableHead>{t("connectorGroups.strategy")}</TableHead>
+                <TableHead>{t("connectorGroups.members")}</TableHead>
+                <TableHead>{t("connectorGroups.active")}</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -276,11 +278,11 @@ export default function ConnectorGroupsPage() {
           <CardContent className="space-y-6">
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
-                <Label>Nome</Label>
+                <Label>{t("connectorGroups.name")}</Label>
                 <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Strategy</Label>
+                <Label>{t("connectorGroups.strategy")}</Label>
                 <Select value={groupStrategy} onValueChange={(value) => setGroupStrategy(value as ConnectorGroupStrategy)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -293,25 +295,25 @@ export default function ConnectorGroupsPage() {
               <div className="flex items-end gap-2">
                 <Button onClick={() => updateGroupMutation.mutate()} disabled={updateGroupMutation.isPending}>
                   <Save className="mr-2 h-4 w-4" />
-                  Salvar
+                  {t("connectorGroups.save")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => void selectedGroupQuery.refetch()}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Recarregar
+                  {t("connectorGroups.reload")}
                 </Button>
               </div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
-                <Label>Connector</Label>
+                <Label>{t("connectorGroups.connector")}</Label>
                 <Select value={memberConnectorId || "none"} onValueChange={(value) => setMemberConnectorId(value === "none" ? "" : value)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("connectorGroups.select")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Selecione</SelectItem>
+                    <SelectItem value="none">{t("connectorGroups.select")}</SelectItem>
                     {availableConnectors.map((connector) => (
                       <SelectItem key={connector.id} value={String(connector.id)}>
                         {connector.name} · {connector.status}
@@ -321,11 +323,11 @@ export default function ConnectorGroupsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Priority</Label>
+                <Label>{t("connectorGroups.priority")}</Label>
                 <Input type="number" value={memberPriority} onChange={(e) => setMemberPriority(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Weight</Label>
+                <Label>{t("connectorGroups.weight")}</Label>
                 <Input type="number" value={memberWeight} onChange={(e) => setMemberWeight(e.target.value)} />
               </div>
             </div>
@@ -335,16 +337,16 @@ export default function ConnectorGroupsPage() {
               onClick={() => addMemberMutation.mutate()}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Adicionar/Atualizar membro
+              {t("connectorGroups.addUpdateMember")}
             </Button>
 
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Connector</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Weight</TableHead>
+                  <TableHead>{t("connectorGroups.connector")}</TableHead>
+                  <TableHead>{t("connectorGroups.status")}</TableHead>
+                  <TableHead>{t("connectorGroups.priority")}</TableHead>
+                  <TableHead>{t("connectorGroups.weight")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>

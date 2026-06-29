@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 import {
   downloadText,
   getConfig,
@@ -36,6 +37,7 @@ function diffLineClass(line: string) {
 }
 
 export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; hostname: string }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [selectedConfig, setSelectedConfig] = useState<ConfigDetail | null>(null);
   const [selectedDiff, setSelectedDiff] = useState<ConfigDiff | null>(null);
@@ -53,7 +55,7 @@ export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; h
       setSelectedConfig(data);
       setSelectedDiff(null);
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("common.error"), description: error.message, variant: "destructive" }),
   });
 
   const diffMutation = useMutation({
@@ -62,7 +64,7 @@ export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; h
       setSelectedDiff(data);
       setSelectedConfig(null);
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("common.error"), description: error.message, variant: "destructive" }),
   });
 
   const downloadMutation = useMutation({
@@ -71,7 +73,7 @@ export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; h
       const stamp = data.collected_at.replace(/[:.]/g, "-");
       downloadText(`${hostname}-config-${data.id}-${stamp}.txt`, data.raw_config ?? "");
     },
-    onError: (error: Error) => toast({ title: "Erro", description: error.message, variant: "destructive" }),
+    onError: (error: Error) => toast({ title: t("common.error"), description: error.message, variant: "destructive" }),
   });
 
   const history = historyQuery.data ?? [];
@@ -82,7 +84,7 @@ export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; h
         <CardHeader className="border-b bg-muted/30">
           <CardTitle className="text-lg flex items-center gap-2">
             <History className="h-5 w-5" />
-            Config History
+            {t("configHistory.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -92,11 +94,11 @@ export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; h
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Origem</TableHead>
-                  <TableHead>Tamanho</TableHead>
-                  <TableHead>Hash</TableHead>
-                  <TableHead>Parser Status</TableHead>
+                  <TableHead>{t("configHistory.date")}</TableHead>
+                  <TableHead>{t("configHistory.source")}</TableHead>
+                  <TableHead>{t("configHistory.size")}</TableHead>
+                  <TableHead>{t("configHistory.hash")}</TableHead>
+                  <TableHead>{t("configHistory.parserStatus")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -114,15 +116,15 @@ export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; h
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => viewMutation.mutate(item.id)}>
                           <Eye className="h-4 w-4 mr-1" />
-                          Visualizar
+                          {t("configHistory.view")}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => diffMutation.mutate(item.id)}>
                           <GitCompare className="h-4 w-4 mr-1" />
-                          Comparar
+                          {t("configHistory.compare")}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => downloadMutation.mutate(item.id)}>
                           <Download className="h-4 w-4 mr-1" />
-                          Baixar
+                          {t("configHistory.download")}
                         </Button>
                       </div>
                     </TableCell>
@@ -131,7 +133,7 @@ export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; h
                 {history.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Nenhuma configuração coletada ainda.
+                      {t("configHistory.empty")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -146,7 +148,7 @@ export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; h
           <CardHeader className="border-b bg-muted/30">
             <CardTitle className="text-lg flex items-center gap-2">
               <Terminal className="h-5 w-5" />
-              Config #{selectedConfig.id}
+              {t("configHistory.configTitle", { id: selectedConfig.id })}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -162,9 +164,9 @@ export function ConfigHistoryPanel({ deviceId, hostname }: { deviceId: number; h
           <CardHeader className="border-b bg-muted/30">
             <CardTitle className="text-lg flex items-center gap-2">
               <GitCompare className="h-5 w-5" />
-              Diff #{selectedDiff.id}
+              {t("configHistory.diffTitle", { id: selectedDiff.id })}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">{selectedDiff.diff_summary ?? "Sem resumo"}</p>
+            <p className="text-xs text-muted-foreground">{selectedDiff.diff_summary ?? t("configHistory.noSummary")}</p>
           </CardHeader>
           <CardContent className="p-0">
             <pre className="p-4 overflow-x-auto text-xs font-mono max-h-[600px]">

@@ -6,30 +6,33 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ArrowDown, ArrowUp, Edit3, GitCompare } from "lucide-react";
+import { useTranslation } from "@/i18n";
 
 export function DiffDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const { t } = useTranslation();
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[420px] border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2 text-zinc-100">
-            <GitCompare className="h-4 w-4" /> Comparar snapshots
+            <GitCompare className="h-4 w-4" /> {t("networkMap.diffDrawer.title")}
           </SheetTitle>
           <SheetDescription className="text-zinc-400">
-            Diff entre o snapshot atual e o anterior.
+            {t("networkMap.diffDrawer.description")}
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-5 space-y-4">
-          <Section title="Links adicionados" color="emerald" icon={<ArrowUp className="h-3.5 w-3.5" />}
+          <Section title={t("networkMap.diffDrawer.linksAdded")} color="emerald" icon={<ArrowUp className="h-3.5 w-3.5" />}
             items={["MNS-RB → MCH-RA (10G)"]} />
-          <Section title="Links removidos" color="red" icon={<ArrowDown className="h-3.5 w-3.5" />}
+          <Section title={t("networkMap.diffDrawer.linksRemoved")} color="red" icon={<ArrowDown className="h-3.5 w-3.5" />}
             items={["BVA-RB → CJB-RA (legado)"]} />
-          <Section title="Links alterados" color="amber" icon={<Edit3 className="h-3.5 w-3.5" />}
+          <Section title={t("networkMap.diffDrawer.linksChanged")} color="amber" icon={<Edit3 className="h-3.5 w-3.5" />}
             items={["BVA-RA ↔ BVA-RB (UP → PARTIAL)"]} />
-          <Section title="Devices não vistos" color="zinc" icon={<ArrowDown className="h-3.5 w-3.5" />}
+          <Section title={t("networkMap.diffDrawer.devicesNotSeen")} color="zinc" icon={<ArrowDown className="h-3.5 w-3.5" />}
             items={["4WNET-CJB-RA-S6730"]} />
-          <Section title="Status alterados" color="amber" icon={<Edit3 className="h-3.5 w-3.5" />}
+          <Section title={t("networkMap.diffDrawer.statusChanged")} color="amber" icon={<Edit3 className="h-3.5 w-3.5" />}
             items={["DWDM-BVA-01 (UP → PARTIAL)"]} />
         </div>
       </SheetContent>

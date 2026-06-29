@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDraftList, createDraft, updateDraft, validateDraft, previewDraft, approveDraft, publishDraft } from "@/features/template-studio/template-studio-api";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, AlertCircle, CheckCircle } from "lucide-react";
+import { useTranslation } from "@/i18n";
+import { Pencil } from "lucide-react";
 
 export default function TemplateStudioPage() {
+  const { t } = useTranslation();
   const { data: drafts, refetch } = useDraftList();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -26,11 +27,11 @@ export default function TemplateStudioPage() {
       } else {
         await createDraft(currentDraft.body);
       }
-      toast({ title: "Draft saved" });
+      toast({ title: t("templateStudio.toastDraftSaved") });
       setView("list");
       refetch();
     } catch (err) {
-      toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("templateStudio.toastError"), description: (err as Error).message, variant: "destructive" });
     }
   };
 
@@ -38,8 +39,8 @@ export default function TemplateStudioPage() {
     try {
       const result = await validateDraft(currentDraft.id || 0);
       setValidation(result);
-    } catch (err) {
-      toast({ title: "Validation error", variant: "destructive" });
+    } catch {
+      toast({ title: t("templateStudio.toastValidationError"), variant: "destructive" });
     }
   };
 
@@ -47,30 +48,30 @@ export default function TemplateStudioPage() {
     try {
       const result = await previewDraft(currentDraft.id || 0);
       setPreview(result);
-    } catch (err) {
-      toast({ title: "Preview error", variant: "destructive" });
+    } catch {
+      toast({ title: t("templateStudio.toastPreviewError"), variant: "destructive" });
     }
   };
 
   const handlePublish = async () => {
     try {
       await publishDraft(currentDraft.id || 0);
-      toast({ title: "Template published!" });
+      toast({ title: t("templateStudio.toastPublished") });
       setView("list");
       refetch();
-    } catch (err) {
-      toast({ title: "Publish failed", variant: "destructive" });
+    } catch {
+      toast({ title: t("templateStudio.toastPublishFailed"), variant: "destructive" });
     }
   };
 
   const handleApprove = async () => {
     try {
       await approveDraft(currentDraft.id || 0);
-      toast({ title: "Draft approved" });
+      toast({ title: t("templateStudio.toastApproved") });
       setView("list");
       refetch();
-    } catch (err) {
-      toast({ title: "Approval failed", variant: "destructive" });
+    } catch {
+      toast({ title: t("templateStudio.toastApprovalFailed"), variant: "destructive" });
     }
   };
 
@@ -79,14 +80,16 @@ export default function TemplateStudioPage() {
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Button variant="ghost" onClick={() => setView("list")}>
-            ← Back
+            ← {t("templateStudio.back")}
           </Button>
-          <h1 className="text-2xl font-bold">Template Studio — {currentDraft.id ? "Edit" : "Create"}</h1>
+          <h1 className="text-2xl font-bold">
+            {t("templateStudio.editTitle", { mode: currentDraft.id ? t("templateStudio.edit") : t("templateStudio.create") })}
+          </h1>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>DSL Template</CardTitle>
+            <CardTitle>{t("templateStudio.dslTemplate")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Textarea
@@ -99,14 +102,14 @@ export default function TemplateStudioPage() {
         </Card>
 
         <div className="flex gap-2">
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave}>{t("templateStudio.save")}</Button>
           {currentDraft.id && (
             <>
               <Button onClick={handleValidate} variant="outline">
-                Validate
+                {t("templateStudio.validate")}
               </Button>
               <Button onClick={handlePreview} variant="outline">
-                Preview
+                {t("templateStudio.preview")}
               </Button>
             </>
           )}
@@ -115,12 +118,14 @@ export default function TemplateStudioPage() {
         {validation && (
           <Card>
             <CardHeader>
-              <CardTitle>Validation {validation.passed ? "✓ PASSED" : "✗ FAILED"}</CardTitle>
+              <CardTitle>
+                {t("templateStudio.validation")} {validation.passed ? t("templateStudio.validationPassed") : t("templateStudio.validationFailed")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {validation.errors?.length > 0 && (
                 <div>
-                  <p className="font-semibold text-red-600">Errors:</p>
+                  <p className="font-semibold text-red-600">{t("templateStudio.errors")}</p>
                   <ul className="list-disc pl-5 text-sm text-red-600">
                     {validation.errors.map((e: string, i: number) => (
                       <li key={i}>{e}</li>
@@ -130,7 +135,7 @@ export default function TemplateStudioPage() {
               )}
               {validation.warnings?.length > 0 && (
                 <div>
-                  <p className="font-semibold text-amber-600">Warnings:</p>
+                  <p className="font-semibold text-amber-600">{t("templateStudio.warnings")}</p>
                   <ul className="list-disc pl-5 text-sm text-amber-600">
                     {validation.warnings.map((w: string, i: number) => (
                       <li key={i}>{w}</li>
@@ -145,18 +150,18 @@ export default function TemplateStudioPage() {
         {preview && (
           <Card>
             <CardHeader>
-              <CardTitle>Preview</CardTitle>
+              <CardTitle>{t("templateStudio.preview")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm font-semibold mb-2">Generated CLI:</p>
+                <p className="text-sm font-semibold mb-2">{t("templateStudio.generatedCli")}</p>
                 <pre className="bg-slate-900 text-slate-100 p-3 rounded text-xs max-h-40 overflow-auto">
                   {preview.cli}
                 </pre>
               </div>
               {user?.role === "admin" && (
                 <Button onClick={handlePublish} className="bg-green-600">
-                  Publish Version
+                  {t("templateStudio.publishVersion")}
                 </Button>
               )}
             </CardContent>
@@ -170,26 +175,26 @@ export default function TemplateStudioPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Pencil className="h-8 w-8" />
-        <h1 className="text-2xl font-bold">Template Studio</h1>
+        <h1 className="text-2xl font-bold">{t("templateStudio.title")}</h1>
       </div>
 
       <Button onClick={() => { setView("edit"); setCurrentDraft({ body: "" }); }} className="bg-blue-600">
-        New Draft
+        {t("templateStudio.newDraft")}
       </Button>
 
       <Card>
         <CardHeader>
-          <CardTitle>Drafts</CardTitle>
+          <CardTitle>{t("templateStudio.drafts")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead>{t("templateStudio.tableId")}</TableHead>
+                <TableHead>{t("templateStudio.tableStatus")}</TableHead>
+                <TableHead>{t("templateStudio.tableCreatedBy")}</TableHead>
+                <TableHead>{t("templateStudio.tableDate")}</TableHead>
+                <TableHead>{t("templateStudio.tableAction")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -207,7 +212,7 @@ export default function TemplateStudioPage() {
                       size="sm"
                       onClick={() => { setCurrentDraft({ id: d.id, body: d.draftBody }); setView("edit"); }}
                     >
-                      Edit
+                      {t("templateStudio.edit")}
                     </Button>
                   </TableCell>
                 </TableRow>

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/i18n";
 
 export function SaveLayoutDialog({
   open,
@@ -24,6 +25,7 @@ export function SaveLayoutDialog({
   onSave: (name: string) => void;
   saving?: boolean;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(initialName);
 
   useEffect(() => {
@@ -34,30 +36,30 @@ export function SaveLayoutDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Salvar layout</DialogTitle>
+          <DialogTitle>{t("networkMap.saveLayout.title")}</DialogTitle>
           <DialogDescription className="text-zinc-400">
-            Nomeie o layout para restaurar posições, devices e links depois.
+            {t("networkMap.saveLayout.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1">
-          <Label htmlFor="layout-name">Nome do layout</Label>
+          <Label htmlFor="layout-name">{t("networkMap.saveLayout.nameLabel")}</Label>
           <Input
             id="layout-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Layout principal"
+            placeholder={t("networkMap.saveLayout.namePlaceholder")}
             className="border-zinc-800 bg-zinc-900"
           />
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             disabled={!name.trim() || saving}
             onClick={() => onSave(name.trim())}
           >
-            {saving ? "Salvando..." : "Salvar"}
+            {saving ? t("networkMap.saveLayout.saving") : t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

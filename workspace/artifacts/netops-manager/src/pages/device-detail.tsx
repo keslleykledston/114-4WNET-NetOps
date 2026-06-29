@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Server, Activity, ShieldCheck, Rocket, History, ChevronRight, Pencil, Network } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
 import { appendSnmpToDevicePayload, buildDeviceAccessPayload } from "@/features/devices/device-connector-utils";
 import { DiscoveryPanel } from "@/features/device-discovery/discovery-panel";
@@ -33,6 +34,7 @@ export default function DeviceDetail() {
   const deviceId = params?.id ? parseInt(params.id) : 0;
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const updateDevice = useUpdateDevice();
 
@@ -79,7 +81,7 @@ export default function DeviceDetail() {
   }
 
   if (!device) {
-    return <div>Device not found</div>;
+    return <div>{t("deviceDetail.notFound")}</div>;
   }
 
   const extendedDevice = device as typeof device & {
@@ -95,11 +97,11 @@ export default function DeviceDetail() {
   };
   const accessLabel =
     extendedDevice.accessMode === "connector_group" && extendedDevice.connectorGroupName
-      ? `Via ${extendedDevice.connectorGroupName}`
+      ? t("deviceDetail.accessVia", { name: extendedDevice.connectorGroupName })
       : extendedDevice.accessMode === "connector" && extendedDevice.connectorName
-      ? `Via ${extendedDevice.connectorName}`
-      : "Direto";
-  const tenantLabel = extendedDevice.tenantName ?? (extendedDevice.tenantId ? `Tenant #${extendedDevice.tenantId}` : null);
+      ? t("deviceDetail.accessVia", { name: extendedDevice.connectorName })
+      : t("deviceDetail.accessDirect");
+  const tenantLabel = extendedDevice.tenantName ?? (extendedDevice.tenantId ? t("deviceDetail.tenantFallback", { id: extendedDevice.tenantId }) : null);
 
   const handleUpdate = (values: DeviceFormValues) => {
     const payload: DeviceUpdate = {
@@ -125,10 +127,10 @@ export default function DeviceDetail() {
         queryClient.invalidateQueries({ queryKey: getGetDeviceQueryKey(device.id) });
         queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
         setIsEditOpen(false);
-        toast({ title: "Dispositivo atualizado" });
+        toast({ title: t("deviceDetail.toasts.updated") });
       },
       onError: (err: any) => {
-        toast({ title: "Erro ao atualizar dispositivo", description: err.message, variant: "destructive" });
+        toast({ title: t("deviceDetail.toasts.updateError"), description: err.message, variant: "destructive" });
       },
     });
   };
@@ -136,7 +138,7 @@ export default function DeviceDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-        <Link href="/devices" className="hover:text-foreground transition-colors">Devices</Link>
+        <Link href="/devices" className="hover:text-foreground transition-colors">{t("deviceDetail.breadcrumb")}</Link>
         <ChevronRight className="h-4 w-4" />
         <span className="text-foreground">{device.hostname}</span>
       </div>
@@ -154,8 +156,8 @@ export default function DeviceDetail() {
             </Badge>
             <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded">{device.ipAddress}</span>
             <span className="text-sm text-muted-foreground capitalize">{device.vendor} {device.platform}</span>
-            {tenantLabel ? <Badge variant="secondary">Tenant: {tenantLabel}</Badge> : null}
-            <Badge variant="outline">Acesso: {accessLabel}</Badge>
+            {tenantLabel ? <Badge variant="secondary">{t("deviceDetail.tenantLabel", { name: tenantLabel })}</Badge> : null}
+            <Badge variant="outline">{t("deviceDetail.accessLabel", { label: accessLabel })}</Badge>
           </div>
         </div>
 
@@ -169,7 +171,7 @@ export default function DeviceDetail() {
           trigger={
             <Button variant="outline">
               <Pencil className="mr-2 h-4 w-4" />
-              Editar
+              {t("common.edit")}
             </Button>
           }
         />
@@ -177,45 +179,45 @@ export default function DeviceDetail() {
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-6 lg:w-[600px]">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="config">Config</TabsTrigger>
-          <TabsTrigger value="communities">Communities</TabsTrigger>
-          <TabsTrigger value="filters">Filters</TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
-          <TabsTrigger value="provisioning">Provisioning</TabsTrigger>
+          <TabsTrigger value="overview">{t("deviceDetail.tabs.overview")}</TabsTrigger>
+          <TabsTrigger value="config">{t("deviceDetail.tabs.config")}</TabsTrigger>
+          <TabsTrigger value="communities">{t("deviceDetail.tabs.communities")}</TabsTrigger>
+          <TabsTrigger value="filters">{t("deviceDetail.tabs.filters")}</TabsTrigger>
+          <TabsTrigger value="compliance">{t("deviceDetail.tabs.compliance")}</TabsTrigger>
+          <TabsTrigger value="provisioning">{t("deviceDetail.tabs.provisioning")}</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="space-y-6 mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">System Information</CardTitle>
+                <CardTitle className="text-lg">{t("deviceDetail.systemInformation")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="text-muted-foreground mb-1">Hostname</div>
+                    <div className="text-muted-foreground mb-1">{t("devices.hostname")}</div>
                     <div className="font-medium">{device.hostname}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">IP Address</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.ipAddress")}</div>
                     <div className="font-mono">{device.ipAddress}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Vendor</div>
+                    <div className="text-muted-foreground mb-1">{t("devices.vendor")}</div>
                     <div className="capitalize">{device.vendor}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Platform</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.platform")}</div>
                     <div className="uppercase">{device.platform}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Site</div>
+                    <div className="text-muted-foreground mb-1">{t("devices.site")}</div>
                     <div>{device.site}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Role</div>
-                    <div className="uppercase">{device.role || 'N/A'}</div>
+                    <div className="text-muted-foreground mb-1">{t("devices.role")}</div>
+                    <div className="uppercase">{device.role || t("deviceDetail.na")}</div>
                   </div>
                 </div>
               </CardContent>
@@ -223,29 +225,29 @@ export default function DeviceDetail() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Connection Details</CardTitle>
+                <CardTitle className="text-lg">{t("deviceDetail.connectionDetails")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="text-muted-foreground mb-1">SSH Port</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.sshPort")}</div>
                     <div>{device.sshPort}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Username</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.username")}</div>
                     <div>{device.username}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Last Seen</div>
-                    <div>{device.lastSeen ? new Date(device.lastSeen).toLocaleString() : 'Never'}</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.lastSeen")}</div>
+                    <div>{device.lastSeen ? new Date(device.lastSeen).toLocaleString() : t("common.never")}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">SNMP Community</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.snmpCommunity")}</div>
                     <div>
                       {extendedDevice.snmpConfigured ? (
-                        <Badge variant="outline" className="text-green-600 border-green-600/40">Configurada</Badge>
+                        <Badge variant="outline" className="text-green-600 border-green-600/40">{t("deviceDetail.snmpConfigured")}</Badge>
                       ) : (
-                        <span className="text-muted-foreground">Não configurada</span>
+                        <span className="text-muted-foreground">{t("deviceDetail.snmpNotConfigured")}</span>
                       )}
                     </div>
                   </div>
@@ -255,32 +257,32 @@ export default function DeviceDetail() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Coleta via Connector</CardTitle>
+                <CardTitle className="text-lg">{t("deviceDetail.connectorCollection")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-muted-foreground mb-1">Modo de acesso</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.accessMode")}</div>
                     <div>{collectionStatusQuery.data?.connectorName ? `Via ${collectionStatusQuery.data.connectorName}` : accessLabel}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Último bundle SSH</div>
-                    <div>{collectionStatusQuery.data?.lastSshBundleAt ? new Date(collectionStatusQuery.data.lastSshBundleAt).toLocaleString() : "Nunca"}</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.lastSshBundle")}</div>
+                    <div>{collectionStatusQuery.data?.lastSshBundleAt ? new Date(collectionStatusQuery.data.lastSshBundleAt).toLocaleString() : t("common.never")}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Status do parse</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.parseStatus")}</div>
                     <Badge variant="outline">{collectionStatusQuery.data?.parserStatus ?? "PENDING"}</Badge>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">SNMP configurado</div>
-                    <div>{collectionStatusQuery.data?.snmpConfigured ? "Sim" : "Não"}</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.snmpConfiguredShort")}</div>
+                    <div>{collectionStatusQuery.data?.snmpConfigured ? t("common.yes") : t("common.no")}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Peers BGP parseados</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.parsedBgpPeers")}</div>
                     <div>{collectionStatusQuery.data?.bgpPeerCount ?? 0}</div>
                   </div>
                   <div>
-                    <div className="text-muted-foreground mb-1">Circuitos L2 parseados</div>
+                    <div className="text-muted-foreground mb-1">{t("deviceDetail.parsedL2Circuits")}</div>
                     <div>{collectionStatusQuery.data?.l2CircuitCount ?? 0}</div>
                   </div>
                 </div>
@@ -292,7 +294,7 @@ export default function DeviceDetail() {
           </div>
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Diagnóstico via {accessLabel}</CardTitle>
+              <CardTitle className="text-lg">{t("deviceDetail.diagnosticsTitle", { label: accessLabel })}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button
@@ -301,21 +303,21 @@ export default function DeviceDetail() {
                   try {
                     const response = await fetch(`/api/devices/${device.id}/diagnostics`, { method: "POST", credentials: "include" });
                     const data = await response.json();
-                    if (!response.ok) throw new Error(data.error ?? "Falha no diagnóstico");
+                    if (!response.ok) throw new Error(data.error ?? t("deviceDetail.toasts.diagnosticsFailed"));
                     toast({
-                      title: `Diagnóstico (${data.mode})`,
-                      description: `SSH: ${data.ssh?.success ? "OK" : "fail"} · SNMP: ${data.snmp?.success ? "OK" : "fail"} · Ping: ${data.ping?.success ? "OK" : data.ping?.message ?? "—"}`,
+                      title: t("deviceDetail.toasts.diagnosticsTitle", { mode: data.mode }),
+                      description: t("deviceDetail.toasts.diagnosticsDescription", { ssh: data.ssh?.success ? t("deviceDetail.toasts.ok") : t("deviceDetail.toasts.fail"), snmp: data.snmp?.success ? t("deviceDetail.toasts.ok") : t("deviceDetail.toasts.fail"), ping: data.ping?.success ? t("deviceDetail.toasts.ok") : data.ping?.message ?? "—" }),
                     });
                   } catch (error) {
                     toast({
-                      title: "Erro no diagnóstico",
-                      description: error instanceof Error ? error.message : "Falha",
+                      title: t("deviceDetail.toasts.diagnosticsError"),
+                      description: error instanceof Error ? error.message : t("deviceDetail.toasts.diagnosticsFailed"),
                       variant: "destructive",
                     });
                   }
                 }}
               >
-                Executar ping / TCP / SNMP / SSH
+                {t("deviceDetail.runDiagnostics")}
               </Button>
             </CardContent>
           </Card>
@@ -331,7 +333,7 @@ export default function DeviceDetail() {
             <CardHeader className="border-b bg-muted/30">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Network className="h-5 w-5" />
-                Community Sets
+                {t("deviceDetail.communitySets")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -345,7 +347,7 @@ export default function DeviceDetail() {
             <CardHeader className="border-b bg-muted/30">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Network className="h-5 w-5" />
-                Community Filters Library
+                {t("deviceDetail.communityFiltersLibrary")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -362,7 +364,7 @@ export default function DeviceDetail() {
                   <div className="flex items-center gap-3">
                     <ShieldCheck className="h-5 w-5" />
                     <div>
-                      <CardTitle className="text-lg">Compliance Score</CardTitle>
+                      <CardTitle className="text-lg">{t("deviceDetail.complianceScore")}</CardTitle>
                       <div className="text-2xl font-bold mt-1">
                         {deviceCompliance.score}
                         <Badge className="ml-2" variant={
@@ -374,11 +376,11 @@ export default function DeviceDetail() {
                       </div>
                     </div>
                   </div>
-                  <Button onClick={() => triggerComplianceRun(deviceId)}>Run Now</Button>
+                  <Button onClick={() => triggerComplianceRun(deviceId)}>{t("deviceDetail.runNow")}</Button>
                 </div>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground">
-                Last run: {deviceCompliance.completedAt ? new Date(deviceCompliance.completedAt).toLocaleString() : 'Never'}
+                {t("deviceDetail.lastRun")}: {deviceCompliance.completedAt ? new Date(deviceCompliance.completedAt).toLocaleString() : t("common.never")}
               </CardContent>
             </Card>
           )}
@@ -386,14 +388,14 @@ export default function DeviceDetail() {
           {deviceCompliance?.remediations && deviceCompliance.remediations.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Failing Checks</CardTitle>
+                <CardTitle className="text-base">{t("deviceDetail.failingChecks")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
                   {deviceCompliance.remediations.slice(0, 10).map((item: any, idx: number) => (
                     <div key={idx} className="p-2 border rounded bg-muted/50">
                       <div className="font-mono text-xs">{item.remediation?.ruleId || 'unknown'}</div>
-                      <div className="mt-1">{item.remediation?.cliSuggestion || 'No suggestion available'}</div>
+                      <div className="mt-1">{item.remediation?.cliSuggestion || t("deviceDetail.noSuggestion")}</div>
                     </div>
                   ))}
                 </div>
@@ -404,11 +406,11 @@ export default function DeviceDetail() {
           {deviceDrifts && deviceDrifts.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Latest Drift</CardTitle>
+                <CardTitle className="text-base">{t("deviceDetail.latestDrift")}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm">
                 <pre className="text-xs bg-muted p-2 rounded max-h-40 overflow-auto">
-                  {deviceDrifts[0].driftSummary || 'No drift detected'}
+                  {deviceDrifts[0].driftSummary || t("deviceDetail.noDrift")}
                 </pre>
               </CardContent>
             </Card>
@@ -416,20 +418,20 @@ export default function DeviceDetail() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Recent Jobs</CardTitle>
+              <CardTitle className="text-base">{t("deviceDetail.recentJobs")}</CardTitle>
             </CardHeader>
             <CardContent>
               {complianceJobs?.length ? (
                 <div className="space-y-2">
                   {complianceJobs.slice(0, 5).map(job => (
                     <div key={job.id} className="text-xs p-2 border rounded flex justify-between">
-                      <div>Job #{job.id} <Badge variant="outline" className="ml-1">{job.status}</Badge></div>
+                      <div>{t("deviceDetail.jobLabel", { id: job.id })} <Badge variant="outline" className="ml-1">{job.status}</Badge></div>
                       <div className="text-muted-foreground">{job.passCount}P / {job.failCount}F</div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-xs">No jobs</p>
+                <p className="text-muted-foreground text-xs">{t("deviceDetail.noJobs")}</p>
               )}
             </CardContent>
           </Card>
@@ -440,7 +442,7 @@ export default function DeviceDetail() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Rocket className="h-5 w-5" />
-                Provisioning History
+                {t("deviceDetail.provisioningHistory")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -458,7 +460,7 @@ export default function DeviceDetail() {
                       </div>
                     </div>
                   </div>
-                )) : <p className="text-muted-foreground text-sm">No provisioning jobs found for this device.</p>}
+                )) : <p className="text-muted-foreground text-sm">{t("deviceDetail.noProvisioningJobs")}</p>}
               </div>
             </CardContent>
           </Card>

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
+import { useTranslation } from "@/i18n";
 import {
   createConnector,
   createTenant,
@@ -27,6 +28,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 }
 
 export default function ConnectorsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -54,9 +56,9 @@ export default function ConnectorsPage() {
     onSuccess: () => {
       setTenantName("");
       void queryClient.invalidateQueries({ queryKey: ["connectors-tenants"] });
-      toast({ title: "Tenant criado" });
+      toast({ title: t("connectors.toastTenantCreated") });
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   const bootstrapDownloadMutation = useMutation({
@@ -65,11 +67,11 @@ export default function ConnectorsPage() {
     onSuccess: () => {
       setBootstrapDownloaded(true);
       toast({
-        title: "Pacote de bootstrap baixado",
-        description: "Arquivo .env pronto para ser usado no agente connector.",
+        title: t("connectors.toastBootstrapDownloaded"),
+        description: t("connectors.toastBootstrapDownloadedDesc"),
       });
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   const createConnectorMutation = useMutation({
@@ -84,11 +86,11 @@ export default function ConnectorsPage() {
       setConnectorName("");
       void queryClient.invalidateQueries({ queryKey: ["connectors"] });
       toast({
-        title: data.reprovisioned ? "Connector reemitido" : "Connector criado",
-        description: "Baixe o pacote de bootstrap para ativar o connector.",
+        title: data.reprovisioned ? t("connectors.toastConnectorReprovisioned") : t("connectors.toastConnectorCreated"),
+        description: t("connectors.toastConnectorCreatedDesc"),
       });
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("common.error"), description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -97,22 +99,20 @@ export default function ConnectorsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Waypoints className="h-6 w-6 text-primary" />
-            Conectores / Bastião
+            {t("connectors.pageTitle")}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            WireGuard transporta; o Connector Agent executa SSH/SNMP no ambiente do cliente.
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">{t("connectors.pageSubtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Link href="/infrastructure/connectors/dashboard">
             <Button variant="secondary" size="sm">
               <LayoutDashboard className="h-4 w-4 mr-2" />
-              Dashboard
+              {t("connectors.dashboard")}
             </Button>
           </Link>
           <Button variant="outline" size="sm" onClick={() => void connectorsQuery.refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Atualizar
+            {t("common.refresh")}
           </Button>
         </div>
       </div>
@@ -121,26 +121,25 @@ export default function ConnectorsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Novo tenant</CardTitle>
+              <CardTitle className="text-base">{t("connectors.newTenant")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex gap-2">
-                <Input placeholder="Cliente A" value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
+                <Input placeholder={t("connectors.tenantPlaceholder")} value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
                 <Button disabled={!tenantName.trim() || createTenantMutation.isPending} onClick={() => createTenantMutation.mutate()}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
               {(tenantsQuery.data ?? []).length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  Tenants existentes: {(tenantsQuery.data ?? []).map((t) => t.name).join(", ")}.
-                  Após revogar um connector, reutilize o tenant e o mesmo nome — um novo token será emitido automaticamente.
+                  {t("connectors.tenantsHint", { names: (tenantsQuery.data ?? []).map((tenant) => tenant.name).join(", ") })}
                 </p>
               )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Novo connector</CardTitle>
+              <CardTitle className="text-base">{t("connectors.newConnector")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <select
@@ -148,16 +147,16 @@ export default function ConnectorsPage() {
                 value={selectedTenantId}
                 onChange={(e) => setSelectedTenantId(e.target.value)}
               >
-                <option value="">Tenant…</option>
-                {(tenantsQuery.data ?? []).map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
+                <option value="">{t("connectors.selectTenant")}</option>
+                {(tenantsQuery.data ?? []).map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>
+                    {tenant.name}
                   </option>
                 ))}
               </select>
               <div className="flex gap-2">
                 <Input
-                  placeholder="cliente-a-connector-01"
+                  placeholder={t("connectors.connectorPlaceholder")}
                   value={connectorName}
                   onChange={(e) => setConnectorName(e.target.value)}
                 />
@@ -165,12 +164,10 @@ export default function ConnectorsPage() {
                   disabled={!connectorName.trim() || !selectedTenantId || createConnectorMutation.isPending}
                   onClick={() => createConnectorMutation.mutate()}
                 >
-                  Criar
+                  {t("connectors.create")}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Se o connector com esse nome estiver revogado, ele será reemitido (mesmo ID, novo token e chaves WireGuard).
-              </p>
+              <p className="text-xs text-muted-foreground">{t("connectors.reprovisionHint")}</p>
             </CardContent>
           </Card>
         </div>
@@ -179,22 +176,19 @@ export default function ConnectorsPage() {
       {createdConnector && !bootstrapDownloaded && (
         <Card className="border-amber-500/50 bg-amber-500/5">
           <CardHeader>
-            <CardTitle className="text-base text-amber-600 dark:text-amber-400">PENDING BOOTSTRAP</CardTitle>
+            <CardTitle className="text-base text-amber-600 dark:text-amber-400">{t("connectors.pendingBootstrap")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="text-sm text-amber-700 dark:text-amber-300">
-              <p className="font-semibold">⚠️ Este segredo será baixado apenas uma vez</p>
-              <p className="text-xs mt-1">
-                Clique abaixo para baixar o arquivo <code>.env</code> com as credenciais de bootstrap do connector.
-                Após o download, use-o para inicializar o agente.
-              </p>
+              <p className="font-semibold">{t("connectors.bootstrapWarning")}</p>
+              <p className="text-xs mt-1">{t("connectors.bootstrapDesc")}</p>
             </div>
             <Button
               onClick={() => void bootstrapDownloadMutation.mutate(createdConnector.id)}
               disabled={bootstrapDownloadMutation.isPending}
               className="w-full"
             >
-              {bootstrapDownloadMutation.isPending ? "Gerando pacote..." : "📥 Baixar pacote de bootstrap"}
+              {bootstrapDownloadMutation.isPending ? t("connectors.generatingPackage") : t("connectors.downloadBootstrap")}
             </Button>
           </CardContent>
         </Card>
@@ -203,29 +197,29 @@ export default function ConnectorsPage() {
       {createdConnector && bootstrapDownloaded && (
         <Card className="border-green-500/50 bg-green-500/5">
           <CardHeader>
-            <CardTitle className="text-base text-green-600 dark:text-green-400">✓ Pacote baixado</CardTitle>
+            <CardTitle className="text-base text-green-600 dark:text-green-400">{t("connectors.packageDownloaded")}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-green-700 dark:text-green-300">
-            Use o arquivo baixado (<code>{createdConnector.name}.env</code>) para inicializar o agente connector.
+            {t("connectors.packageDownloadedDesc", { name: createdConnector.name })}
           </CardContent>
         </Card>
       )}
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Conectores</CardTitle>
+          <CardTitle className="text-base">{t("connectors.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Tenant</TableHead>
-                <TableHead>IP WG</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Versão</TableHead>
-                <TableHead>Último heartbeat</TableHead>
-                <TableHead>Jobs</TableHead>
+                <TableHead>{t("connectors.tableName")}</TableHead>
+                <TableHead>{t("connectors.tableTenant")}</TableHead>
+                <TableHead>{t("connectors.wgIp")}</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
+                <TableHead>{t("connectors.version")}</TableHead>
+                <TableHead>{t("connectors.lastHeartbeat")}</TableHead>
+                <TableHead>{t("connectors.jobs")}</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -240,13 +234,13 @@ export default function ConnectorsPage() {
                   </TableCell>
                   <TableCell>{c.version ?? "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {c.last_heartbeat ? new Date(c.last_heartbeat).toLocaleString() : "nunca"}
+                    {c.last_heartbeat ? new Date(c.last_heartbeat).toLocaleString() : t("common.never")}
                   </TableCell>
                   <TableCell>{c.pending_jobs}</TableCell>
                   <TableCell>
                     <Link href={`/infrastructure/connectors/${c.id}`}>
                       <Button variant="ghost" size="sm">
-                        Detalhes
+                        {t("connectors.details")}
                       </Button>
                     </Link>
                   </TableCell>
@@ -255,7 +249,7 @@ export default function ConnectorsPage() {
               {!connectorsQuery.isLoading && (connectorsQuery.data ?? []).length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    Nenhum connector cadastrado.
+                    {t("connectors.noConnectors")}
                   </TableCell>
                 </TableRow>
               )}

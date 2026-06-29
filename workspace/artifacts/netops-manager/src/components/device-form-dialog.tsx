@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { platformOptionsForVendor, VENDOR_OPTIONS } from "@/lib/vendor-options";
+import { useTranslation } from "@/i18n";
 
 export interface DeviceFormValues {
   hostname: string;
@@ -72,6 +73,7 @@ export function DeviceFormDialog({
   device,
   trigger,
 }: DeviceFormDialogProps) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<DeviceFormValues>(DEFAULT_VALUES);
   const groupsQuery = useQuery({ queryKey: ["connector-groups"], queryFn: listConnectorGroups });
   const tenantsQuery = useQuery({ queryKey: ["connectors", "tenants"], queryFn: listTenants });
@@ -141,11 +143,12 @@ export function DeviceFormDialog({
     }));
   };
 
-  const title = mode === "create" ? "Cadastrar Novo Dispositivo" : `Editar ${device?.hostname ?? "Dispositivo"}`;
-  const description = mode === "create"
-    ? "Preencha credenciais SSH e, opcionalmente, a comunidade SNMP."
-    : "Atualize dados de acesso. Senha e comunidade SNMP em branco mantêm os valores atuais.";
-  const submitLabel = mode === "create" ? "Adicionar Dispositivo" : "Salvar Alterações";
+  const title =
+    mode === "create"
+      ? t("deviceForm.createTitle")
+      : t("deviceForm.editTitle", { hostname: device?.hostname ?? t("deviceForm.editFallback") });
+  const description = mode === "create" ? t("deviceForm.createDescription") : t("deviceForm.editDescription");
+  const submitLabel = mode === "create" ? t("deviceForm.submitCreate") : t("deviceForm.submitEdit");
 
   const tenantMissingGroup = Boolean(form.tenantId && !form.connectorGroupId);
   const snmpConfigured = mode === "edit" && Boolean(device?.snmpConfigured);
@@ -167,7 +170,7 @@ export function DeviceFormDialog({
           className="space-y-4"
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <FormField label="Hostname">
+            <FormField label={t("deviceForm.hostname")}>
               <Input
                 required
                 value={form.hostname}
@@ -176,7 +179,7 @@ export function DeviceFormDialog({
               />
             </FormField>
 
-            <FormField label="IP Address">
+            <FormField label={t("deviceForm.ipAddress")}>
               <Input
                 required
                 className="font-mono"
@@ -186,7 +189,7 @@ export function DeviceFormDialog({
               />
             </FormField>
 
-            <FormField label="Vendor">
+            <FormField label={t("deviceForm.vendor")}>
               <Select value={form.vendor} onValueChange={(value) => setForm({ ...form, vendor: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -197,7 +200,7 @@ export function DeviceFormDialog({
               </Select>
             </FormField>
 
-            <FormField label="Platform">
+            <FormField label={t("deviceForm.platform")}>
               <Select value={form.platform} onValueChange={(value) => setForm({ ...form, platform: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -208,7 +211,7 @@ export function DeviceFormDialog({
               </Select>
             </FormField>
 
-            <FormField label="Site">
+            <FormField label={t("deviceForm.site")}>
               <Input
                 required
                 value={form.site}
@@ -217,7 +220,7 @@ export function DeviceFormDialog({
               />
             </FormField>
 
-            <FormField label="Role">
+            <FormField label={t("deviceForm.role")}>
               <Input
                 value={form.role}
                 onChange={(event) => setForm({ ...form, role: event.target.value })}
@@ -225,7 +228,7 @@ export function DeviceFormDialog({
               />
             </FormField>
 
-            <FormField label="SSH Port">
+            <FormField label={t("deviceForm.sshPort")}>
               <Input
                 required
                 type="number"
@@ -234,7 +237,7 @@ export function DeviceFormDialog({
               />
             </FormField>
 
-            <FormField label="Username">
+            <FormField label={t("deviceForm.username")}>
               <Input
                 required
                 value={form.username}
@@ -242,21 +245,19 @@ export function DeviceFormDialog({
               />
             </FormField>
 
-            <FormField label="Password">
+            <FormField label={t("deviceForm.password")}>
               <Input
                 required={mode === "create"}
                 type="password"
                 value={form.password}
                 onChange={(event) => setForm({ ...form, password: event.target.value })}
-                placeholder={mode === "edit" ? "Deixe em branco para manter" : ""}
+                placeholder={mode === "edit" ? t("deviceForm.passwordKeepBlank") : ""}
               />
             </FormField>
 
-            <FormField label="Comunidade SNMP">
+            <FormField label={t("deviceForm.snmpCommunity")}>
               {snmpConfigured && !form.snmpCommunity ? (
-                <p className="text-xs text-muted-foreground">
-                  Comunidade configurada no dispositivo. Deixe em branco para manter ou digite um novo valor para substituir.
-                </p>
+                <p className="text-xs text-muted-foreground">{t("deviceForm.snmpConfiguredHint")}</p>
               ) : null}
               <div className="flex items-center gap-2">
                 <Input
@@ -265,26 +266,26 @@ export function DeviceFormDialog({
                   onChange={(event) => setForm({ ...form, snmpCommunity: event.target.value })}
                   placeholder={
                     mode === "edit"
-                      ? (snmpConfigured ? "•••••••• (configurada)" : "Não configurada")
+                      ? (snmpConfigured ? t("deviceForm.snmpConfiguredPlaceholder") : t("deviceForm.snmpNotConfigured"))
                       : "public"
                   }
                 />
                 {snmpConfigured && !form.snmpCommunity ? (
                   <Badge variant="outline" className="shrink-0 text-green-600 border-green-600/40">
-                    Ativa
+                    {t("deviceForm.snmpActive")}
                   </Badge>
                 ) : null}
               </div>
             </FormField>
 
-            <FormField label="Tenant">
+            <FormField label={t("deviceForm.tenant")}>
               <Select
                 value={form.tenantId || "none"}
                 onValueChange={(value) => applyTenantSelection(value === "none" ? "" : value)}
               >
-                <SelectTrigger><SelectValue placeholder="Sem tenant — acesso direto" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("deviceForm.noTenantDirect")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sem tenant — acesso direto</SelectItem>
+                  <SelectItem value="none">{t("deviceForm.noTenantDirect")}</SelectItem>
                   {tenants.map((tenant) => (
                     <SelectItem key={tenant.id} value={String(tenant.id)}>
                       {tenant.name}
@@ -294,7 +295,7 @@ export function DeviceFormDialog({
               </Select>
             </FormField>
 
-            <FormField label="Connector Group">
+            <FormField label={t("deviceForm.connectorGroup")}>
               <Select
                 disabled={!form.tenantId || tenantGroups.length === 0}
                 value={form.connectorGroupId || "none"}
@@ -302,10 +303,10 @@ export function DeviceFormDialog({
                   setForm({ ...form, connectorGroupId: value === "none" ? "" : value })
                 }
               >
-                <SelectTrigger><SelectValue placeholder="Selecionar grupo" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("deviceForm.selectGroup")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">
-                    {form.tenantId ? (tenantGroups.length > 0 ? "Escolha um grupo" : "Nenhum grupo ativo") : "Selecione um tenant"}
+                    {form.tenantId ? (tenantGroups.length > 0 ? t("deviceForm.chooseGroup") : t("deviceForm.noActiveGroup")) : t("deviceForm.selectTenantFirst")}
                   </SelectItem>
                   {tenantGroups.map((group) => (
                     <SelectItem key={group.id} value={String(group.id)}>
@@ -316,7 +317,7 @@ export function DeviceFormDialog({
               </Select>
               {selectedGroup ? (
                 <div className="text-xs text-muted-foreground">
-                  Tenant: {selectedGroup.tenant_name} · Estratégia: {selectedGroup.strategy}
+                  {t("deviceForm.tenantStrategy", { tenant: selectedGroup.tenant_name, strategy: selectedGroup.strategy })}
                 </div>
               ) : null}
             </FormField>
@@ -324,24 +325,17 @@ export function DeviceFormDialog({
 
           {form.tenantId && selectedGroup ? (
             <p className="text-sm text-muted-foreground">
-              Acesso via bastião: <span className="font-medium text-foreground">{selectedGroup.name}</span>
-              {" "}
-              <span className="text-xs">({selectedGroup.strategy})</span>
-              — coletas SSH/SNMP enfileiradas no grupo.
+              {t("deviceForm.bastionAccess", { name: selectedGroup.name, strategy: selectedGroup.strategy })}
             </p>
           ) : form.tenantId && tenantMissingGroup ? (
-            <p className="text-sm text-destructive">
-              Este tenant não tem grupo disponível. Crie um em Infraestrutura → Connector Groups ou escolha acesso direto.
-            </p>
+            <p className="text-sm text-destructive">{t("deviceForm.tenantNoGroup")}</p>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Sem tenant, o dispositivo usa acesso direto do servidor NetOps. Com tenant, o grupo é escolhido automaticamente.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("deviceForm.directAccessHint")}</p>
           )}
 
           <DialogFooter>
             <Button type="submit" disabled={isPending || tenantMissingGroup}>
-              {isPending ? "Salvando..." : submitLabel}
+              {isPending ? t("deviceForm.saving") : submitLabel}
             </Button>
           </DialogFooter>
         </form>

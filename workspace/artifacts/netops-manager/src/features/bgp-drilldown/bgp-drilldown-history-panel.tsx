@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useTranslation } from "@/i18n";
 import { GitCompare, History } from "lucide-react";
 import {
   ConfigSourceBadge,
@@ -34,6 +35,7 @@ export function BgpDrilldownHistoryPanel({
   error,
   hasSubmitted,
 }: BgpDrilldownHistoryPanelProps) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<number[]>([]);
 
   const sorted = useMemo(
@@ -66,13 +68,13 @@ export function BgpDrilldownHistoryPanel({
   }
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Carregando histórico...</p>;
+    return <p className="text-sm text-muted-foreground">{t("bgpPeerDrilldown.features.history.loading")}</p>;
   }
 
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Erro ao carregar histórico</AlertTitle>
+        <AlertTitle>{t("bgpPeerDrilldown.features.history.loadError")}</AlertTitle>
         <AlertDescription>{error.message}</AlertDescription>
       </Alert>
     );
@@ -90,24 +92,22 @@ export function BgpDrilldownHistoryPanel({
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <History className="h-4 w-4" />
-            Histórico ({sorted.length})
+            {t("bgpPeerDrilldown.features.history.title", { count: sorted.length })}
           </CardTitle>
-          <CardDescription>
-            Ordenado por collected_at desc. Selecione 2 linhas para comparar policies/AFI/warnings (sem raw evidence).
-          </CardDescription>
+          <CardDescription>{t("bgpPeerDrilldown.features.history.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
-                  <th className="px-2 py-2 text-left font-medium w-10">Cmp</th>
-                  <th className="px-3 py-2 text-left font-medium">Collected</th>
-                  <th className="px-3 py-2 text-left font-medium">Source</th>
-                  <th className="px-3 py-2 text-left font-medium">Config source</th>
-                  <th className="px-3 py-2 text-left font-medium">Freshness</th>
-                  <th className="px-3 py-2 text-left font-medium">Warnings</th>
-                  <th className="px-3 py-2 text-left font-medium">Expires</th>
+                  <th className="px-2 py-2 text-left font-medium w-10">{t("bgpPeerDrilldown.features.history.colCompare")}</th>
+                  <th className="px-3 py-2 text-left font-medium">{t("bgpPeerDrilldown.features.history.colCollected")}</th>
+                  <th className="px-3 py-2 text-left font-medium">{t("bgpPeerDrilldown.features.history.colSource")}</th>
+                  <th className="px-3 py-2 text-left font-medium">{t("bgpPeerDrilldown.features.history.colConfigSource")}</th>
+                  <th className="px-3 py-2 text-left font-medium">{t("bgpPeerDrilldown.features.history.colFreshness")}</th>
+                  <th className="px-3 py-2 text-left font-medium">{t("bgpPeerDrilldown.features.history.colWarnings")}</th>
+                  <th className="px-3 py-2 text-left font-medium">{t("bgpPeerDrilldown.features.history.colExpires")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -117,7 +117,7 @@ export function BgpDrilldownHistoryPanel({
                       <Checkbox
                         checked={selected.includes(item.id)}
                         onCheckedChange={() => toggle(item.id)}
-                        aria-label={`Selecionar histórico ${item.id}`}
+                        aria-label={t("bgpPeerDrilldown.features.history.selectAria", { id: item.id })}
                       />
                     </td>
                     <td className="px-3 py-2 font-mono text-xs">{formatDt(item.collectedAt)}</td>
@@ -137,9 +137,9 @@ export function BgpDrilldownHistoryPanel({
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" size="sm" disabled={selected.length !== 2} onClick={() => void compareQuery.refetch()}>
               <GitCompare className="h-4 w-4 mr-2" />
-              Comparar selecionados
+              {t("bgpPeerDrilldown.features.history.compareSelected")}
             </Button>
-            <Badge variant="outline">{selected.length}/2 selecionados</Badge>
+            <Badge variant="outline">{t("bgpPeerDrilldown.features.history.selectedCount", { count: selected.length })}</Badge>
           </div>
         </CardContent>
       </Card>
@@ -147,25 +147,48 @@ export function BgpDrilldownHistoryPanel({
       {selected.length === 2 && compareQuery.data?.compare ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Comparação simples</CardTitle>
+            <CardTitle className="text-base">{t("bgpPeerDrilldown.features.history.compareTitle")}</CardTitle>
             <CardDescription>
-              #{compareQuery.data.compare.left.id} ({formatDt(compareQuery.data.compare.left.collectedAt)}) vs
-              {" "}
-              #{compareQuery.data.compare.right.id} ({formatDt(compareQuery.data.compare.right.collectedAt)})
+              {t("bgpPeerDrilldown.features.history.compareVs", {
+                leftId: compareQuery.data.compare.left.id,
+                leftDate: formatDt(compareQuery.data.compare.left.collectedAt),
+                rightId: compareQuery.data.compare.right.id,
+                rightDate: formatDt(compareQuery.data.compare.right.collectedAt),
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
-            <CompareSection title="Import policy changes" rows={compareQuery.data.compare.importPolicyChanges.map((r) => (
-              `${r.afiSafi}${r.vrf ? `/${r.vrf}` : ""}: ${r.left ?? "—"} → ${r.right ?? "—"}`
-            ))} />
-            <CompareSection title="Export policy changes" rows={compareQuery.data.compare.exportPolicyChanges.map((r) => (
-              `${r.afiSafi}${r.vrf ? `/${r.vrf}` : ""}: ${r.left ?? "—"} → ${r.right ?? "—"}`
-            ))} />
-            <CompareSection title="AFI/SAFI enabled changes" rows={compareQuery.data.compare.enabledFamilyChanges.map((r) => (
-              `${r.afiSafi}${r.vrf ? `/${r.vrf}` : ""}: ${r.left ? "enabled" : "disabled"} → ${r.right ? "enabled" : "disabled"}`
-            ))} />
-            <CompareSection title="Warnings added" rows={compareQuery.data.compare.warningsAdded} />
-            <CompareSection title="Warnings removed" rows={compareQuery.data.compare.warningsRemoved} />
+            <CompareSection
+              title={t("bgpPeerDrilldown.features.history.sectionImportPolicy")}
+              rows={compareQuery.data.compare.importPolicyChanges.map((r) => (
+                `${r.afiSafi}${r.vrf ? `/${r.vrf}` : ""}: ${r.left ?? "—"} → ${r.right ?? "—"}`
+              ))}
+              noDiffLabel={t("bgpPeerDrilldown.features.history.noDiff")}
+            />
+            <CompareSection
+              title={t("bgpPeerDrilldown.features.history.sectionExportPolicy")}
+              rows={compareQuery.data.compare.exportPolicyChanges.map((r) => (
+                `${r.afiSafi}${r.vrf ? `/${r.vrf}` : ""}: ${r.left ?? "—"} → ${r.right ?? "—"}`
+              ))}
+              noDiffLabel={t("bgpPeerDrilldown.features.history.noDiff")}
+            />
+            <CompareSection
+              title={t("bgpPeerDrilldown.features.history.sectionAfiEnabled")}
+              rows={compareQuery.data.compare.enabledFamilyChanges.map((r) => (
+                `${r.afiSafi}${r.vrf ? `/${r.vrf}` : ""}: ${r.left ? t("bgpPeerDrilldown.features.history.enabled") : t("bgpPeerDrilldown.features.history.disabled")} → ${r.right ? t("bgpPeerDrilldown.features.history.enabled") : t("bgpPeerDrilldown.features.history.disabled")}`
+              ))}
+              noDiffLabel={t("bgpPeerDrilldown.features.history.noDiff")}
+            />
+            <CompareSection
+              title={t("bgpPeerDrilldown.features.history.sectionWarningsAdded")}
+              rows={compareQuery.data.compare.warningsAdded}
+              noDiffLabel={t("bgpPeerDrilldown.features.history.noDiff")}
+            />
+            <CompareSection
+              title={t("bgpPeerDrilldown.features.history.sectionWarningsRemoved")}
+              rows={compareQuery.data.compare.warningsRemoved}
+              noDiffLabel={t("bgpPeerDrilldown.features.history.noDiff")}
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -173,7 +196,7 @@ export function BgpDrilldownHistoryPanel({
   );
 }
 
-function CompareSection({ title, rows }: { title: string; rows: string[] }) {
+function CompareSection({ title, rows, noDiffLabel }: { title: string; rows: string[]; noDiffLabel: string }) {
   return (
     <div>
       <div className="font-medium mb-1">{title}</div>
@@ -182,7 +205,7 @@ function CompareSection({ title, rows }: { title: string; rows: string[] }) {
           {rows.map((row) => <li key={row}>{row}</li>)}
         </ul>
       ) : (
-        <p className="text-muted-foreground">Sem diferenças.</p>
+        <p className="text-muted-foreground">{noDiffLabel}</p>
       )}
     </div>
   );

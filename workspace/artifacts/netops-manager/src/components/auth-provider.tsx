@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { translate, getStoredLocale } from "@/i18n";
 
 export type AuthRole = "viewer" | "operator" | "admin";
 
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!response.ok) {
         const data = await response.json().catch(() => null);
-        throw new Error(data?.error ?? "Login failed");
+        throw new Error(data?.error ?? translate(getStoredLocale(), "auth.loginFailed"));
       }
 
       const data = await response.json();

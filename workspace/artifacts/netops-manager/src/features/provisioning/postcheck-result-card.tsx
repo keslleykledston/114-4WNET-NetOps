@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { useState } from "react";
 import { ProvisioningJob } from "@/lib/provisioning-api";
+import { useTranslation } from "@/i18n";
 
 interface PostcheckResultCardProps {
   job: ProvisioningJob;
@@ -18,6 +19,7 @@ export function PostcheckResultCard({
   isRunning = false,
   canRun = false,
 }: PostcheckResultCardProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   const getStatusDisplay = (): { label: string; color: string; icon: React.ReactNode } => {
@@ -26,25 +28,25 @@ export function PostcheckResultCard({
     switch (status) {
       case "passed":
         return {
-          label: "Passou",
+          label: t("provisioningFeatures.postcheck.passed"),
           color: "bg-green-100",
           icon: <CheckCircle className="h-5 w-5 text-green-600" />,
         };
       case "failed":
         return {
-          label: "Falhou",
+          label: t("provisioningFeatures.postcheck.failed"),
           color: "bg-red-100",
           icon: <AlertCircle className="h-5 w-5 text-red-600" />,
         };
       case "partial":
         return {
-          label: "Parcial",
+          label: t("provisioningFeatures.postcheck.partial"),
           color: "bg-amber-100",
           icon: <AlertCircle className="h-5 w-5 text-amber-600" />,
         };
       default:
         return {
-          label: "Não Executado",
+          label: t("provisioningFeatures.postcheck.notRun"),
           color: "bg-slate-100",
           icon: <Clock className="h-5 w-5 text-slate-400" />,
         };
@@ -57,12 +59,8 @@ export function PostcheckResultCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>Post-check</span>
-          {job.postcheckResult && (
-            <Badge className={statusDisplay.color}>
-              {statusDisplay.label}
-            </Badge>
-          )}
+          <span>{t("provisioningFeatures.postcheck.title")}</span>
+          {job.postcheckResult && <Badge className={statusDisplay.color}>{statusDisplay.label}</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -71,18 +69,15 @@ export function PostcheckResultCard({
           <div className="flex-1">
             {job.postcheckAt && (
               <p className="text-xs text-gray-600">
-                Executado em {new Date(job.postcheckAt).toLocaleString('pt-BR')}
+                {t("provisioningFeatures.postcheck.executedAt", {
+                  at: new Date(job.postcheckAt).toLocaleString(),
+                })}
               </p>
             )}
 
             {job.status === "completed" && canRun && (
-              <Button
-                onClick={onRunPostcheck}
-                disabled={isRunning}
-                size="sm"
-                className="mt-2"
-              >
-                {isRunning ? "Executando..." : "Executar Post-check"}
+              <Button onClick={onRunPostcheck} disabled={isRunning} size="sm" className="mt-2">
+                {isRunning ? t("provisioningFeatures.postcheck.running") : t("provisioningFeatures.postcheck.run")}
               </Button>
             )}
           </div>
@@ -96,7 +91,7 @@ export function PostcheckResultCard({
               onClick={() => setExpanded(!expanded)}
               className="h-auto p-0 text-xs"
             >
-              {expanded ? "⬆️ Ocultar output" : "⬇️ Mostrar output"}
+              {expanded ? t("provisioningFeatures.postcheck.hideOutput") : t("provisioningFeatures.postcheck.showOutput")}
             </Button>
 
             {expanded && (

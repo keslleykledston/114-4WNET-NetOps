@@ -8,13 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 import { Globe2, Webhook, Activity, Save, RefreshCw, ShieldCheck, Database, PlayCircle, ListTree } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+type IntegrationCardName = "netbox" | "future_webhook" | "future_zabbix";
+
 type IntegrationCard = {
-  name: "netbox" | "future_webhook" | "future_zabbix";
-  title: string;
-  description: string;
+  name: IntegrationCardName;
   icon: typeof Globe2;
 };
 
@@ -57,25 +58,10 @@ type NetBoxPreview = {
   items: NetBoxPreviewItem[];
 };
 
-const cards: IntegrationCard[] = [
-  {
-    name: "netbox",
-    title: "NetBox",
-    description: "Read-only sync. No write back to NetBox.",
-    icon: Globe2,
-  },
-  {
-    name: "future_webhook",
-    title: "Webhook",
-    description: "Prepared for future event delivery.",
-    icon: Webhook,
-  },
-  {
-    name: "future_zabbix",
-    title: "Zabbix",
-    description: "Prepared for future monitoring integration.",
-    icon: Activity,
-  },
+const INTEGRATION_CARDS: IntegrationCard[] = [
+  { name: "netbox", icon: Globe2 },
+  { name: "future_webhook", icon: Webhook },
+  { name: "future_zabbix", icon: Activity },
 ];
 
 async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
@@ -95,6 +81,7 @@ async function apiJson<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export default function IntegrationsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -147,7 +134,7 @@ export default function IntegrationsPage() {
         enabled: draft.enabled,
         configJson: {
           baseUrl: draft.baseUrl || null,
-          notes: draft.notes || "Integração preparada para fase futura",
+          notes: draft.notes || t("integrations.futureNotesDefault"),
           readiness: "future",
           skipTlsVerify: draft.skipTlsVerify,
           tokenConfigured: false,
@@ -156,9 +143,9 @@ export default function IntegrationsPage() {
     }, {
       onSuccess: async () => {
         await queryClient.invalidateQueries({ queryKey: getListIntegrationsQueryKey() });
-        toast({ title: "Integração salva" });
+        toast({ title: t("integrations.toast.saved") });
       },
-      onError: () => toast({ title: "Falha ao salvar integração", variant: "destructive" }),
+      onError: () => toast({ title: t("integrations.toast.saveFailed"), variant: "destructive" }),
     });
   };
 
@@ -168,7 +155,11 @@ export default function IntegrationsPage() {
       const status = await apiJson<NetBoxStatus>("/api/netbox/status");
       setNetboxStatus(status);
     } catch (error) {
-      toast({ title: "Falha ao carregar NetBox", description: error instanceof Error ? error.message : "Erro", variant: "destructive" });
+      toast({
+        title: t("integrations.toast.loadNetboxFailed"),
+        description: error instanceof Error ? error.message : t("common.error"),
+        variant: "destructive",
+      });
     } finally {
       setNetboxLoading(false);
     }
@@ -178,10 +169,14 @@ export default function IntegrationsPage() {
     setNetboxLoading(true);
     try {
       const result = await apiJson<Record<string, unknown>>("/api/netbox/test-connection", { method: "POST" });
-      toast({ title: "NetBox test", description: String(result.message ?? "OK") });
+      toast({ title: t("integrations.toast.netboxTest"), description: String(result.message ?? "OK") });
       await refreshNetBoxStatus();
     } catch (error) {
-      toast({ title: "Falha no teste NetBox", description: error instanceof Error ? error.message : "Erro", variant: "destructive" });
+      toast({
+        title: t("integrations.toast.netboxTestFailed"),
+        description: error instanceof Error ? error.message : t("common.error"),
+        variant: "destructive",
+      });
     } finally {
       setNetboxLoading(false);
     }
@@ -192,9 +187,16 @@ export default function IntegrationsPage() {
     try {
       const result = await apiJson<{ count: number; items: Array<Record<string, unknown>> }>("/api/netbox/devices");
       setNetboxDevices(result.items);
-      toast({ title: "NetBox devices carregados", description: `${result.count} itens` });
+      toast({
+        title: t("integrations.toast.devicesLoaded"),
+        description: t("integrations.toast.itemsCount", { count: result.count }),
+      });
     } catch (error) {
-      toast({ title: "Falha ao listar NetBox", description: error instanceof Error ? error.message : "Erro", variant: "destructive" });
+      toast({
+        title: t("integrations.toast.listDevicesFailed"),
+        description: error instanceof Error ? error.message : t("common.error"),
+        variant: "destructive",
+      });
     } finally {
       setNetboxLoading(false);
     }
@@ -206,7 +208,11 @@ export default function IntegrationsPage() {
       const result = await apiJson<{ count: number; items: Array<Record<string, unknown>> }>("/api/netbox/sites");
       setNetboxSites(result.items);
     } catch (error) {
-      toast({ title: "Falha ao listar sites", description: error instanceof Error ? error.message : "Erro", variant: "destructive" });
+      toast({
+        title: t("integrations.toast.listSitesFailed"),
+        description: error instanceof Error ? error.message : t("common.error"),
+        variant: "destructive",
+      });
     } finally {
       setNetboxLoading(false);
     }
@@ -217,9 +223,19 @@ export default function IntegrationsPage() {
     try {
       const result = await apiJson<NetBoxPreview>("/api/netbox/devices/preview-sync", { method: "POST" });
       setNetboxPreview(result);
-      toast({ title: "Preview NetBox pronto", description: `Create ${result.summary.toCreate}, Update ${result.summary.toUpdate}` });
+      toast({
+        title: t("integrations.toast.previewReady"),
+        description: t("integrations.toast.previewSummary", {
+          create: result.summary.toCreate,
+          update: result.summary.toUpdate,
+        }),
+      });
     } catch (error) {
-      toast({ title: "Falha no preview", description: error instanceof Error ? error.message : "Erro", variant: "destructive" });
+      toast({
+        title: t("integrations.toast.previewFailed"),
+        description: error instanceof Error ? error.message : t("common.error"),
+        variant: "destructive",
+      });
     } finally {
       setNetboxLoading(false);
     }
@@ -229,10 +245,20 @@ export default function IntegrationsPage() {
     setNetboxLoading(true);
     try {
       const result = await apiJson<Record<string, unknown>>("/api/netbox/devices/sync-local", { method: "POST" });
-      toast({ title: "Sync local feito", description: `Created ${result.created ?? 0}, Updated ${result.updated ?? 0}` });
+      toast({
+        title: t("integrations.toast.syncDone"),
+        description: t("integrations.toast.syncSummary", {
+          created: Number(result.created ?? 0),
+          updated: Number(result.updated ?? 0),
+        }),
+      });
       await refreshNetBoxStatus();
     } catch (error) {
-      toast({ title: "Falha no sync local", description: error instanceof Error ? error.message : "Erro", variant: "destructive" });
+      toast({
+        title: t("integrations.toast.syncFailed"),
+        description: error instanceof Error ? error.message : t("common.error"),
+        variant: "destructive",
+      });
     } finally {
       setNetboxLoading(false);
     }
@@ -241,45 +267,49 @@ export default function IntegrationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Integrations</h1>
-        <p className="mt-1 text-muted-foreground">Readiness only. NetBox mode is read-only.</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("integrations.title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("integrations.pageSubtitle")}</p>
       </div>
 
       <Card className="border-primary/30 bg-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <ShieldCheck className="h-4 w-4" />
-            NetBox read-only sync
+            {t("integrations.netboxReadOnlySync")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Modo somente leitura. Nenhuma alteração será feita no NetBox.
+            {t("integrations.netboxReadOnlyDesc")}
           </p>
 
           <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
             <div className="rounded-md border bg-muted/20 p-3">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Enabled</div>
-              <div className="mt-1 text-sm font-semibold">{netboxStatus?.enabled ? "Yes" : "No"}</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("common.enabled")}</div>
+              <div className="mt-1 text-sm font-semibold">{netboxStatus?.enabled ? t("common.yes") : t("common.no")}</div>
             </div>
             <div className="rounded-md border bg-muted/20 p-3">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Base URL</div>
-              <div className="mt-1 text-sm font-semibold">{netboxStatus?.baseUrlConfigured ? "Configured" : "Missing"}</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("integrations.baseUrl")}</div>
+              <div className="mt-1 text-sm font-semibold">
+                {netboxStatus?.baseUrlConfigured ? t("integrations.configured") : t("integrations.missing")}
+              </div>
             </div>
             <div className="rounded-md border bg-muted/20 p-3">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Token</div>
-              <div className="mt-1 text-sm font-semibold">{netboxStatus?.tokenConfigured ? "Configured" : "Missing"}</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("integrations.token")}</div>
+              <div className="mt-1 text-sm font-semibold">
+                {netboxStatus?.tokenConfigured ? t("integrations.configured") : t("integrations.missing")}
+              </div>
             </div>
             <div className="rounded-md border bg-muted/20 p-3">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">TLS skip</div>
-              <div className="mt-1 text-sm font-semibold">{netboxStatus?.skipTlsVerify ? "Yes" : "No"}</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("integrations.tlsSkip")}</div>
+              <div className="mt-1 text-sm font-semibold">{netboxStatus?.skipTlsVerify ? t("common.yes") : t("common.no")}</div>
             </div>
             <div className="rounded-md border bg-muted/20 p-3">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Last test</div>
-              <div className="mt-1 text-sm font-semibold">{netboxStatus?.lastConnectionStatus ?? "N/A"}</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("integrations.lastTest")}</div>
+              <div className="mt-1 text-sm font-semibold">{netboxStatus?.lastConnectionStatus ?? t("integrations.na")}</div>
             </div>
             <div className="rounded-md border bg-muted/20 p-3">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Readiness</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("integrations.readiness")}</div>
               <div className="mt-1 text-sm font-semibold">{netboxStatus?.readiness ?? "disabled"}</div>
             </div>
           </div>
@@ -287,37 +317,37 @@ export default function IntegrationsPage() {
           <div className="flex flex-wrap gap-2">
             <Button onClick={refreshNetBoxStatus} disabled={netboxLoading}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
+              {t("common.refresh")}
             </Button>
             {isOperator && (
               <>
                 <Button variant="secondary" onClick={testNetBox} disabled={netboxLoading}>
                   <PlayCircle className="mr-2 h-4 w-4" />
-                  Test connection
+                  {t("integrations.testConnection")}
                 </Button>
                 <Button variant="secondary" onClick={loadNetBoxDevices} disabled={netboxLoading}>
                   <ListTree className="mr-2 h-4 w-4" />
-                  List devices
+                  {t("integrations.listDevices")}
                 </Button>
                 <Button variant="secondary" onClick={loadNetBoxSites} disabled={netboxLoading}>
                   <Database className="mr-2 h-4 w-4" />
-                  List sites
+                  {t("integrations.listSites")}
                 </Button>
                 <Button variant="secondary" onClick={previewNetBoxSync} disabled={netboxLoading}>
-                  Preview sync
+                  {t("integrations.previewSync")}
                 </Button>
               </>
             )}
             {isAdmin && (
               <Button onClick={syncNetBoxLocal} disabled={netboxLoading}>
-                Sync local
+                {t("integrations.syncLocal")}
               </Button>
             )}
           </div>
 
           {netboxStatus?.lastConnectionAt && (
             <div className="text-xs text-muted-foreground">
-              Last test at {netboxStatus.lastConnectionAt}
+              {t("integrations.lastTestAt", { at: netboxStatus.lastConnectionAt })}
             </div>
           )}
         </CardContent>
@@ -326,7 +356,7 @@ export default function IntegrationsPage() {
       {netboxPreview && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Preview sync</CardTitle>
+            <CardTitle className="text-base">{t("integrations.previewSync")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
@@ -341,12 +371,12 @@ export default function IntegrationsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Hostname</TableHead>
-                    <TableHead>IP</TableHead>
-                    <TableHead>Site</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Warnings</TableHead>
+                    <TableHead>{t("integrations.table.hostname")}</TableHead>
+                    <TableHead>{t("integrations.table.ip")}</TableHead>
+                    <TableHead>{t("integrations.table.site")}</TableHead>
+                    <TableHead>{t("integrations.table.role")}</TableHead>
+                    <TableHead>{t("integrations.table.action")}</TableHead>
+                    <TableHead>{t("integrations.table.warnings")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -376,17 +406,17 @@ export default function IntegrationsPage() {
       {netboxDevices && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">NetBox devices preview</CardTitle>
+            <CardTitle className="text-base">{t("integrations.devicesPreview")}</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>IP</TableHead>
-                  <TableHead>Site</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Vendor</TableHead>
+                  <TableHead>{t("integrations.table.name")}</TableHead>
+                  <TableHead>{t("integrations.table.ip")}</TableHead>
+                  <TableHead>{t("integrations.table.site")}</TableHead>
+                  <TableHead>{t("integrations.table.role")}</TableHead>
+                  <TableHead>{t("integrations.table.vendor")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -408,14 +438,14 @@ export default function IntegrationsPage() {
       {netboxSites && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">NetBox sites preview</CardTitle>
+            <CardTitle className="text-base">{t("integrations.sitesPreview")}</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Slug</TableHead>
+                  <TableHead>{t("integrations.table.name")}</TableHead>
+                  <TableHead>{t("integrations.table.slug")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -432,7 +462,7 @@ export default function IntegrationsPage() {
       )}
 
       <div className="grid gap-4 xl:grid-cols-3">
-        {cards.map((card) => {
+        {INTEGRATION_CARDS.map((card) => {
           const integration = byName.get(card.name);
           const draft = getDraft(card.name);
           const Icon = card.icon;
@@ -443,33 +473,33 @@ export default function IntegrationsPage() {
                 <CardTitle className="flex items-center justify-between gap-3 text-base">
                   <span className="flex items-center gap-2">
                     <Icon className="h-4 w-4" />
-                    {card.title}
+                    {t(`integrations.cards.${card.name}.title`)}
                   </span>
                   <Badge variant={draft.enabled ? "default" : "outline"}>
-                    {draft.enabled ? "Enabled" : "Disabled"}
+                    {draft.enabled ? t("common.enabled") : t("common.disabled")}
                   </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">{card.description}</p>
+                <p className="text-sm text-muted-foreground">{t(`integrations.cards.${card.name}.description`)}</p>
 
                 {card.name === "netbox" && (
                   <>
                     <div className="grid gap-2 md:grid-cols-2">
                       <div className="space-y-2">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Base URL</div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("integrations.baseUrl")}</div>
                         <Input
                           value={draft.baseUrl}
                           onChange={(event) => setDrafts((current) => ({
                             ...current,
                             [card.name]: { ...draft, baseUrl: event.target.value },
                           }))}
-                          placeholder="https://netbox.example.com"
+                          placeholder={t("integrations.netboxUrlPlaceholder")}
                           disabled={!isAdmin}
                         />
                       </div>
                       <div className="space-y-2">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Skip TLS</div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("integrations.skipTls")}</div>
                         <div className="flex items-center justify-between rounded-md border bg-muted/20 px-3 py-2">
                           <div className="text-sm font-medium">NETBOX_SKIP_TLS_VERIFY</div>
                           <Switch
@@ -487,22 +517,22 @@ export default function IntegrationsPage() {
                 )}
 
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Notes</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("integrations.notes")}</div>
                   <Input
                     value={draft.notes}
                     onChange={(event) => setDrafts((current) => ({
                       ...current,
                       [card.name]: { ...draft, notes: event.target.value },
                     }))}
-                    placeholder="Integração preparada para fase futura"
+                    placeholder={t("integrations.futureNotesPlaceholder")}
                     disabled={!isAdmin}
                   />
                 </div>
 
                 <div className="flex items-center justify-between rounded-md border bg-muted/20 px-3 py-2">
                   <div>
-                    <div className="text-sm font-medium">Enabled</div>
-                    <div className="text-xs text-muted-foreground">Readiness only. No token storage.</div>
+                    <div className="text-sm font-medium">{t("common.enabled")}</div>
+                    <div className="text-xs text-muted-foreground">{t("integrations.enabledHint")}</div>
                   </div>
                   <Switch
                     checked={draft.enabled}
@@ -517,13 +547,13 @@ export default function IntegrationsPage() {
                 <div className="text-xs text-muted-foreground">
                   {(() => {
                     const readiness = (integration as unknown as { readiness?: string } | undefined)?.readiness;
-                    return readiness ? `Readiness: ${readiness}` : "Readiness: future";
+                    return t("integrations.readinessLabel", { value: readiness ?? "future" });
                   })()}
                 </div>
 
                 <Button className="w-full" onClick={() => saveIntegration(card.name)} disabled={updateIntegration.isPending || isLoading || !isAdmin}>
                   <Save className="mr-2 h-4 w-4" />
-                  Save readiness
+                  {t("integrations.saveReadiness")}
                 </Button>
               </CardContent>
             </Card>

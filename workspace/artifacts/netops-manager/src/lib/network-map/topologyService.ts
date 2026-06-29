@@ -12,6 +12,7 @@ import {
   fetchActiveMapLayout,
   fetchMapLayout,
   fetchMapLayouts,
+  fetchTopologyGraph,
   saveMapLayout,
 } from "@/features/topology/topology-api";
 
@@ -89,30 +90,74 @@ function snapshotFromPayload(
   };
 }
 
+function mergePositions(
+  graphPositions: Record<string, { x: number; y: number }> | undefined,
+  layoutPositions: Record<string, { x: number; y: number }> | undefined,
+): Record<string, { x: number; y: number }> {
+  return {
+    ...(graphPositions ?? {}),
+    ...(layoutPositions ?? {}),
+  };
+}
+
+function toDeviceArray(graphDevices: unknown[]): DeviceData[] {
+  return graphDevices.map((device) => device as DeviceData);
+}
+
+function toLinkArray(graphLinks: unknown[]): LinkData[] {
+  return graphLinks.map((link) => link as LinkData);
+}
+
+async function loadGraphTopology(): Promise<Pick<GetTopologyResult, "devices" | "links" | "positions" | "layoutId" | "layoutName" | "snapshot">> {
+  const [graph, activeLayout] = await Promise.all([
+    fetchTopologyGraph(""),
+    fetchActiveMapLayout().catch(() => null),
+  ]);
+
+  const devices = toDeviceArray((graph?.devices ?? graph?.nodes ?? []) as unknown[]);
+  const links = toLinkArray((graph?.links ?? graph?.edges ?? []) as unknown[]);
+  const layoutPositions = (activeLayout?.payload?.positions ?? {}) as Record<string, { x: number; y: number }>;
+  const graphPositions = (graph?.positions ?? {}) as Record<string, { x: number; y: number }>;
+
+  return {
+    devices,
+    links,
+    positions: mergePositions(graphPositions, layoutPositions),
+    layoutId: activeLayout?.id ?? null,
+    layoutName: activeLayout?.name ?? null,
+    snapshot: snapshotFromPayload(devices, links, activeLayout),
+  };
+}
+
 export const topologyService = {
   async getTopology(_params?: { tenantId?: string; siteId?: string }): Promise<GetTopologyResult> {
-    const active = await fetchActiveMapLayout();
-    if (!active) {
+    try {
+      const payload = await loadGraphTopology();
+      return payload;
+    } catch {
+      const active = await fetchActiveMapLayout().catch(() => null);
+      if (!active) {
+        return {
+          devices: [],
+          links: [],
+          positions: {},
+          snapshot: emptySnapshot(),
+          layoutId: null,
+          layoutName: null,
+        };
+      }
+      const devices = (active.payload.devices ?? []) as DeviceData[];
+      const links = (active.payload.links ?? []) as LinkData[];
+      const positions = active.payload.positions ?? {};
       return {
-        devices: [],
-        links: [],
-        positions: {},
-        snapshot: emptySnapshot(),
-        layoutId: null,
-        layoutName: null,
+        devices,
+        links,
+        positions,
+        snapshot: snapshotFromPayload(devices, links, active),
+        layoutId: active.id,
+        layoutName: active.name,
       };
     }
-    const devices = (active.payload.devices ?? []) as DeviceData[];
-    const links = (active.payload.links ?? []) as LinkData[];
-    const positions = active.payload.positions ?? {};
-    return {
-      devices,
-      links,
-      positions,
-      snapshot: snapshotFromPayload(devices, links, active),
-      layoutId: active.id,
-      layoutName: active.name,
-    };
   },
 
   async listLayouts(): Promise<MapLayoutSummary[]> {

@@ -19,6 +19,7 @@ import {
 import { useListDevices } from "@workspace/api-client-react";
 import type { DeviceData } from "@/lib/network-map/types";
 import { inventoryNodeId, mapInventoryDeviceToMapNode } from "@/lib/network-map/inventory-bridge";
+import { useTranslation } from "@/i18n";
 
 export function AddDeviceModal({
   open,
@@ -31,6 +32,7 @@ export function AddDeviceModal({
   mapDevices: DeviceData[];
   onConfirm: (device: DeviceData, connectToNeighborId?: string) => void;
 }) {
+  const { t } = useTranslation();
   const { data: inventoryDevices = [], isLoading } = useListDevices();
   const [deviceId, setDeviceId] = useState<string>("");
   const [neighborId, setNeighborId] = useState<string>("none");
@@ -58,17 +60,23 @@ export function AddDeviceModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Adicionar device</DialogTitle>
+          <DialogTitle>{t("networkMap.addDevice.title")}</DialogTitle>
           <DialogDescription className="text-zinc-400">
-            Escolha um device do inventário. Opcionalmente conecte a um vizinho já no mapa.
+            {t("networkMap.addDevice.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1">
-            <Label>Device do inventário</Label>
+            <Label>{t("networkMap.addDevice.inventoryDeviceLabel")}</Label>
             <Select value={deviceId} onValueChange={setDeviceId}>
               <SelectTrigger className="border-zinc-800 bg-zinc-900">
-                <SelectValue placeholder={isLoading ? "Carregando..." : "Selecionar device"} />
+                <SelectValue
+                  placeholder={
+                    isLoading
+                      ? `${t("common.loading")}...`
+                      : t("networkMap.addDevice.selectDevicePlaceholder")
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {sortedInventory.map((d) => {
@@ -78,7 +86,7 @@ export function AddDeviceModal({
                     <SelectItem key={d.id} value={String(d.id)} disabled={onMap}>
                       {d.hostname}
                       <span className="ml-1 text-zinc-500">({d.site})</span>
-                      {onMap ? " — já no mapa" : ""}
+                      {onMap ? t("networkMap.addDevice.alreadyOnMap") : ""}
                     </SelectItem>
                   );
                 })}
@@ -86,13 +94,13 @@ export function AddDeviceModal({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Conectar ao vizinho (opcional)</Label>
+            <Label>{t("networkMap.addDevice.connectNeighborLabel")}</Label>
             <Select value={neighborId} onValueChange={setNeighborId}>
               <SelectTrigger className="border-zinc-800 bg-zinc-900">
-                <SelectValue placeholder="Nenhum" />
+                <SelectValue placeholder={t("networkMap.addDevice.none")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Nenhum</SelectItem>
+                <SelectItem value="none">{t("networkMap.addDevice.none")}</SelectItem>
                 {neighborOptions.map((d) => (
                   <SelectItem key={d.id} value={d.id}>
                     {d.name}
@@ -105,7 +113,7 @@ export function AddDeviceModal({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             disabled={!selectedInventory}
@@ -116,7 +124,7 @@ export function AddDeviceModal({
               onOpenChange(false);
             }}
           >
-            Adicionar
+            {t("networkMap.addDevice.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -19,6 +19,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/i18n";
 import type { NetopsTreeSelection, NetopsTreeView } from "./types";
 
 interface NetopsTreeProps {
@@ -29,37 +30,49 @@ interface NetopsTreeProps {
 
 interface BgpCategoryItem {
   key: NetopsTreeView;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   roleFilter?: string;
 }
 
-const deviceViews: Array<{ key: NetopsTreeView; label: string; icon: LucideIcon }> = [
-  { key: "device", label: "Summary", icon: Server },
-  { key: "interfaces", label: "Interfaces", icon: GitBranch },
-  { key: "bgp", label: "BGP", icon: Network },
-  { key: "filters", label: "Filters", icon: Filter },
-  { key: "communities", label: "Communities", icon: Tags },
-];
-
-const bgpCategories: Array<BgpCategoryItem> = [
-  { key: "bgp-providers", label: "Operadoras", icon: RadioTower, roleFilter: "provider" },
-  { key: "bgp-customers", label: "Clientes", icon: Users, roleFilter: "customer" },
-  { key: "bgp-cdn", label: "CDN", icon: Cloud, roleFilter: "cdn" },
-  { key: "bgp-ix", label: "IX", icon: Share2, roleFilter: "ix" },
-  { key: "bgp-cdn-ix", label: "CDN/IX", icon: Network, roleFilter: "cdn_ix" },
-  { key: "bgp-ibgp", label: "iBGP", icon: Link2, roleFilter: "ibgp" },
-];
-
-function groupLabel(device: Device): string {
-  return device.site?.trim() || "Sem cliente";
+function useDeviceViews() {
+  const { t } = useTranslation();
+  return useMemo(
+    () => [
+      { key: "device" as const, label: t("netopsTree.views.summary"), icon: Server },
+      { key: "interfaces" as const, label: t("netopsTree.views.interfaces"), icon: GitBranch },
+      { key: "bgp" as const, label: t("netopsTree.views.bgp"), icon: Network },
+      { key: "filters" as const, label: t("netopsTree.views.filters"), icon: Filter },
+      { key: "communities" as const, label: t("netopsTree.views.communities"), icon: Tags },
+    ],
+    [t],
+  );
 }
 
-function groupDevices(devices: Device[]): Array<[string, Device[]]> {
+function useBgpCategories(): BgpCategoryItem[] {
+  const { t } = useTranslation();
+  return useMemo(
+    () => [
+      { key: "bgp-providers", labelKey: "netopsTree.bgpCategories.providers", icon: RadioTower, roleFilter: "provider" },
+      { key: "bgp-customers", labelKey: "netopsTree.bgpCategories.customers", icon: Users, roleFilter: "customer" },
+      { key: "bgp-cdn", labelKey: "netopsTree.bgpCategories.cdn", icon: Cloud, roleFilter: "cdn" },
+      { key: "bgp-ix", labelKey: "netopsTree.bgpCategories.ix", icon: Share2, roleFilter: "ix" },
+      { key: "bgp-cdn-ix", labelKey: "netopsTree.bgpCategories.cdnIx", icon: Network, roleFilter: "cdn_ix" },
+      { key: "bgp-ibgp", labelKey: "netopsTree.bgpCategories.ibgp", icon: Link2, roleFilter: "ibgp" },
+    ],
+    [t],
+  );
+}
+
+function groupLabel(device: Device, noCustomerLabel: string): string {
+  return device.site?.trim() || noCustomerLabel;
+}
+
+function groupDevices(devices: Device[], noCustomerLabel: string): Array<[string, Device[]]> {
   const grouped = new Map<string, Device[]>();
 
   for (const device of devices) {
-    const label = groupLabel(device);
+    const label = groupLabel(device, noCustomerLabel);
     grouped.set(label, [...(grouped.get(label) ?? []), device]);
   }
 
@@ -69,8 +82,8 @@ function groupDevices(devices: Device[]): Array<[string, Device[]]> {
       group.sort((left, right) => left.hostname.localeCompare(right.hostname, "pt", { sensitivity: "base" })),
     ] as [string, Device[]])
     .sort(([left], [right]) => {
-      if (left === "Sem cliente") return 1;
-      if (right === "Sem cliente") return -1;
+      if (left === noCustomerLabel) return 1;
+      if (right === noCustomerLabel) return -1;
       return left.localeCompare(right, "pt", { sensitivity: "base" });
     });
 }
@@ -81,12 +94,14 @@ function BgpCategoryTree({
   category,
   selected,
   onSelect,
+  label,
 }: {
   device: Device;
   peers: NetopsBgpPeer[] | undefined;
   category: BgpCategoryItem;
   selected: NetopsTreeSelection | null;
   onSelect: (selection: NetopsTreeSelection) => void;
+  label: string;
 }) {
   const filteredPeers = useMemo(
     () => (peers ?? []).filter((p) => p.role === category.roleFilter),
@@ -104,11 +119,11 @@ function BgpCategoryTree({
         "flex w-full items-center gap-2 rounded-md py-1.5 pl-8 pr-2 text-xs transition-colors",
         isActive
           ? "border border-primary/20 bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
       )}
     >
       <Icon className="h-3 w-3 shrink-0" />
-      <span className="flex-1 text-left">{category.label}</span>
+      <span className="flex-1 text-left">{label}</span>
       <Badge variant="outline" className="h-4 px-1 text-[9px]">
         {filteredPeers.length}
       </Badge>
@@ -125,6 +140,9 @@ function DeviceTreeNode({
   onToggleDevice,
   bgpOpen,
   onToggleBgp,
+  deviceViews,
+  bgpCategories,
+  t,
 }: {
   device: Device;
   selected: NetopsTreeSelection | null;
@@ -134,6 +152,9 @@ function DeviceTreeNode({
   onToggleDevice: () => void;
   bgpOpen: boolean;
   onToggleBgp: () => void;
+  deviceViews: ReturnType<typeof useDeviceViews>;
+  bgpCategories: BgpCategoryItem[];
+  t: (key: string) => string;
 }) {
   const { data: peers } = useListNetopsDeviceBgpPeers(device.id);
   const activeDevice = selected?.device.id === device.id;
@@ -145,7 +166,7 @@ function DeviceTreeNode({
           type="button"
           className="-ml-1 rounded p-0.5 hover:bg-muted"
           onClick={onToggleDevice}
-          aria-label={expanded ? "Collapse device" : "Expand device"}
+          aria-label={expanded ? t("netopsTree.collapseDevice") : t("netopsTree.expandDevice")}
         >
           {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         </button>
@@ -170,7 +191,7 @@ function DeviceTreeNode({
                       type="button"
                       className="-ml-1 rounded p-0.5 hover:bg-muted"
                       onClick={onToggleBgp}
-                      aria-label={bgpOpen ? "Collapse BGP" : "Expand BGP"}
+                      aria-label={bgpOpen ? t("netopsTree.collapseBgp") : t("netopsTree.expandBgp")}
                     >
                       {bgpOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                     </button>
@@ -186,7 +207,15 @@ function DeviceTreeNode({
 
                   {bgpOpen &&
                     bgpCategories.map((category) => (
-                      <BgpCategoryTree key={category.key} device={device} peers={peers} category={category} selected={selected} onSelect={onSelect} />
+                      <BgpCategoryTree
+                        key={category.key}
+                        device={device}
+                        peers={peers}
+                        category={category}
+                        selected={selected}
+                        onSelect={onSelect}
+                        label={t(category.labelKey)}
+                      />
                     ))}
                 </div>
               );
@@ -211,11 +240,15 @@ function DeviceTreeNode({
 }
 
 export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
+  const { t } = useTranslation();
+  const deviceViews = useDeviceViews();
+  const bgpCategories = useBgpCategories();
+  const noCustomerLabel = t("netopsTree.noCustomer");
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedDevices, setExpandedDevices] = useState<Record<number, boolean>>({});
   const [expandedBgp, setExpandedBgp] = useState<Record<number, boolean>>({});
 
-  const groups = useMemo(() => groupDevices(devices), [devices]);
+  const groups = useMemo(() => groupDevices(devices, noCustomerLabel), [devices, noCustomerLabel]);
 
   function isGroupOpen(label: string): boolean {
     return expandedGroups[label] ?? true;
@@ -245,14 +278,14 @@ export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
     return (
       <div className="flex min-h-[320px] flex-col items-center justify-center gap-2 text-center text-muted-foreground">
         <Server className="h-8 w-8 opacity-50" />
-        <p className="text-sm">No devices found.</p>
+        <p className="text-sm">{t("netopsTree.noDevices")}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-1">
-      {groups.map(([label, groupDevices]) => {
+      {groups.map(([label, groupDevicesList]) => {
         const groupOpen = isGroupOpen(label);
 
         return (
@@ -266,13 +299,13 @@ export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
               <Building2 className="h-3.5 w-3.5" />
               <span className="min-w-0 flex-1 truncate">{label}</span>
               <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
-                {groupDevices.length}
+                {groupDevicesList.length}
               </Badge>
             </button>
 
             {groupOpen && (
               <div className="ml-3 space-y-0.5 border-l border-border/70 pl-2">
-                {groupDevices.map((device) => {
+                {groupDevicesList.map((device) => {
                   const deviceOpen = isDeviceOpen(device.id);
                   const bgpOpen = isBgpOpen(device.id);
 
@@ -287,6 +320,9 @@ export function NetopsTree({ devices, selected, onSelect }: NetopsTreeProps) {
                       onToggleDevice={() => setExpandedDevices((current) => ({ ...current, [device.id]: !deviceOpen }))}
                       bgpOpen={bgpOpen}
                       onToggleBgp={() => setExpandedBgp((current) => ({ ...current, [device.id]: !bgpOpen }))}
+                      deviceViews={deviceViews}
+                      bgpCategories={bgpCategories}
+                      t={t}
                     />
                   );
                 })}

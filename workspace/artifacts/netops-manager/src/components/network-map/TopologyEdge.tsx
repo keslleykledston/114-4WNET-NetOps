@@ -14,6 +14,7 @@ import {
 } from "@/lib/network-map/edge-routing";
 import { edgeLabel, edgeStyle } from "./edge-styles";
 import { toast } from "sonner";
+import { useTranslation } from "@/i18n";
 
 interface ExtendedLinkData extends LinkData {
   _dimmed?: boolean;
@@ -36,6 +37,7 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
     selected,
     markerEnd,
   } = props;
+  const { t } = useTranslation();
   const { screenToFlowPosition } = useReactFlow();
 
   const onWaypointChange = data?._onWaypointChange;
@@ -53,13 +55,9 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
   const stateRef = useRef({ storedWaypoints, sourceX, sourceY, targetX, targetY, onWaypointChange, id });
   stateRef.current = { storedWaypoints, sourceX, sourceY, targetX, targetY, onWaypointChange, id };
 
-  // Convert relative waypoints to absolute coordinates for calculations
   const absoluteWaypoints = useMemo(() => {
-    return storedWaypoints.map((wp, idx) => {
-      if (idx === 0) return { x: sourceX + wp.x, y: sourceY + wp.y };
-      return { x: targetX + wp.x, y: targetY + wp.y };
-    });
-  }, [storedWaypoints, sourceX, sourceY, targetX, targetY]);
+    return storedWaypoints;
+  }, [storedWaypoints]);
 
   // Strict orthogonal path calculation using absolute coordinates
   const pathPoints = getOrthogonalPathPoints(
@@ -110,11 +108,7 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
       const flowPos = screenToFlowPosition({ x: moveEvent.clientX, y: moveEvent.clientY });
       
       const nextWps = [...storedWaypoints];
-      if (index === 0) {
-        nextWps[index] = { x: flowPos.x - sourceX, y: flowPos.y - sourceY };
-      } else {
-        nextWps[index] = { x: flowPos.x - targetX, y: flowPos.y - targetY };
-      }
+      nextWps[index] = { x: flowPos.x, y: flowPos.y };
       onWaypointChange?.(id, nextWps);
     };
 
@@ -139,10 +133,7 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
 
     const currentWps = storedWaypoints.length > 0
       ? [...storedWaypoints]
-      : getInitialWaypoints(sourceVal, targetVal, sourcePosition, targetPosition).map((wp, idx) => {
-          if (idx === 0) return { x: wp.x - sourceVal.x, y: wp.y - sourceVal.y };
-          return { x: wp.x - targetVal.x, y: wp.y - targetVal.y };
-        });
+      : getInitialWaypoints(sourceVal, targetVal, sourcePosition, targetPosition);
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -154,13 +145,7 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
       const deltaX = currentFlow.x - startFlow.x;
       const deltaY = currentFlow.y - startFlow.y;
 
-      // Convert initial relative waypoints to absolute for applying delta
-      const absInitialWps = currentWps.map((wp, idx) => {
-        if (idx === 0) return { x: sourceX + wp.x, y: sourceY + wp.y };
-        return { x: targetX + wp.x, y: targetY + wp.y };
-      });
-
-      const nextWpsAbsolute = absInitialWps.map((wp, idx) => {
+      const nextWpsAbsolute = currentWps.map((wp, idx) => {
         const newWp = { ...wp };
         const isFirst = segmentIndex === 0;
         const isLast = segmentIndex === currentWps.length;
@@ -184,13 +169,7 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
         return newWp;
       });
 
-      // Convert back to relative waypoints before committing
-      const nextWpsRelative = nextWpsAbsolute.map((wp, idx) => {
-        if (idx === 0) return { x: wp.x - sourceX, y: wp.y - sourceY };
-        return { x: wp.x - targetX, y: wp.y - targetY };
-      });
-
-      onWaypointChange?.(id, nextWpsRelative);
+      onWaypointChange?.(id, nextWpsAbsolute);
     };
 
     const handlePointerUp = () => {
@@ -250,7 +229,7 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
                 e.stopPropagation();
                 const nextWps = storedWaypoints.filter((_, idx) => idx !== index);
                 onWaypointChange?.(id, nextWps);
-                toast.success("Ponto de curva removido.");
+                toast.success(t("networkMap.topologyEdge.waypointRemoved"));
               }}
               style={{
                 position: "absolute",
@@ -259,7 +238,7 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
                 zIndex: 40,
               }}
               className="nodrag nopan nowheel group/anchor h-6 w-6 cursor-grab active:cursor-grabbing"
-              title="Arraste para mover o ponto. Clique duplo para apagar."
+              title={t("networkMap.topologyEdge.dragWaypointTitle")}
             >
               <span className="absolute inset-1.5 rounded-full border border-white/30 bg-sky-500 hover:bg-sky-400 active:border-sky-300 shadow-[0_0_8px_rgba(14,165,233,0.7)] transition-all" />
             </div>
@@ -282,7 +261,7 @@ export function TopologyEdge(props: EdgeProps<ExtendedLinkData>) {
               className={`nodrag nopan nowheel group/anchor h-5 w-5 flex items-center justify-center cursor-${
                 seg.type === "horizontal" ? "ns" : "ew"
               }-resize`}
-              title="Arraste para mover o segmento. Clique para adicionar ponto de curva."
+              title={t("networkMap.topologyEdge.dragSegmentTitle")}
             >
               <span className="h-3.5 w-3.5 rounded-full border border-white/20 bg-zinc-700 hover:bg-sky-500 flex items-center justify-center text-[10px] font-bold text-white transition-all shadow-[0_0_6px_rgba(0,0,0,0.6)]">
                 +

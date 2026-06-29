@@ -3,6 +3,7 @@ import type { DiscoveryBgpPeer } from "@/features/device-discovery/discovery-api
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
+import { useTranslation } from "@/i18n";
 
 interface BgpPeerDetailModalProps {
   device: Device;
@@ -35,6 +36,8 @@ export function BgpPeerDetailModal({
   onClose,
   onPlanCleanup,
 }: BgpPeerDetailModalProps) {
+  const { t } = useTranslation();
+
   if (!peer) return null;
 
   const title = peerDetailModalTitle(peer);
@@ -51,40 +54,35 @@ export function BgpPeerDetailModal({
         </DialogHeader>
 
         <div className="px-6 py-5 space-y-3">
-          {/* Peer IP */}
           <div className="rounded-lg bg-slate-900/50 border border-slate-800 p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-              Peer IP
+              {t("bgp.peerDetailModal.peerIp")}
             </p>
             <p className="font-mono text-sm text-slate-200">{peer.peerIp}</p>
           </div>
 
-
-          {/* Received prefix counter */}
           <div className="rounded-lg bg-slate-900/50 border border-slate-800 p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-              Received Routes
+              {t("bgp.peerDetailModal.receivedRoutes")}
             </p>
             <p className="font-mono text-sm text-purple-400">
               {peer.receivedPrefixes ?? "—"}
             </p>
           </div>
 
-          {/* Advertised prefix counter */}
           <div className="rounded-lg bg-slate-900/50 border border-slate-800 p-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-              Advertised Routes
+              {t("bgp.peerDetailModal.advertisedRoutes")}
             </p>
             <p className="font-mono text-sm text-blue-400">
               {peer.advertisedPrefixes ?? "—"}
             </p>
           </div>
 
-          {/* Import Policy */}
           {peer.importPolicy && (
             <div className="rounded-lg bg-slate-900/50 border border-slate-800 p-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-                Route-Policy (Import)
+                {t("bgp.peerDetailModal.importPolicy")}
               </p>
               <p className="font-mono text-xs text-slate-300 break-all">
                 {peer.importPolicy}
@@ -92,11 +90,10 @@ export function BgpPeerDetailModal({
             </div>
           )}
 
-          {/* Export Policy */}
           {peer.exportPolicy && (
             <div className="rounded-lg bg-slate-900/50 border border-slate-800 p-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-                Route-Policy (Export)
+                {t("bgp.peerDetailModal.exportPolicy")}
               </p>
               <p className="font-mono text-xs text-slate-300 break-all">
                 {peer.exportPolicy}
@@ -104,11 +101,8 @@ export function BgpPeerDetailModal({
             </div>
           )}
 
-          {/* Notes */}
           <p className="text-xs text-slate-400 leading-relaxed pt-2">
-            Route-policy names may not exist in BGP-4-MIB OIDs used in SNMP discovery.
-            These prefix counters are persisted when Huawei SSH collection succeeds and{" "}
-            <span className="font-mono text-slate-300">display bgp … peer verbose</span> is available.
+            {t("bgp.peerDetailModal.notes")}
           </p>
 
           <div className="flex flex-col gap-2 pt-2">
@@ -117,14 +111,14 @@ export function BgpPeerDetailModal({
                 type="button"
                 variant="secondary"
                 onClick={() => onPlanCleanup(peer)}
-                title="Planejar remoção segura do peer"
+                title={t("bgp.peerDetailModal.planRemovalTitle")}
               >
                 <AlertCircle className="h-4 w-4" />
-                Planejar Remoção
+                {t("bgp.peerDetailModal.planRemoval")}
               </Button>
             ) : (
               <p className="text-[11px] text-red-300">
-                Peer Established protegido: nenhum plano de remoção será apresentado.
+                {t("bgp.peerDetailModal.establishedProtected")}
               </p>
             )}
           </div>

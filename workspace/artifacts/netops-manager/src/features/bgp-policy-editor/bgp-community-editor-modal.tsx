@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
 import type {
   BgpPolicyEditorCommunityEditPayload,
@@ -52,6 +53,8 @@ export function BgpCommunityEditorModal({
   communitySets,
   onSave,
 }: BgpCommunityEditorModalProps) {
+  const { t } = useTranslation();
+  const ce = "bgpPolicyEditor.communityEditor";
   const normalizedInitial = useMemo(
     () => [...new Set(initialSelectedCommunities.map(normalizeToken))].filter(Boolean),
     [initialSelectedCommunities],
@@ -68,6 +71,7 @@ export function BgpCommunityEditorModal({
     [communitySets, selectedCommunities],
   );
   const isCustom = resolution.isCustom;
+  const customLabel = t(`${ce}.custom`);
 
   useEffect(() => {
     if (!open) return;
@@ -119,20 +123,20 @@ export function BgpCommunityEditorModal({
       confidence: resolution.confidence,
       changed: true,
       previewText: [
-        `node: ${nodeLabel}`,
-        `afi/safi: ${afiSafi}`,
-        `sequence: ${sequence ?? "—"}`,
-        `device: ${deviceName}`,
-        `peer: ${peerIp}`,
-        `selected: ${resolution.normalizedCommunities.length ? resolution.normalizedCommunities.join(" ") : "—"}`,
-        `community-list: ${nextName ?? "Customizado"}`,
-        `confidence: ${resolution.confidence}`,
+        `${t(`${ce}.previewNode`)}: ${nodeLabel}`,
+        `${t(`${ce}.previewAfiSafi`)}: ${afiSafi}`,
+        `${t(`${ce}.previewSequence`)}: ${sequence ?? "—"}`,
+        `${t(`${ce}.previewDevice`)}: ${deviceName}`,
+        `${t(`${ce}.previewPeer`)}: ${peerIp}`,
+        `${t(`${ce}.previewSelected`)}: ${resolution.normalizedCommunities.length ? resolution.normalizedCommunities.join(" ") : "—"}`,
+        `${t(`${ce}.previewCommunityList`)}: ${nextName ?? customLabel}`,
+        `${t(`${ce}.previewConfidence`)}: ${resolution.confidence}`,
       ].join("\n"),
     });
     onOpenChange(false);
   }
 
-  const currentListName = resolution.matchedCommunityListName ?? matchedSet?.name ?? selectedListName ?? initialMatchedCommunityListName ?? "Customizado";
+  const currentListName = resolution.matchedCommunityListName ?? matchedSet?.name ?? selectedListName ?? initialMatchedCommunityListName ?? customLabel;
   const customState = isCustom || !matchedSet;
   const setOptions = communitySets;
   const currentSelectValue = resolution.matchedCommunityListName && setOptions.some((item) => item.name === resolution.matchedCommunityListName)
@@ -145,7 +149,7 @@ export function BgpCommunityEditorModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Editar community</DialogTitle>
+          <DialogTitle>{t(`${ce}.title`)}</DialogTitle>
           <DialogDescription>
             {deviceName} · {peerIp} · {policyName} · {nodeLabel}
           </DialogDescription>
@@ -153,21 +157,19 @@ export function BgpCommunityEditorModal({
 
         <div className="space-y-4">
           <Alert>
-            <AlertTitle>Estado local</AlertTitle>
-            <AlertDescription>
-              Esta edição vive apenas em memória nesta fase. Nenhuma mudança é enviada ao backend.
-            </AlertDescription>
+            <AlertTitle>{t(`${ce}.localStateTitle`)}</AlertTitle>
+            <AlertDescription>{t(`${ce}.localStateDesc`)}</AlertDescription>
           </Alert>
 
           <div className="grid gap-3 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Community-list atual</Label>
+              <Label>{t(`${ce}.currentCommunityList`)}</Label>
               <Select value={currentSelectValue} onValueChange={handleSelectList}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Customizado" />
+                  <SelectValue placeholder={customLabel} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__custom__">Customizado</SelectItem>
+                  <SelectItem value="__custom__">{customLabel}</SelectItem>
                   {setOptions.length > 0 ? (
                     setOptions.map((set) => (
                       <SelectItem key={set.id} value={set.name}>
@@ -176,17 +178,17 @@ export function BgpCommunityEditorModal({
                     ))
                   ) : (
                     <SelectItem value="__empty__" disabled>
-                      Nenhuma community-list carregada
+                      {t(`${ce}.noCommunityListsLoaded`)}
                     </SelectItem>
                   )}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Estado</Label>
+              <Label>{t(`${ce}.state`)}</Label>
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">{customState ? "Customizado" : "Reconhecido"}</Badge>
-                <Badge variant="outline">{selectedCommunities.length} communities</Badge>
+                <Badge variant="outline">{customState ? customLabel : t(`${ce}.recognized`)}</Badge>
+                <Badge variant="outline">{t(`${ce}.communitiesCount`, { count: selectedCommunities.length })}</Badge>
                 <Badge variant="outline">{currentListName}</Badge>
                 <Badge variant="outline">conf: {resolution.confidence}</Badge>
               </div>
@@ -196,7 +198,7 @@ export function BgpCommunityEditorModal({
           {communityOptions.length > 0 ? (
             <div className="rounded-md border border-border">
               <div className="border-b border-border px-3 py-2 text-sm font-medium">
-                Matriz de communities
+                {t(`${ce}.communityMatrix`)}
               </div>
               <ScrollArea className="max-h-80">
                 <div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -223,35 +225,31 @@ export function BgpCommunityEditorModal({
             </div>
           ) : (
             <Alert>
-              <AlertTitle>Sem communities descobertas</AlertTitle>
-              <AlertDescription>
-                O snapshot/payload atual não trouxe items de community library para montar a matriz.
-              </AlertDescription>
+              <AlertTitle>{t(`${ce}.noCommunitiesTitle`)}</AlertTitle>
+              <AlertDescription>{t(`${ce}.noCommunitiesDesc`)}</AlertDescription>
             </Alert>
           )}
 
           <div className="rounded-md border border-border bg-muted/20 p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="text-sm font-medium">Preview local</div>
-                <div className="text-xs text-muted-foreground">
-                  A seleção acima só ajusta o estado em memória.
-                </div>
+                <div className="text-sm font-medium">{t(`${ce}.localPreview`)}</div>
+                <div className="text-xs text-muted-foreground">{t(`${ce}.localPreviewDesc`)}</div>
               </div>
-              <Badge variant="outline">{isCustom ? "Customizado" : "Community-list encontrada"}</Badge>
+              <Badge variant="outline">{isCustom ? customLabel : t(`${ce}.communityListFound`)}</Badge>
             </div>
             <pre className="mt-3 overflow-auto whitespace-pre-wrap font-mono text-xs text-muted-foreground">
-{selectedCommunities.length ? selectedCommunities.join("\n") : "Nenhuma community selecionada"}
+{selectedCommunities.length ? selectedCommunities.join("\n") : t(`${ce}.noCommunitySelected`)}
             </pre>
           </div>
         </div>
 
         <DialogFooter className="flex flex-wrap items-center justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="button" onClick={handleSave}>
-            Salvar
+            {t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

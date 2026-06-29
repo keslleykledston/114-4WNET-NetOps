@@ -1,5 +1,9 @@
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n";
+import type { TranslationParams } from "@/i18n/types";
 import type { L2CircuitType, L2Finding, L2OperationalFreshness, L2Status } from "./l2-circuits-api";
+
+export type TranslateFn = (key: string, params?: TranslationParams) => string;
 
 export function operStatusClass(status: L2Status | string) {
   switch (status) {
@@ -42,37 +46,13 @@ export function circuitTypeClass(type: L2CircuitType | string) {
   }
 }
 
-export function circuitTypeLabel(type: L2CircuitType | string) {
-  switch (type) {
-    case "vlan_local":
-      return "VLAN Local";
-    case "vlan_orphan":
-      return "VLAN Órfã";
-    case "vlanif_orphan":
-      return "VLANIF Orphan";
-    case "vlan_not_in_switch_batch":
-      return "VLAN Batch Missing";
-    case "l3_interface":
-      return "Subif L3";
-    case "l3_vrf_link":
-      return "L3 VRF Link";
-    case "config_only":
-      return "Config Only";
-    case "l2vc":
-      return "L2VC";
-    case "vpws":
-      return "VPWS";
-    case "vsi":
-      return "VSI";
-    case "vpls":
-      return "VPLS";
-    case "dot1q_subif":
-      return "Dot1Q";
-    case "vlan":
-      return "VLAN";
-    default:
-      return type;
+export function circuitTypeLabel(type: L2CircuitType | string, t?: TranslateFn) {
+  const key = `l2Circuits.circuitTypes.${type}`;
+  if (t) {
+    const translated = t(key);
+    if (translated !== key) return translated;
   }
+  return type;
 }
 
 export function circuitTypeGroup(type: L2CircuitType | string): "local" | "mpls" | "vsi" {
@@ -90,14 +70,16 @@ export function OperStatusBadge({ status }: { status: L2Status | string }) {
 }
 
 export function CircuitTypeBadge({ type }: { type: L2CircuitType | string }) {
+  const { t } = useTranslation();
   return (
     <Badge variant="outline" className={circuitTypeClass(type)}>
-      {circuitTypeLabel(type)}
+      {circuitTypeLabel(type, t)}
     </Badge>
   );
 }
 
 export function FreshnessBadge({ freshness }: { freshness: L2OperationalFreshness }) {
+  const { t } = useTranslation();
   const cls =
     freshness === "fresh"
       ? "bg-green-500/10 text-green-400 border-green-500/20"
@@ -106,14 +88,7 @@ export function FreshnessBadge({ freshness }: { freshness: L2OperationalFreshnes
         : freshness === "expired"
           ? "bg-red-500/10 text-red-400 border-red-500/20"
           : "bg-slate-500/10 text-slate-300 border-slate-500/20";
-  const label =
-    freshness === "fresh"
-      ? "Fresh"
-      : freshness === "stale"
-        ? "Stale"
-        : freshness === "expired"
-          ? "Expired"
-          : "Unknown";
+  const label = t(`l2Circuits.freshness.${freshness}`);
 
   return (
     <Badge variant="outline" className={cls}>
@@ -123,6 +98,7 @@ export function FreshnessBadge({ freshness }: { freshness: L2OperationalFreshnes
 }
 
 export function NocFindingBadges({ findings }: { findings: L2Finding[] }) {
+  const { t } = useTranslation();
   const circuitDown = findings.some((f) => f.code === "CIRCUIT_DOWN" || f.code === "L2VC_DOWN" || f.code === "VSI_DOWN");
   const remoteNotForwarding = findings.some((f) => f.code === "REMOTE_NOT_FORWARDING");
   const vlanOrphan = findings.some((f) => f.code === "VLAN_ORPHAN");
@@ -133,17 +109,17 @@ export function NocFindingBadges({ findings }: { findings: L2Finding[] }) {
     <div className="flex flex-wrap gap-1">
       {circuitDown && (
         <Badge variant="outline" className="bg-red-500/15 text-red-300 border-red-500/40 text-[10px] uppercase tracking-wide">
-          Circuit DOWN
+          {t("l2Circuits.findingBadges.circuitDown")}
         </Badge>
       )}
       {remoteNotForwarding && (
         <Badge variant="outline" className="bg-amber-500/15 text-amber-200 border-amber-500/40 text-[10px] uppercase tracking-wide">
-          Remote N/F
+          {t("l2Circuits.findingBadges.remoteNotForwarding")}
         </Badge>
       )}
       {vlanOrphan && (
         <Badge variant="outline" className="bg-orange-500/15 text-orange-200 border-orange-500/40 text-[10px] uppercase tracking-wide">
-          VLAN Órfã
+          {t("l2Circuits.findingBadges.vlanOrphan")}
         </Badge>
       )}
     </div>

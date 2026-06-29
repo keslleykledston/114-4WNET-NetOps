@@ -1,14 +1,9 @@
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n";
+import type { TranslationParams } from "@/i18n/types";
 import { cn } from "@/lib/utils";
 
-export const OPERATIONAL_CATEGORY_LABELS: Record<string, string> = {
-  BLOCKER_REAL: "Bloqueador real",
-  RISCO_OPERACIONAL: "Risco operacional",
-  PADRONIZACAO: "Padronização",
-  CUSTOMIZACAO: "Customização",
-  INFORMATIVO: "Informativo",
-  FALSO_POSITIVO: "Falso positivo",
-};
+type TranslateFn = (key: string, params?: TranslationParams) => string;
 
 const CATEGORY_CLASS_NAMES: Record<string, string> = {
   BLOCKER_REAL: "bg-red-500/10 text-red-300 border-red-500/30",
@@ -19,9 +14,11 @@ const CATEGORY_CLASS_NAMES: Record<string, string> = {
   FALSO_POSITIVO: "bg-green-500/10 text-green-300 border-green-500/30",
 };
 
-export function operationalCategoryLabel(value: string | null | undefined) {
-  if (!value) return "Não classificado";
-  return OPERATIONAL_CATEGORY_LABELS[value] ?? value;
+export function operationalCategoryLabel(t: TranslateFn, value: string | null | undefined) {
+  if (!value) return t("compliance.operationalCategories.unclassified");
+  const key = `compliance.operationalCategories.${value}`;
+  const translated = t(key);
+  return translated === key ? value : translated;
 }
 
 interface OperationalCategoryBadgeProps {
@@ -30,6 +27,7 @@ interface OperationalCategoryBadgeProps {
 }
 
 export function OperationalCategoryBadge({ value, className }: OperationalCategoryBadgeProps) {
+  const { t } = useTranslation();
   const key = value ?? "unknown";
 
   return (
@@ -37,7 +35,7 @@ export function OperationalCategoryBadge({ value, className }: OperationalCatego
       variant="outline"
       className={cn("whitespace-nowrap", CATEGORY_CLASS_NAMES[key] ?? "bg-slate-500/10 text-slate-300 border-slate-500/30", className)}
     >
-      {operationalCategoryLabel(value)}
+      {operationalCategoryLabel(t, value)}
     </Badge>
   );
 }

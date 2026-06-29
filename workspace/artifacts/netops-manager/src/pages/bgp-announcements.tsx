@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { BgpAnnouncementPreviewModal } from "@/features/bgp/bgp-announcements-preview-modal";
 import { useAuth } from "@/components/auth-provider";
+import { useTranslation } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 type AnnouncementMatrixCell = {
@@ -406,6 +407,7 @@ function matchesRow(row: AnnouncementMatrixRow, family: string, target: string, 
 }
 
 export default function BgpAnnouncementsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: devices = [] } = useListDevices();
@@ -662,36 +664,36 @@ export default function BgpAnnouncementsPage() {
     <div className="space-y-6">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Anúncios (matriz)</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("bgpAnnouncements.title")}</h1>
           <Badge variant="outline" className="gap-1">
             <ShieldCheck className="h-3.5 w-3.5" />
-            Read-only
+            {t("bgpAnnouncements.readOnly")}
           </Badge>
           <Badge variant="outline" className="gap-1">
             <ClipboardList className="h-3.5 w-3.5" />
-            Fonte: {latest?.matrix?.generatedFrom ?? "foundation"}
+            {t("bgpAnnouncements.sourceLabel")} {latest?.matrix?.generatedFrom ?? "foundation"}
           </Badge>
           <Badge variant="outline" className="gap-1">
             <FileClock className="h-3.5 w-3.5" />
-            Coleta: {fmtDate(latest?.generated_at)}
+            {t("bgpAnnouncements.collectionLabel")} {fmtDate(latest?.generated_at)}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Matriz operacional BGP com preview read-only, change-plans, aprovação, dry-run, postcheck e rollback. Execução real bloqueada por padrão.
+          {t("bgpAnnouncements.subtitle")}
         </p>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Contexto</CardTitle>
-          <CardDescription>GET /api/bgp/announcements/matrix/latest e POST /api/bgp/announcements/matrix/refresh</CardDescription>
+          <CardTitle className="text-base">{t("bgpAnnouncements.context")}</CardTitle>
+          <CardDescription>{t("bgpAnnouncements.contextHint")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-[minmax(220px,360px)_minmax(180px,220px)_minmax(180px,220px)_minmax(180px,220px)]">
           <div className="space-y-2">
-            <Label>Device</Label>
+            <Label>{t("bgpAnnouncements.device")}</Label>
             <Select value={deviceId} onValueChange={setDeviceId} disabled={devices.length === 0}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o device" />
+                <SelectValue placeholder={t("bgpAnnouncements.selectDevice")} />
               </SelectTrigger>
               <SelectContent>
                 {devices.map((device) => (
@@ -703,40 +705,40 @@ export default function BgpAnnouncementsPage() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Família</Label>
+            <Label>{t("bgpAnnouncements.family")}</Label>
             <Select value={family} onValueChange={setFamily}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="ipv4">IPv4</SelectItem>
-                <SelectItem value="ipv6">IPv6</SelectItem>
-                <SelectItem value="mixed">Mista</SelectItem>
+                <SelectItem value="all">{t("bgpAnnouncements.familyAll")}</SelectItem>
+                <SelectItem value="ipv4">{t("bgpAnnouncements.familyIpv4")}</SelectItem>
+                <SelectItem value="ipv6">{t("bgpAnnouncements.familyIpv6")}</SelectItem>
+                <SelectItem value="mixed">{t("bgpAnnouncements.familyMixed")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Target</Label>
+            <Label>{t("bgpAnnouncements.target")}</Label>
             <Select value={target} onValueChange={setTarget}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="all">{t("bgpAnnouncements.targetAll")}</SelectItem>
                 <SelectItem value="origin_target">origin_target</SelectItem>
                 <SelectItem value="customer_import_target">customer_import_target</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Busca</Label>
+            <Label>{t("bgpAnnouncements.search")}</Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Política, prefixo, upstream..."
+                placeholder={t("bgpAnnouncements.searchPlaceholder")}
                 className="pl-9"
               />
             </div>
@@ -747,45 +749,45 @@ export default function BgpAnnouncementsPage() {
       <div className="flex flex-wrap gap-3">
         <Button onClick={() => void refreshMutation.mutateAsync()} disabled={!deviceId || !canRefresh || refreshMutation.isPending}>
           <RefreshCw className={cn("mr-2 h-4 w-4", refreshMutation.isPending ? "animate-spin" : "")} />
-          Atualizar
+          {t("bgpAnnouncements.refresh")}
         </Button>
         <Badge variant="secondary" className="bg-slate-500/10 text-slate-300">
-          snapshot #{latest?.snapshot_id ?? "n/a"}
+          {t("bgpAnnouncements.snapshotBadge", { id: latest?.snapshot_id ?? "n/a" })}
         </Badge>
         {latest?.is_stale ? (
           <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-300">
-            Snapshot stale (&gt;24h)
+            {t("bgpAnnouncements.snapshotStale")}
           </Badge>
         ) : null}
         {refreshMutation.isPending ? (
           <Badge variant="outline" className="gap-1 border-sky-500/40 bg-sky-500/10 text-sky-300">
             <RefreshCw className="h-3 w-3 animate-spin" />
-            Refresh em andamento
+            {t("bgpAnnouncements.refreshInProgress")}
           </Badge>
         ) : null}
         <Badge variant="secondary" className="bg-slate-500/10 text-slate-300">
-          coleção #{latest?.collection_id ?? "n/a"}
+          {t("bgpAnnouncements.collectionBadge", { id: latest?.collection_id ?? "n/a" })}
         </Badge>
         <Badge variant="secondary" className="bg-slate-500/10 text-slate-300">
-          device {activeDevice ? `${activeDevice.hostname}` : "n/a"}
+          {t("bgpAnnouncements.deviceBadge", { name: activeDevice ? activeDevice.hostname : "n/a" })}
         </Badge>
         <Badge variant="secondary" className="bg-slate-500/10 text-slate-300">
-          rollbacks {rollbacks.length}
+          {t("bgpAnnouncements.rollbacksBadge", { count: rollbacks.length })}
         </Badge>
       </div>
 
       {summary ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Targets</div><div className="mt-1 text-2xl font-bold">{summary.totalTargets ?? 0}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Origin</div><div className="mt-1 text-2xl font-bold text-emerald-400">{summary.totalOriginTargets ?? 0}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Customer import</div><div className="mt-1 text-2xl font-bold text-sky-400">{summary.totalCustomerImportTargets ?? 0}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Cust. export excl.</div><div className="mt-1 text-2xl font-bold text-amber-400">{summary.totalExcludedCustomerExports ?? 0}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Upstream excl.</div><div className="mt-1 text-2xl font-bold text-amber-400">{summary.totalExcludedUpstreamPolicies ?? 0}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Unknown</div><div className="mt-1 text-2xl font-bold">{summary.totalUnknownPolicies ?? 0}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">On / P1 / P2</div><div className="mt-1 text-2xl font-bold">{[summary.totalOn ?? 0, summary.totalP1 ?? 0, summary.totalP2 ?? 0].join(" / ")}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">P3 / P4 / Off</div><div className="mt-1 text-2xl font-bold">{[summary.totalP3 ?? 0, summary.totalP4 ?? 0, summary.totalOff ?? 0].join(" / ")}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Unmarked / Conflict / Unknown</div><div className="mt-1 text-2xl font-bold">{[summary.totalUnmarked ?? 0, summary.totalConflict ?? 0, summary.totalUnknown ?? 0].join(" / ")}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Prefixos expandidos</div><div className="mt-1 text-2xl font-bold">{summary.totalExpandedPrefixes ?? 0}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryTargets")}</div><div className="mt-1 text-2xl font-bold">{summary.totalTargets ?? 0}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryOrigin")}</div><div className="mt-1 text-2xl font-bold text-emerald-400">{summary.totalOriginTargets ?? 0}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryCustomerImport")}</div><div className="mt-1 text-2xl font-bold text-sky-400">{summary.totalCustomerImportTargets ?? 0}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryCustExportExcluded")}</div><div className="mt-1 text-2xl font-bold text-amber-400">{summary.totalExcludedCustomerExports ?? 0}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryUpstreamExcluded")}</div><div className="mt-1 text-2xl font-bold text-amber-400">{summary.totalExcludedUpstreamPolicies ?? 0}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryUnknown")}</div><div className="mt-1 text-2xl font-bold">{summary.totalUnknownPolicies ?? 0}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryOnP1P2")}</div><div className="mt-1 text-2xl font-bold">{[summary.totalOn ?? 0, summary.totalP1 ?? 0, summary.totalP2 ?? 0].join(" / ")}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryP3P4Off")}</div><div className="mt-1 text-2xl font-bold">{[summary.totalP3 ?? 0, summary.totalP4 ?? 0, summary.totalOff ?? 0].join(" / ")}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryUnmarkedConflictUnknown")}</div><div className="mt-1 text-2xl font-bold">{[summary.totalUnmarked ?? 0, summary.totalConflict ?? 0, summary.totalUnknown ?? 0].join(" / ")}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.summaryExpandedPrefixes")}</div><div className="mt-1 text-2xl font-bold">{summary.totalExpandedPrefixes ?? 0}</div></CardContent></Card>
         </div>
       ) : null}
 
@@ -797,24 +799,24 @@ export default function BgpAnnouncementsPage() {
               ? refreshMutation.error.message
               : matrixQuery.error instanceof Error
                 ? matrixQuery.error.message
-                : "Falha ao carregar anúncios"}
+                : t("bgpAnnouncements.loadError")}
           </span>
         </div>
       ) : null}
 
       <Tabs defaultValue="matrix" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="matrix">Matriz</TabsTrigger>
-          <TabsTrigger value="upstreams">Auditoria Upstreams</TabsTrigger>
-          <TabsTrigger value="sets">Community Sets</TabsTrigger>
-          <TabsTrigger value="plans">Change Plans</TabsTrigger>
-          <TabsTrigger value="history">Histórico</TabsTrigger>
+          <TabsTrigger value="matrix">{t("bgpAnnouncements.tabMatrix")}</TabsTrigger>
+          <TabsTrigger value="upstreams">{t("bgpAnnouncements.tabUpstreams")}</TabsTrigger>
+          <TabsTrigger value="sets">{t("bgpAnnouncements.communitySetsTitle")}</TabsTrigger>
+          <TabsTrigger value="plans">{t("bgpAnnouncements.changePlansTitle")}</TabsTrigger>
+          <TabsTrigger value="history">{t("bgpAnnouncements.tabHistory")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="matrix" className="space-y-4">
           {matrixQuery.isLoading ? (
             <Card>
-              <CardContent className="p-6 text-sm text-muted-foreground">Carregando snapshot latest...</CardContent>
+              <CardContent className="p-6 text-sm text-muted-foreground">{t("bgpAnnouncements.loadingSnapshot")}</CardContent>
             </Card>
           ) : isEmpty ? (
             <Card>
@@ -824,13 +826,13 @@ export default function BgpAnnouncementsPage() {
                     <EmptyMedia variant="icon">
                       <ClipboardList className="h-6 w-6" />
                     </EmptyMedia>
-                    <EmptyTitle>Nenhum snapshot encontrado</EmptyTitle>
-                    <EmptyDescription>Execute a primeira atualização.</EmptyDescription>
+                    <EmptyTitle>{t("bgpAnnouncements.noSnapshotTitle")}</EmptyTitle>
+                    <EmptyDescription>{t("bgpAnnouncements.noSnapshotDescription")}</EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
                     <Button onClick={() => void refreshMutation.mutateAsync()} disabled={!deviceId || refreshMutation.isPending}>
                       <RefreshCw className={cn("mr-2 h-4 w-4", refreshMutation.isPending ? "animate-spin" : "")} />
-                      Atualizar agora
+                      {t("bgpAnnouncements.refreshNow")}
                     </Button>
                   </EmptyContent>
                 </Empty>
@@ -839,19 +841,19 @@ export default function BgpAnnouncementsPage() {
           ) : (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Rows da matriz</CardTitle>
+                <CardTitle className="text-base">{t("bgpAnnouncements.matrixRows")}</CardTitle>
                 <CardDescription>
-                  {filteredRows.length} de {rows.length} linhas visíveis
+                  {t("bgpAnnouncements.visibleRows", { visible: filteredRows.length, total: rows.length })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Target Policy</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Família</TableHead>
-                      <TableHead>Prefix Scope</TableHead>
+                      <TableHead>{t("bgpAnnouncements.targetPolicy")}</TableHead>
+                      <TableHead>{t("bgpAnnouncements.type")}</TableHead>
+                      <TableHead>{t("bgpAnnouncements.family")}</TableHead>
+                      <TableHead>{t("bgpAnnouncements.prefixScope")}</TableHead>
                       {columns.map((column) => (
                         <TableHead key={column.key} className="min-w-[140px]">
                           <div className="flex flex-col">
@@ -860,14 +862,14 @@ export default function BgpAnnouncementsPage() {
                           </div>
                         </TableHead>
                       ))}
-                      <TableHead>Risco</TableHead>
+                      <TableHead>{t("bgpAnnouncements.risk")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredRows.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5 + columns.length} className="py-10 text-center text-muted-foreground">
-                          Nenhuma linha bate com os filtros.
+                          {t("bgpAnnouncements.noMatchingRows")}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -886,7 +888,7 @@ export default function BgpAnnouncementsPage() {
                               <div>
                                 {row.prefixScope.expandedPrefixes.length > 0 ? (
                                   <details>
-                                    <summary className="cursor-pointer text-xs text-sky-300">Expandir prefixos ({row.prefixScope.affectedPrefixCount})</summary>
+                                    <summary className="cursor-pointer text-xs text-sky-300">{t("bgpAnnouncements.expandPrefixes", { count: row.prefixScope.affectedPrefixCount })}</summary>
                                     <div className="mt-2 space-y-1">
                                       {row.prefixScope.expandedPrefixes.map((item) => (
                                         <div key={`${row.routePolicyName}-${item.raw}`} className="rounded border border-border bg-background/40 px-2 py-1">
@@ -903,10 +905,10 @@ export default function BgpAnnouncementsPage() {
                               {row.findings?.some((finding) => finding.code === "COMMUNITY_SET_EXACT_MATCH_FOUND" || finding.code === "TARGET_POLICY_USES_SHARED_COMMUNITY_LIST") ? (
                                 <div className="flex flex-wrap gap-2">
                                   {row.findings.some((finding) => finding.code === "COMMUNITY_SET_EXACT_MATCH_FOUND") ? (
-                                    <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">community-list exata</Badge>
+                                    <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">{t("bgpAnnouncements.exactCommunityList")}</Badge>
                                   ) : null}
                                   {row.findings.some((finding) => finding.code === "TARGET_POLICY_USES_SHARED_COMMUNITY_LIST") ? (
-                                    <Badge variant="secondary" className="bg-amber-500/10 text-amber-300">shared list</Badge>
+                                    <Badge variant="secondary" className="bg-amber-500/10 text-amber-300">{t("bgpAnnouncements.sharedList")}</Badge>
                                   ) : null}
                                 </div>
                               ) : null}
@@ -952,36 +954,36 @@ export default function BgpAnnouncementsPage() {
 
         <TabsContent value="upstreams">
           {upstreamAuditQuery.isLoading ? (
-            <Card><CardContent className="p-6 text-sm text-muted-foreground">Carregando auditoria...</CardContent></Card>
+            <Card><CardContent className="p-6 text-sm text-muted-foreground">{t("bgpAnnouncements.loadingAudit")}</CardContent></Card>
           ) : upstreamAuditQuery.error ? (
-            <Card><CardContent className="p-6 text-sm text-destructive">{upstreamAuditQuery.error instanceof Error ? upstreamAuditQuery.error.message : "Erro ao carregar auditoria"}</CardContent></Card>
+            <Card><CardContent className="p-6 text-sm text-destructive">{upstreamAuditQuery.error instanceof Error ? upstreamAuditQuery.error.message : t("bgpAnnouncements.auditLoadError")}</CardContent></Card>
           ) : (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Auditoria de upstreams</CardTitle>
+                <CardTitle className="text-base">{t("bgpAnnouncements.upstreamAuditTitle")}</CardTitle>
                 <CardDescription>
-                  {upstreamAuditQuery.data?.totalUpstreamsAudited ?? 0} upstreams · {upstreamAuditQuery.data?.totalAuditFindings ?? 0} findings
+                  {t("bgpAnnouncements.upstreamAuditSummary", { upstreams: upstreamAuditQuery.data?.totalUpstreamsAudited ?? 0, findings: upstreamAuditQuery.data?.totalAuditFindings ?? 0 })}
                 </CardDescription>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Upstream</TableHead>
+                      <TableHead>{t("bgpAnnouncements.upstream")}</TableHead>
                       <TableHead>CID</TableHead>
                       <TableHead>Local-AS</TableHead>
-                      <TableHead>Export Policy</TableHead>
+                      <TableHead>{t("bgpAnnouncements.exportPolicy")}</TableHead>
                       {["On", "P1", "P2", "P3", "P4", "Off", "NE", "BH", "Def", "Rx"].map((label) => (
                         <TableHead key={label} className="min-w-[110px]">{label}</TableHead>
                       ))}
-                      <TableHead>Findings</TableHead>
-                      <TableHead>Severity</TableHead>
+                      <TableHead>{t("bgpAnnouncements.findings")}</TableHead>
+                      <TableHead>{t("bgpAnnouncements.severity")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {Object.values(upstreamAuditQuery.data?.byCircuit ?? {}).length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={15} className="py-10 text-center text-muted-foreground">Nenhum upstream auditado.</TableCell>
+                        <TableCell colSpan={15} className="py-10 text-center text-muted-foreground">{t("bgpAnnouncements.noUpstreamAudited")}</TableCell>
                       </TableRow>
                     ) : (
                       Object.values(upstreamAuditQuery.data?.byCircuit ?? {}).map((audit) => (
@@ -1029,22 +1031,22 @@ export default function BgpAnnouncementsPage() {
 
         <TabsContent value="sets">
           {communitySetsQuery.isLoading ? (
-            <Card><CardContent className="p-6 text-sm text-muted-foreground">Carregando community sets...</CardContent></Card>
+            <Card><CardContent className="p-6 text-sm text-muted-foreground">{t("bgpAnnouncements.loadingCommunitySets")}</CardContent></Card>
           ) : communitySetsQuery.error ? (
-            <Card><CardContent className="p-6 text-sm text-destructive">{communitySetsQuery.error instanceof Error ? communitySetsQuery.error.message : "Erro ao carregar community sets"}</CardContent></Card>
+            <Card><CardContent className="p-6 text-sm text-destructive">{communitySetsQuery.error instanceof Error ? communitySetsQuery.error.message : t("bgpAnnouncements.communitySetsLoadError")}</CardContent></Card>
           ) : (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Community Sets</CardTitle>
-                <CardDescription>{communitySetsQuery.data?.length ?? 0} sets normalizados</CardDescription>
+                <CardTitle className="text-base">{t("bgpAnnouncements.communitySetsTitle")}</CardTitle>
+                <CardDescription>{t("bgpAnnouncements.normalizedSets", { count: communitySetsQuery.data?.length ?? 0 })}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {(communitySetsQuery.data ?? []).length === 0 ? (
                   <Empty>
                     <EmptyHeader>
                       <EmptyMedia variant="icon"><ClipboardList className="h-6 w-6" /></EmptyMedia>
-                      <EmptyTitle>Nenhum community set</EmptyTitle>
-                      <EmptyDescription>Config atual não expõe community-list.</EmptyDescription>
+                      <EmptyTitle>{t("bgpAnnouncements.noCommunitySetTitle")}</EmptyTitle>
+                      <EmptyDescription>{t("bgpAnnouncements.noCommunitySetDescription")}</EmptyDescription>
                     </EmptyHeader>
                   </Empty>
                 ) : (
@@ -1057,15 +1059,15 @@ export default function BgpAnnouncementsPage() {
                             <div className="font-mono text-[11px] text-muted-foreground">{set.normalizedHash}</div>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant="secondary" className="bg-slate-500/10 text-slate-300">{set.communities.length} communities</Badge>
-                            <Badge variant="secondary" className={set.isShared ? "bg-amber-500/10 text-amber-300" : "bg-emerald-500/10 text-emerald-300"}>{set.isShared ? "shared" : "exclusive"}</Badge>
+                            <Badge variant="secondary" className="bg-slate-500/10 text-slate-300">{t("bgpAnnouncements.communitiesCount", { count: set.communities.length })}</Badge>
+                            <Badge variant="secondary" className={set.isShared ? "bg-amber-500/10 text-amber-300" : "bg-emerald-500/10 text-emerald-300"}>{set.isShared ? t("bgpAnnouncements.shared") : t("bgpAnnouncements.exclusive")}</Badge>
                           </div>
                         </div>
                         <div className="mt-2 text-xs text-muted-foreground">{set.semanticSummary || "—"}</div>
                       </summary>
                       <div className="mt-3 space-y-2 text-xs">
-                        <div>Usage: {set.usageCount} · policies: {set.usedByPolicies.join(", ") || "—"}</div>
-                        <div>Findings: {set.findings.length}</div>
+                        <div>{t("bgpAnnouncements.usagePolicies", { usage: set.usageCount, policies: set.usedByPolicies.join(", ") || "—" })}</div>
+                        <div>{t("bgpAnnouncements.findingsCount", { count: set.findings.length })}</div>
                         <div className="flex flex-wrap gap-2">
                           {set.communities.map((community) => (
                             <Badge key={`${set.name}-${community}`} variant="secondary" className="bg-slate-500/10 text-slate-300 font-mono">{community}</Badge>
@@ -1083,27 +1085,27 @@ export default function BgpAnnouncementsPage() {
         <TabsContent value="plans">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Change Plans</CardTitle>
-              <CardDescription>Drafts gerados a partir de previews read-only.</CardDescription>
+              <CardTitle className="text-base">{t("bgpAnnouncements.changePlansTitle")}</CardTitle>
+              <CardDescription>{t("bgpAnnouncements.changePlansDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Upstream</TableHead>
-                    <TableHead>Current → Desired</TableHead>
-                    <TableHead>Risk</TableHead>
-                    <TableHead>Criado</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
+                    <TableHead>{t("bgpAnnouncements.target")}</TableHead>
+                    <TableHead>{t("bgpAnnouncements.upstream")}</TableHead>
+                    <TableHead>{t("bgpAnnouncements.currentDesired")}</TableHead>
+                    <TableHead>{t("bgpAnnouncements.risk")}</TableHead>
+                    <TableHead>{t("bgpAnnouncements.created")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead>{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(changePlansQuery.data ?? []).length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">Nenhum draft salvo.</TableCell>
+                      <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">{t("bgpAnnouncements.noDrafts")}</TableCell>
                     </TableRow>
                   ) : (
                     (changePlansQuery.data ?? []).map((plan) => (
@@ -1135,7 +1137,7 @@ export default function BgpAnnouncementsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => setSelectedPlan(plan)}>Detalhes</Button>
+                          <Button variant="outline" size="sm" onClick={() => setSelectedPlan(plan)}>{t("bgpAnnouncements.details")}</Button>
                           {plan.status === "draft" ? (
                             <Button
                               variant="secondary"
@@ -1143,7 +1145,7 @@ export default function BgpAnnouncementsPage() {
                               onClick={() => void cancelPlanMutation.mutateAsync(plan.id)}
                               disabled={cancelPlanMutation.isPending}
                             >
-                              Cancelar
+                              {t("common.cancel")}
                             </Button>
                           ) : null}
                         </TableCell>
@@ -1163,20 +1165,20 @@ export default function BgpAnnouncementsPage() {
                 <Clock3 className="h-4 w-4" />
                 Timelapse
               </CardTitle>
-              <CardDescription>Linha do tempo por target, upstream e prefixo.</CardDescription>
+              <CardDescription>{t("bgpAnnouncements.timelapseDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="space-y-1">
-                  <Label>Target</Label>
+                  <Label>{t("bgpAnnouncements.target")}</Label>
                   <Input value={historyTarget} onChange={(event) => setHistoryTarget(event.target.value)} placeholder="ORIGIN-X" />
                 </div>
                 <div className="space-y-1">
-                  <Label>Upstream</Label>
+                  <Label>{t("bgpAnnouncements.upstream")}</Label>
                   <Input value={historyUpstream} onChange={(event) => setHistoryUpstream(event.target.value)} placeholder="C10" />
                 </div>
                 <div className="space-y-1">
-                  <Label>Prefixo</Label>
+                  <Label>{t("bgpAnnouncements.prefix")}</Label>
                   <Input value={historyPrefix} onChange={(event) => setHistoryPrefix(event.target.value)} placeholder="45.169.160.0/23" />
                 </div>
               </div>
@@ -1185,11 +1187,11 @@ export default function BgpAnnouncementsPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Data</TableHead>
-                      <TableHead>Target</TableHead>
-                      <TableHead>Upstream</TableHead>
-                      <TableHead>Evento</TableHead>
-                      <TableHead>Antes</TableHead>
-                      <TableHead>Depois</TableHead>
+                      <TableHead>{t("bgpAnnouncements.target")}</TableHead>
+                      <TableHead>{t("bgpAnnouncements.upstream")}</TableHead>
+                      <TableHead>{t("bgpAnnouncements.event")}</TableHead>
+                      <TableHead>{t("bgpAnnouncements.before")}</TableHead>
+                      <TableHead>{t("bgpAnnouncements.after")}</TableHead>
                       <TableHead>Snapshot</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1197,7 +1199,7 @@ export default function BgpAnnouncementsPage() {
                     {(historyQuery.data ?? []).length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
-                          Nenhum evento no período/filtros.
+                          {t("bgpAnnouncements.noHistoryEvents")}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -1239,34 +1241,34 @@ export default function BgpAnnouncementsPage() {
       <Dialog open={Boolean(selectedPlan)} onOpenChange={(open) => { if (!open) setSelectedPlan(null); }}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Change plan #{selectedPlan?.id ?? "-"}</DialogTitle>
+            <DialogTitle>{t("bgpAnnouncements.changePlanTitle", { id: selectedPlan?.id ?? "-" })}</DialogTitle>
             <DialogDescription>
-              Draft read-only gerado a partir do preview.
+              {t("bgpAnnouncements.changePlanDescription")}
             </DialogDescription>
           </DialogHeader>
           {selectedPlan ? (
             <div className="space-y-4 text-sm">
               <div className="grid gap-3 md:grid-cols-2">
-                <div><span className="text-muted-foreground">Base snapshot:</span> {selectedPlan.baseSnapshotId}</div>
-                <div><span className="text-muted-foreground">Collection:</span> {selectedPlan.collectionId ?? "—"}</div>
-                <div><span className="text-muted-foreground">Target:</span> {selectedPlan.targetPolicyName}</div>
-                <div><span className="text-muted-foreground">Upstream:</span> {selectedPlan.upstreamName} / {selectedPlan.upstreamCircuitId}</div>
-                <div><span className="text-muted-foreground">Current → Desired:</span> {selectedPlan.currentState} → {selectedPlan.desiredState}</div>
-                <div><span className="text-muted-foreground">Risk:</span> {selectedPlan.riskLevel}</div>
-                <div><span className="text-muted-foreground">Postcheck:</span> {selectedPlan.postcheckStatus ?? "pending"}{selectedPlan.postcheckRequired ? " (required)" : ""}</div>
+                <div><span className="text-muted-foreground">{t("bgpAnnouncements.baseSnapshot")}</span> {selectedPlan.baseSnapshotId}</div>
+                <div><span className="text-muted-foreground">{t("bgpAnnouncements.collection")}</span> {selectedPlan.collectionId ?? "—"}</div>
+                <div><span className="text-muted-foreground">{t("bgpAnnouncements.target")}:</span> {selectedPlan.targetPolicyName}</div>
+                <div><span className="text-muted-foreground">{t("bgpAnnouncements.upstream")}:</span> {selectedPlan.upstreamName} / {selectedPlan.upstreamCircuitId}</div>
+                <div><span className="text-muted-foreground">{t("bgpAnnouncements.currentDesired")}</span> {selectedPlan.currentState} → {selectedPlan.desiredState}</div>
+                <div><span className="text-muted-foreground">{t("bgpAnnouncements.risk")}:</span> {selectedPlan.riskLevel}</div>
+                <div><span className="text-muted-foreground">{t("bgpAnnouncements.postcheck")}</span> {selectedPlan.postcheckStatus ?? "pending"}{selectedPlan.postcheckRequired ? t("bgpAnnouncements.postcheckRequired") : ""}</div>
                 <div><span className="text-muted-foreground">Status:</span> {selectedPlan.status}</div>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <Label>Reason / note</Label>
-                  <Textarea rows={3} value={approvalReason} onChange={(event) => setApprovalReason(event.target.value)} placeholder="Opcional" />
+                  <Label>{t("bgpAnnouncements.reasonNote")}</Label>
+                  <Textarea rows={3} value={approvalReason} onChange={(event) => setApprovalReason(event.target.value)} placeholder={t("common.optional")} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Approval</Label>
+                  <Label>{t("bgpAnnouncements.approval")}</Label>
                   <div className="rounded-lg border border-border bg-background/40 p-3 text-xs">
                     <div>Status: {selectedPlan.approval?.status ?? "none"}</div>
-                    <div>Reviewer: {selectedPlan.approval?.reviewedBy ?? "—"}</div>
-                    <div>Reason: {selectedPlan.approval?.reason ?? "—"}</div>
+                    <div>{t("bgpAnnouncements.reviewer")} {selectedPlan.approval?.reviewedBy ?? "—"}</div>
+                    <div>{t("bgpAnnouncements.reason")} {selectedPlan.approval?.reason ?? "—"}</div>
                   </div>
                 </div>
               </div>
@@ -1274,17 +1276,17 @@ export default function BgpAnnouncementsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">Postcheck {selectedPlan.postcheckStatus ?? "pending"}</Badge>
                   {selectedPlan.latestPostcheck?.status ? <Badge variant="secondary">{selectedPlan.latestPostcheck.status}</Badge> : null}
-                  {selectedPlan.postcheckRequired ? <Badge variant="secondary">required</Badge> : <Badge variant="secondary">skipped</Badge>}
+                  {selectedPlan.postcheckRequired ? <Badge variant="secondary">{t("bgpAnnouncements.required")}</Badge> : <Badge variant="secondary">{t("bgpAnnouncements.skipped")}</Badge>}
                 </div>
                 <div className="mt-2 grid gap-2 md:grid-cols-2">
-                  <div>Expected: {selectedPlan.desiredState} / {selectedPlan.desiredCommunity ?? "—"}</div>
-                  <div>Observed: {selectedPlan.latestPostcheck?.observedState ?? "—"} / {selectedPlan.latestPostcheck?.observedCommunity ?? "—"}</div>
+                  <div>{t("bgpAnnouncements.expected")} {selectedPlan.desiredState} / {selectedPlan.desiredCommunity ?? "—"}</div>
+                  <div>{t("bgpAnnouncements.observed")} {selectedPlan.latestPostcheck?.observedState ?? "—"} / {selectedPlan.latestPostcheck?.observedCommunity ?? "—"}</div>
                   <div>Base snapshot: {selectedPlan.baseSnapshotId}</div>
                   <div>Observed snapshot: {selectedPlan.latestPostcheck?.observedSnapshotId ?? "—"}</div>
                 </div>
                 {selectedPlan.latestPostcheck ? (
                   <details className="mt-2">
-                    <summary className="cursor-pointer text-[11px] text-sky-300">Ver diff do postcheck</summary>
+                    <summary className="cursor-pointer text-[11px] text-sky-300">{t("bgpAnnouncements.viewPostcheckDiff")}</summary>
                     <pre className="mt-2 overflow-auto rounded border border-border bg-muted/40 p-2 text-[10px] leading-4">
 {JSON.stringify({ diff: selectedPlan.latestPostcheck.diff, findings: selectedPlan.latestPostcheck.findings }, null, 2)}
                     </pre>
@@ -1292,28 +1294,28 @@ export default function BgpAnnouncementsPage() {
                 ) : null}
               </div>
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Diff</div>
+                <div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.diff")}</div>
                 <pre className="mt-2 overflow-auto rounded-lg border border-border bg-muted/40 p-3 text-[11px] leading-5">
 {JSON.stringify(selectedPlan.diff, null, 2)}
                 </pre>
               </div>
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Commands</div>
+                <div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.commands")}</div>
                 <pre className="mt-2 overflow-auto rounded-lg border border-border bg-muted/40 p-3 text-[11px] leading-5">
 {selectedPlan.proposedCommands.map((item) => `${item.command}`).join("\n")}
                 </pre>
               </div>
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Rollback</div>
+                <div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.rollback")}</div>
                 <pre className="mt-2 overflow-auto rounded-lg border border-border bg-muted/40 p-3 text-[11px] leading-5">
 {selectedPlan.rollbackCommands.map((item) => `${item.command}`).join("\n")}
                 </pre>
               </div>
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Findings</div>
+                <div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.findings")}</div>
                 <div className="mt-2 space-y-2">
                   {selectedPlan.findings.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">Nenhum finding.</div>
+                    <div className="text-sm text-muted-foreground">{t("bgpAnnouncements.noFindings")}</div>
                   ) : selectedPlan.findings.map((finding) => (
                     <div key={`${finding.code}-${finding.message}`} className="rounded-lg border border-border bg-background/50 px-3 py-2">
                       <div className="flex flex-wrap items-center gap-2">
@@ -1327,10 +1329,10 @@ export default function BgpAnnouncementsPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Executions</div>
+                <div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.executions")}</div>
                 <div className="mt-2 space-y-2">
                   {(selectedPlan.executions ?? []).length === 0 ? (
-                    <div className="text-sm text-muted-foreground">Nenhum dry-run ainda.</div>
+                    <div className="text-sm text-muted-foreground">{t("bgpAnnouncements.noDryRun")}</div>
                   ) : (
                     (selectedPlan.executions ?? []).map((execution) => (
                       <div key={execution.id} className="rounded-lg border border-border bg-background/50 p-3 text-xs">
@@ -1339,9 +1341,9 @@ export default function BgpAnnouncementsPage() {
                           <Badge variant="outline">{execution.status}</Badge>
                           <span className="text-muted-foreground">#{execution.id}</span>
                         </div>
-                        <div className="mt-2">Started: {fmtDate(execution.startedAt)} · Finished: {fmtDate(execution.finishedAt)}</div>
+                        <div className="mt-2">{t("bgpAnnouncements.started")} {fmtDate(execution.startedAt)} · {t("bgpAnnouncements.finished")} {fmtDate(execution.finishedAt)}</div>
                         <div className="mt-2">
-                          <div className="text-[10px] uppercase text-muted-foreground">Execution log</div>
+                          <div className="text-[10px] uppercase text-muted-foreground">{t("bgpAnnouncements.executionLog")}</div>
                           <pre className="mt-1 overflow-auto rounded border border-border bg-muted/40 p-2 text-[10px] leading-4">
 {JSON.stringify(execution.executionLog, null, 2)}
                           </pre>
@@ -1352,11 +1354,11 @@ export default function BgpAnnouncementsPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Rollback</div>
+                <div className="text-xs uppercase text-muted-foreground">{t("bgpAnnouncements.rollback")}</div>
                 <div className="mt-2 space-y-2">
                   <div className="space-y-1">
-                    <Label>Rollback note / reason</Label>
-                    <Textarea rows={2} value={rollbackReason} onChange={(event) => setRollbackReason(event.target.value)} placeholder="Opcional" />
+                    <Label>{t("bgpAnnouncements.rollbackNote")}</Label>
+                    <Textarea rows={2} value={rollbackReason} onChange={(event) => setRollbackReason(event.target.value)} placeholder={t("common.optional")} />
                   </div>
                   {selectedRollback ? (
                     <div className="rounded-lg border border-border bg-background/50 p-3 text-xs space-y-2">
@@ -1369,20 +1371,20 @@ export default function BgpAnnouncementsPage() {
                       <div>Base snapshot: {selectedRollback.baseSnapshotId} · Rollback to: {selectedRollback.rollbackToSnapshotId}</div>
                       <div>Current snapshot: {selectedRollback.currentSnapshotId ?? "—"}</div>
                       <details>
-                        <summary className="cursor-pointer text-[11px] text-sky-300">Ver rollback diff</summary>
+                        <summary className="cursor-pointer text-[11px] text-sky-300">{t("bgpAnnouncements.viewRollbackDiff")}</summary>
                         <pre className="mt-2 overflow-auto rounded border border-border bg-muted/40 p-2 text-[10px] leading-4">
 {JSON.stringify(selectedRollback.rollbackDiff, null, 2)}
                         </pre>
                       </details>
                       <details>
-                        <summary className="cursor-pointer text-[11px] text-sky-300">Ver rollback log</summary>
+                        <summary className="cursor-pointer text-[11px] text-sky-300">{t("bgpAnnouncements.viewRollbackLog")}</summary>
                         <pre className="mt-2 overflow-auto rounded border border-border bg-muted/40 p-2 text-[10px] leading-4">
 {JSON.stringify(selectedRollback.rollbackLog, null, 2)}
                         </pre>
                       </details>
                     </div>
                   ) : (
-                    <div className="text-sm text-muted-foreground">Nenhum rollback solicitado.</div>
+                    <div className="text-sm text-muted-foreground">{t("bgpAnnouncements.noRollbackRequested")}</div>
                   )}
                 </div>
               </div>
@@ -1390,7 +1392,7 @@ export default function BgpAnnouncementsPage() {
                 {selectedPlan.status === "draft" && canOperateBgpAnnouncements ? (
                   <>
                     <Button onClick={() => void requestApprovalMutation.mutateAsync(selectedPlan.id)} disabled={requestApprovalMutation.isPending}>
-                      Solicitar aprovação
+                      {t("bgpAnnouncements.requestApproval")}
                     </Button>
                     <Button variant="secondary" onClick={() => void cancelPlanMutation.mutateAsync(selectedPlan.id)} disabled={cancelPlanMutation.isPending}>
                       Cancelar
@@ -1400,59 +1402,59 @@ export default function BgpAnnouncementsPage() {
                 {selectedPlan.status === "pending_approval" && canOperateBgpAnnouncements ? (
                   <>
                     <Button onClick={() => void approveMutation.mutateAsync(selectedPlan.approval?.id ?? 0)} disabled={!selectedPlan.approval?.id || approveMutation.isPending}>
-                      Aprovar
+                      {t("bgpAnnouncements.approve")}
                     </Button>
                     <Button variant="destructive" onClick={() => void rejectMutation.mutateAsync(selectedPlan.approval?.id ?? 0)} disabled={!selectedPlan.approval?.id || rejectMutation.isPending}>
-                      Rejeitar
+                      {t("bgpAnnouncements.reject")}
                     </Button>
                   </>
                 ) : null}
                 {selectedPlan.status === "approved" && canOperateBgpAnnouncements ? (
                   <>
                     <Button onClick={() => void dryRunMutation.mutateAsync(selectedPlan.id)} disabled={dryRunMutation.isPending || !selectedPlan.approval?.id}>
-                      Executar dry-run
+                      {t("bgpAnnouncements.runDryRun")}
                     </Button>
-                    <Badge variant="outline">Execução real bloqueada</Badge>
+                    <Badge variant="outline">{t("bgpAnnouncements.realExecutionBlocked")}</Badge>
                   </>
                 ) : null}
                 {selectedPlan.postcheckRequired && (selectedPlan.status === "approved" || selectedPlan.status === "dry_run_succeeded") && canOperateBgpAnnouncements ? (
                   <Button onClick={() => void postcheckMutation.mutateAsync(selectedPlan.id)} disabled={postcheckMutation.isPending}>
-                    Rodar postcheck
+                    {t("bgpAnnouncements.runPostcheck")}
                   </Button>
                 ) : null}
                 {canOperateBgpAnnouncements && (selectedPlan.status === "approved" || selectedPlan.status === "dry_run_succeeded" || selectedPlan.status === "execution_blocked") ? (
                   <Button onClick={() => void requestRollbackMutation.mutateAsync(selectedPlan.id)} disabled={requestRollbackMutation.isPending}>
-                    Solicitar rollback
+                    {t("bgpAnnouncements.requestRollback")}
                   </Button>
                 ) : null}
                 {selectedRollback?.status === "pending_approval" && canOperateBgpAnnouncements ? (
                   <>
                     <Button onClick={() => void approveRollbackMutation.mutateAsync(selectedRollback.id)} disabled={approveRollbackMutation.isPending}>
-                      Aprovar rollback
+                      {t("bgpAnnouncements.approveRollback")}
                     </Button>
                     <Button variant="destructive" onClick={() => void rejectRollbackMutation.mutateAsync(selectedRollback.id)} disabled={rejectRollbackMutation.isPending}>
-                      Rejeitar rollback
+                      {t("bgpAnnouncements.rejectRollback")}
                     </Button>
                   </>
                 ) : null}
                 {selectedRollback?.status === "approved" && canOperateBgpAnnouncements ? (
                   <>
                     <Button onClick={() => void rollbackDryRunMutation.mutateAsync(selectedRollback.id)} disabled={rollbackDryRunMutation.isPending}>
-                      Rollback dry-run
+                      {t("bgpAnnouncements.rollbackDryRun")}
                     </Button>
-                    <Badge variant="outline">Rollback real bloqueado</Badge>
+                    <Badge variant="outline">{t("bgpAnnouncements.rollbackRealBlocked")}</Badge>
                   </>
                 ) : null}
                 {selectedRollback?.status === "dry_run_succeeded" && canOperateBgpAnnouncements ? (
                   <Button onClick={() => void rollbackPostcheckMutation.mutateAsync(selectedRollback.id)} disabled={rollbackPostcheckMutation.isPending}>
-                    Postcheck rollback
+                    {t("bgpAnnouncements.rollbackPostcheck")}
                   </Button>
                 ) : null}
                 {selectedRollback?.status === "dry_run_succeeded" ? (
                   <Alert className="border-amber-500/30 bg-amber-500/10">
                     <Clock3 className="h-4 w-4" />
                     <AlertDescription>
-                      Rollback dry-run OK. Execução real ainda está desabilitada neste ambiente.
+                      {t("bgpAnnouncements.rollbackDryRun")} OK. Execução real ainda está desabilitada neste ambiente.
                     </AlertDescription>
                   </Alert>
                 ) : null}
@@ -1460,7 +1462,7 @@ export default function BgpAnnouncementsPage() {
                   <Alert className="border-emerald-500/30 bg-emerald-500/10">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Dry-run OK. Execução real ainda está desabilitada neste ambiente.
+                      {t("bgpAnnouncements.dryRunOk")}
                     </AlertDescription>
                   </Alert>
                 ) : null}

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, X, Loader2, Circle } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n";
 
 interface ProvisioningStep {
   stepName: string;
@@ -51,6 +52,7 @@ function getStatusColor(status: string): string {
 }
 
 export function ExecutionResultTimeline({ steps = [] }: ExecutionResultTimelineProps) {
+  const { t } = useTranslation();
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
 
   const toggleStep = (idx: number) => {
@@ -70,7 +72,7 @@ export function ExecutionResultTimeline({ steps = [] }: ExecutionResultTimelineP
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Resultado da Execução</CardTitle>
+        <CardTitle>{t("provisioningFeatures.timeline.title")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -88,8 +90,9 @@ export function ExecutionResultTimeline({ steps = [] }: ExecutionResultTimelineP
 
                   {step.executedAt && (
                     <p className="text-xs text-gray-600 mt-1">
-                      {new Date(step.executedAt).toLocaleString('pt-BR')}
-                      {step.duration && ` (${(step.duration / 1000).toFixed(2)}s)`}
+                      {new Date(step.executedAt).toLocaleString()}
+                      {step.duration &&
+                        ` (${t("provisioningFeatures.timeline.duration", { seconds: (step.duration / 1000).toFixed(2) })})`}
                     </p>
                   )}
 
@@ -100,7 +103,7 @@ export function ExecutionResultTimeline({ steps = [] }: ExecutionResultTimelineP
                       onClick={() => toggleStep(idx)}
                       className="mt-2 h-auto p-0 text-xs"
                     >
-                      {expandedSteps.has(idx) ? "⬆️ Ocultar saída" : "⬇️ Mostrar saída"}
+                      {expandedSteps.has(idx) ? t("provisioningFeatures.timeline.hideDetails") : t("provisioningFeatures.timeline.showDetails")}
                     </Button>
                   )}
 

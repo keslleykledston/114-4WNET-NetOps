@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactElement } from "react";
 import type { PortSpec, StencilSpec } from "./stencils";
 import { PORT_STATUS_COLOR } from "./stencils";
+import { useTranslation } from "@/i18n";
 
 interface Props {
   spec: StencilSpec;
@@ -14,6 +15,7 @@ interface Props {
  * with a colored inner fill (status) and a utilization bar at the bottom.
  */
 export function DeviceStencil({ spec, selectedPortId, onSelectPort }: Props) {
+  const { t } = useTranslation();
   // Build columns: ports come pre-assigned to row 0/1; group consecutive 2 ports per column.
   const columns = useMemo(() => buildColumns(spec.ports), [spec.ports]);
   const downCount = useMemo(() => spec.ports.filter((p) => p.status === "down").length, [spec.ports]);
@@ -133,6 +135,12 @@ export function DeviceStencil({ spec, selectedPortId, onSelectPort }: Props) {
                     height={PORT_H}
                     selected={selectedPortId === p.id}
                     onClick={(svgPoint) => onSelectPort(p, svgPoint)}
+                    portTooltip={t("networkMap.stencil.portTooltip", {
+                      ifname: p.ifname,
+                      status: t(`networkMap.stencil.portStatus.${p.status}`),
+                      speed: p.speed,
+                      util: p.utilPct,
+                    })}
                   />
                 );
               })}
@@ -183,6 +191,7 @@ function PortCell({
   height,
   selected,
   onClick,
+  portTooltip,
 }: {
   port: PortSpec;
   x: number;
@@ -191,6 +200,7 @@ function PortCell({
   height: number;
   selected: boolean;
   onClick: (svgPoint: { x: number; y: number }) => void;
+  portTooltip: string;
 }) {
   const [hover, setHover] = useState(false);
   const c = PORT_STATUS_COLOR[port.status];
@@ -211,9 +221,7 @@ function PortCell({
       }}
       style={{ cursor: "pointer" }}
     >
-      <title>
-        {`${port.ifname}\nStatus: ${c.label}\nVelocidade: ${port.speed}\nUtilização: ${port.utilPct}%`}
-      </title>
+      <title>{portTooltip}</title>
       {/* Cage (SFP/QSFP body) */}
       <rect
         width={width}

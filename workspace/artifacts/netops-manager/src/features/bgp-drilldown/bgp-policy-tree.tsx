@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "@/i18n";
 import type { BgpPeerDrilldownResult } from "./types";
 import { AfiSafiBadge, DependencyStatusBadge, PolicySourceBadge } from "./bgp-drilldown-badges";
 
@@ -27,6 +28,7 @@ function TreeSection({ label, children, defaultOpen = true }: { label: ReactNode
 }
 
 export function BgpPolicyTree({ data, direction, title }: BgpPolicyTreeProps) {
+  const { t } = useTranslation();
   const policies = data.policies.filter((p) => p.direction === direction);
   const families = data.families.filter((f) =>
     direction === "import" ? f.effectiveImportPolicy : f.effectiveExportPolicy,
@@ -35,7 +37,7 @@ export function BgpPolicyTree({ data, direction, title }: BgpPolicyTreeProps) {
   if (!policies.length && !families.length) {
     return (
       <p className="text-sm text-muted-foreground">
-        Nenhuma policy {direction} encontrada no snapshot para este peer.
+        {t("bgpPeerDrilldown.features.policyTree.empty", { direction })}
       </p>
     );
   }
@@ -62,7 +64,9 @@ export function BgpPolicyTree({ data, direction, title }: BgpPolicyTreeProps) {
                 {eff ? <DependencyStatusBadge status={eff.status} /> : null}
                 {eff ? <PolicySourceBadge source={eff.source} inherited={eff.inheritedFromGroup} /> : null}
                 {fam.inheritedGroup ? (
-                  <span className="text-[10px] text-muted-foreground">via {fam.inheritedGroup}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {t("bgpPeerDrilldown.features.policyTree.viaGroup", { group: fam.inheritedGroup })}
+                  </span>
                 ) : null}
               </span>
             )}
@@ -71,7 +75,10 @@ export function BgpPolicyTree({ data, direction, title }: BgpPolicyTreeProps) {
               policy.nodes.map((node) => (
                 <div key={`${policy.name}-${node.sequence}`} className="ml-2 space-y-1">
                   <div className="text-xs text-muted-foreground">
-                    node {node.sequence ?? "?"} · {node.action ?? "—"}
+                    {t("bgpPeerDrilldown.features.policyTree.nodeAction", {
+                      sequence: node.sequence ?? "?",
+                      action: node.action ?? "—",
+                    })}
                   </div>
                   {node.matches.map((m) => (
                     <div key={m.raw} className="ml-4 flex flex-wrap items-center gap-2 font-mono text-xs">
@@ -87,13 +94,15 @@ export function BgpPolicyTree({ data, direction, title }: BgpPolicyTreeProps) {
                   ))}
                   {node.applies.map((a) => (
                     <div key={a.raw} className="ml-4 font-mono text-xs text-muted-foreground">
-                      └── apply: {a.raw}
+                      └── {t("bgpPeerDrilldown.features.policyTree.applyPrefix")} {a.raw}
                     </div>
                   ))}
                 </div>
               ))
             ) : (
-              <p className="text-xs text-muted-foreground ml-2">Policy não detalhada (include_policies=false ou ausente no catálogo).</p>
+              <p className="text-xs text-muted-foreground ml-2">
+                {t("bgpPeerDrilldown.features.policyTree.notDetailed")}
+              </p>
             )}
           </TreeSection>
         );

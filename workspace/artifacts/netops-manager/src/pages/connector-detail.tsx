@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
+import { useTranslation } from "@/i18n";
 import {
   createDiagnosticJob,
   deleteConnector,
@@ -41,6 +42,7 @@ export default function ConnectorDetailPage() {
   const id = Number(params?.id);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const canWrite = user?.role === "admin" || user?.role === "operator";
   const isAdmin = user?.role === "admin";
@@ -72,13 +74,6 @@ export default function ConnectorDetailPage() {
     refetchInterval: 10_000,
   });
 
-  const healthQuery = useQuery({
-    queryKey: ["connector-health", id],
-    queryFn: () => getConnectorHealth(id),
-    enabled: Number.isInteger(id) && id > 0,
-    refetchInterval: 30_000,
-  });
-
   const alertsQuery = useQuery({
     queryKey: ["connector-alerts", id],
     queryFn: () => listConnectorAlertsForConnector(id),
@@ -94,9 +89,9 @@ export default function ConnectorDetailPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["connector-alerts", id] });
       void queryClient.invalidateQueries({ queryKey: ["connector-health-summary"] });
-      toast({ title: "Alerta atualizado" });
+      toast({ title: t("connectorDetail.toastAlertUpdated") });
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("connectorDetail.error"), description: e.message, variant: "destructive" }),
   });
 
   const revokeMutation = useMutation({
@@ -105,11 +100,11 @@ export default function ConnectorDetailPage() {
       void queryClient.invalidateQueries({ queryKey: ["connector", id] });
       void queryClient.invalidateQueries({ queryKey: ["connector-jobs", id] });
       toast({
-        title: "Connector revogado",
-        description: "Jobs pendentes cancelados. Crie novamente com o mesmo nome para emitir um novo token.",
+        title: t("connectorDetail.toastRevoked"),
+        description: t("connectorDetail.toastRevokedDesc"),
       });
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("connectorDetail.error"), description: e.message, variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
@@ -117,12 +112,12 @@ export default function ConnectorDetailPage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["connectors"] });
       toast({
-        title: "Connector removido",
-        description: "O registro foi excluído. Dispositivos vinculados ficaram sem connector atribuído.",
+        title: t("connectorDetail.toastRemoved"),
+        description: t("connectorDetail.toastRemovedDesc"),
       });
       navigate("/infrastructure/connectors");
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("connectorDetail.error"), description: e.message, variant: "destructive" }),
   });
 
   const diagMutation = useMutation({
@@ -130,17 +125,17 @@ export default function ConnectorDetailPage() {
       createDiagnosticJob(id, input.kind, input.body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["connector-jobs", id] });
-      toast({ title: "Job enfileirado", description: "O connector agent executará localmente." });
+      toast({ title: t("connectorDetail.toastJobQueued"), description: t("connectorDetail.toastJobQueuedDesc") });
     },
-    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("connectorDetail.error"), description: e.message, variant: "destructive" }),
   });
 
   const c = connectorQuery.data;
   if (connectorQuery.isLoading) {
-    return <div className="p-0">Carregando…</div>;
+    return <div className="p-0">{t("connectorDetail.loading")}</div>;
   }
   if (!c) {
-    return <div className="p-0">Connector não encontrado.</div>;
+    return <div className="p-0">{t("connectorDetail.notFound")}</div>;
   }
 
   return (
@@ -149,7 +144,7 @@ export default function ConnectorDetailPage() {
         <Link href="/infrastructure/connectors">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Voltar
+            {t("connectorDetail.back")}
           </Button>
         </Link>
         <div>
@@ -162,30 +157,30 @@ export default function ConnectorDetailPage() {
 
       <Tabs defaultValue="summary">
         <TabsList>
-          <TabsTrigger value="summary">Resumo</TabsTrigger>
-          <TabsTrigger value="wireguard">WireGuard</TabsTrigger>
-          <TabsTrigger value="jobs">Jobs</TabsTrigger>
-          <TabsTrigger value="diagnostics">Diagnóstico</TabsTrigger>
+          <TabsTrigger value="summary">{t("connectorDetail.tabs.summary")}</TabsTrigger>
+          <TabsTrigger value="wireguard">{t("connectorDetail.tabs.wireguard")}</TabsTrigger>
+          <TabsTrigger value="jobs">{t("connectorDetail.tabs.jobs")}</TabsTrigger>
+          <TabsTrigger value="diagnostics">{t("connectorDetail.tabs.diagnostics")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary" className="space-y-4 mt-4">
           <Card>
             <CardContent className="pt-6 grid gap-2 text-sm md:grid-cols-2">
               <p>
-                <span className="text-muted-foreground">IP WireGuard:</span> {c.wireguard_ip ?? "—"}
+                <span className="text-muted-foreground">{t("connectorDetail.wgIp")}</span> {c.wireguard_ip ?? "—"}
               </p>
               <p>
-                <span className="text-muted-foreground">Último heartbeat:</span>{" "}
-                {c.last_heartbeat ? new Date(c.last_heartbeat).toLocaleString() : "nunca"}
+                <span className="text-muted-foreground">{t("connectorDetail.lastHeartbeat")}</span>{" "}
+                {c.last_heartbeat ? new Date(c.last_heartbeat).toLocaleString() : t("connectorDetail.never")}
               </p>
               <p>
-                <span className="text-muted-foreground">Versão:</span> {c.version ?? "—"}
+                <span className="text-muted-foreground">{t("connectorDetail.versionLabel")}</span> {c.version ?? "—"}
               </p>
               <p>
-                <span className="text-muted-foreground">Dispositivos:</span> {c.device_count}
+                <span className="text-muted-foreground">{t("connectorDetail.devices")}</span> {c.device_count}
               </p>
               <p>
-                <span className="text-muted-foreground">Jobs pendentes:</span> {c.pending_jobs}
+                <span className="text-muted-foreground">{t("connectorDetail.pendingJobs")}</span> {c.pending_jobs}
               </p>
             </CardContent>
           </Card>
@@ -194,7 +189,7 @@ export default function ConnectorDetailPage() {
               {c.status !== "REVOKED" && (
                 <Button variant="destructive" onClick={() => revokeMutation.mutate()} disabled={revokeMutation.isPending}>
                   <ShieldOff className="h-4 w-4 mr-2" />
-                  Revogar connector
+                  {t("connectorDetail.revokeConnector")}
                 </Button>
               )}
               <Button
@@ -204,7 +199,7 @@ export default function ConnectorDetailPage() {
                 disabled={deleteMutation.isPending}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
-                Remover connector
+                {t("connectorDetail.removeConnector")}
               </Button>
             </div>
           )}
@@ -216,14 +211,14 @@ export default function ConnectorDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Severidade</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Mensagem</TableHead>
-                    <TableHead>Primeira ocorrência</TableHead>
-                    <TableHead>Última ocorrência</TableHead>
-                    <TableHead>Ações</TableHead>
+                    <TableHead>{t("connectorDetail.severity")}</TableHead>
+                    <TableHead>{t("connectorDetail.type")}</TableHead>
+                    <TableHead>{t("connectorDetail.status")}</TableHead>
+                    <TableHead>{t("connectorDetail.alertTitle")}</TableHead>
+                    <TableHead>{t("connectorDetail.message")}</TableHead>
+                    <TableHead>{t("connectorDetail.firstOccurrence")}</TableHead>
+                    <TableHead>{t("connectorDetail.lastOccurrence")}</TableHead>
+                    <TableHead>{t("connectorDetail.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -248,7 +243,7 @@ export default function ConnectorDetailPage() {
                             disabled={alertActionMutation.isPending}
                             onClick={() => alertActionMutation.mutate({ alertId: alert.id, action: "ack" })}
                           >
-                            ACK
+                            {t("connectorDetail.ack")}
                           </Button>
                         )}
                         {canWrite && (alert.status === "OPEN" || alert.status === "ACKNOWLEDGED") && (
@@ -258,7 +253,7 @@ export default function ConnectorDetailPage() {
                             disabled={alertActionMutation.isPending}
                             onClick={() => alertActionMutation.mutate({ alertId: alert.id, action: "resolve" })}
                           >
-                            Resolver
+                            {t("connectorDetail.resolve")}
                           </Button>
                         )}
                       </TableCell>
@@ -267,7 +262,7 @@ export default function ConnectorDetailPage() {
                   {(alertsQuery.data ?? []).length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
-                        Nenhum alerta registrado.
+                        {t("connectorDetail.noAlerts")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -280,7 +275,7 @@ export default function ConnectorDetailPage() {
         <TabsContent value="wireguard" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Configuração (sem chave privada)</CardTitle>
+              <CardTitle className="text-base">{t("connectorDetail.wgConfigTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <Button
@@ -290,7 +285,7 @@ export default function ConnectorDetailPage() {
                   setWgConfig(data.config);
                 }}
               >
-                Carregar preview
+                {t("connectorDetail.loadPreview")}
               </Button>
               {wgConfig && (
                 <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-80">{wgConfig}</pre>
@@ -305,13 +300,13 @@ export default function ConnectorDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Device</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Duração</TableHead>
-                    <TableHead>Criado por</TableHead>
+                    <TableHead>{t("connectorDetail.date")}</TableHead>
+                    <TableHead>{t("connectorDetail.device")}</TableHead>
+                    <TableHead>{t("connectorDetail.type")}</TableHead>
+                    <TableHead>{t("connectorDetail.target")}</TableHead>
+                    <TableHead>{t("connectorDetail.status")}</TableHead>
+                    <TableHead>{t("connectorDetail.duration")}</TableHead>
+                    <TableHead>{t("connectorDetail.createdBy")}</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -334,7 +329,7 @@ export default function ConnectorDetailPage() {
                             setSelectedJob(detail);
                           }}
                         >
-                          Ver resultado
+                          {t("connectorDetail.viewResult")}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -342,7 +337,7 @@ export default function ConnectorDetailPage() {
                   {(jobsQuery.data ?? []).length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
-                        Nenhum job ainda.
+                        {t("connectorDetail.noJobsYet")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -357,7 +352,7 @@ export default function ConnectorDetailPage() {
             <>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Ping (read-only)</CardTitle>
+                  <CardTitle className="text-base">{t("connectorDetail.pingReadOnly")}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex gap-2">
                   <Input placeholder="10.10.10.1" value={pingTarget} onChange={(e) => setPingTarget(e.target.value)} />
@@ -365,7 +360,7 @@ export default function ConnectorDetailPage() {
                     disabled={!pingTarget || diagMutation.isPending}
                     onClick={() => diagMutation.mutate({ kind: "ping", body: { target_ip: pingTarget } })}
                   >
-                    Enfileirar
+                    {t("connectorDetail.enqueue")}
                   </Button>
                 </CardContent>
               </Card>
@@ -373,11 +368,11 @@ export default function ConnectorDetailPage() {
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Terminal className="h-4 w-4" />
-                    SSH read-only
+                    {t("connectorDetail.sshReadOnly")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Input placeholder="IP do equipamento" value={sshTarget} onChange={(e) => setSshTarget(e.target.value)} />
+                  <Input placeholder={t("connectorDetail.deviceIpPlaceholder")} value={sshTarget} onChange={(e) => setSshTarget(e.target.value)} />
                   <Input placeholder="display version" value={sshCommand} onChange={(e) => setSshCommand(e.target.value)} />
                   <Button
                     disabled={!sshTarget || !sshCommand || diagMutation.isPending}
@@ -388,7 +383,7 @@ export default function ConnectorDetailPage() {
                       })
                     }
                   >
-                    Enfileirar SSH
+                    {t("connectorDetail.enqueueSsh")}
                   </Button>
                 </CardContent>
               </Card>
@@ -400,20 +395,19 @@ export default function ConnectorDetailPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover connector?</AlertDialogTitle>
+            <AlertDialogTitle>{t("connectorDetail.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Isso excluirá permanentemente <strong>{c.name}</strong> ({c.tenant_name}), incluindo jobs e histórico de
-              heartbeat. Dispositivos vinculados ({c.device_count}) ficarão sem connector. Esta ação não pode ser desfeita.
+              {t("connectorDetail.deleteDesc", { name: c.name, tenant: c.tenant_name, count: String(c.device_count) })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("connectorDetail.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deleteMutation.mutate()}
               disabled={deleteMutation.isPending}
             >
-              Remover
+              {t("connectorDetail.remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -422,10 +416,15 @@ export default function ConnectorDetailPage() {
       <AlertDialog open={Boolean(selectedJob)} onOpenChange={(open) => !open && setSelectedJob(null)}>
         <AlertDialogContent className="max-w-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Job #{String(selectedJob?.id ?? "")}</AlertDialogTitle>
+            <AlertDialogTitle>{t("connectorDetail.jobTitle", { id: String(selectedJob?.id ?? "") })}</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-left text-sm">
-                <p>Status: {String(selectedJob?.status)} · Duração: {String(selectedJob?.duration_ms ?? "—")}ms</p>
+                <p>
+                  {t("connectorDetail.statusDuration", {
+                    status: String(selectedJob?.status),
+                    duration: String(selectedJob?.duration_ms ?? "—"),
+                  })}
+                </p>
                 <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40">
                   {JSON.stringify(selectedJob?.payload_json ?? {}, null, 2)}
                 </pre>
@@ -441,7 +440,7 @@ export default function ConnectorDetailPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Fechar</AlertDialogCancel>
+            <AlertDialogCancel>{t("connectorDetail.close")}</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

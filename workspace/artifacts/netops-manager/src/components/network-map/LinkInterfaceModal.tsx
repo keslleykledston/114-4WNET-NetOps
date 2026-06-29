@@ -44,6 +44,7 @@ import { useLiveInterfaceTraffic } from "@/features/network-map/operational-inte
 import { DeviceStencil } from "./device-stencils/DeviceStencil";
 import { PortMiniChart } from "./device-stencils/PortMiniChart";
 import { InterfaceSelect } from "./ManualLinkModal";
+import { useTranslation } from "@/i18n";
 
 const CHART_POINTS = 40;
 
@@ -100,6 +101,7 @@ function useInterfaceTrafficPoll(
   ifName: string,
   enabled: boolean,
 ): TrafficState {
+  const { t } = useTranslation();
   const [state, setState] = useState<TrafficState>(emptyTraffic);
   const prevRef = useRef<{ inOctets: bigint; outOctets: bigint; at: number } | null>(null);
 
@@ -125,7 +127,7 @@ function useInterfaceTrafficPoll(
           setState((s) => ({
             ...s,
             loading: false,
-            error: "Sem contadores SNMP para esta interface.",
+            error: t("networkMap.linkInterface.noSnmpCounters"),
           }));
           return;
         }
@@ -151,7 +153,7 @@ function useInterfaceTrafficPoll(
           ? error.message
           : error instanceof Error
             ? error.message
-            : "Falha ao coletar SNMP";
+            : t("networkMap.linkInterface.snmpCollectFailed");
         setState((s) => ({
           ...s,
           loading: false,
@@ -166,7 +168,7 @@ function useInterfaceTrafficPoll(
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [deviceId, ifName, enabled]);
+  }, [deviceId, ifName, enabled, t]);
 
   return state;
 }
@@ -194,6 +196,7 @@ function LinkSidePanel({
   onDraftChange: (v: string) => void;
   enabled: boolean;
 }) {
+  const { t } = useTranslation();
   const deviceId = parseInventoryNodeId(device.id);
   const traffic = useInterfaceTrafficPoll(deviceId, draftIf || ifName, enabled);
   const { livePorts: allPortTraffic } = useLiveInterfaceTraffic(deviceId, enabled);
@@ -253,13 +256,13 @@ function LinkSidePanel({
           </div>
         </div>
         <Badge variant="outline" className="shrink-0 border-zinc-700 bg-zinc-950 text-[10px] text-zinc-300">
-          {side === "source" ? "Lado A" : "Lado B"}
+          {side === "source" ? t("networkMap.linkInterface.sideA") : t("networkMap.linkInterface.sideB")}
         </Badge>
       </div>
 
       {editing ? (
         <InterfaceSelect
-          label="Interface"
+          label={t("networkMap.linkInterface.interface")}
           deviceNodeId={device.id}
           value={draftIf}
           onChange={onDraftChange}
@@ -295,7 +298,7 @@ function LinkSidePanel({
           />
         ) : (
           <div className="flex h-[72px] items-center justify-center text-[11px] text-zinc-500">
-            {traffic.loading ? "Coletando SNMP…" : (traffic.error ?? "Aguardando amostras")}
+            {traffic.loading ? t("networkMap.linkInterface.collectingSnmp") : (traffic.error ?? t("networkMap.linkInterface.waitingSamples"))}
           </div>
         )}
       </div>
@@ -303,10 +306,13 @@ function LinkSidePanel({
       <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
         <Activity className="h-3 w-3 text-sky-400" />
         {traffic.loading
-          ? "SNMP_FAST — amostragem a cada 10s"
+          ? t("networkMap.linkInterface.snmpFastHint")
           : traffic.error
             ? traffic.error
-            : `Uso ${traffic.utilPct}% · cap ${fmtMbps(traffic.capacityMbps)}`}
+            : t("networkMap.linkInterface.usageCapacity", {
+                util: traffic.utilPct,
+                capacity: fmtMbps(traffic.capacityMbps),
+              })}
       </div>
     </div>
   );
@@ -319,6 +325,7 @@ export function LinkInterfaceModal({
   links,
   onOpenChange,
   onLinkUpdated,
+  onLinkDeleted,
 }: {
   link: LinkData | null;
   devices: DeviceData[];
@@ -326,7 +333,9 @@ export function LinkInterfaceModal({
   links: LinkData[];
   onOpenChange: (open: boolean) => void;
   onLinkUpdated: (link: LinkData) => void;
+  onLinkDeleted: (linkId: string) => void;
 }) {
+  const { t } = useTranslation();
   const open = !!link;
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -369,11 +378,11 @@ export function LinkInterfaceModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
             <Cable className="h-4 w-4 text-sky-400" />
-            Link {src.name} ↔ {dst.name}
+            {t("networkMap.linkInterface.title", { source: src.name, target: dst.name })}
           </DialogTitle>
           <DialogDescription className="text-zinc-400">
-            {link.capacity} · {link.edgeType} · origem {link.origin}
-            {link.utilizationPct != null ? ` · uso ${link.utilizationPct}%` : ""}
+            {link.capacity} · {link.edgeType} · {t("networkMap.linkInterface.origin")} {link.origin}
+            {link.utilizationPct != null ? ` · ${t("networkMap.linkInterface.usage")} ${link.utilizationPct}%` : ""}
           </DialogDescription>
         </DialogHeader>
 
@@ -408,23 +417,33 @@ export function LinkInterfaceModal({
 
         <DialogFooter className="gap-2 sm:justify-between">
           <div className="text-[10px] text-zinc-500">
-            Faceplates via SNMP platform/sysDescr · tráfego IF-MIB (hcIn/hcOut octets)
+            {t("networkMap.linkInterface.footerHint")}
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!link) return;
+                onLinkDeleted(link.id);
+                onOpenChange(false);
+              }}
+            >
+              {t("networkMap.linkInterface.removeLink")}
+            </Button>
             {editing ? (
               <>
                 <Button variant="ghost" onClick={() => { setEditing(false); setDraftA(link.intfA); setDraftB(link.intfB); }}>
-                  Cancelar
+                  {t("common.cancel")}
                 </Button>
                 <Button onClick={() => void handleSave()} disabled={saving}>
                   <Save className="mr-1.5 h-3.5 w-3.5" />
-                  {saving ? "Salvando…" : "Salvar interfaces"}
+                  {saving ? t("networkMap.linkInterface.saving") : t("networkMap.linkInterface.saveInterfaces")}
                 </Button>
               </>
             ) : (
               <Button variant="outline" className="border-zinc-700 bg-zinc-900" onClick={() => setEditing(true)}>
                 <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                Editar interfaces
+                {t("networkMap.linkInterface.editInterfaces")}
               </Button>
             )}
           </div>

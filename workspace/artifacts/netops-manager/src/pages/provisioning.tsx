@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import {
   getListProvisioningJobsQueryKey,
   useCreateProvisioningJob,
@@ -97,6 +98,7 @@ function parseStructuredTargets(values: Record<string, string>): number[] {
 
 export default function Provisioning() {
   const { t } = useTranslation();
+  const [location] = useLocation();
   const { data: jobs, isLoading: jobsLoading } = useListProvisioningJobs();
   const { data: devices } = useListDevices();
   const createJob = useCreateProvisioningJob();
@@ -129,6 +131,19 @@ export default function Provisioning() {
   const [rollbackLoading, setRollbackLoading] = useState(false);
   const [previewRollbackLoading, setPreviewRollbackLoading] = useState(false);
   const [executeEnabled, setExecuteEnabled] = useState(true);
+
+  useEffect(() => {
+    const search = location.includes("?") ? location.slice(location.indexOf("?") + 1) : "";
+    if (!search) return;
+    const params = new URLSearchParams(search);
+    const serviceTypeParam = params.get("serviceType");
+    if (
+      serviceTypeParam &&
+      ["l2vpn", "l3vpn", "l2vpn_vpws", "l2vpn_vpls", "l3vpn_vrf", "bgp_peer_customer", "bgp_peer_provider"].includes(serviceTypeParam)
+    ) {
+      setServiceType(serviceTypeParam);
+    }
+  }, [location]);
 
   const selectedTemplate = useMemo(
     () => templates.find((item) => item.serviceType === serviceType),

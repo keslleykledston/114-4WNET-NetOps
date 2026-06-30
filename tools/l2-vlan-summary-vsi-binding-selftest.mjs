@@ -28,10 +28,16 @@ const vlan1118 = parseHuaweiL2Circuits({
   "display vlan summary": summary,
   "display vsi verbose": "# hostname=EDGE_S6730\\n***VSI Name               : L2L-1118\\n    VSI ID                 : 1118\\n    VSI State              : up\\n    Peer Router ID         : 10.1.1.1\\n    Session                : up\\n    Encapsulation Type     : VLAN\\n",
 });
+const vlan1158 = parseHuaweiL2Circuits({
+  "display current-configuration interface": "# hostname=EDGE_S6730\\ninterface Vlanif1158\\n description L2-only\\n#",
+  "display vlan summary": summary,
+  "display vlan": "VLAN ID: 1158\\nStatus: Enable\\nState: Up\\nDescription: VLAN 1158\\nTagged ports: XGE0/0/48(U), Eth-Trunk0(U)\\nActive ports: XGE0/0/48(U), Eth-Trunk0(U)\\n",
+});
 
 const findings199 = resolveL2Findings(normalizeCircuits(vlan199));
 const findings1842 = resolveL2Findings(normalizeCircuits(vlan1842));
 const findings1118 = resolveL2Findings(normalizeCircuits(vlan1118));
+const findings1158 = resolveL2Findings(normalizeCircuits(vlan1158));
 
 const binding1118 = vlan1118.find((c) => c.outerVlan === 1118);
 
@@ -57,6 +63,10 @@ console.log(JSON.stringify({
     binding: binding1118?.classification,
     findings: findings1118.map((f) => f.code),
   },
+  vlan1158: {
+    binding: vlan1158.find((c) => c.outerVlan === 1158)?.classification,
+    findings: findings1158.map((f) => f.code),
+  },
 }, null, 2));
 `;
 
@@ -73,4 +83,7 @@ if (result.status !== 0) {
 }
 
 console.log(result.stdout);
+if (!result.stdout.includes('"vlan1158"')) {
+  process.exit(1);
+}
 console.log("l2-vlan-summary-vsi-binding-selftest: OK");

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Download, Eye, Filter, Layers, Network, RefreshCw } from "lucide-react";
+import { Link } from "wouter";
 import { useAuth } from "@/components/auth-provider";
 import { useTranslation } from "@/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -281,6 +282,24 @@ export default function L2Circuits() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">L2VPN</CardTitle>
+          <CardDescription>Acesso rápido para criar/editar fluxos L2VPN relacionados a VPWS e VSI/VPLS.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/provisioning?serviceType=l2vpn_vpws">L2VPN VPWS</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/provisioning?serviceType=l2vpn_vpls">L2VPN VPLS/VSI</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/provisioning?serviceType=l2vpn">L2VPN Preview</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-3">

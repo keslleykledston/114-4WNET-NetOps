@@ -73,6 +73,7 @@ function TechnicalDetailFields({ circuit }: { circuit: L2Circuit }) {
       <OptionalField label={t(`${ds}.vlanExists`)} value={circuit.evidenceFlags && typeof circuit.evidenceFlags === "object" ? String((circuit.evidenceFlags as { vlanExists?: boolean }).vlanExists ?? "") : undefined} />
       <OptionalField label={t(`${ds}.classification`)} value={circuit.classification} />
       <OptionalField label={t(`${ds}.l2Transport`)} value={circuit.l2Transport} />
+      <OptionalField label={t(`${ds}.vlanifBindingVsi`)} value={circuit.evidenceFlags && typeof circuit.evidenceFlags === "object" ? (circuit.evidenceFlags as { vlanifBindingVsiName?: string }).vlanifBindingVsiName : undefined} />
       <OptionalField label={t(`${ds}.parentInterface`)} value={circuit.parentInterface} mono />
       {(group === "local" || group === "mpls") && <OptionalField label={t(`${ds}.outerVlan`)} value={circuit.outerVlan} />}
       {group === "local" && <OptionalField label={t(`${ds}.innerVlan`)} value={circuit.innerVlan} />}

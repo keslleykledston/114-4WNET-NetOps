@@ -16,12 +16,15 @@ export interface VlanEvidence {
   vlanExists?: boolean;
   vlanState?: string;
   vlanStatus?: string;
+  portsUpCount?: number;
   taggedPorts?: string[];
   activePorts?: string[];
   vlanDescription?: string;
   vlanifExists?: boolean;
   vlanifHasL3?: boolean;
   vlanifEmpty?: boolean;
+  vlanifBindingVsiName?: string;
+  vlanifBindingType?: string;
 }
 
 export function inferDeviceRoleFamily(rawOutputs: Record<string, string | undefined>): L2DeviceRoleFamily {
@@ -146,6 +149,7 @@ export function parseVlanEvidence(displayVlanOutput?: string, vlanConfigOutput?:
           vlanifExists: false,
           vlanifHasL3: false,
           vlanifEmpty: false,
+          portsUpCount: 0,
           taggedPorts: [],
           activePorts: [],
         };
@@ -162,6 +166,7 @@ export function parseVlanEvidence(displayVlanOutput?: string, vlanConfigOutput?:
         vlanifExists: false,
         vlanifHasL3: false,
         vlanifEmpty: false,
+        portsUpCount: 0,
         taggedPorts: [],
         activePorts: [],
       };
@@ -179,6 +184,7 @@ export function parseVlanEvidence(displayVlanOutput?: string, vlanConfigOutput?:
         vlanifExists: true,
         vlanifHasL3: false,
         vlanifEmpty: true,
+        portsUpCount: 0,
         taggedPorts: [],
         activePorts: [],
       };
@@ -196,7 +202,15 @@ export function parseVlanEvidence(displayVlanOutput?: string, vlanConfigOutput?:
     }
 
     if (inVlanifBlock) {
-      if (/^ip address\b/i.test(line) || /^ipv6 address\b/i.test(line) || /^ipv6 enable\b/i.test(line) || /\bospf\b/i.test(line) || /\bisis\b/i.test(line) || /\bbgp\b/i.test(line) || /\brip\b/i.test(line) || /^ip binding vpn-instance\b/i.test(line) || /^vpn-instance\b/i.test(line) || /\bmpls\b/i.test(line) || /\bl2vc\b/i.test(line) || /\bvsi\b/i.test(line) || /\bvpls\b/i.test(line) || /\bl2\s+binding\b/i.test(line)) {
+      if (/^l2 binding\s+vsi\s+(\S+)/i.test(line)) {
+        const match = line.match(/^l2 binding\s+vsi\s+(\S+)/i);
+        if (match) {
+          current.vlanifBindingType = "vsi";
+          current.vlanifBindingVsiName = match[1];
+          current.vlanifHasL3 = false;
+          current.vlanifEmpty = false;
+        }
+      } else if (/^ip address\b/i.test(line) || /^ipv6 address\b/i.test(line) || /^ipv6 enable\b/i.test(line) || /\bospf\b/i.test(line) || /\bisis\b/i.test(line) || /\bbgp\b/i.test(line) || /\brip\b/i.test(line) || /^ip binding vpn-instance\b/i.test(line) || /^vpn-instance\b/i.test(line) || /\bmpls\b/i.test(line) || /\bl2vc\b/i.test(line) || /\bvsi\b/i.test(line) || /\bvpls\b/i.test(line) || /\bl2\s+binding\b/i.test(line)) {
         current.vlanifHasL3 = true;
         current.vlanifEmpty = false;
       }
@@ -211,6 +225,7 @@ export function parseVlanEvidence(displayVlanOutput?: string, vlanConfigOutput?:
         vlanifExists: false,
         vlanifHasL3: false,
         vlanifEmpty: false,
+        portsUpCount: 0,
         taggedPorts: [],
         activePorts: [],
       };
@@ -221,6 +236,7 @@ export function parseVlanEvidence(displayVlanOutput?: string, vlanConfigOutput?:
       const active = [...displayRow[3].matchAll(/(?:AT|ACTIVE):\s*([A-Za-z0-9\/.-]+)/gi)].map((m) => m[1]);
       entry.taggedPorts = [...new Set([...(entry.taggedPorts ?? []), ...tagged])];
       entry.activePorts = [...new Set([...(entry.activePorts ?? []), ...active])];
+      entry.portsUpCount = entry.activePorts.length;
       evidence.set(vlanId, entry);
       continue;
     }
@@ -239,12 +255,14 @@ export function parseVlanEvidence(displayVlanOutput?: string, vlanConfigOutput?:
       const ports = portList.split(/[\s,]+/).filter(Boolean);
       if (/^tagged ports/i.test(line)) current.taggedPorts = [...new Set([...(current.taggedPorts ?? []), ...ports])];
       if (/^active ports/i.test(line)) current.activePorts = [...new Set([...(current.activePorts ?? []), ...ports])];
+      current.portsUpCount = current.activePorts?.length ?? 0;
     }
   }
 
   commit();
   for (const [vlanId, entry] of evidence.entries()) {
     entry.vlanifEmpty = Boolean(entry.vlanifExists) && !entry.vlanifHasL3;
+    entry.portsUpCount = entry.activePorts?.length ?? 0;
     evidence.set(vlanId, entry);
   }
   return evidence;

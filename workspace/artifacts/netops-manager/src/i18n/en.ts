@@ -476,6 +476,7 @@ export const en = {
       remoteNotForwarding: "Remote N/F",
       vlanOrphan: "Orphan VLAN",
       vlanifEmpty: "Empty Vlanif",
+      vlanifBindingVsi: "VSI binding",
     },
     badges: {
       up: "Up",
@@ -532,6 +533,7 @@ export const en = {
         VLANIF_ORPHAN: "The Vlanif interface exists without IP, VRF, or known L2 service.",
         VLAN_NOT_IN_SWITCH_BATCH: "The VLAN is used on ports but missing from the switch global list.",
         VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF: "The VLAN is active at L2, but the Vlanif is empty/unneeded.",
+        VLAN_VSI_BINDING: "The Vlanif is bound to a VSI/VPLS service.",
         DESCRIPTION_MISSING: "The circuit has no operational description.",
         INCOMPLETE_L2_CONFIG: "The L2 configuration is incomplete (missing essential identifiers).",
         DUPLICATED_VC_ID: "The same VC ID appears on more than one circuit.",
@@ -575,6 +577,7 @@ export const en = {
         title: "What to do now",
         noActionNeeded: "No immediate action needed — keep monitoring.",
         checkOperationalStatus: "Check on the device whether the interface or L2 session is active.",
+        checkVlanifResidue: "Confirm whether the Vlanif is residual and remove it if no L3 use is expected.",
         reviewWithNetwork: "Validate with the network team whether this configuration is still required.",
       },
       technical: {
@@ -637,6 +640,13 @@ export const en = {
           impact: "Low. The VLAN appears to be working as L2.",
           action: "Remove the empty Vlanif if no L3 use is expected, or document its purpose.",
           step: "Confirm the VLAN is pure L2 and decide whether the Vlanif should be removed.",
+        },
+        VLAN_VSI_BINDING: {
+          title: "Vlanif bound to VSI",
+          explanation: "The Vlanif is bound to a VSI/VPLS service, so it is not a plain local VLAN.",
+          impact: "Depends on VSI and pseudowire state.",
+          action: "Check the associated VSI status and its pseudowires.",
+          step: "Validate VSI name, state, and related peers.",
         },
         DESCRIPTION_MISSING: {
           title: "Circuit without description",
@@ -725,6 +735,7 @@ export const en = {
       innerVlan: "Inner VLAN",
       vlanExists: "VLAN exists",
       vlanifEmpty: "Vlanif empty",
+      vlanifBindingVsi: "VSI binding",
       taggedPorts: "Tagged ports",
       activePorts: "Active ports",
       vlanDescription: "VLAN description",

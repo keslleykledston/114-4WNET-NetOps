@@ -14,6 +14,7 @@ export const L2_OPERATIONAL_SSH_OPS_COMMANDS = [
 export const L2_OPERATIONAL_SSH_CONFIG_COMMANDS = [
   "display current-configuration interface",
   "display interface description",
+  "display vlan",
   "display vlan summary",
 ] as const;
 

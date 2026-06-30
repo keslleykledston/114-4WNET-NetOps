@@ -50,8 +50,8 @@ export function parseVlanLocalCircuits(
     const ifDesc = descriptionByInterface.get(block.interfaceName);
     const mergedDescription = pickDescription(block.description, ifDesc?.description);
     const veGroup = block.veGroup ?? resolveVeGroup(block.interfaceName, blockByName);
-    const vsiName = extractVsiName(mergedDescription);
     const vlanEvidence = context?.vlanEvidenceById?.get(vlanId);
+    const vsiName = extractVsiName(mergedDescription) ?? vlanEvidence?.vlanifBindingVsiName;
     const vlanDescription = vlanEvidence?.vlanDescription?.trim();
 
     let description = mergedDescription || vlanDescription;
@@ -68,10 +68,12 @@ export function parseVlanLocalCircuits(
     const hasGlobalVlan = context?.globalVlans?.has(vlanId) ?? false;
     const hasMultiInterfaceUse = (vlanUsageCount.get(vlanId) ?? 0) > 1;
     const hasValidDescription = Boolean((mergedDescription?.trim() || vlanDescription) && !block.isVlanif);
+    const hasVlanifBinding = Boolean(vlanEvidence?.vlanifBindingVsiName);
     const hasStrongL2Use =
       hasL2vc ||
       hasVsi ||
       hasMac ||
+      hasVlanifBinding ||
       block.hasBridge ||
       block.hasL2Binding ||
       Boolean(veGroup) ||
@@ -124,7 +126,7 @@ export function parseVlanLocalCircuits(
       innerVlan: block.innerVlan,
       localInterface: block.interfaceName,
       parentInterface,
-      vsiName: hasVsi ? vsiName : undefined,
+      vsiName: hasVsi || hasVlanifBinding ? vsiName : undefined,
       adminStatus: ifDesc?.phy,
       operStatus: ifDesc?.protocol,
       rawEvidence: truncateL2Evidence(block.rawBlock),
@@ -160,6 +162,8 @@ function buildEvidenceFlags(
       vlanifExists?: boolean;
       vlanifHasL3?: boolean;
       vlanifEmpty?: boolean;
+      vlanifBindingType?: string;
+      vlanifBindingVsiName?: string;
       taggedPorts?: string[];
       activePorts?: string[];
       vlanDescription?: string;
@@ -197,6 +201,9 @@ function buildEvidenceFlags(
     vlanifExists: extra.vlanEvidence?.vlanifExists ?? block.isVlanif,
     vlanifHasL3: extra.vlanEvidence?.vlanifHasL3 ?? false,
     vlanifEmpty: extra.vlanEvidence?.vlanifEmpty ?? (block.isVlanif && !extra.vlanEvidence?.vlanifHasL3),
+    vlanifVpcBinding: Boolean(extra.vlanEvidence?.vlanifBindingVsiName),
+    vlanifBindingType: extra.vlanEvidence?.vlanifBindingType,
+    vlanifBindingVsiName: extra.vlanEvidence?.vlanifBindingVsiName,
     taggedPorts: extra.vlanEvidence?.taggedPorts,
     activePorts: extra.vlanEvidence?.activePorts,
     vlanDescription: extra.vlanEvidence?.vlanDescription,
@@ -421,6 +428,7 @@ function classifyInterfaceBlock(input: {
   vlanEvidence?: {
     vlanExists?: boolean;
     activePorts?: string[];
+    vlanifBindingVsiName?: string;
   };
 }): {
   circuitType: ParsedL2Circuit["circuitType"];
@@ -437,6 +445,10 @@ function classifyInterfaceBlock(input: {
       return { circuitType: "l3_vrf_link", classification: "l3_vrf_link", l2Transport: "l3" };
     }
     return { circuitType: "l3_interface", classification: "l3_interface", l2Transport: "l3" };
+  }
+
+  if (vlanEvidence?.vlanifBindingVsiName) {
+    return { circuitType: "vlan_vsi_binding", classification: "vlan_vsi_binding", l2Transport: "multipoint" };
   }
 
   if (vlanEvidence?.vlanExists && (vlanEvidence?.activePorts?.length ?? 0) > 0) {

@@ -28,6 +28,7 @@ export function circuitTypeClass(type: L2CircuitType | string) {
     case "vlanif_orphan":
     case "vlan_not_in_switch_batch":
     case "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF":
+    case "vlan_vsi_binding":
       return "bg-amber-500/10 text-amber-300 border-amber-500/20";
     case "l3_interface":
     case "l3_vrf_link":
@@ -57,6 +58,7 @@ export function circuitTypeLabel(type: L2CircuitType | string, t?: TranslateFn) 
 }
 
 export function circuitTypeGroup(type: L2CircuitType | string): "local" | "mpls" | "vsi" {
+  if (type === "vlan_vsi_binding" || type === "vsi" || type === "vpls") return "vsi";
   if (type === "vlan_local" || type === "vlan_orphan" || type === "vlanif_orphan" || type === "vlan_not_in_switch_batch" || type === "dot1q_subif" || type === "vlan" || type === "l3_interface" || type === "l3_vrf_link" || type === "config_only") return "local";
   if (type === "l2vc" || type === "vpws") return "mpls";
   return "vsi";

@@ -476,6 +476,7 @@ export const ptBR = {
       remoteNotForwarding: "Remote N/F",
       vlanOrphan: "VLAN Órfã",
       vlanifEmpty: "Vlanif vazia",
+      vlanifBindingVsi: "VSI vinculada",
     },
     badges: {
       up: "Ativo",
@@ -532,6 +533,7 @@ export const ptBR = {
         VLANIF_ORPHAN: "A interface Vlanif existe, porém sem IP, VRF ou serviço L2 associado.",
         VLAN_NOT_IN_SWITCH_BATCH: "A VLAN é usada em portas, mas não aparece na lista global do switch.",
         VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF: "A VLAN está ativa em L2, mas a Vlanif está vazia/desnecessária.",
+        VLAN_VSI_BINDING: "A Vlanif está vinculada a um serviço VSI/VPLS.",
         DESCRIPTION_MISSING: "O circuito não possui descrição operacional.",
         INCOMPLETE_L2_CONFIG: "A configuração L2 está incompleta (faltam identificadores essenciais).",
         DUPLICATED_VC_ID: "O mesmo VC ID aparece em mais de um circuito.",
@@ -575,6 +577,7 @@ export const ptBR = {
         title: "O que fazer agora",
         noActionNeeded: "Nenhuma ação imediata necessária — manter monitoramento.",
         checkOperationalStatus: "Verificar no equipamento se a interface ou sessão L2 está ativa.",
+        checkVlanifResidue: "Confirmar se a Vlanif é residual e remover se não houver uso L3 previsto.",
         reviewWithNetwork: "Validar com a equipe de rede se esta configuração ainda é necessária.",
       },
       technical: {
@@ -637,6 +640,13 @@ export const ptBR = {
           impact: "Baixo. A VLAN aparenta estar funcionando como L2.",
           action: "Remover Vlanif vazia se não houver uso L3 previsto, ou documentar finalidade.",
           step: "Confirmar que a VLAN é puramente L2 e decidir se a Vlanif deve ser removida.",
+        },
+        VLAN_VSI_BINDING: {
+          title: "Vlanif vinculada a VSI",
+          explanation: "A Vlanif está vinculada a um serviço VSI/VPLS, então não é apenas uma VLAN local simples.",
+          impact: "Depende do estado da VSI e dos pseudowires associados.",
+          action: "Conferir o status da VSI associada e seus pseudowires.",
+          step: "Validar o nome da VSI, o estado e os peers relacionados.",
         },
         DESCRIPTION_MISSING: {
           title: "Circuito sem descrição",
@@ -725,6 +735,7 @@ export const ptBR = {
       innerVlan: "VLAN interna",
       vlanExists: "VLAN existe",
       vlanifEmpty: "Vlanif vazia",
+      vlanifBindingVsi: "VSI vinculada",
       taggedPorts: "Portas tagged",
       activePorts: "Portas ativas",
       vlanDescription: "Descrição da VLAN",

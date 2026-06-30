@@ -68,6 +68,13 @@ export function getProbableCause(circuit: L2Circuit, t: TranslateFn): string {
   if (circuit.operStatus === "DOWN") return t(`${ds}.probableCause.operDown`);
   if (circuit.operStatus === "PARTIAL") return t(`${ds}.probableCause.operPartial`);
   if (circuit.operStatus === "CONFIG_ONLY") return t(`${ds}.probableCause.operConfigOnly`);
+  if (circuit.findings.some((finding) => finding.code === "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF")) {
+    return t(`${ds}.probableCause.VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF`);
+  }
+  if (circuit.findings.some((finding) => finding.code === "VLANIF_ORPHAN")) {
+    return t(`${ds}.probableCause.VLANIF_ORPHAN`);
+  }
+  if (circuit.classification === "vlan_vsi_binding") return t(`${ds}.probableCause.VLAN_USED_IN_VSI`);
   if (circuit.findings.length === 0) return t(`${ds}.probableCause.healthy`);
   return t(`${ds}.probableCause.generic`);
 }
@@ -139,6 +146,15 @@ export function getSuggestedActionSteps(circuit: L2Circuit, t: TranslateFn): str
 
   if (!steps.length && circuit.operStatus === "DOWN") {
     steps.push(t(`${ds}.actions.checkOperationalStatus`));
+  }
+  if (!steps.length && circuit.findings.some((finding) => finding.code === "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF")) {
+    steps.push(t(`${ds}.actions.checkVlanifResidue`));
+  }
+  if (!steps.length && circuit.findings.some((finding) => finding.code === "VLANIF_ORPHAN")) {
+    steps.push(t(`${ds}.actions.checkVlanifResidue`));
+  }
+  if (!steps.length && circuit.classification === "vlan_vsi_binding") {
+    steps.push(t(`${ds}.actions.reviewWithNetwork`));
   }
   if (!steps.length && circuit.findings.length === 0) {
     steps.push(t(`${ds}.actions.noActionNeeded`));

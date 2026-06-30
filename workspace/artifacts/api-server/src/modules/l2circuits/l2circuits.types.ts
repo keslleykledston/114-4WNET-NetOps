@@ -1,5 +1,5 @@
-export type L2CircuitType = "vlan" | "dot1q_subif" | "vlan_local" | "vlan_orphan" | "l2vc" | "vpws" | "vsi" | "vpls" | "l3_vrf_link" | "l3_interface" | "config_only";
-export type L2Classification = "vlan_orphan" | "vlanif_orphan" | "vlan_not_in_switch_batch" | "vlan_local" | "switching_vlan" | "vpws" | "l2vc" | "vsi" | "vpls" | "l3_vrf_link" | "l3_interface" | "router_l2_vlan_anomaly" | "classification_conflict" | "config_only";
+export type L2CircuitType = "vlan" | "dot1q_subif" | "vlan_local" | "vlan_orphan" | "vlan_vsi_binding" | "l2vc" | "vpws" | "vsi" | "vpls" | "l3_vrf_link" | "l3_interface" | "config_only";
+export type L2Classification = "vlan_orphan" | "vlanif_orphan" | "vlan_not_in_switch_batch" | "vlan_local" | "vlan_vsi_binding" | "switching_vlan" | "vpws" | "l2vc" | "vsi" | "vpls" | "l3_vrf_link" | "l3_interface" | "router_l2_vlan_anomaly" | "classification_conflict" | "config_only";
 export type L2Transport = "local_vlan" | "pseudowire" | "multipoint" | "l3" | "config_only" | "none";
 export type L2DeviceRoleFamily = "ROUTER" | "SWITCH" | "UNKNOWN";
 export type L2Status = "UP" | "DOWN" | "PARTIAL" | "UNKNOWN" | "CONFIG_ONLY";
@@ -112,6 +112,9 @@ export interface ParsedL2Circuit {
     vlanifExists?: boolean;
     vlanifHasL3?: boolean;
     vlanifEmpty?: boolean;
+    vlanifVpcBinding?: boolean;
+    vlanifBindingType?: string;
+    vlanifBindingVsiName?: string;
     taggedPorts?: string[];
     activePorts?: string[];
     vlanDescription?: string;

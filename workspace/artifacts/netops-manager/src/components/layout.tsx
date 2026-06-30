@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { getConnectorHealthSummary } from "@/features/connectors/connectors-api";
 import {
   ShieldCheck,
-  Rocket,
   FileCode,
   ScrollText,
   DownloadCloud,
@@ -40,10 +39,7 @@ const navItems = [
   { href: "/map", icon: Map, labelKey: "nav.map" },
   { href: "/l2-circuits", icon: Network, labelKey: "nav.l2Circuits" },
   { href: "/compliance", icon: ShieldCheck, labelKey: "nav.compliance" },
-  { href: "/provisioning", icon: Rocket, labelKey: "nav.provisioning" },
-  { href: "/provisioning/templates", icon: FileCode, labelKey: "nav.templateRegistry" },
-  { href: "/provisioning/template-studio", icon: FileCode, labelKey: "nav.templateStudio" },
-  { href: "/provisioning/service-catalog", icon: FileCode, labelKey: "nav.serviceCatalog" },
+  { href: "/provisioning", icon: DownloadCloud, labelKey: "nav.provisioning" },
   { href: "/templates", icon: FileCode, labelKey: "nav.templates" },
   { href: "/policies", icon: ScrollText, labelKey: "nav.policies" },
   { href: "/config-collection", icon: DownloadCloud, labelKey: "nav.configCollection" },

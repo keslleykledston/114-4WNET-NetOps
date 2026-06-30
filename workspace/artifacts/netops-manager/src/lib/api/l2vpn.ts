@@ -73,6 +73,11 @@ export type L2VPNDraftResponse = {
   notes: string;
 };
 
+export type L2VPNDraftEdit = {
+  circuitId: number;
+  fields: Record<string, string | number | null>;
+};
+
 export const fetchL2VPNStats = async (): Promise<L2VPNStats> => {
   const { data } = await axios.get<L2VPNStats>("/api/l2vpn/stats");
   return data;
@@ -88,7 +93,7 @@ export const compareL2VPNCircuits = async (leftCircuitId: number, rightCircuitId
   return data;
 };
 
-export const createL2VPNDraft = async (payload: { title: string; circuitIds: number[]; notes?: string; validation?: unknown }): Promise<L2VPNDraftResponse> => {
+export const createL2VPNDraft = async (payload: { title: string; circuitIds: number[]; notes?: string; validation?: unknown; edits?: L2VPNDraftEdit[] }): Promise<L2VPNDraftResponse> => {
   const { data } = await axios.post<L2VPNDraftResponse>("/api/l2vpn/drafts", payload);
   return data;
 };

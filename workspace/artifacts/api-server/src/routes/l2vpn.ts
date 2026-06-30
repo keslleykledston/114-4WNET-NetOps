@@ -201,6 +201,7 @@ router.post("/drafts", requirePermission("provisioning.write"), async (req, res)
     const title = String(req.body?.title ?? "").trim();
     const notes = String(req.body?.notes ?? "").trim();
     const validation = req.body?.validation ?? null;
+    const edits = Array.isArray(req.body?.edits) ? req.body.edits : [];
 
     if (circuitIds.length === 0 || !title) {
       res.status(400).json({ error: "title and circuitIds required" });
@@ -218,12 +219,14 @@ router.post("/drafts", requirePermission("provisioning.write"), async (req, res)
         circuitIds,
         notes,
         validation,
+        edits,
         mode: "supervised-draft",
       }),
       parametersJson: JSON.stringify({
         circuitIds,
         notes,
         validation,
+        edits,
         mode: "supervised-draft",
       }),
       createdAt: new Date(),
@@ -236,6 +239,7 @@ router.post("/drafts", requirePermission("provisioning.write"), async (req, res)
       title,
       circuitIds,
       notes,
+      edits,
     });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : "Internal server error" });

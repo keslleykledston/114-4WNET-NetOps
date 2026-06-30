@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { ArrowUpRight, CheckCircle2, Diff, Layers3, PenLine, ShieldAlert, Sparkles } from "lucide-react";
-import { useL2VPNCircuits, useL2VPNStats, compareL2VPNCircuits, createL2VPNDraft, type L2VPNComparison } from "@/lib/api/l2vpn";
+import { useL2VPNCircuits, useL2VPNStats, compareL2VPNCircuits, createL2VPNDraft, type L2VPNComparison, type L2VPNDraftEdit } from "@/lib/api/l2vpn";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,10 @@ export default function L2VPNDashboard() {
   const [rightCircuitId, setRightCircuitId] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
   const [draftNotes, setDraftNotes] = useState("");
+  const [editLeftVlan, setEditLeftVlan] = useState("");
+  const [editRightVlan, setEditRightVlan] = useState("");
+  const [editLeftInterface, setEditLeftInterface] = useState("");
+  const [editRightInterface, setEditRightInterface] = useState("");
   const [comparison, setComparison] = useState<L2VPNComparison | null>(null);
   const [busy, setBusy] = useState(false);
   const [draftBusy, setDraftBusy] = useState(false);
@@ -155,11 +159,32 @@ export default function L2VPNDashboard() {
     }
     setDraftBusy(true);
     try {
+      const edits: L2VPNDraftEdit[] = [
+        ...(editLeftVlan.trim() || editLeftInterface.trim()
+          ? [{
+              circuitId: left,
+              fields: {
+                outerVlan: editLeftVlan.trim() ? Number(editLeftVlan) : null,
+                localInterface: editLeftInterface.trim() || null,
+              },
+            }]
+          : []),
+        ...(editRightVlan.trim() || editRightInterface.trim()
+          ? [{
+              circuitId: right,
+              fields: {
+                outerVlan: editRightVlan.trim() ? Number(editRightVlan) : null,
+                localInterface: editRightInterface.trim() || null,
+              },
+            }]
+          : []),
+      ];
       const result = await createL2VPNDraft({
         title: draftTitle.trim(),
         circuitIds: [left, right],
         notes: draftNotes.trim(),
         validation: comparison,
+        edits,
       });
       toast({
         title: "Draft salvo",
@@ -235,6 +260,18 @@ export default function L2VPNDashboard() {
             <CardContent className="space-y-3">
               <Input value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} placeholder="Título do draft" />
               <Textarea value={draftNotes} onChange={(e) => setDraftNotes(e.target.value)} placeholder="Notas para supervisão" />
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2 rounded-2xl border border-white/10 bg-slate-950/35 p-3">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Ponta A</div>
+                  <Input value={editLeftVlan} onChange={(e) => setEditLeftVlan(e.target.value)} placeholder="VLAN sugerida" />
+                  <Input value={editLeftInterface} onChange={(e) => setEditLeftInterface(e.target.value)} placeholder="Interface sugerida" />
+                </div>
+                <div className="space-y-2 rounded-2xl border border-white/10 bg-slate-950/35 p-3">
+                  <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Ponta B</div>
+                  <Input value={editRightVlan} onChange={(e) => setEditRightVlan(e.target.value)} placeholder="VLAN sugerida" />
+                  <Input value={editRightInterface} onChange={(e) => setEditRightInterface(e.target.value)} placeholder="Interface sugerida" />
+                </div>
+              </div>
               <Button onClick={() => void saveDraft()} disabled={draftBusy} className="w-full">
                 {draftBusy ? "Salvando..." : "Salvar draft"}
               </Button>

@@ -123,6 +123,13 @@ export const en = {
     scheduler: "Scheduler",
     users: "Users",
     connectorAlerts: "Connectors ({{count}})",
+    section: {
+      monitoring: "Monitoring & Maps",
+      circuits: "Circuits & VPNs",
+      bgp: "BGP Operations",
+      connectivity: "Connectivity & Collectors",
+      policies: "Policies & Security",
+    },
   },
   app: {
     loadingSession: "Loading session...",
@@ -2575,6 +2582,11 @@ export const en = {
     bastionAccess: "Bastion access: {{name}} ({{strategy}}) — SSH/SNMP collections queued on the group.",
     tenantNoGroup: "This tenant has no available group. Create one under Infrastructure → Connector Groups or use direct access.",
     directAccessHint: "Without a tenant, the device uses direct access from the NetOps server. With a tenant, the group is chosen automatically.",
+    tabs: {
+      general: "Identification",
+      access: "Connection",
+      advanced: "Advanced Parameters",
+    },
   },
   discovery: {
     title: "Discovery",

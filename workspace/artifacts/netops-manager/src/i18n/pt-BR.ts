@@ -123,6 +123,13 @@ export const ptBR = {
     scheduler: "Agendador",
     users: "Usuários",
     connectorAlerts: "Conectores ({{count}})",
+    section: {
+      monitoring: "Monitoramento",
+      circuits: "Circuitos & VPNs",
+      bgp: "Operações BGP",
+      connectivity: "Conectividade & Coletores",
+      policies: "Regras & Segurança",
+    },
   },
   app: {
     loadingSession: "Carregando sessão...",
@@ -2699,6 +2706,11 @@ export const ptBR = {
     bastionAccess: "Acesso via bastião: {{name}} ({{strategy}}) — coletas SSH/SNMP enfileiradas no grupo.",
     tenantNoGroup: "Este tenant não tem grupo disponível. Crie um em Infraestrutura → Connector Groups ou escolha acesso direto.",
     directAccessHint: "Sem tenant, o dispositivo usa acesso direto do servidor NetOps. Com tenant, o grupo é escolhido automaticamente.",
+    tabs: {
+      general: "Identificação",
+      access: "Conexão",
+      advanced: "Parâmetros Avançados",
+    },
   },
   discovery: {
     title: "Discovery",

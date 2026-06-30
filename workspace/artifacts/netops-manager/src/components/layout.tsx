@@ -34,28 +34,54 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "./auth-provider";
 import { useTranslation } from "@/i18n";
 
-const navItems = [
-  { href: "/", icon: LayoutDashboard, labelKey: "nav.dashboard" },
-  { href: "/map", icon: Map, labelKey: "nav.map" },
-  { href: "/l2-circuits", icon: Network, labelKey: "nav.l2Circuits" },
-  { href: "/compliance", icon: ShieldCheck, labelKey: "nav.compliance" },
-  { href: "/provisioning", icon: DownloadCloud, labelKey: "nav.provisioning" },
-  { href: "/templates", icon: FileCode, labelKey: "nav.templates" },
-  { href: "/policies", icon: ScrollText, labelKey: "nav.policies" },
-  { href: "/config-collection", icon: DownloadCloud, labelKey: "nav.configCollection" },
-  { href: "/snmp-history", icon: RadioTower, labelKey: "nav.snmpHistory" },
-  { href: "/netops-operations", icon: Workflow, labelKey: "nav.netopsOperations" },
-  { href: "/operational/bgp", icon: GitBranch, labelKey: "nav.bgpOperations" },
-  { href: "/bgp/peer-drilldown", icon: GitBranch, labelKey: "nav.bgpDrilldown" },
-  { href: "/bgp/announcements", icon: ClipboardList, labelKey: "nav.bgpAnnouncements" },
-  { href: "/audit", icon: ShieldAlert, labelKey: "nav.audit" },
-  { href: "/security/credentials", icon: KeyRound, labelKey: "nav.credentialVault" },
-  { href: "/tenants/notifications", icon: BellRing, labelKey: "nav.notifications" },
-  { href: "/reports", icon: FileBarChart, labelKey: "nav.reports" },
-  { href: "/integrations", icon: PlugZap, labelKey: "nav.integrations" },
-  { href: "/infrastructure/connectors", icon: Waypoints, labelKey: "nav.connectors" },
-  { href: "/infrastructure/connector-groups", icon: Waypoints, labelKey: "nav.connectorGroups" },
-  { href: "/scheduler", icon: CalendarClock, labelKey: "nav.scheduler" },
+const navSections = [
+  {
+    titleKey: "nav.section.monitoring",
+    items: [
+      { href: "/", icon: LayoutDashboard, labelKey: "nav.dashboard" },
+      { href: "/map", icon: Map, labelKey: "nav.map" },
+      { href: "/topology", icon: Waypoints, labelKey: "nav.topology" },
+      { href: "/reports", icon: FileBarChart, labelKey: "nav.reports" },
+    ],
+  },
+  {
+    titleKey: "nav.section.circuits",
+    items: [
+      { href: "/provisioning", icon: DownloadCloud, labelKey: "nav.provisioning" },
+      { href: "/l2-circuits", icon: Network, labelKey: "nav.l2Circuits" },
+      { href: "/netops-operations", icon: Workflow, labelKey: "nav.netopsOperations" },
+    ],
+  },
+  {
+    titleKey: "nav.section.bgp",
+    items: [
+      { href: "/operational/bgp", icon: GitBranch, labelKey: "nav.bgpOperations" },
+      { href: "/bgp/peer-drilldown", icon: GitBranch, labelKey: "nav.bgpDrilldown" },
+      { href: "/bgp/announcements", icon: ClipboardList, labelKey: "nav.bgpAnnouncements" },
+    ],
+  },
+  {
+    titleKey: "nav.section.connectivity",
+    items: [
+      { href: "/infrastructure/connectors", icon: Waypoints, labelKey: "nav.connectors" },
+      { href: "/infrastructure/connector-groups", icon: Waypoints, labelKey: "nav.connectorGroups" },
+      { href: "/snmp-history", icon: RadioTower, labelKey: "nav.snmpHistory" },
+      { href: "/config-collection", icon: DownloadCloud, labelKey: "nav.configCollection" },
+    ],
+  },
+  {
+    titleKey: "nav.section.policies",
+    items: [
+      { href: "/compliance", icon: ShieldCheck, labelKey: "nav.compliance" },
+      { href: "/policies", icon: ScrollText, labelKey: "nav.policies" },
+      { href: "/templates", icon: FileCode, labelKey: "nav.templates" },
+      { href: "/security/credentials", icon: KeyRound, labelKey: "nav.credentialVault" },
+      { href: "/scheduler", icon: CalendarClock, labelKey: "nav.scheduler" },
+      { href: "/audit", icon: ShieldAlert, labelKey: "nav.audit" },
+      { href: "/tenants/notifications", icon: BellRing, labelKey: "nav.notifications" },
+      { href: "/integrations", icon: PlugZap, labelKey: "nav.integrations" },
+    ],
+  },
 ] as const;
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -65,6 +91,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const { t, locale, setLocale } = useTranslation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
   const connectorSummaryQuery = useQuery({
     queryKey: ["connector-health-summary"],
     queryFn: getConnectorHealthSummary,
@@ -96,37 +123,51 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
         
-        <nav className={["flex-1 overflow-y-auto py-3 space-y-0.5 scrollbar-thin scrollbar-track-sidebar scrollbar-thumb-sidebar-accent", sidebarCollapsed ? "px-1" : "px-2"].join(" ")}>
-          {navItems.map((item) => {
-            const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-            const Icon = item.icon;
-            const label =
-              item.href === "/infrastructure/connectors" && openConnectorAlerts > 0
-                ? t("nav.connectorAlerts", { count: openConnectorAlerts })
-                : t(item.labelKey);
-
-            return (
-              <Link key={item.href} href={item.href}>
-                <div
-                  className={cn(
-                    "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
-                    sidebarCollapsed ? "justify-center px-2 gap-0" : "gap-2.5 px-3 py-2",
-                    isActive
-                      ? "bg-[#1e2a45] text-primary"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )}
-                  data-testid={`link-nav-${item.labelKey.split(".").pop()}`}
-                  title={sidebarCollapsed ? label : undefined}
-                >
-                  {isActive ? <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" /> : null}
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {!sidebarCollapsed ? <span className="truncate">{label}</span> : null}
+        <nav className={["flex-1 overflow-y-auto py-3 space-y-4 scrollbar-thin scrollbar-track-sidebar scrollbar-thumb-sidebar-accent", sidebarCollapsed ? "px-1" : "px-2"].join(" ")}>
+          {navSections.map((section) => (
+            <div key={section.titleKey} className="space-y-1">
+              {!sidebarCollapsed ? (
+                <div className="text-[10px] font-bold tracking-[0.15em] text-sidebar-foreground/50 px-3 py-1 uppercase">
+                  {t(section.titleKey)}
                 </div>
-              </Link>
-            );
-          })}
+              ) : (
+                <div className="h-px bg-sidebar-border/30 my-2 mx-2" />
+              )}
+              
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+                  const Icon = item.icon;
+                  const label =
+                    item.href === "/infrastructure/connectors" && openConnectorAlerts > 0
+                      ? t("nav.connectorAlerts", { count: openConnectorAlerts })
+                      : t(item.labelKey);
 
-        {user?.role === "admin" && (
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <div
+                        className={cn(
+                          "relative flex items-center rounded-lg transition-colors cursor-pointer text-[13px] font-medium min-h-9",
+                          sidebarCollapsed ? "justify-center px-2 gap-0" : "gap-2.5 px-3 py-2",
+                          isActive
+                            ? "bg-[#1e2a45] text-primary"
+                            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        )}
+                        data-testid={`link-nav-${item.labelKey.split(".").pop()}`}
+                        title={sidebarCollapsed ? label : undefined}
+                      >
+                        {isActive ? <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary" /> : null}
+                        <Icon className="h-4 w-4 shrink-0" />
+                        {!sidebarCollapsed ? <span className="truncate">{label}</span> : null}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {user?.role === "admin" && (
             <div className="pt-4 border-t border-sidebar-border">
               {!sidebarCollapsed ? (
                 <div className="text-[11px] font-semibold tracking-[0.18em] text-sidebar-foreground/60 px-3 py-2 mb-1">{t("layout.administration")}</div>
@@ -205,8 +246,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
       
       {/* Main Content */}
-      <main className={cn("flex-1 bg-background", isFullscreenMap ? "flex min-h-0 flex-col overflow-hidden" : "overflow-y-auto")}>
-        {isFullscreenMap ? children : <div className="p-8">{children}</div>}
+      <main className={cn(
+        "flex-1 relative overflow-y-auto bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.15),_transparent_35%),linear-gradient(135deg,_#050816_0%,_#0d0d2b_45%,_#15153b_100%)] text-white transition-all duration-300",
+        isFullscreenMap ? "flex min-h-0 flex-col overflow-hidden" : ""
+      )}>
+        {/* Dotted Grid Background */}
+        <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px]" />
+        
+        {/* Safe Read-Only Header */}
+        {!isFullscreenMap && (
+          <div className="relative z-20 flex items-center justify-between px-8 py-3 border-b border-white/5 bg-slate-950/20 backdrop-blur-md">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="text-[11px] font-semibold tracking-wider text-cyan-400 uppercase">
+                {locale === "pt-BR" ? "Modo de Visualização Segura (Read-only)" : "Safe View Mode (Read-only)"}
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-400 font-mono">
+              {locale === "pt-BR" ? "Operação Protegida" : "Protected Operation"}
+            </div>
+          </div>
+        )}
+
+        <div className="relative z-10">
+          {isFullscreenMap ? children : <div className="p-8">{children}</div>}
+        </div>
       </main>
     </div>
   );

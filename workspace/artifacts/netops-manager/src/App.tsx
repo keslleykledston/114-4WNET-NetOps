@@ -13,7 +13,7 @@ import Dashboard from "@/pages/dashboard";
 import Devices from "@/pages/devices";
 import DeviceDetail from "@/pages/device-detail";
 import Compliance from "@/pages/compliance";
-import Provisioning from "@/pages/provisioning";
+import L2VPNDashboard from "@/pages/l2vpn-dashboard";
 import ProvisioningTemplatesPage from "@/pages/provisioning-templates";
 import ProvisioningTemplateDetailPage from "@/pages/provisioning-template-detail";
 import TemplateStudioPage from "@/pages/template-studio";
@@ -84,7 +84,7 @@ function Router() {
         <Route path="/devices" component={Devices} />
         <Route path="/devices/:id" component={DeviceDetail} />
         <Route path="/compliance" component={Compliance} />
-        <Route path="/provisioning" component={Provisioning} />
+        <Route path="/provisioning" component={L2VPNDashboard} />
         <Route path="/provisioning/templates" component={ProvisioningTemplatesPage} />
         <Route path="/provisioning/templates/:id" component={ProvisioningTemplateDetailPage} />
         <Route path="/provisioning/template-studio" component={TemplateStudioPage} />

@@ -21,6 +21,7 @@ export type L2FindingCode =
   | "VLAN_USED_IN_L3_VRF"
   | "VLANIF_ORPHAN"
   | "VLAN_NOT_IN_SWITCH_BATCH"
+  | "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF"
   | "CLASSIFICATION_CONFLICT";
 export type L2FindingSeverity = "info" | "warning" | "error";
 
@@ -105,6 +106,15 @@ export interface ParsedL2Circuit {
     hasMtu?: boolean;
     hasStatisticEnable?: boolean;
     hasSwitchingUse?: boolean;
+    vlanExists?: boolean;
+    vlanState?: string;
+    vlanStatus?: string;
+    vlanifExists?: boolean;
+    vlanifHasL3?: boolean;
+    vlanifEmpty?: boolean;
+    taggedPorts?: string[];
+    activePorts?: string[];
+    vlanDescription?: string;
     vlanDeclaredGlobal?: boolean;
     vsiPeers?: L2VsiPeer[];
     pwSummary?: L2PwSummary;

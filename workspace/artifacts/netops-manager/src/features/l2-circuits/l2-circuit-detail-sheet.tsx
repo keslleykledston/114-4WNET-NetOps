@@ -70,6 +70,7 @@ function TechnicalDetailFields({ circuit }: { circuit: L2Circuit }) {
       <OptionalField label={t(`${ds}.name`)} value={circuit.name} />
       <OptionalField label={t(`${ds}.descriptionField`)} value={circuit.description} />
       <OptionalField label={t(`${ds}.localInterface`)} value={circuit.localInterface} mono />
+      <OptionalField label={t(`${ds}.vlanExists`)} value={circuit.evidenceFlags && typeof circuit.evidenceFlags === "object" ? String((circuit.evidenceFlags as { vlanExists?: boolean }).vlanExists ?? "") : undefined} />
       <OptionalField label={t(`${ds}.classification`)} value={circuit.classification} />
       <OptionalField label={t(`${ds}.l2Transport`)} value={circuit.l2Transport} />
       <OptionalField label={t(`${ds}.parentInterface`)} value={circuit.parentInterface} mono />
@@ -83,6 +84,10 @@ function TechnicalDetailFields({ circuit }: { circuit: L2Circuit }) {
       <FieldBlock label={t(`${ds}.adminStatus`)} value={circuit.adminStatus} />
       <FieldBlock label={t(`${ds}.operStatus`)} value={circuit.operStatus} />
       <OptionalField label={t(`${ds}.pwStatus`)} value={circuit.pwStatus} />
+      <OptionalField label={t(`${ds}.taggedPorts`)} value={circuit.evidenceFlags && typeof circuit.evidenceFlags === "object" ? ((circuit.evidenceFlags as { taggedPorts?: string[] }).taggedPorts ?? []).join(", ") : undefined} mono />
+      <OptionalField label={t(`${ds}.activePorts`)} value={circuit.evidenceFlags && typeof circuit.evidenceFlags === "object" ? ((circuit.evidenceFlags as { activePorts?: string[] }).activePorts ?? []).join(", ") : undefined} mono />
+      <OptionalField label={t(`${ds}.vlanDescription`)} value={circuit.evidenceFlags && typeof circuit.evidenceFlags === "object" ? (circuit.evidenceFlags as { vlanDescription?: string }).vlanDescription : undefined} />
+      <OptionalField label={t(`${ds}.vlanifEmpty`)} value={circuit.evidenceFlags && typeof circuit.evidenceFlags === "object" ? String((circuit.evidenceFlags as { vlanifEmpty?: boolean }).vlanifEmpty ?? "") : undefined} />
       <FieldBlock label={t(`${ds}.source`)} value={circuit.source} />
       <div className="sm:col-span-2">
         <FieldBlock label={t(`${ds}.discoveryRun`)} value={circuit.discoveryRunId} mono />

@@ -13,6 +13,10 @@ function isPwDown(pwStatus?: string): boolean {
 }
 
 function isServiceDown(circuit: NormalizedL2Circuit): boolean {
+  const isLocalVlan = circuit.classification === "vlan_local" || circuit.circuitType === "vlan_local";
+  if (isLocalVlan && circuit.evidenceFlags?.vlanExists && (circuit.evidenceFlags?.activePorts?.length ?? 0) > 0) {
+    return false;
+  }
   if (circuit.operStatus === "DOWN") return true;
   if (isPwDown(circuit.pwStatus)) return true;
   const session = circuit.sessionState?.toLowerCase().trim() ?? "";
@@ -98,6 +102,7 @@ export function enrichCircuitsWithFindings(
       });
     }
     if (circuit.classification === "vlan_not_in_switch_batch" || circuit.anomalyTags?.includes("VLAN_NOT_IN_SWITCH_BATCH")) {
+      if (circuit.evidenceFlags?.vlanExists) continue;
       addFinding(findingsByKey, circuitKey, {
         code: "VLAN_NOT_IN_SWITCH_BATCH",
         severity: "warning",
@@ -161,11 +166,19 @@ export function enrichCircuitsWithFindings(
     }
 
     if (circuit.operStatus === "DOWN") {
+      if (
+        (circuit.classification === "vlan_local" || circuit.circuitType === "vlan_local") &&
+        circuit.evidenceFlags?.vlanExists &&
+        (circuit.evidenceFlags?.activePorts?.length ?? 0) > 0
+      ) {
+        // Local VLAN alive by VLAN membership, not Vlanif oper status.
+      } else {
       addFinding(findingsByKey, circuitKey, {
         code: "CIRCUIT_DOWN",
         severity: "error",
         message: `Circuit ${label} is operationally down`,
       });
+      }
     }
     if ((circuit.circuitType === "l2vc" || circuit.circuitType === "vpws") && isPwDown(circuit.pwStatus)) {
       addFinding(findingsByKey, circuitKey, {
@@ -316,6 +329,17 @@ export function enrichCircuitsWithFindings(
       continue;
     }
     if (!circuit.description || circuit.description.toLowerCase() === "null" || circuit.description.trim() === "") {
+      const suppressDescriptionMissing =
+        (circuit.classification === "vlan_local" || circuit.circuitType === "vlan_local") &&
+        circuit.evidenceFlags?.vlanExists &&
+        (circuit.evidenceFlags?.activePorts?.length ?? 0) > 0;
+      if (suppressDescriptionMissing) {
+        // VLAN local already has enough operational evidence.
+      } else {
+      const vlanDescription = circuit.evidenceFlags && typeof circuit.evidenceFlags === "object"
+        ? (circuit.evidenceFlags as { vlanDescription?: string }).vlanDescription
+        : undefined;
+      if (vlanDescription && vlanDescription.trim()) continue;
       const isL3Subif =
         circuit.classification === "l3_interface" ||
         circuit.classification === "l3_vrf_link" ||
@@ -327,6 +351,21 @@ export function enrichCircuitsWithFindings(
         message: isL3Subif
           ? "Subinterface dot1q possui serviço L3 atrelado, mas não possui descrição operacional. Adicionar descrição padronizada indicando cliente, circuito, peer ou finalidade operacional."
           : `Circuit ${label} has no description`,
+      });
+      }
+    }
+    if (
+      circuit.classification === "vlan_local" &&
+      circuit.evidenceFlags?.vlanExists &&
+      circuit.evidenceFlags?.vlanifEmpty &&
+      (circuit.evidenceFlags?.activePorts?.length ?? 0) > 0 &&
+      (circuit.evidenceFlags?.taggedPorts?.length ?? 0) > 0
+    ) {
+      addFinding(findingsByKey, circuitKey, {
+        code: "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF",
+        severity: "info",
+        message:
+          "VLAN L2 ativa com Vlanif vazia/desnecessária. Validar se a Vlanif é resíduo de configuração; se não houver uso previsto, remover a Vlanif para evitar ambiguidade operacional.",
       });
     }
   }

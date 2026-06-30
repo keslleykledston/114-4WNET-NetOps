@@ -114,6 +114,20 @@ assert.equal(vlan1705BrtA?.classification, "vlan_local");
 assert.equal(vlan1705BrtA?.evidenceFlags?.vlanDeclaredGlobal, true);
 assert.equal(findingsFor(vlan1705FromDisplayVlan).some((f) => f.code === "VLAN_NOT_IN_SWITCH_BATCH"), false);
 
+const vlan1842EmptyVlanif = parseHuaweiL2Circuits({
+  "display current-configuration interface": "# hostname=4WNET-BVA-BRT-RA_S6730\\ninterface Vlanif1842\\n#\\ninterface Eth-Trunk2\\n port link-type trunk\\n port trunk allow-pass vlan 1842\\n#\\ninterface XGigabitEthernet0/0/38\\n port link-type trunk\\n port trunk allow-pass vlan 1842\\n#\\ninterface XGigabitEthernet0/0/47\\n port link-type trunk\\n port trunk allow-pass vlan 1842\\n#",
+  "display vlan": "VLAN ID: 1842\\nStatus: Enable\\nState: Up\\nDescription: BVA-BRT-RA-L2\\nTagged ports: Eth-Trunk2, XGigabitEthernet0/0/38, XGigabitEthernet0/0/47\\nActive ports: Eth-Trunk2, XGigabitEthernet0/0/38\\n",
+  "display vlan summary": "Static VLAN:\\nTotal 1 static VLAN.\\n  1842\\n",
+});
+const vlan1842 = vlan1842EmptyVlanif.find((c) => c.outerVlan === 1842);
+assert.equal(vlan1842?.classification, "vlan_local");
+const vlan1842Findings = findingsFor(vlan1842EmptyVlanif);
+assert.equal(vlan1842Findings.some((f) => f.code === "VLAN_NOT_IN_SWITCH_BATCH"), false);
+assert.equal(vlan1842Findings.some((f) => f.code === "CIRCUIT_DOWN"), false);
+assert.equal(vlan1842Findings.some((f) => f.code === "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF"), true);
+assert.equal(vlan1842Findings.some((f) => f.code === "DESCRIPTION_MISSING"), false);
+assert.equal(vlan1842Findings.some((f) => f.severity === "critical"), false);
+
 console.log(JSON.stringify({
   dot1qOrphan: dot1qOrphan[0].classification,
   dot1qLocal: dot1qLocal.length,
@@ -122,6 +136,7 @@ console.log(JSON.stringify({
   vpws: vlanifVpws[0].name,
   vsi: vsi[0].name,
   missingBatch: trunkMissingBatch.map((c) => c.classification),
+  vlan1842: vlan1842Findings.map((f) => f.code),
 }, null, 2));
 `;
 

@@ -7,6 +7,7 @@ import {
   inferDeviceRoleFamily,
   parseGlobalVlans,
   parseMacVlans,
+  parseVlanEvidence,
   parseSwitchingVlans,
   parseSwitchingVlansFromDisplayVlan,
   resolveDisplayVlanOutput,
@@ -40,6 +41,7 @@ export function parseHuaweiL2Circuits(rawOutputs: Record<string, string | undefi
 
   const vlanInventoryOutput = resolveDisplayVlanOutput(rawOutputs);
   const vlanDetailOutput = rawOutputs["display vlan"]?.trim();
+  const vlanEvidenceById = parseVlanEvidence(vlanDetailOutput ?? vlanInventoryOutput, rawOutputs["display current-configuration interface"]);
 
   const { globalVlans, hasGlobalVlanEvidence } = parseGlobalVlans(
     rawOutputs["display current-configuration interface"],
@@ -56,6 +58,7 @@ export function parseHuaweiL2Circuits(rawOutputs: Record<string, string | undefi
     macVlans: parseMacVlans(rawOutputs["display mac-address vlan"]),
     l2vcClientInterfaces: new Set(circuits.filter((c) => c.circuitType === "l2vc" || c.circuitType === "vpws").map((c) => c.localInterface).filter(Boolean) as string[]),
     vsiInterfaces: new Set(circuits.filter((c) => c.circuitType === "vsi" || c.circuitType === "vpls").map((c) => c.localInterface).filter(Boolean) as string[]),
+    vlanEvidenceById,
   };
 
   // Parse dot1q / VLAN_LOCAL from config + interface description

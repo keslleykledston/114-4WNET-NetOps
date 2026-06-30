@@ -27,6 +27,7 @@ export function circuitTypeClass(type: L2CircuitType | string) {
     case "vlan_orphan":
     case "vlanif_orphan":
     case "vlan_not_in_switch_batch":
+    case "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF":
       return "bg-amber-500/10 text-amber-300 border-amber-500/20";
     case "l3_interface":
     case "l3_vrf_link":
@@ -102,8 +103,9 @@ export function NocFindingBadges({ findings }: { findings: L2Finding[] }) {
   const circuitDown = findings.some((f) => f.code === "CIRCUIT_DOWN" || f.code === "L2VC_DOWN" || f.code === "VSI_DOWN");
   const remoteNotForwarding = findings.some((f) => f.code === "REMOTE_NOT_FORWARDING");
   const vlanOrphan = findings.some((f) => f.code === "VLAN_ORPHAN");
+  const vlanifEmpty = findings.some((f) => f.code === "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF");
 
-  if (!circuitDown && !remoteNotForwarding && !vlanOrphan) return null;
+  if (!circuitDown && !remoteNotForwarding && !vlanOrphan && !vlanifEmpty) return null;
 
   return (
     <div className="flex flex-wrap gap-1">
@@ -120,6 +122,11 @@ export function NocFindingBadges({ findings }: { findings: L2Finding[] }) {
       {vlanOrphan && (
         <Badge variant="outline" className="bg-orange-500/15 text-orange-200 border-orange-500/40 text-[10px] uppercase tracking-wide">
           {t("l2Circuits.findingBadges.vlanOrphan")}
+        </Badge>
+      )}
+      {vlanifEmpty && (
+        <Badge variant="outline" className="bg-amber-500/15 text-amber-200 border-amber-500/40 text-[10px] uppercase tracking-wide">
+          {t("l2Circuits.findingBadges.vlanifEmpty")}
         </Badge>
       )}
     </div>

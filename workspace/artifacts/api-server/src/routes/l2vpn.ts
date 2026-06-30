@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, l2CircuitsTable, devicesTable, provisioningJobsTable } from "@workspace/db";
+import { db, l2CircuitsTable, devicesTable, l2vpnDraftsTable } from "@workspace/db";
 import { eq, desc, inArray } from "drizzle-orm";
 import { requirePermission } from "../lib/auth.js";
 
@@ -208,34 +208,26 @@ router.post("/drafts", requirePermission("provisioning.write"), async (req, res)
       return;
     }
 
-    const [job] = await db.insert(provisioningJobsTable).values({
-      name: title,
-      type: "l2vpn_draft",
+    const [draft] = await db.insert(l2vpnDraftsTable).values({
       status: "draft",
-      serviceType: "l2vpn",
-      description: notes || null,
-      deviceIds: JSON.stringify(circuitIds),
-      parameters: JSON.stringify({
+      title,
+      notes: notes || null,
+      circuitIds,
+      edits,
+      validationJson: {
         circuitIds,
         notes,
         validation,
         edits,
         mode: "supervised-draft",
-      }),
-      parametersJson: JSON.stringify({
-        circuitIds,
-        notes,
-        validation,
-        edits,
-        mode: "supervised-draft",
-      }),
-      createdAt: new Date(),
+      },
+      createdByUserId: null,
       updatedAt: new Date(),
-    } as typeof provisioningJobsTable.$inferInsert).returning();
+    } as typeof l2vpnDraftsTable.$inferInsert).returning();
 
     res.status(201).json({
-      id: job?.id ?? null,
-      status: job?.status ?? "draft",
+      id: draft?.id ?? null,
+      status: draft?.status ?? "draft",
       title,
       circuitIds,
       notes,

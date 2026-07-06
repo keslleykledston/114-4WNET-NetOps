@@ -24,6 +24,7 @@ import {
   KeyRound,
   BellRing,
   ClipboardList,
+  Building2,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -58,6 +59,7 @@ const navSections = [
       { href: "/operational/bgp", icon: GitBranch, labelKey: "nav.bgpOperations" },
       { href: "/bgp/peer-drilldown", icon: GitBranch, labelKey: "nav.bgpDrilldown" },
       { href: "/bgp/announcements", icon: ClipboardList, labelKey: "nav.bgpAnnouncements" },
+      { href: "/bgp/customers", icon: Building2, labelKey: "nav.bgpCustomers" },
     ],
   },
   {

@@ -17,6 +17,7 @@
 - Identidade K3G pode ser aplicada somente como asset compativel: favicon, icone pequeno no header/dashboard/sidebar, ou marca discreta onde o layout atual ja tiver ponto visual equivalente.
 - Nao usar assets K3G para trocar estrutura, spacing, tema ou hierarquia visual.
 - Nao sobrescrever assets existentes sem backup ou novo nome claro.
+- O padrão atual de referência visual está documentado em `docs/frontend/LAYOUT_STANDARD.md`; novas telas devem seguir esse guia antes de criar um novo estilo.
 
 ## Arquivos protegidos
 
@@ -27,6 +28,7 @@
 - `workspace/artifacts/netops-manager/src/App.tsx`
 - `workspace/artifacts/netops-manager/public/favicon.svg`
 - `workspace/artifacts/netops-manager/public/opengraph.jpg`
+- `docs/frontend/LAYOUT_STANDARD.md`
 
 Alteracao permitida:
 

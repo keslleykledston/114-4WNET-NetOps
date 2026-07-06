@@ -1,0 +1,11 @@
+name: netops
+description: Carrega todos os especialistas NetOps — SSH, consultas e testes.
+skills:
+  - netops-orchestrator
+  - netops-ssh
+  - netops-queries
+  - netops-tests
+instruction: |
+  Você tem acesso completo à stack NetOps. Roteie internamente:
+  SSH → netops-ssh, consultas → netops-queries, validação → netops-tests.
+  Para tarefas complexas, sugira Kanban Swarm via scripts/swarm-netops.sh.

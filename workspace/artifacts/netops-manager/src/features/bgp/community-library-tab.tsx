@@ -6,28 +6,38 @@ import { Input } from "@/components/ui/input";
 import {
   useCommunityLibraryItems,
   useResyncCommunityLibrary,
+  type CommunityResyncResult,
 } from "@/features/device-discovery/community-api";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
+import type { TranslationParams } from "@/i18n/types";
 
 interface CommunityLibraryTabProps {
   deviceId: number;
 }
 
-function formatSyncSummary(result: {
-  libraryInserted: number;
-  libraryUpdated: number;
-  setsInserted: number;
-  setMembersInserted: number;
-}) {
-  return [
-    `${result.libraryInserted} filtros novos`,
-    `${result.libraryUpdated} filtros atualizados`,
-    `${result.setsInserted} sets importados`,
-    `${result.setMembersInserted} members`,
-  ].join(" · ");
+type TranslateFn = (key: string, params?: TranslationParams) => string;
+
+function formatSyncSummary(result: CommunityResyncResult, t: TranslateFn) {
+  const sourceLabel =
+    result.source === "live_ssh"
+      ? t("communities.panel.syncSource.liveSsh")
+      : t("communities.panel.syncSource.backup");
+  const parts = [
+    t("communities.toasts.syncSummary.source", { source: sourceLabel }),
+    t("communities.toasts.syncSummary.newFilters", { count: result.libraryInserted }),
+    t("communities.toasts.syncSummary.updatedFilters", { count: result.libraryUpdated }),
+    t("communities.toasts.syncSummary.importedSets", { count: result.setsInserted }),
+    t("communities.toasts.syncSummary.members", { count: result.setMembersInserted }),
+  ];
+  if (result.setMembersMissingLibrary > 0) {
+    parts.push(t("communities.toasts.syncSummary.missingLibrary", { count: result.setMembersMissingLibrary }));
+  }
+  return parts.join(" · ");
 }
 
 export function CommunityLibraryTab({ deviceId }: CommunityLibraryTabProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const { toast } = useToast();
@@ -42,20 +52,20 @@ export function CommunityLibraryTab({ deviceId }: CommunityLibraryTabProps) {
   const summary = useMemo(() => {
     const items = libraryQuery.data ?? [];
     const active = items.filter((item) => item.isActive).length;
-    return `${items.length} entradas · ${active} ativas`;
-  }, [libraryQuery.data]);
+    return `${t("communities.panel.badges.entries", { count: items.length })} · ${t("communities.panel.badges.active", { count: active })}`;
+  }, [libraryQuery.data, t]);
 
   async function handleResync(source: "backup" | "live") {
     try {
       const result = await resyncMutation.mutateAsync({ deviceId, source });
       toast({
-        title: source === "backup" ? "Sync backup concluído" : "Sync live (SSH) concluído",
-        description: formatSyncSummary(result),
+        title: source === "backup" ? t("communities.toasts.syncBackupDone") : t("communities.toasts.syncLiveDone"),
+        description: formatSyncSummary(result, t),
       });
     } catch (error) {
       toast({
-        title: source === "backup" ? "Falha no sync backup" : "Falha no sync live (SSH)",
-        description: error instanceof Error ? error.message : "Não foi possível sincronizar communities.",
+        title: source === "backup" ? t("communities.toasts.syncBackupFailed") : t("communities.toasts.syncLiveFailed"),
+        description: error instanceof Error ? error.message : t("communities.toasts.deviceUnreachable"),
         variant: "destructive",
       });
     }
@@ -70,14 +80,12 @@ export function CommunityLibraryTab({ deviceId }: CommunityLibraryTabProps) {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-foreground">Biblioteca de communities</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t("communities.panel.library.title")}</h3>
               <Badge variant="secondary" className="text-[10px]">
                 {summary}
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Busca por nome, valor ou descrição. `Sync backup` lê o último running-config salvo; `Sync live (SSH)` consulta o equipamento agora.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("communities.panel.description")}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -88,7 +96,7 @@ export function CommunityLibraryTab({ deviceId }: CommunityLibraryTabProps) {
               disabled={resyncMutation.isPending}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${resyncMutation.isPending ? "animate-spin" : ""}`} />
-              Sync backup
+              {t("communities.panel.syncBackup")}
             </Button>
             <Button
               variant="outline"
@@ -97,7 +105,7 @@ export function CommunityLibraryTab({ deviceId }: CommunityLibraryTabProps) {
               disabled={resyncMutation.isPending}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${resyncMutation.isPending ? "animate-spin" : ""}`} />
-              Sync live (SSH)
+              {t("communities.panel.syncLiveSsh")}
             </Button>
           </div>
         </div>
@@ -108,7 +116,7 @@ export function CommunityLibraryTab({ deviceId }: CommunityLibraryTabProps) {
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar community-filter..."
+              placeholder={t("communities.panel.searchPlaceholder")}
               className="pl-9"
             />
           </div>
@@ -118,39 +126,39 @@ export function CommunityLibraryTab({ deviceId }: CommunityLibraryTabProps) {
       {libraryQuery.error ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive flex items-start gap-2">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>Erro ao carregar biblioteca de communities.</span>
+          <span>{t("communities.panel.loadError")}</span>
         </div>
       ) : null}
 
       <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div className="border-b border-border px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground">
-          Filtros descobertos
+          {t("communities.panel.library.discoveredFilters")}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 font-medium">Filter</th>
-                <th className="px-4 py-3 font-medium">Valor</th>
-                <th className="px-4 py-3 font-medium">Descrição</th>
-                <th className="px-4 py-3 font-medium">Tipo</th>
-                <th className="px-4 py-3 font-medium">Ação</th>
-                <th className="px-4 py-3 font-medium">Origem</th>
-                <th className="px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3 font-medium text-right">Uso</th>
+                <th className="px-4 py-3 font-medium">{t("communities.panel.library.table.filter")}</th>
+                <th className="px-4 py-3 font-medium">{t("communities.panel.library.table.value")}</th>
+                <th className="px-4 py-3 font-medium">{t("communities.panel.library.table.description")}</th>
+                <th className="px-4 py-3 font-medium">{t("communities.panel.library.table.type")}</th>
+                <th className="px-4 py-3 font-medium">{t("communities.panel.library.table.action")}</th>
+                <th className="px-4 py-3 font-medium">{t("communities.panel.library.table.origin")}</th>
+                <th className="px-4 py-3 font-medium">{t("communities.panel.library.table.state")}</th>
+                <th className="px-4 py-3 font-medium text-right">{t("communities.panel.library.table.usageRp")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    Carregando biblioteca...
+                    {t("communities.panel.library.loading")}
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    Nenhum filtro encontrado. Use `Sync backup` ou `Sync live (SSH)`.
+                    {t("communities.panel.library.empty")}
                   </td>
                 </tr>
               ) : (
@@ -169,11 +177,11 @@ export function CommunityLibraryTab({ deviceId }: CommunityLibraryTabProps) {
                     <td className="px-4 py-3 text-xs">
                       {item.isActive ? (
                         <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">
-                          ativo
+                          {t("communities.panel.library.active")}
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="bg-amber-500/10 text-amber-300">
-                          inativo
+                          {t("communities.panel.library.inactive")}
                         </Badge>
                       )}
                     </td>

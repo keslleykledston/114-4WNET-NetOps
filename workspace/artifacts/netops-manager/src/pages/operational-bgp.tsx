@@ -13,6 +13,7 @@ import {
   useOperationalBgpSummary,
 } from "@/features/operational-bgp/operational-bgp-api";
 import { BgpFsmStateBadge, BgpOperStatusBadge } from "@/features/operational-bgp/operational-bgp-state-badge";
+import { useTranslation } from "@/i18n";
 
 function fmtDate(value: string | null): string {
   if (!value) return "-";
@@ -21,14 +22,15 @@ function fmtDate(value: string | null): string {
   return parsed.toLocaleString();
 }
 
-function freshnessLabel(value: BgpFreshnessStatus): string {
-  if (value === "fresh") return "fresh";
-  if (value === "stale") return "stale";
-  if (value === "expired") return "expired";
-  return "unknown";
+function freshnessLabel(value: BgpFreshnessStatus, t: (key: string) => string): string {
+  if (value === "fresh") return t("operationalBgp.freshnessFresh");
+  if (value === "stale") return t("operationalBgp.freshnessStale");
+  if (value === "expired") return t("operationalBgp.freshnessExpired");
+  return t("operationalBgp.freshnessUnknown");
 }
 
 export default function OperationalBgpPage() {
+  const { t } = useTranslation();
   const { data: devices, isLoading: devicesLoading } = useListDevices();
   const sortedDevices = useMemo(
     () => [...(devices ?? [])].sort((left, right) => left.hostname.localeCompare(right.hostname, "pt", { sensitivity: "base" })),
@@ -59,17 +61,17 @@ export default function OperationalBgpPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <GitBranch className="h-6 w-6 text-primary" />
-          BGP Operations
+          {t("operationalBgp.title")}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Esta tela mostra estado operacional via SNMP. Nao valida configuracao/policies.
+          {t("operationalBgp.subtitle")}
         </p>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Device selector</CardTitle>
-          <CardDescription>Somente leitura por GET de peers e summary.</CardDescription>
+          <CardTitle className="text-base">{t("operationalBgp.deviceSelector")}</CardTitle>
+          <CardDescription>{t("operationalBgp.deviceSelectorHint")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <Select
@@ -78,7 +80,7 @@ export default function OperationalBgpPage() {
             disabled={devicesLoading || sortedDevices.length === 0}
           >
             <SelectTrigger className="w-full sm:w-[360px]">
-              <SelectValue placeholder="Selecione o device" />
+              <SelectValue placeholder={t("operationalBgp.selectDevice")} />
             </SelectTrigger>
             <SelectContent>
               {sortedDevices.map((device) => (
@@ -91,28 +93,28 @@ export default function OperationalBgpPage() {
 
           <Button variant="outline" onClick={() => { void peersQuery.refetch(); void summaryQuery.refetch(); }}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Atualizar
+            {t("operationalBgp.refreshNow")}
           </Button>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">total peers</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{summary?.total ?? 0}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">established</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-emerald-400">{summary?.counts.up ?? 0}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">idle</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-yellow-400">{summary?.counts.idle ?? 0}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">active/connect</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{activeConnect}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">down/unknown</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{(summary?.counts.down ?? 0) + (summary?.counts.unknown ?? 0)}</div></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">freshness</CardTitle></CardHeader><CardContent><div className="text-lg font-semibold">{freshnessLabel(summary?.freshness ?? "unknown")}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("operationalBgp.totalPeers")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{summary?.total ?? 0}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("operationalBgp.establishedPeers")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-emerald-400">{summary?.counts.up ?? 0}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("operationalBgp.idle")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-yellow-400">{summary?.counts.idle ?? 0}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("operationalBgp.activeConnect")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold text-red-400">{activeConnect}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("operationalBgp.downPeers")}</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{(summary?.counts.down ?? 0) + (summary?.counts.unknown ?? 0)}</div></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t("operationalBgp.freshness")}</CardTitle></CardHeader><CardContent><div className="text-lg font-semibold">{freshnessLabel(summary?.freshness ?? "unknown", t)}</div></CardContent></Card>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Activity className="h-4 w-4" />
-            BGP peers operacional
+            {t("operationalBgp.peersTableTitle")}
           </CardTitle>
           <CardDescription>
-            Fonte: GET `/api/operational/bgp` e GET `/api/operational/bgp/summary` (read-only).
+            {t("operationalBgp.peersTableHint")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,15 +128,15 @@ export default function OperationalBgpPage() {
 
           {!isLoading && (peersQuery.isError || summaryQuery.isError) && (
             <p className="text-sm text-destructive">
-              {peersQuery.error instanceof Error ? peersQuery.error.message : summaryQuery.error instanceof Error ? summaryQuery.error.message : "Falha ao carregar BGP operacional"}
+              {peersQuery.error instanceof Error ? peersQuery.error.message : summaryQuery.error instanceof Error ? summaryQuery.error.message : t("operationalBgp.loadError")}
             </p>
           )}
 
           {!isLoading && !peersQuery.isError && !summaryQuery.isError && peers.length === 0 && (
             <div className="rounded-md border border-dashed p-8 text-center space-y-2">
-              <p className="font-medium">Sem coleta operacional disponivel</p>
+              <p className="font-medium">{t("operationalBgp.noOperationalData")}</p>
               <p className="text-sm text-muted-foreground">
-                Coleta SNMP BGP ainda nao executada ou expirada.
+                {t("operationalBgp.noOperationalDataHint")}
               </p>
             </div>
           )}
@@ -143,15 +145,15 @@ export default function OperationalBgpPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>IP Peer</TableHead>
-                  <TableHead>AS</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Operacional</TableHead>
-                  <TableHead>Uptime</TableHead>
-                  <TableHead>Coletado em</TableHead>
-                  <TableHead>Frescor</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead>{t("operationalBgp.peerIp")}</TableHead>
+                  <TableHead>{t("operationalBgp.as")}</TableHead>
+                  <TableHead>{t("operationalBgp.peerType")}</TableHead>
+                  <TableHead>{t("bgpPeerDrilldown.state")}</TableHead>
+                  <TableHead>{t("operationalBgp.operational")}</TableHead>
+                  <TableHead>{t("bgpPeerDrilldown.uptime")}</TableHead>
+                  <TableHead>{t("operationalBgp.collectedAt")}</TableHead>
+                  <TableHead>{t("operationalBgp.freshness")}</TableHead>
+                  <TableHead>{t("common.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -164,15 +166,15 @@ export default function OperationalBgpPage() {
                     <TableCell><BgpOperStatusBadge status={peer.operStatus} /></TableCell>
                       <TableCell>{peer.uptimeSeconds ?? "-"}</TableCell>
                       <TableCell>{fmtDate(peer.collectedAt)}</TableCell>
-                      <TableCell>{freshnessLabel(summary?.freshness ?? "unknown")}</TableCell>
+                      <TableCell>{freshnessLabel(summary?.freshness ?? "unknown", t)}</TableCell>
                       <TableCell>
                         <Button asChild variant="outline" size="sm" className="h-8">
                           <Link
                             href={`/bgp/peer-drilldown?deviceId=${effectiveDeviceId ?? ""}&peer=${encodeURIComponent(peer.peerIp)}&auto=1`}
-                            title="Abrir drilldown técnico"
+                            title={t("operationalBgp.openDrilldown")}
                           >
                             <GitBranch className="h-4 w-4" />
-                            Drilldown
+                            {t("operationalBgp.drilldown")}
                           </Link>
                       </Button>
                     </TableCell>

@@ -4,7 +4,7 @@ import {
   useCreateCompliancePolicy, useDeleteCompliancePolicy
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { ScrollText, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 
 export default function Policies() {
+  const { t } = useTranslation();
   const { data: policies, isLoading } = useListCompliancePolicies();
   const createPolicy = useCreateCompliancePolicy();
   const deletePolicy = useDeleteCompliancePolicy();
@@ -35,17 +37,17 @@ export default function Policies() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListCompliancePoliciesQueryKey() });
         setIsCreateOpen(false);
-        toast({ title: "Policy created" });
+        toast({ title: t("policies.created") });
       }
     });
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Delete policy?")) {
+    if (confirm(t("policies.deleteConfirm"))) {
       deletePolicy.mutate({ id }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListCompliancePoliciesQueryKey() });
-          toast({ title: "Policy deleted" });
+          toast({ title: t("policies.deleted") });
         }
       });
     }
@@ -65,26 +67,26 @@ export default function Policies() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Policies</h1>
-          <p className="text-muted-foreground mt-1">Manage compliance rules</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("policies.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("policies.subtitle")}</p>
         </div>
         
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2" /> New Policy</Button>
+            <Button><Plus className="h-4 w-4 mr-2" /> {t("policies.newPolicy")}</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Policy</DialogTitle>
+              <DialogTitle>{t("policies.createPolicy")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Name</label>
+                <label className="text-sm font-medium">{t("common.name")}</label>
                 <Input value={newPolicy.name} onChange={e => setNewPolicy({...newPolicy, name: e.target.value})} placeholder="Require NTP Servers" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Context</label>
+                  <label className="text-sm font-medium">{t("policies.context")}</label>
                   <Select value={newPolicy.context} onValueChange={v => setNewPolicy({...newPolicy, context: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -97,7 +99,7 @@ export default function Policies() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Severity</label>
+                  <label className="text-sm font-medium">{t("compliance.severity")}</label>
                   <Select value={newPolicy.severity} onValueChange={v => setNewPolicy({...newPolicy, severity: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -112,24 +114,24 @@ export default function Policies() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Rule Type</label>
+                  <label className="text-sm font-medium">{t("policies.ruleType")}</label>
                   <Select value={newPolicy.ruleType} onValueChange={v => setNewPolicy({...newPolicy, ruleType: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="presence">Presence (must exist)</SelectItem>
-                      <SelectItem value="absence">Absence (must not exist)</SelectItem>
-                      <SelectItem value="regex">Regex Match</SelectItem>
+                      <SelectItem value="presence">{t("policies.ruleTypes.presence")}</SelectItem>
+                      <SelectItem value="absence">{t("policies.ruleTypes.absence")}</SelectItem>
+                      <SelectItem value="regex">{t("policies.ruleTypes.regex")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Pattern/Value</label>
+                  <label className="text-sm font-medium">{t("policies.patternValue")}</label>
                   <Input value={newPolicy.rulePattern} onChange={e => setNewPolicy({...newPolicy, rulePattern: e.target.value})} placeholder="ntp server \d+\.\d+\.\d+\.\d+" />
                 </div>
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleCreate} disabled={createPolicy.isPending}>Save</Button>
+              <Button onClick={handleCreate} disabled={createPolicy.isPending}>{t("common.save")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -140,18 +142,18 @@ export default function Policies() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Context</TableHead>
-                <TableHead>Severity</TableHead>
-                <TableHead>Rule</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("common.name")}</TableHead>
+                <TableHead>{t("policies.context")}</TableHead>
+                <TableHead>{t("compliance.severity")}</TableHead>
+                <TableHead>{t("policies.rule")}</TableHead>
+                <TableHead className="text-right">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8">{t("common.loading")}...</TableCell></TableRow>
               ) : policies?.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No policies found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t("policies.noPolicies")}</TableCell></TableRow>
               ) : (
                 policies?.map(p => (
                   <TableRow key={p.id}>

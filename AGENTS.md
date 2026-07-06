@@ -93,6 +93,19 @@ Portas típicas lab: API `8080` ou `8085`, Web `3000` ou `3005`, Postgres `5432`
 | Docs referência | `docs/ai/*.md` |
 | Skill migração Codex | `.codex/skills/netops-migration/SKILL.md` |
 
+## Hermes Agent (operação runtime)
+
+Orquestrador multi-agente para SSH, consultas API e testes via CLI Hermes:
+
+| Recurso | Caminho |
+|---------|---------|
+| **Instalação e uso** | `hermes/README.md` |
+| **Telegram (bot)** | `hermes/TELEGRAM.md` |
+| Profile distribution | `hermes/distribution.yaml` |
+| Skills (SSH, queries, tests) | `hermes/skills/*/SKILL.md` |
+| Scripts operacionais | `hermes/scripts/*.sh` |
+| Sub-agentes | `hermes/agents/*.md` |
+
 ## Feature flags (resumo)
 
 | Flag | Default | Efeito |

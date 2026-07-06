@@ -52,3 +52,33 @@ export function getTenantIdForConnectorGroup(
   if (!connectorGroupId) return null;
   return groups.find((group) => group.id === connectorGroupId)?.tenant_id ?? null;
 }
+
+/** Maps tenant/connector group form fields to API PATCH/POST body fields. */
+export function buildDeviceAccessPayload(values: {
+  tenantId: string;
+  connectorGroupId: string;
+}): { connectorGroupId: number | null; connectorId: null } {
+  if (values.connectorGroupId) {
+    return {
+      connectorGroupId: Number(values.connectorGroupId),
+      connectorId: null,
+    };
+  }
+  return {
+    connectorGroupId: null,
+    connectorId: null,
+  };
+}
+
+export function appendSnmpToDevicePayload(
+  payload: { snmpCommunity?: string },
+  snmpCommunity: string,
+  mode: "create" | "edit",
+): void {
+  const trimmed = snmpCommunity.trim();
+  if (mode === "create") {
+    if (trimmed) payload.snmpCommunity = trimmed;
+    return;
+  }
+  if (trimmed) payload.snmpCommunity = trimmed;
+}

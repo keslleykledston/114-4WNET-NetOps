@@ -8,6 +8,7 @@ from typing import Any
 
 from .config import Config
 from .security import SecurityPolicyError, validate_ssh_command
+from .ssh_legacy import legacy_openssh_cli_options
 from .utils import run_command
 
 logger = logging.getLogger("netops-connector")
@@ -198,6 +199,7 @@ def run_ssh_command(target_ip: str, payload: dict[str, Any], config: Config) -> 
     username = str(payload.get("username", "")).strip()
     password = str(payload.get("password", ""))
     port = int(payload.get("port", 22))
+    vendor = str(payload.get("vendor", "") or "")
     if not username:
         raise ValueError("SSH payload requires username")
     if not command:
@@ -221,6 +223,7 @@ def run_ssh_command(target_ip: str, payload: dict[str, Any], config: Config) -> 
             "sshpass",
             "-e",
             "ssh",
+            *legacy_openssh_cli_options(vendor),
             "-n",
             "-o",
             "StrictHostKeyChecking=no",

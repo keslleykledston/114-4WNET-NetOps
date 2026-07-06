@@ -46,6 +46,7 @@ export const l2CircuitsTable = pgTable("l2_circuits", {
 export const l2DiscoveryJobsTable = pgTable("l2_discovery_jobs", {
   id: serial("id").primaryKey(),
   runId: text("run_id").notNull().unique(),
+  jobType: text("job_type").notNull().default("discovery"), // discovery | refresh
   deviceId: integer("device_id").notNull().references(() => devicesTable.id, { onDelete: "cascade" }),
   status: text("status").notNull(), // pending | running | completed | failed
   startedAt: timestamp("started_at").notNull(),

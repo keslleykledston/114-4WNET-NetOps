@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n";
 import {
   fetchImpactSummary,
   fetchScenarios,
@@ -10,6 +11,7 @@ import {
 } from "@/features/impact/impact-api";
 
 export default function ImpactAnalysis() {
+  const { t } = useTranslation();
   const [summary, setSummary] = useState<any>(null);
   const [scenarios, setScenarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,30 +51,29 @@ export default function ImpactAnalysis() {
   }
 
   if (loading) {
-    return <div className="p-0">Loading...</div>;
+    return <div className="p-0">{t("common.loading")}...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Impact Analysis</h1>
-        <Button onClick={loadData}>Refresh</Button>
+        <h1 className="text-2xl font-bold">{t("impact.title")}</h1>
+        <Button onClick={loadData}>{t("common.refresh")}</Button>
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="scenarios">Scenarios</TabsTrigger>
-          <TabsTrigger value="correlation">Service Correlation</TabsTrigger>
+          <TabsTrigger value="overview">{t("impact.overview")}</TabsTrigger>
+          <TabsTrigger value="scenarios">{t("impact.scenarios")}</TabsTrigger>
+          <TabsTrigger value="correlation">{t("impact.serviceCorrelation")}</TabsTrigger>
         </TabsList>
 
-        {/* OVERVIEW TAB */}
         <TabsContent value="overview" className="space-y-4 mt-6">
           {summary ? (
             <div className="grid grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Total Scenarios</CardTitle>
+                  <CardTitle className="text-lg">{t("impact.totalScenarios")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">{summary.totalScenarios || 0}</p>
@@ -80,7 +81,7 @@ export default function ImpactAnalysis() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Open</CardTitle>
+                  <CardTitle className="text-lg">{t("impact.open")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold text-red-600">{summary.openScenarios || 0}</p>
@@ -88,7 +89,7 @@ export default function ImpactAnalysis() {
               </Card>
               <Card className="border-red-200 bg-red-50">
                 <CardHeader>
-                  <CardTitle className="text-lg text-red-800">Critical</CardTitle>
+                  <CardTitle className="text-lg text-red-800">{t("impact.critical")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold text-red-600">{summary.criticalScenarios || 0}</p>
@@ -96,7 +97,7 @@ export default function ImpactAnalysis() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Affected Services</CardTitle>
+                  <CardTitle className="text-lg">{t("impact.affectedServices")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-2xl font-bold">{summary.affectedServices || 0}</p>
@@ -106,29 +107,28 @@ export default function ImpactAnalysis() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-muted-foreground">No impact data available</p>
+                <p className="text-muted-foreground">{t("impact.noImpactData")}</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* SCENARIOS TAB */}
         <TabsContent value="scenarios" className="space-y-4 mt-6">
           {scenarios.length > 0 ? (
             <Card>
               <CardHeader>
-                <CardTitle>Impact Scenarios</CardTitle>
-                <CardDescription>{scenarios.length} scenarios</CardDescription>
+                <CardTitle>{t("impact.impactScenarios")}</CardTitle>
+                <CardDescription>{t("impact.scenariosCount", { count: scenarios.length })}</CardDescription>
               </CardHeader>
               <CardContent>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-2">Target</th>
-                      <th className="text-left py-2">Status</th>
-                      <th className="text-left py-2">Severity</th>
-                      <th className="text-left py-2">Affected</th>
-                      <th className="text-left py-2">Actions</th>
+                      <th className="text-left py-2">{t("impact.target")}</th>
+                      <th className="text-left py-2">{t("common.status")}</th>
+                      <th className="text-left py-2">{t("compliance.severity")}</th>
+                      <th className="text-left py-2">{t("impact.affected")}</th>
+                      <th className="text-left py-2">{t("common.actions")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -168,14 +168,14 @@ export default function ImpactAnalysis() {
                                 variant="outline"
                                 onClick={() => handleAck(scenario.id)}
                               >
-                                Ack
+                                {t("impact.ack")}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleResolve(scenario.id)}
                               >
-                                Resolve
+                                {t("impact.resolve")}
                               </Button>
                             </>
                           )}
@@ -189,23 +189,20 @@ export default function ImpactAnalysis() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-green-600 font-semibold">✓ No impact scenarios</p>
+                <p className="text-green-600 font-semibold">{t("impact.noScenarios")}</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* SERVICE CORRELATION TAB */}
         <TabsContent value="correlation" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Service Correlation</CardTitle>
-              <CardDescription>Services affected by scenarios</CardDescription>
+              <CardTitle>{t("impact.serviceCorrelation")}</CardTitle>
+              <CardDescription>{t("impact.servicesAffected")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Service correlation details coming soon
-              </p>
+              <p className="text-sm text-muted-foreground">{t("impact.correlationComingSoon")}</p>
             </CardContent>
           </Card>
         </TabsContent>

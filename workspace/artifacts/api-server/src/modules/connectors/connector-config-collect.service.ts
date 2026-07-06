@@ -16,16 +16,10 @@ import { createConnectorJob } from "./connectors.service.js";
 import { parseAndPersistConfigBundle } from "../config-backup/config-bundle-parser.service.js";
 import { createConfigDiffForCollectedConfig } from "../config-history/config-history.service.js";
 import { resolveDeviceConnectorContext } from "./connector-execution.service.js";
-
-export const HUAWEI_SSH_CONFIG_BUNDLE_COMMANDS = [
-  "display current-configuration",
-  "display bgp peer",
-  "display bgp peer verbose",
-  "display mpls l2vc verbose",
-  "display vsi verbose",
-  "display interface description",
-  "display interface brief",
-] as const;
+import {
+  getConfigBundleCommands as getVendorConfigBundleCommands,
+  normalizeVendorKey,
+} from "../netops/vendor-registry.js";
 
 export const SSH_CONFIG_BUNDLE_TIMEOUT_SECONDS = 300;
 
@@ -33,11 +27,9 @@ export type ConfigCollectEnqueueResult =
   | { status: "queued"; jobId: number }
   | { status: "failed"; message: string };
 
-export function getConfigBundleCommands(vendor: string): string[] {
-  if (vendor.toLowerCase().includes("huawei")) {
-    return [...HUAWEI_SSH_CONFIG_BUNDLE_COMMANDS];
-  }
-  return ["show running-config", "show ip bgp summary", "show interfaces"];
+export function getConfigBundleCommands(vendor: string, platform?: string): string[] {
+  const vendorKey = normalizeVendorKey(vendor, platform);
+  return getVendorConfigBundleCommands(vendorKey);
 }
 
 export async function enqueueSshConfigBundleForDevice(
@@ -55,7 +47,7 @@ export async function enqueueSshConfigBundleForDevice(
     }
     await assertConnectorAcceptsJobs(connectorId);
     const password = decrypt(device.passwordEncrypted);
-    const commands = getConfigBundleCommands(device.vendor);
+    const commands = getConfigBundleCommands(device.vendor, device.platform);
     for (const command of commands) {
       assertReadOnlySshCommand(command);
     }

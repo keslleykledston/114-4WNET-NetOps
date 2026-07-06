@@ -1,0 +1,47 @@
+model:
+  provider: custom
+  default: ${NETOPS_HERMES_MODEL:-gpt-5.3-codex}
+  base_url: ${OPENAI_BASE_URL}
+  api_key: ${OPENAI_API_KEY}
+
+fallback_providers:
+  - provider: openai-codex
+    model: gpt-5.3-codex
+
+terminal:
+  backend: local
+  working_dir: ${NETOPS_REPO_ROOT}
+
+# Comandos Telegram: resposta instantânea (sem LLM) ou alias para skills curtas.
+# No Telegram: /health, /devices, /flags, /docker
+quick_commands:
+  health:
+    type: exec
+    command: 'bash "${NETOPS_REPO_ROOT}/hermes/scripts/netops-api-query.sh" health'
+  devices:
+    type: exec
+    command: 'bash "${NETOPS_REPO_ROOT}/hermes/scripts/netops-api-query.sh" devices'
+  flags:
+    type: exec
+    command: 'bash "${NETOPS_REPO_ROOT}/hermes/scripts/netops-api-query.sh" flags'
+  docker:
+    type: exec
+    command: 'bash "${NETOPS_REPO_ROOT}/hermes/scripts/netops-api-query.sh" docker-status'
+  nssh:
+    type: alias
+    target: nssh
+  nq:
+    type: alias
+    target: nq
+  ntest:
+    type: alias
+    target: ntest
+  nop:
+    type: alias
+    target: nop
+  ndiag:
+    type: alias
+    target: ndiag
+  netops:
+    type: alias
+    target: nop

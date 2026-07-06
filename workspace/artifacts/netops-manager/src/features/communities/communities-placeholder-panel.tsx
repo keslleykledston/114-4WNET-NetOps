@@ -22,6 +22,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
+import { useTranslation } from "@/i18n";
+import type { TranslationParams } from "@/i18n/types";
 import { CommunityApplyConfirmModal } from "@/features/communities/community-apply-confirm-modal";
 import {
   useApplyCommunitySet,
@@ -56,26 +58,34 @@ function isAppCreatedOrigin(origin: string) {
   return !isImportedOrigin(origin);
 }
 
-function formatSyncSummary(result: {
-  source: "running_config" | "live_ssh";
-  libraryInserted: number;
-  libraryUpdated: number;
-  setsInserted: number;
-  setMembersInserted: number;
-  setMembersMissingLibrary: number;
-}) {
-  const sourceLabel = result.source === "live_ssh" ? "live SSH" : "backup";
-  const missingLabel = result.setMembersMissingLibrary > 0 ? ` · ${result.setMembersMissingLibrary} sem biblioteca` : "";
-  return [
-    `source ${sourceLabel}`,
-    `${result.libraryInserted} novos filtros`,
-    `${result.libraryUpdated} filtros atualizados`,
-    `${result.setsInserted} sets importados`,
-    `${result.setMembersInserted} members`,
-    missingLabel,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+type TranslateFn = (key: string, params?: TranslationParams) => string;
+
+function formatSyncSummary(
+  result: {
+    source: "running_config" | "live_ssh";
+    libraryInserted: number;
+    libraryUpdated: number;
+    setsInserted: number;
+    setMembersInserted: number;
+    setMembersMissingLibrary: number;
+  },
+  t: TranslateFn,
+) {
+  const sourceLabel =
+    result.source === "live_ssh"
+      ? t("communities.panel.syncSource.liveSsh")
+      : t("communities.panel.syncSource.backup");
+  const parts = [
+    t("communities.toasts.syncSummary.source", { source: sourceLabel }),
+    t("communities.toasts.syncSummary.newFilters", { count: result.libraryInserted }),
+    t("communities.toasts.syncSummary.updatedFilters", { count: result.libraryUpdated }),
+    t("communities.toasts.syncSummary.importedSets", { count: result.setsInserted }),
+    t("communities.toasts.syncSummary.members", { count: result.setMembersInserted }),
+  ];
+  if (result.setMembersMissingLibrary > 0) {
+    parts.push(t("communities.toasts.syncSummary.missingLibrary", { count: result.setMembersMissingLibrary }));
+  }
+  return parts.join(" · ");
 }
 
 function statusClass(status: string) {
@@ -101,6 +111,8 @@ function originClass(origin: string) {
 }
 
 function SetMemberRow({ member }: { member: CommunitySet["members"][number] }) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-start justify-between gap-3 rounded-lg border border-border bg-background/60 px-3 py-2">
       <div className="min-w-0">
@@ -119,11 +131,11 @@ function SetMemberRow({ member }: { member: CommunitySet["members"][number] }) {
         ) : null}
         {member.missingInLibrary ? (
           <Badge variant="secondary" className="bg-amber-500/10 text-amber-300">
-            missing
+            {t("communities.panel.member.missing")}
           </Badge>
         ) : (
           <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300">
-            linked
+            {t("communities.panel.member.linked")}
           </Badge>
         )}
       </div>
@@ -132,6 +144,7 @@ function SetMemberRow({ member }: { member: CommunitySet["members"][number] }) {
 }
 
 export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const canManage = user?.role !== "viewer";
   const { toast } = useToast();
@@ -241,13 +254,13 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
     try {
       const result = await resyncMutation.mutateAsync({ deviceId: device.id, source });
       toast({
-        title: source === "backup" ? "Sync backup concluído" : "Sync live (SSH) concluído",
-        description: formatSyncSummary(result),
+        title: source === "backup" ? t("communities.toasts.syncBackupDone") : t("communities.toasts.syncLiveDone"),
+        description: formatSyncSummary(result, t),
       });
     } catch (error) {
       toast({
-        title: source === "backup" ? "Falha no sync backup" : "Falha no sync live (SSH)",
-        description: error instanceof Error ? error.message : "Não foi possível consultar o dispositivo.",
+        title: source === "backup" ? t("communities.toasts.syncBackupFailed") : t("communities.toasts.syncLiveFailed"),
+        description: error instanceof Error ? error.message : t("communities.toasts.deviceUnreachable"),
         variant: "destructive",
       });
     }
@@ -307,7 +320,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
     };
 
     if (!payload.name) {
-      toast({ title: "Nome obrigatório", variant: "destructive" });
+      toast({ title: t("communities.toasts.nameRequired"), variant: "destructive" });
       return;
     }
 
@@ -317,7 +330,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
           deviceId: device.id,
           ...payload,
         })) as CommunitySet;
-        toast({ title: "Community set criado" });
+        toast({ title: t("communities.toasts.setCreated") });
         setCreatingNew(false);
         setSelectedSetId(created.id);
         setCompareSetId(null);
@@ -328,13 +341,13 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
           setId: selectedSet.id,
           ...payload,
         })) as CommunitySet;
-        toast({ title: "Community set atualizado" });
+        toast({ title: t("communities.toasts.setUpdated") });
         setSelectedSetId(updated.id);
       }
     } catch (error) {
       toast({
-        title: "Falha ao salvar set",
-        description: error instanceof Error ? error.message : "Erro inesperado",
+        title: t("communities.toasts.saveFailed"),
+        description: error instanceof Error ? error.message : t("communities.toasts.unexpectedError"),
         variant: "destructive",
       });
     }
@@ -342,16 +355,16 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
 
   async function handleDelete() {
     if (!selectedSet || !canManage) return;
-    if (!window.confirm("Apagar este community set?")) return;
+    if (!window.confirm(t("communities.toasts.deleteConfirm"))) return;
 
     try {
       await deleteMutation.mutateAsync({ deviceId: device.id, setId: selectedSet.id });
-      toast({ title: "Community set removido" });
+      toast({ title: t("communities.toasts.setDeleted") });
       resetEditor();
     } catch (error) {
       toast({
-        title: "Falha ao apagar set",
-        description: error instanceof Error ? error.message : "Erro inesperado",
+        title: t("communities.toasts.deleteFailed"),
+        description: error instanceof Error ? error.message : t("communities.toasts.unexpectedError"),
         variant: "destructive",
       });
     }
@@ -362,12 +375,12 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
     try {
       const result = (await previewQuery.refetch()).data as CommunityPreviewResult | undefined;
       setPreviewResult(result ?? null);
-      toast({ title: "Preview gerado" });
+      toast({ title: t("communities.toasts.previewGenerated") });
       return Boolean(result);
     } catch (error) {
       toast({
-        title: "Falha no preview",
-        description: error instanceof Error ? error.message : "Não foi possível gerar preview.",
+        title: t("communities.toasts.previewFailed"),
+        description: error instanceof Error ? error.message : t("communities.toasts.previewGenerateFailed"),
         variant: "destructive",
       });
       return false;
@@ -377,11 +390,11 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
   async function copyToClipboard(value: string, label: string) {
     try {
       await navigator.clipboard.writeText(value);
-      toast({ title: `${label} copiado` });
+      toast({ title: t("communities.toasts.copied", { label }) });
     } catch {
       toast({
-        title: `Falha ao copiar ${label.toLowerCase()}`,
-        description: "O navegador bloqueou a cópia.",
+        title: t("communities.toasts.copyFailed", { label: label.toLowerCase() }),
+        description: t("communities.toasts.copyBlocked"),
         variant: "destructive",
       });
     }
@@ -409,11 +422,11 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
         acknowledgeMissingLibraryRefs: previewResult.missingCommunityValues.length > 0,
       });
       setApplyDialogOpen(false);
-      toast({ title: "Configuração aplicada" });
+      toast({ title: t("communities.toasts.configApplied") });
     } catch (error) {
       toast({
-        title: "Falha ao aplicar set",
-        description: error instanceof Error ? error.message : "Erro inesperado",
+        title: t("communities.toasts.applyFailed"),
+        description: error instanceof Error ? error.message : t("communities.toasts.unexpectedError"),
         variant: "destructive",
       });
     } finally {
@@ -442,11 +455,10 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#252840] bg-[#161922]">
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 </span>
-                BGP Communities
+                {t("communities.panel.title")}
               </CardTitle>
               <CardDescription className="max-w-4xl text-[12px] text-muted-foreground">
-                Consulta real do device via backend. `Sync backup` lê o último running-config salvo; `Sync live (SSH)` consulta o
-                equipamento agora e importa `ip community-filter` para a biblioteca e `ip community-list` para os sets.
+                {t("communities.panel.description")}
               </CardDescription>
             </div>
 
@@ -460,7 +472,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                 className="border-[#252840] text-muted-foreground hover:border-brand-blue hover:text-brand-blue"
               >
                 <RefreshCw className={`mr-2 h-4 w-4 ${resyncMutation.isPending ? "animate-spin" : ""}`} />
-                Sync backup
+                {t("communities.panel.syncBackup")}
               </Button>
               <Button
                 type="button"
@@ -471,26 +483,26 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                 className="border-[#252840] text-muted-foreground hover:border-sky-500/50 hover:text-sky-300"
               >
                 <RefreshCw className={`mr-2 h-4 w-4 ${resyncMutation.isPending ? "animate-spin" : ""}`} />
-                Sync live (SSH)
+                {t("communities.panel.syncLiveSsh")}
               </Button>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-[11px] text-muted-foreground">
-              {libraryItems.length} entradas
+              {t("communities.panel.badges.entries", { count: libraryItems.length })}
             </Badge>
             <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-[11px] text-muted-foreground">
-              {activeLibrary} ativas
+              {t("communities.panel.badges.active", { count: activeLibrary })}
             </Badge>
             <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-[11px] text-muted-foreground">
-              {filteredSets.length} sets
+              {t("communities.panel.badges.sets", { count: filteredSets.length })}
             </Badge>
             <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-[11px] text-muted-foreground">
-              {importedSets} importados
+              {t("communities.panel.badges.imported", { count: importedSets })}
             </Badge>
             <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-[11px] text-muted-foreground">
-              Device #{device.id}
+              {t("communities.panel.badges.device", { id: device.id })}
             </Badge>
           </div>
 
@@ -499,7 +511,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
             <Input
               value={librarySearch}
               onChange={(event) => setLibrarySearch(event.target.value)}
-              placeholder="Buscar por nome, valor, descrição ou vrp_object_name..."
+              placeholder={t("communities.panel.searchPlaceholder")}
               className="border-[#252840] bg-[#11141c] pl-9 text-foreground placeholder:text-muted-foreground"
             />
           </div>
@@ -508,7 +520,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
 
       {libraryQuery.isError || setsQuery.isError ? (
         <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          Erro ao carregar communities do device. Se o device estiver acessível, use `Sync live (SSH)` para atualizar a base.
+          {t("communities.panel.loadError")}
         </div>
       ) : null}
 
@@ -518,22 +530,22 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
             value="library"
             className="rounded-md px-4 py-1.5 text-[12px] font-medium text-muted-foreground data-[state=active]:bg-brand-blue data-[state=active]:text-white"
           >
-            Biblioteca
+            {t("communities.panel.tabs.library")}
           </TabsTrigger>
           <TabsTrigger
             value="sets"
             className="rounded-md px-4 py-1.5 text-[12px] font-medium text-muted-foreground data-[state=active]:bg-brand-blue data-[state=active]:text-white"
           >
-            Community Sets
+            {t("communities.panel.tabs.sets")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="library" className="mt-4">
           <Card className="border-[#252840] bg-[#10131a]">
             <CardHeader className="space-y-2 border-b border-[#252840]">
-              <CardTitle className="text-[14px] text-foreground">Biblioteca de community-filter</CardTitle>
+              <CardTitle className="text-[14px] text-foreground">{t("communities.panel.library.title")}</CardTitle>
               <CardDescription className="text-[12px] text-muted-foreground">
-                Entradas descobertas no running-config salvo ou diretamente no device via SSH live.
+                {t("communities.panel.library.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -541,27 +553,27 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                 <table className="w-full text-left text-sm">
                   <thead className="bg-[#161922] text-[10px] uppercase tracking-wide text-muted-foreground">
                     <tr>
-                      <th className="px-3 py-2 font-semibold">Filter</th>
-                      <th className="px-3 py-2 font-semibold">Valor</th>
-                      <th className="px-3 py-2 font-semibold">Descrição</th>
-                      <th className="px-3 py-2 font-semibold">Tipo</th>
-                      <th className="px-3 py-2 font-semibold">Ação</th>
-                      <th className="px-3 py-2 font-semibold">Origem</th>
-                      <th className="px-3 py-2 font-semibold">Estado</th>
-                      <th className="px-3 py-2 font-semibold text-right">Uso (RP)</th>
+                      <th className="px-3 py-2 font-semibold">{t("communities.panel.library.table.filter")}</th>
+                      <th className="px-3 py-2 font-semibold">{t("communities.panel.library.table.value")}</th>
+                      <th className="px-3 py-2 font-semibold">{t("communities.panel.library.table.description")}</th>
+                      <th className="px-3 py-2 font-semibold">{t("communities.panel.library.table.type")}</th>
+                      <th className="px-3 py-2 font-semibold">{t("communities.panel.library.table.action")}</th>
+                      <th className="px-3 py-2 font-semibold">{t("communities.panel.library.table.origin")}</th>
+                      <th className="px-3 py-2 font-semibold">{t("communities.panel.library.table.state")}</th>
+                      <th className="px-3 py-2 font-semibold text-right">{t("communities.panel.library.table.usageRp")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {isBusy ? (
                       <tr>
                         <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
-                          A consultar device...
+                          {t("communities.panel.library.loading")}
                         </td>
                       </tr>
                     ) : libraryItems.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">
-                          Sem entradas. Use `Sync backup` ou `Sync live (SSH)` para carregar a biblioteca real.
+                          {t("communities.panel.library.empty")}
                         </td>
                       </tr>
                     ) : (
@@ -582,11 +594,11 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                           <td className="px-3 py-2 text-xs">
                             {item.isActive ? (
                               <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-medium text-emerald-200">
-                                ativo
+                                {t("communities.panel.library.active")}
                               </span>
                             ) : (
                               <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-medium text-amber-200">
-                                inativo
+                                {t("communities.panel.library.inactive")}
                               </span>
                             )}
                           </td>
@@ -607,13 +619,13 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
               <CardHeader className="space-y-2.5 border-b border-[#252840]">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <CardTitle className="text-[14px] text-foreground">Community sets neste dispositivo</CardTitle>
-                    <CardDescription className="text-[12px] text-muted-foreground">Selecione um set para ver os members, origem e estado.</CardDescription>
+                    <CardTitle className="text-[14px] text-foreground">{t("communities.panel.sets.listTitle")}</CardTitle>
+                    <CardDescription className="text-[12px] text-muted-foreground">{t("communities.panel.sets.listDescription")}</CardDescription>
                   </div>
                   {canManage ? (
                     <Button variant="outline" size="sm" onClick={startCreate} className="border-[#252840] text-muted-foreground hover:border-brand-blue hover:text-brand-blue">
                       <Plus className="mr-2 h-4 w-4" />
-                      Novo
+                      {t("communities.panel.sets.new")}
                     </Button>
                   ) : null}
                 </div>
@@ -622,7 +634,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                   <Input
                     value={setSearch}
                     onChange={(event) => setSetSearch(event.target.value)}
-                    placeholder="Buscar set..."
+                    placeholder={t("communities.panel.sets.searchPlaceholder")}
                     className="border-[#252840] bg-[#11141c] pl-9 text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
@@ -632,11 +644,11 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                   <div className="space-y-1 p-3">
                     {isBusy ? (
                       <div className="rounded-lg border border-dashed border-[#252840] p-8 text-center text-sm text-muted-foreground">
-                        A consultar device...
+                        {t("communities.panel.sets.loading")}
                       </div>
                     ) : filteredSets.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-[#252840] p-8 text-center text-sm text-muted-foreground">
-                        Nenhum set encontrado. Sincronize para importar as community-list do equipamento.
+                        {t("communities.panel.sets.empty")}
                       </div>
                     ) : (
                       filteredSets.map((set) => {
@@ -667,7 +679,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                             </div>
                             <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                               <span className="font-mono">{set.origin}</span>
-                              <span>{set.membersTotal} members</span>
+                              <span>{t("communities.panel.sets.membersCount", { count: set.membersTotal })}</span>
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <Badge variant="secondary" className={originClass(set.origin)}>
@@ -683,7 +695,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                                 </Badge>
                               )}
                               <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-muted-foreground">
-                                {set.membersMissing} missing
+                                {t("communities.panel.sets.missingCount", { count: set.membersMissing })}
                               </Badge>
                             </div>
                             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -699,7 +711,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                                 }}
                               >
                                 <Eye className="h-3 w-3" />
-                                Detalhe
+                                {t("communities.panel.sets.detail")}
                               </button>
                               {canManage && (
                                 <button
@@ -718,7 +730,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                                   }}
                                 >
                                   <Copy className="h-3 w-3" />
-                                  Clonar
+                                  {t("communities.panel.sets.clone")}
                                 </button>
                               )}
                               {canManage && allSets.length > 1 && (
@@ -731,7 +743,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                                   }}
                                 >
                                   <Eye className="h-3 w-3" />
-                                  Comparar
+                                  {t("communities.panel.sets.compare")}
                                 </button>
                               )}
                               {canManage && isAppCreatedOrigin(set.origin) ? (
@@ -747,7 +759,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                                   }}
                                 >
                                   <Pencil className="h-3 w-3" />
-                                  Editar
+                                  {t("communities.panel.sets.edit")}
                                 </button>
                               ) : null}
                             </div>
@@ -762,9 +774,9 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
 
             <Card className="overflow-hidden border-[#252840] bg-[#10131a]">
               <CardHeader className="space-y-1.5 border-b border-[#252840]">
-                <CardTitle className="text-[14px] text-foreground">Detalhes do set</CardTitle>
+                <CardTitle className="text-[14px] text-foreground">{t("communities.panel.details.title")}</CardTitle>
                 <CardDescription className="text-[12px] text-muted-foreground">
-                  O set selecionado mostra members, origem e preview implícito do bloco VRP.
+                  {t("communities.panel.details.description")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 p-4 lg:h-[840px] lg:overflow-y-auto">
@@ -772,40 +784,40 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-muted-foreground">
-                        new draft
+                        {t("communities.panel.details.newDraft")}
                       </Badge>
                       <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-200">
-                        app created
+                        {t("communities.panel.details.appCreated")}
                       </Badge>
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
                       <label className="space-y-1.5 text-sm">
-                        <span className="text-muted-foreground">Nome amigável</span>
-                        <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex.: Clientes Core" className="border-[#252840] bg-[#11141c] text-foreground placeholder:text-muted-foreground" />
+                        <span className="text-muted-foreground">{t("communities.panel.details.friendlyName")}</span>
+                        <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("communities.panel.details.placeholders.friendlyName")} className="border-[#252840] bg-[#11141c] text-foreground placeholder:text-muted-foreground" />
                       </label>
                       <label className="space-y-1.5 text-sm">
-                        <span className="text-muted-foreground">Slug</span>
-                        <Input value={slug} onChange={(event) => setSlug(event.target.value)} placeholder="clientes-core" className="border-[#252840] bg-[#11141c] text-foreground placeholder:text-muted-foreground" />
+                        <span className="text-muted-foreground">{t("communities.panel.details.slug")}</span>
+                        <Input value={slug} onChange={(event) => setSlug(event.target.value)} placeholder={t("communities.panel.details.placeholders.slug")} className="border-[#252840] bg-[#11141c] text-foreground placeholder:text-muted-foreground" />
                       </label>
                     </div>
 
                     <label className="space-y-1.5 text-sm">
-                      <span className="text-muted-foreground">VRP object name</span>
+                      <span className="text-muted-foreground">{t("communities.panel.details.vrpObjectName")}</span>
                       <Input
                         value={vrpObjectName}
                         onChange={(event) => setVrpObjectName(event.target.value)}
-                        placeholder="CLIST_CLIENTES_CORE"
+                        placeholder={t("communities.panel.details.placeholders.vrpObjectName")}
                         className="border-[#252840] bg-[#11141c] font-mono text-foreground placeholder:text-muted-foreground"
                       />
                     </label>
 
                     <label className="space-y-1.5 text-sm">
-                      <span className="text-muted-foreground">Descrição</span>
+                      <span className="text-muted-foreground">{t("communities.panel.details.descriptionLabel")}</span>
                       <Textarea
                         value={description}
                         onChange={(event) => setDescription(event.target.value)}
-                        placeholder="Descrição opcional do set"
+                        placeholder={t("communities.panel.details.placeholders.description")}
                         className="min-h-28 border-[#252840] bg-[#11141c] text-foreground placeholder:text-muted-foreground"
                       />
                     </label>
@@ -813,10 +825,10 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                     <div className="flex flex-wrap gap-2">
                       <Button onClick={() => void saveEditor()} disabled={createMutation.isPending || !name.trim()}>
                         <Save className="mr-2 h-4 w-4" />
-                        Guardar
+                        {t("communities.panel.details.save")}
                       </Button>
                       <Button variant="outline" onClick={() => void resetEditor()} className="border-[#252840] text-muted-foreground hover:border-brand-blue hover:text-brand-blue">
-                        Cancelar
+                        {t("communities.panel.details.cancel")}
                       </Button>
                     </div>
                   </div>
@@ -837,22 +849,24 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                         {selectedSet.description ? <p className="max-w-3xl text-sm text-muted-foreground">{selectedSet.description}</p> : null}
                       </div>
                       <div className="rounded-lg border border-[#252840] bg-[#11141c] px-3 py-2 text-sm text-muted-foreground">
-                        <div>{selectedSet.membersTotal} members</div>
-                        <div>{selectedSet.membersResolved} resolvidos</div>
-                        <div>{selectedSet.membersMissing} faltando na biblioteca</div>
+                        <div>{t("communities.panel.sets.membersCount", { count: selectedSet.membersTotal })}</div>
+                        <div>{t("communities.panel.details.resolved", { count: selectedSet.membersResolved })}</div>
+                        <div>{t("communities.panel.details.missingInLibrary", { count: selectedSet.membersMissing })}</div>
                       </div>
                     </div>
 
                     {isImportedOrigin(selectedSet.origin) ? (
                       <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
-                        Set importado do equipamento. A lista abaixo é somente leitura.
+                        {t("communities.panel.details.importedReadOnly")}
                       </div>
                     ) : null}
 
                     {selectedSet.membersMissing > 0 ? (
                       <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-200">
                         <div className="font-medium">
-                          {selectedSet.membersMissing} member{selectedSet.membersMissing > 1 ? "s" : ""} sem referência na biblioteca
+                          {selectedSet.membersMissing > 1
+                            ? t("communities.panel.details.membersMissingRefMany", { count: selectedSet.membersMissing })
+                            : t("communities.panel.details.membersMissingRefOne", { count: selectedSet.membersMissing })}
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {selectedSet.members
@@ -868,10 +882,10 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
 
                     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
                       <div className="space-y-2">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Members</div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("communities.panel.details.members")}</div>
                         {selectedSet.members.length === 0 ? (
                           <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-                            Este set não possui members.
+                            {t("communities.panel.details.noMembers")}
                           </div>
                         ) : (
                           <div className="space-y-1.5">
@@ -886,19 +900,19 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                       </div>
 
                       <div className="space-y-2 rounded-lg border border-[#252840] bg-[#11141c] p-4">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ações</div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("communities.panel.details.actions")}</div>
                         {canManage && !isImportedOrigin(selectedSet.origin) ? (
                           <div className="space-y-1.5">
                             <label className="space-y-1.5 text-sm">
-                              <span className="text-muted-foreground">Nome</span>
+                              <span className="text-muted-foreground">{t("communities.panel.details.name")}</span>
                               <Input value={name} onChange={(event) => setName(event.target.value)} className="border-[#252840] bg-[#10131a] text-foreground" />
                             </label>
                             <label className="space-y-1.5 text-sm">
-                              <span className="text-muted-foreground">Slug</span>
+                              <span className="text-muted-foreground">{t("communities.panel.details.slug")}</span>
                               <Input value={slug} onChange={(event) => setSlug(event.target.value)} className="border-[#252840] bg-[#10131a] text-foreground" />
                             </label>
                             <label className="space-y-1.5 text-sm">
-                              <span className="text-muted-foreground">VRP object name</span>
+                              <span className="text-muted-foreground">{t("communities.panel.details.vrpObjectName")}</span>
                               <Input
                                 value={vrpObjectName}
                                 onChange={(event) => setVrpObjectName(event.target.value)}
@@ -906,17 +920,17 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                               />
                             </label>
                             <label className="space-y-1.5 text-sm">
-                              <span className="text-muted-foreground">Descrição</span>
+                              <span className="text-muted-foreground">{t("communities.panel.details.descriptionLabel")}</span>
                               <Textarea value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-24 border-[#252840] bg-[#10131a] text-foreground" />
                             </label>
                             <div className="flex flex-col gap-2">
                               <Button onClick={() => void saveEditor()} disabled={updateMutation.isPending || !name.trim()} className="bg-brand-blue text-white hover:bg-brand-blue-hover">
                                 <Save className="mr-2 h-4 w-4" />
-                                Guardar alterações
+                                {t("communities.panel.details.saveChanges")}
                               </Button>
                               <Button variant="outline" onClick={() => void handlePreview()} disabled={previewQuery.isFetching} className="border-[#252840] text-muted-foreground hover:border-brand-blue hover:text-brand-blue">
                                 <Eye className="mr-2 h-4 w-4" />
-                                Preview
+                                {t("communities.panel.details.preview")}
                               </Button>
                               <Button
                                 variant="outline"
@@ -924,26 +938,26 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                                 disabled={applyMutation.isPending || !previewResult}
                                 className="border-[#252840] text-muted-foreground hover:border-sky-500/50 hover:text-sky-300"
                               >
-                                Guardar e aplicar…
+                                {t("communities.panel.details.saveAndApply")}
                               </Button>
                               <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleteMutation.isPending}>
                                 <Trash2 className="mr-2 h-4 w-4" />
-                                Apagar
+                                {t("communities.panel.details.delete")}
                               </Button>
                             </div>
                           </div>
                         ) : (
                           <div className="space-y-2 text-sm text-muted-foreground">
-                            <p>O set importado não é editável nesta tela.</p>
-                            <p>Use `Sync backup` ou `Sync live (SSH)` para atualizar a origem.</p>
+                            <p>{t("communities.panel.details.importedNotEditable")}</p>
+                            <p>{t("communities.panel.details.importedSyncHint")}</p>
                           </div>
                         )}
                         <div className="pt-1 text-xs text-muted-foreground">
-                          {previewResult ? "Preview disponível para aplicação." : "Gere um preview para habilitar o apply."}
+                          {previewResult ? t("communities.panel.details.previewAvailable") : t("communities.panel.details.previewRequired")}
                         </div>
                         {selectedSet ? (
                           <div className="space-y-2 border-t border-border pt-2">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Comparar sets</div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("communities.panel.details.compareSets")}</div>
                             <div className="flex flex-col gap-2 sm:flex-row">
                               <select
                                 value={compareSetId ?? ""}
@@ -953,7 +967,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                                 }}
                                 className="min-w-0 flex-1 rounded-md border border-[#252840] bg-[#11141c] px-3 py-2 text-sm text-foreground"
                               >
-                                <option value="">Selecione outro set</option>
+                                <option value="">{t("communities.panel.details.selectOtherSet")}</option>
                                 {allSets
                                   .filter((set) => set.id !== selectedSet.id)
                                   .map((set) => (
@@ -970,19 +984,23 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                                 className="border-[#252840] text-muted-foreground hover:border-amber-500/50 hover:text-amber-200"
                               >
                                 <Eye className="mr-2 h-4 w-4" />
-                                Comparar
+                                {t("communities.panel.sets.compare")}
                               </Button>
                             </div>
                             {compareQuery.data && compareSet ? (
                               <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                                 <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-[10px] text-muted-foreground">
-                                  {selectedSet.membersTotal} members
+                                  {t("communities.panel.sets.membersCount", { count: selectedSet.membersTotal })}
                                 </Badge>
                                 <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-[10px] text-muted-foreground">
-                                  {compareSet.membersTotal} members
+                                  {t("communities.panel.sets.membersCount", { count: compareSet.membersTotal })}
                                 </Badge>
                                 <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-[10px] text-muted-foreground">
-                                  {compareQuery.data.sameMembers ? "mesmos members" : `${compareQuery.data.onlyInA.length + compareQuery.data.onlyInB.length} diferenças`}
+                                  {compareQuery.data.sameMembers
+                                    ? t("communities.panel.details.sameMembers")
+                                    : t("communities.panel.details.differences", {
+                                        count: compareQuery.data.onlyInA.length + compareQuery.data.onlyInB.length,
+                                      })}
                                 </Badge>
                               </div>
                             ) : null}
@@ -994,22 +1012,22 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                     {selectedSet.impliedConfigPreview ? (
                         <div className="space-y-1.5">
                           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            Preview implícito
+                            {t("communities.panel.details.impliedPreview")}
                           </div>
                         <div className="flex flex-wrap gap-2">
-                          <Button variant="outline" size="sm" onClick={() => void copyToClipboard(selectedSet.impliedConfigPreview ?? "", "Bloco VRP")} className="border-[#252840] text-muted-foreground hover:border-brand-blue hover:text-brand-blue">
+                          <Button variant="outline" size="sm" onClick={() => void copyToClipboard(selectedSet.impliedConfigPreview ?? "", t("communities.toasts.labels.vrpBlock"))} className="border-[#252840] text-muted-foreground hover:border-brand-blue hover:text-brand-blue">
                             <Copy className="mr-2 h-4 w-4" />
-                            Copiar bloco
+                            {t("communities.panel.details.copyBlock")}
                           </Button>
                           {previewResult?.candidateSha256 ? (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => void copyToClipboard(previewResult.candidateSha256, "SHA-256")}
+                              onClick={() => void copyToClipboard(previewResult.candidateSha256, t("communities.toasts.labels.sha256"))}
                               className="border-[#252840] text-muted-foreground hover:border-brand-blue hover:text-brand-blue"
                             >
                               <Copy className="mr-2 h-4 w-4" />
-                              Copiar SHA
+                              {t("communities.panel.details.copySha")}
                             </Button>
                           ) : null}
                         </div>
@@ -1021,7 +1039,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
 
                     {previewResult ? (
                       <div className="space-y-2 rounded-lg border border-[#252840] bg-[#11141c] p-4">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview real</div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("communities.panel.details.realPreview")}</div>
                         {previewResult.warnings.length > 0 ? (
                           <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-700">
                             <ul className="list-disc space-y-1 pl-4">
@@ -1033,12 +1051,12 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                         ) : null}
                         <div className="grid gap-3 md:grid-cols-2">
                           <div className="rounded-lg border border-[#252840] bg-[#11141c] p-3">
-                            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">SHA-256</div>
+                            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("communities.toasts.labels.sha256")}</div>
                             <div className="mt-1 break-all font-mono text-xs text-foreground">{previewResult.candidateSha256}</div>
                           </div>
                           <div className="rounded-lg border border-[#252840] bg-[#11141c] p-3 text-sm text-muted-foreground">
-                            <div>{previewResult.membersMissingLibrary} members sem biblioteca</div>
-                            <div>{previewResult.missingCommunityValues.length} valores faltando</div>
+                            <div>{t("communities.panel.details.membersWithoutLibrary", { count: previewResult.membersMissingLibrary })}</div>
+                            <div>{t("communities.panel.details.missingValues", { count: previewResult.missingCommunityValues.length })}</div>
                           </div>
                         </div>
                         <pre className="max-h-52 overflow-auto rounded-lg border border-[#252840] bg-[#11141c] p-3 text-xs leading-4 text-foreground">
@@ -1049,7 +1067,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                   </div>
                 ) : (
                   <div className="py-10 text-center text-sm text-muted-foreground">
-                    Selecione um set para ver os detalhes.
+                    {t("communities.panel.details.selectSetHint")}
                   </div>
                 )}
               </CardContent>
@@ -1065,9 +1083,9 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden rounded-2xl border border-[#252840] bg-[#10131a] p-0 text-foreground shadow-2xl">
           <DialogHeader className="flex items-center justify-between gap-2 border-b border-[#252840] px-6 py-4 text-left">
             <div>
-              <DialogTitle className="text-[15px] font-semibold text-foreground">Comparação de Community Sets</DialogTitle>
+              <DialogTitle className="text-[15px] font-semibold text-foreground">{t("communities.compare.title")}</DialogTitle>
               <DialogDescription className="text-[12px] text-muted-foreground">
-              Diferença entre o set selecionado e o set de comparação, no mesmo formato visual do legado.
+                {t("communities.compare.description")}
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -1076,7 +1094,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
             <div className="max-h-[calc(90vh-88px)] space-y-4 overflow-y-auto px-6 py-5">
               {compareQuery.isLoading ? (
                 <div className="rounded-lg border border-dashed border-[#252840] p-6 text-sm text-muted-foreground">
-                  A comparar sets...
+                  {t("communities.compare.loading")}
                 </div>
               ) : compareQuery.data ? (
                 <>
@@ -1089,13 +1107,17 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                   {compareSet.name}
                 </Badge>
                 <Badge variant="secondary" className="border-[#252840] bg-[#161922] text-[10px] text-muted-foreground">
-                  {compareQuery.data.sameMembers ? "mesmos members" : `${compareQuery.data.onlyInA.length + compareQuery.data.onlyInB.length} diferenças`}
+                  {compareQuery.data.sameMembers
+                    ? t("communities.panel.details.sameMembers")
+                    : t("communities.panel.details.differences", {
+                        count: compareQuery.data.onlyInA.length + compareQuery.data.onlyInB.length,
+                      })}
                 </Badge>
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-lg border border-[#252840] bg-[#11141c] p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Em ambos</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("communities.compare.inBoth")}</div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {compareQuery.data.inBoth.length > 0 ? (
                       compareQuery.data.inBoth.map((value) => (
@@ -1104,12 +1126,12 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                         </Badge>
                       ))
                     ) : (
-                      <span className="text-sm text-muted-foreground">Nenhum</span>
+                      <span className="text-sm text-muted-foreground">{t("communities.compare.none")}</span>
                     )}
                   </div>
                 </div>
                 <div className="rounded-lg border border-[#252840] bg-[#11141c] p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Só em A</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("communities.compare.onlyInA")}</div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {compareQuery.data.onlyInA.length > 0 ? (
                       compareQuery.data.onlyInA.map((value) => (
@@ -1118,12 +1140,12 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                         </Badge>
                       ))
                     ) : (
-                      <span className="text-sm text-muted-foreground">Nenhum</span>
+                      <span className="text-sm text-muted-foreground">{t("communities.compare.none")}</span>
                     )}
                   </div>
                 </div>
                 <div className="rounded-lg border border-[#252840] bg-[#11141c] p-3">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Só em B</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("communities.compare.onlyInB")}</div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {compareQuery.data.onlyInB.length > 0 ? (
                       compareQuery.data.onlyInB.map((value) => (
@@ -1132,7 +1154,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                         </Badge>
                       ))
                     ) : (
-                      <span className="text-sm text-muted-foreground">Nenhum</span>
+                      <span className="text-sm text-muted-foreground">{t("communities.compare.none")}</span>
                     )}
                   </div>
                 </div>
@@ -1141,7 +1163,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-lg border border-[#252840] bg-[#11141c] p-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {selectedSet.name} missing refs
+                    {t("communities.compare.missingRefs", { name: selectedSet.name })}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {compareQuery.data.missingInA.length > 0 ? (
@@ -1151,13 +1173,13 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                         </Badge>
                       ))
                     ) : (
-                      <span className="text-sm text-muted-foreground">Nenhuma</span>
+                      <span className="text-sm text-muted-foreground">{t("communities.compare.noneFeminine")}</span>
                     )}
                   </div>
                 </div>
                 <div className="rounded-lg border border-[#252840] bg-[#11141c] p-3">
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {compareSet.name} missing refs
+                    {t("communities.compare.missingRefs", { name: compareSet.name })}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {compareQuery.data.missingInB.length > 0 ? (
@@ -1167,7 +1189,7 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                         </Badge>
                       ))
                     ) : (
-                      <span className="text-sm text-muted-foreground">Nenhuma</span>
+                      <span className="text-sm text-muted-foreground">{t("communities.compare.noneFeminine")}</span>
                     )}
                   </div>
                 </div>
@@ -1186,19 +1208,19 @@ export function CommunitiesPanel({ device }: CommunitiesPanelProps) {
                         `only_in_b: ${compareQuery.data.onlyInB.join(", ") || "-"}`,
                         `in_both: ${compareQuery.data.inBoth.join(", ") || "-"}`,
                       ].join("\n"),
-                      "Comparação",
+                      t("communities.toasts.labels.comparison"),
                     )
                   }
                   className="border-[#252840] text-muted-foreground hover:border-brand-blue hover:text-brand-blue"
                 >
                   <Copy className="mr-2 h-4 w-4" />
-                  Copiar diff
+                  {t("communities.compare.copyDiff")}
                 </Button>
               </div>
                 </>
               ) : (
                 <div className="rounded-lg border border-dashed border-[#252840] p-6 text-sm text-muted-foreground">
-                  Não foi possível carregar a comparação.
+                  {t("communities.compare.loadFailed")}
                 </div>
               )}
             </div>

@@ -28,8 +28,9 @@ import { InterfacesPanel } from "@/features/device-inventory/interfaces-panel";
 import { OperationalLogsPanel } from "@/features/device-inventory/operational-logs-panel";
 import { OperationalSummary } from "@/features/device-inventory/operational-summary";
 import { DeviceImportModal } from "@/features/devices/device-import-modal";
+import { appendSnmpToDevicePayload, buildDeviceAccessPayload } from "@/features/devices/device-connector-utils";
 import { DeviceFormDialog, type DeviceFormValues } from "@/components/device-form-dialog";
-import { NetopsTree, type NetopsTreeSelection, viewLabel } from "@/features/netops-tree";
+import { NetopsTree, type NetopsTreeSelection, type NetopsTreeView } from "@/features/netops-tree";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 import { Activity, ChevronLeft, ChevronRight, Download, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 type ConnectionTestResponse = ConnectionTestResult;
@@ -70,6 +72,9 @@ export default function NetopsOperations() {
   const { data: devices, isLoading } = useListDevices();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useTranslation();
+
+  const viewLabel = (view: NetopsTreeView) => t(`netopsOperations.views.${view}`);
 
   const [selection, setSelection] = useState<NetopsTreeSelection | null>(null);
   const [search, setSearch] = useState("");
@@ -146,12 +151,13 @@ export default function NetopsOperations() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || undefined,
-      snmpCommunity: values.snmpCommunity || undefined,
+      ...buildDeviceAccessPayload(values),
     };
+    appendSnmpToDevicePayload(payload, values.snmpCommunity, "create");
 
     createDevice.mutate({ data: payload as DeviceInput }, {
       onSuccess: async (newDevice: Device) => {
-        toast({ title: "Testando conectividade..." });
+        toast({ title: t("netopsOperations.toasts.testingConnectivity") });
         setSelection({ device: newDevice, view: "device" });
 
         try {
@@ -165,30 +171,30 @@ export default function NetopsOperations() {
           setIsCreateOpen(false);
 
           if (testResult.success && testResult.configCollect?.status === "queued") {
-            toast({ title: "Dispositivo adicionado — SSH OK — coleta completa enfileirada", description: testResult.message });
+            toast({ title: t("netopsOperations.toasts.deviceAddedCollectQueued"), description: testResult.message });
           } else if (testResult.success && testResult.configCollect?.status === "failed") {
             toast({
-              title: "SSH acessível, porém backup/coleta falhou",
+              title: t("netopsOperations.toasts.sshOkCollectFailed"),
               description: testResult.configCollect.message ?? testResult.message,
               variant: "destructive",
             });
           } else if (testResult.success) {
-            toast({ title: "Dispositivo adicionado — SSH e SNMP OK" });
+            toast({ title: t("netopsOperations.toasts.deviceAddedSshSnmpOk") });
           } else {
             toast({
-              title: "Dispositivo adicionado — Falha em testes",
-              description: "Nem SSH nem SNMP responderam. Verifique IP e credenciais.",
+              title: t("netopsOperations.toasts.deviceAddedTestsFailed"),
+              description: t("netopsOperations.toasts.deviceAddedTestsFailedDesc"),
               variant: "destructive",
             });
           }
         } catch {
-          toast({ title: "Dispositivo adicionado", description: "Testes não puderam ser executados" });
+          toast({ title: t("netopsOperations.toasts.deviceAdded"), description: t("netopsOperations.toasts.testsNotRun") });
           invalidateOperationalQueries(newDevice.id);
           setIsCreateOpen(false);
         }
       },
       onError: (err: any) => {
-        toast({ title: "Erro ao adicionar dispositivo", description: err.message, variant: "destructive" });
+        toast({ title: t("netopsOperations.toasts.addError"), description: err.message, variant: "destructive" });
       },
     });
   };
@@ -205,8 +211,10 @@ export default function NetopsOperations() {
       site: values.site,
       sshPort: values.sshPort,
       role: values.role || "",
-      snmpCommunity: values.snmpCommunity,
+      ...buildDeviceAccessPayload(values),
     };
+
+    appendSnmpToDevicePayload(payload, values.snmpCommunity, "edit");
 
     if (values.password.trim().length > 0) {
       payload.password = values.password;
@@ -219,38 +227,38 @@ export default function NetopsOperations() {
           current?.device.id === updated.id ? { device: updated, view: current.view } : current,
         );
         setEditingDeviceId(null);
-        toast({ title: "Dispositivo atualizado" });
+        toast({ title: t("netopsOperations.toasts.updated") });
       },
       onError: (err: any) => {
-        toast({ title: "Erro ao atualizar dispositivo", description: err.message, variant: "destructive" });
+        toast({ title: t("netopsOperations.toasts.updateError"), description: err.message, variant: "destructive" });
       },
     });
   };
 
   const handleDelete = (deviceId: number) => {
-    if (!confirm("Excluir este dispositivo?")) return;
+    if (!confirm(t("netopsOperations.deleteConfirm"))) return;
 
     deleteDevice.mutate({ id: deviceId }, {
       onSuccess: () => {
         void queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
         setSelection((current) => (current?.device.id === deviceId ? null : current));
-        toast({ title: "Dispositivo removido" });
+        toast({ title: t("netopsOperations.toasts.removed") });
       },
       onError: (err: any) => {
-        toast({ title: "Erro ao remover dispositivo", description: err.message, variant: "destructive" });
+        toast({ title: t("netopsOperations.toasts.removeError"), description: err.message, variant: "destructive" });
       },
     });
   };
 
   const handleTestConnection = (device: Device) => {
-    toast({ title: "Validando conexão SSH..." });
+    toast({ title: t("netopsOperations.toasts.validatingSsh") });
     testConnection.mutate({ id: device.id }, {
       onSuccess: (res: ConnectionTestResponse) => {
         invalidateOperationalQueries(device.id);
 
         if (res.success && res.configCollect?.status === "queued") {
           toast({
-            title: "SSH OK — coleta completa enfileirada",
+            title: t("netopsOperations.toasts.sshOkCollectQueued"),
             description: res.message,
           });
           return;
@@ -258,7 +266,7 @@ export default function NetopsOperations() {
 
         if (res.success && res.configCollect?.status === "failed") {
           toast({
-            title: "SSH acessível, porém backup/coleta falhou",
+            title: t("netopsOperations.toasts.sshOkCollectFailed"),
             description: res.configCollect.message ?? res.message,
             variant: "destructive",
           });
@@ -266,7 +274,7 @@ export default function NetopsOperations() {
         }
 
         toast({
-          title: res.success ? "Conexão SSH OK" : "Falha na conexão SSH",
+          title: res.success ? t("netopsOperations.toasts.sshOk") : t("netopsOperations.toasts.sshFailed"),
           description: res.message,
           variant: res.success ? "default" : "destructive",
         });
@@ -288,28 +296,28 @@ export default function NetopsOperations() {
 
   const accessLabel =
     extendedDevice?.accessMode === "connector_group" && extendedDevice.connectorGroupName
-      ? `Via ${extendedDevice.connectorGroupName}`
+      ? t("netopsOperations.accessVia", { name: extendedDevice.connectorGroupName })
       : extendedDevice?.accessMode === "connector" && extendedDevice.connectorName
-      ? `Via ${extendedDevice.connectorName}`
-      : "Direto";
-  const tenantLabel = extendedDevice?.tenantName ?? (extendedDevice?.tenantId ? `Tenant #${extendedDevice.tenantId}` : null);
+      ? t("netopsOperations.accessVia", { name: extendedDevice.connectorName })
+      : t("netopsOperations.accessDirect");
+  const tenantLabel = extendedDevice?.tenantName ?? (extendedDevice?.tenantId ? t("netopsOperations.tenantFallback", { id: extendedDevice.tenantId }) : null);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">NetOps Operations</h1>
-          <p className="text-muted-foreground">Arvore operacional, inventario e acoes read-only por device.</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("netopsOperations.title")}</h1>
+          <p className="text-muted-foreground">{t("netopsOperations.pageSubtitle")}</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setIsImportOpen(true)}>
             <Download className="mr-2 h-4 w-4" />
-            Import
+            {t("netopsOperations.import")}
           </Button>
           <Button onClick={() => setIsCreateOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Device
+            {t("devices.addDevice")}
           </Button>
         </div>
       </div>
@@ -318,7 +326,7 @@ export default function NetopsOperations() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onSuccess={() => {
-          toast({ title: "Importação concluída com sucesso" });
+          toast({ title: t("netopsOperations.toasts.importSuccess") });
           void queryClient.invalidateQueries({ queryKey: getListDevicesQueryKey() });
           setIsImportOpen(false);
         }}
@@ -348,15 +356,15 @@ export default function NetopsOperations() {
           <CardHeader className="space-y-3 py-4">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {inventoryCollapsed ? "Inv." : "Inventário"}
+                {inventoryCollapsed ? t("netopsOperations.inventoryShort") : t("netopsOperations.inventory")}
               </CardTitle>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setInventoryCollapsed((current) => !current)}
-                aria-label={inventoryCollapsed ? "Expand inventory" : "Collapse inventory"}
-                title={inventoryCollapsed ? "Expand inventory" : "Collapse inventory"}
+                aria-label={inventoryCollapsed ? t("netopsOperations.expandInventory") : t("netopsOperations.collapseInventory")}
+                title={inventoryCollapsed ? t("netopsOperations.expandInventory") : t("netopsOperations.collapseInventory")}
               >
                 {inventoryCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
               </Button>
@@ -366,15 +374,15 @@ export default function NetopsOperations() {
                 <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar hostname, IP, site..."
+                    placeholder={t("netopsOperations.searchPlaceholder")}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     className="border-0 bg-transparent p-0 shadow-none focus-visible:ring-0"
                   />
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{filteredDevices.length} de {sortedDevices.length} devices</span>
-                  {activeSelection?.device ? <span>Selecionado: {activeSelection.device.hostname}</span> : null}
+                  <span>{t("netopsOperations.deviceCount", { filtered: filteredDevices.length, total: sortedDevices.length })}</span>
+                  {activeSelection?.device ? <span>{t("netopsOperations.selectedHostname", { hostname: activeSelection.device.hostname })}</span> : null}
                 </div>
               </>
             ) : null}
@@ -402,14 +410,14 @@ export default function NetopsOperations() {
           {!activeSelection || !selectedDevice ? (
             <Card>
               <CardContent className="p-12 text-center text-muted-foreground">
-                No device selected.
+                {t("netopsOperations.noDeviceSelected")}
               </CardContent>
             </Card>
           ) : (
             <>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <div className="text-sm text-muted-foreground">{selectedDevice.site || "Sem cliente"}</div>
+                  <div className="text-sm text-muted-foreground">{selectedDevice.site || t("netopsOperations.noCustomer")}</div>
                   <h2 className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
                     {selectedDevice.hostname} / {viewLabel(activeSelection.view)}
                   </h2>
@@ -421,8 +429,8 @@ export default function NetopsOperations() {
                     <span className="text-sm text-muted-foreground capitalize">
                       {selectedDevice.vendor} {selectedDevice.platform}
                     </span>
-                    {tenantLabel ? <Badge variant="secondary">Tenant: {tenantLabel}</Badge> : null}
-                    <Badge variant="outline">Acesso: {accessLabel}</Badge>
+                    {tenantLabel ? <Badge variant="secondary">{t("netopsOperations.tenantLabel", { name: tenantLabel })}</Badge> : null}
+                    <Badge variant="outline">{t("netopsOperations.accessLabel", { label: accessLabel })}</Badge>
                   </div>
                 </div>
 
@@ -433,21 +441,21 @@ export default function NetopsOperations() {
                     disabled={testConnection.isPending}
                   >
                     <Activity className="mr-2 h-4 w-4" />
-                    {testConnection.isPending ? "Testando..." : "Testar"}
+                    {testConnection.isPending ? t("netopsOperations.testing") : t("netopsOperations.test")}
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => setEditingDeviceId(selectedDevice.id)}
                   >
                     <Pencil className="mr-2 h-4 w-4" />
-                    Editar
+                    {t("common.edit")}
                   </Button>
                   <Button
                     variant="destructive"
                     onClick={() => handleDelete(selectedDevice.id)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
+                    {t("common.delete")}
                   </Button>
                 </div>
               </div>
@@ -459,31 +467,31 @@ export default function NetopsOperations() {
               )}
 
               {activeSelection.view === "bgp" && (
-                <BgpPanel device={selectedDevice} title="BGP" />
+                <BgpPanel device={selectedDevice} title={t("netopsOperations.bgp")} />
               )}
 
               {activeSelection.view === "bgp-providers" && (
-                <BgpPanel device={selectedDevice} title="BGP Operadoras" role="provider" />
+                <BgpPanel device={selectedDevice} title={t("netopsOperations.bgpProviders")} role="provider" />
               )}
 
               {activeSelection.view === "bgp-customers" && (
-                <BgpPanel device={selectedDevice} title="BGP Clientes" role="customer" />
+                <BgpPanel device={selectedDevice} title={t("netopsOperations.bgpCustomers")} role="customer" />
               )}
 
               {activeSelection.view === "bgp-cdn" && (
-                <BgpPanel device={selectedDevice} title="BGP CDN" role="cdn" />
+                <BgpPanel device={selectedDevice} title={t("netopsOperations.bgpCdn")} role="cdn" />
               )}
 
               {activeSelection.view === "bgp-ix" && (
-                <BgpPanel device={selectedDevice} title="BGP IX" role="ix" />
+                <BgpPanel device={selectedDevice} title={t("netopsOperations.bgpIx")} role="ix" />
               )}
 
               {activeSelection.view === "bgp-cdn-ix" && (
-                <BgpPanel device={selectedDevice} title="BGP CDN/IX" role="cdn_ix" />
+                <BgpPanel device={selectedDevice} title={t("netopsOperations.bgpCdnIx")} role="cdn_ix" />
               )}
 
               {activeSelection.view === "bgp-ibgp" && (
-                <BgpPanel device={selectedDevice} title="BGP iBGP" role="ibgp" />
+                <BgpPanel device={selectedDevice} title={t("netopsOperations.bgpIbgp")} role="ibgp" />
               )}
 
               {activeSelection.view === "filters" && (

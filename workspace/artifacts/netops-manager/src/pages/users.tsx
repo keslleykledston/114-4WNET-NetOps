@@ -13,8 +13,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Loader2, Lock, Unlock, RotateCcw, Trash2 } from "lucide-react";
+import { useTranslation } from "@/i18n";
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -101,26 +103,26 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Users</h1>
-        <Button onClick={() => setIsCreateOpen(true)}>Create User</Button>
+        <h1 className="text-2xl font-bold">{t("users.title")}</h1>
+        <Button onClick={() => setIsCreateOpen(true)}>{t("users.createUser")}</Button>
       </div>
 
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
+          <CardTitle>{t("users.userManagement")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2 px-4">Name</th>
-                  <th className="text-left py-2 px-4">Email</th>
-                  <th className="text-left py-2 px-4">Role</th>
-                  <th className="text-left py-2 px-4">Status</th>
-                  <th className="text-left py-2 px-4">Created</th>
-                  <th className="text-left py-2 px-4">Actions</th>
+                  <th className="text-left py-2 px-4">{t("common.name")}</th>
+                  <th className="text-left py-2 px-4">{t("users.email")}</th>
+                  <th className="text-left py-2 px-4">{t("users.role")}</th>
+                  <th className="text-left py-2 px-4">{t("users.status")}</th>
+                  <th className="text-left py-2 px-4">{t("users.created")}</th>
+                  <th className="text-left py-2 px-4">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -133,14 +135,14 @@ export default function UsersPage() {
                     </td>
                     <td className="py-2 px-4">
                       {u.enabled ? (
-                        <Badge variant="outline" className="bg-green-500/10">Enabled</Badge>
+                        <Badge variant="outline" className="bg-green-500/10">{t("common.enabled")}</Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-red-500/10">Disabled</Badge>
+                        <Badge variant="outline" className="bg-red-500/10">{t("common.disabled")}</Badge>
                       )}
                     </td>
                     <td className="py-2 px-4 text-sm">{new Date(u.createdAt).toLocaleDateString()}</td>
                     <td className="py-2 px-4 space-x-2 flex">
-                      <Button size="sm" variant="outline" onClick={() => setEditingUser(u)}>Edit</Button>
+                      <Button size="sm" variant="outline" onClick={() => setEditingUser(u)}>{t("common.edit")}</Button>
                       {u.enabled ? (
                         <Button
                           size="sm"
@@ -185,18 +187,18 @@ export default function UsersPage() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create User</DialogTitle>
+            <DialogTitle>{t("users.createUser")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Name</Label>
+              <Label>{t("common.name")}</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </div>
             <div>
-              <Label>Email</Label>
+              <Label>{t("users.email")}</Label>
               <Input
                 type="email"
                 value={formData.email}
@@ -204,7 +206,7 @@ export default function UsersPage() {
               />
             </div>
             <div>
-              <Label>Password</Label>
+              <Label>{t("users.password")}</Label>
               <Input
                 type="password"
                 value={formData.password}
@@ -212,15 +214,15 @@ export default function UsersPage() {
               />
             </div>
             <div>
-              <Label>Role</Label>
+              <Label>{t("users.role")}</Label>
               <Select value={formData.role} onValueChange={(role) => setFormData({ ...formData, role })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                  <SelectItem value="operator">Operator</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="viewer">{t("users.viewer")}</SelectItem>
+                  <SelectItem value="operator">{t("users.operator")}</SelectItem>
+                  <SelectItem value="admin">{t("users.admin")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -229,7 +231,7 @@ export default function UsersPage() {
               disabled={createMutation.isPending}
             >
               {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Create
+              {t("common.create")}
             </Button>
           </div>
         </DialogContent>
@@ -240,26 +242,26 @@ export default function UsersPage() {
         <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
+              <DialogTitle>{t("users.editUser")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>Name</Label>
+                <Label>{t("common.name")}</Label>
                 <Input
                   value={editingUser.name}
                   onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
                 />
               </div>
               <div>
-                <Label>Role</Label>
+                <Label>{t("users.role")}</Label>
                 <Select value={editingUser.role} onValueChange={(role) => setEditingUser({ ...editingUser, role })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="operator">Operator</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="viewer">{t("users.viewer")}</SelectItem>
+                    <SelectItem value="operator">{t("users.operator")}</SelectItem>
+                    <SelectItem value="admin">{t("users.admin")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -268,7 +270,7 @@ export default function UsersPage() {
                 disabled={updateMutation.isPending}
               >
                 {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Update
+                {t("common.update")}
               </Button>
             </div>
           </DialogContent>
@@ -280,19 +282,19 @@ export default function UsersPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction.type === "disable" && "Disable User?"}
-              {confirmAction.type === "enable" && "Enable User?"}
-              {confirmAction.type === "reset" && "Reset Password?"}
-              {confirmAction.type === "delete" && "Delete User?"}
+              {confirmAction.type === "disable" && t("users.disableUserConfirm")}
+              {confirmAction.type === "enable" && t("users.enableUserConfirm")}
+              {confirmAction.type === "reset" && t("users.resetPasswordConfirm")}
+              {confirmAction.type === "delete" && t("users.deleteUserConfirm")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmAction.type === "disable" && `Disable ${confirmAction.userName}? They won't be able to login.`}
-              {confirmAction.type === "enable" && `Enable ${confirmAction.userName}?`}
-              {confirmAction.type === "reset" && `Reset password for ${confirmAction.userName}?`}
-              {confirmAction.type === "delete" && `Delete ${confirmAction.userName}? This cannot be undone.`}
+              {confirmAction.type === "disable" && t("users.disableUserDescription", { name: confirmAction.userName ?? "" })}
+              {confirmAction.type === "enable" && t("users.enableUserDescription", { name: confirmAction.userName ?? "" })}
+              {confirmAction.type === "reset" && t("users.resetPasswordDescription", { name: confirmAction.userName ?? "" })}
+              {confirmAction.type === "delete" && t("users.deleteUserDescription", { name: confirmAction.userName ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => {
               if (confirmAction.type === "disable" && confirmAction.userId) {
@@ -300,7 +302,7 @@ export default function UsersPage() {
               } else if (confirmAction.type === "enable" && confirmAction.userId) {
                 enableMutation.mutate({ id: confirmAction.userId });
               } else if (confirmAction.type === "reset" && confirmAction.userId) {
-                const newPassword = prompt("Enter new password (min 8 chars):");
+                const newPassword = prompt(t("users.newPasswordPrompt"));
                 if (newPassword && newPassword.length >= 8) {
                   resetPasswordMutation.mutate({ id: confirmAction.userId, data: { password: newPassword } });
                 }
@@ -309,7 +311,7 @@ export default function UsersPage() {
               }
             }}
           >
-            Confirm
+            {t("common.confirm")}
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>

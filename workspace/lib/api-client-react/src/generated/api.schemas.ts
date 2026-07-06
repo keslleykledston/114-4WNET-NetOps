@@ -459,6 +459,11 @@ export interface NetopsInterface {
   /** Service VLAN only. Default/reserved VLAN 1 is omitted. */
   vlanId?: number;
   encapsulation?: string;
+  /** SNMP ifHighSpeed (Mbps) when collected */
+  highSpeedMbps?: number | null;
+  /** SNMP HC counter snapshot (octets) */
+  inOctets?: number | null;
+  outOctets?: number | null;
 }
 
 export type InterfaceSummary = NetopsInterface & DiscoveryEvidenceSummary & {

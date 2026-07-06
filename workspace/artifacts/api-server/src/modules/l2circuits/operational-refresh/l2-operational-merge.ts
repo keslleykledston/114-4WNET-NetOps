@@ -69,6 +69,75 @@ export function buildLiveOpsByKey(
   return map;
 }
 
+const DOT1Q_CIRCUIT_TYPES = new Set([
+  "vlan_local",
+  "vlan_orphan",
+  "dot1q_subif",
+  "vlan",
+  "l3_vrf_link",
+  "l3_interface",
+  "config_only",
+]);
+
+export function isDot1qCircuitType(circuitType: string): boolean {
+  return DOT1Q_CIRCUIT_TYPES.has(circuitType);
+}
+
+/** Apply fresh config parse classification to an existing DB-backed circuit row. */
+export function applyParsedConfigToCircuit(
+  circuit: NormalizedL2Circuit,
+  liveByKey: Map<string, ParsedL2Circuit>,
+  deviceId: number,
+): boolean {
+  const key = buildCircuitKey(circuit, deviceId);
+  const live = liveByKey.get(key);
+  if (!live) return false;
+
+  if (live.classification) {
+    circuit.classification = live.classification as NormalizedL2Circuit["classification"];
+  }
+  if (live.circuitType) {
+    circuit.circuitType = live.circuitType as NormalizedL2Circuit["circuitType"];
+  }
+  if (live.l2Transport) {
+    circuit.l2Transport = live.l2Transport as NormalizedL2Circuit["l2Transport"];
+  }
+  if (live.deviceRoleFamily) {
+    circuit.deviceRoleFamily = live.deviceRoleFamily;
+  }
+  if (live.roleContext) {
+    circuit.roleContext = live.roleContext;
+  }
+  if (live.evidenceFlags) {
+    circuit.evidenceFlags = { ...(circuit.evidenceFlags ?? {}), ...live.evidenceFlags };
+  }
+  if (live.anomalyTags?.length) {
+    circuit.anomalyTags = [...new Set([...(circuit.anomalyTags ?? []), ...live.anomalyTags])];
+  }
+  if (live.description?.trim()) {
+    circuit.description = live.description;
+  }
+  if (live.adminStatus) {
+    circuit.adminStatus = normalizeAdminStatus(live.adminStatus);
+  }
+  if (live.operStatus) {
+    circuit.operStatus = normalizeOperStatus(live.operStatus, circuit.adminStatus);
+  }
+  return true;
+}
+
+export function buildConfigCircuitKeys(
+  parsed: ParsedL2Circuit[],
+  deviceId: number,
+): Set<string> {
+  const keys = new Set<string>();
+  for (const circuit of parsed) {
+    if (!isDot1qCircuitType(circuit.circuitType)) continue;
+    keys.add(buildCircuitKey(circuit, deviceId));
+  }
+  return keys;
+}
+
 export function applyLiveOpsToCircuit(
   circuit: NormalizedL2Circuit,
   liveByKey: Map<string, ParsedL2Circuit>,
@@ -110,12 +179,9 @@ export function applyLiveOpsToCircuit(
       circuit.operStatus = "UP";
     }
   }
-  if (live.remoteForwardingState) {
-    circuit.remoteForwardingState = live.remoteForwardingState;
-  }
-  if (live.sessionState) {
-    circuit.sessionState = live.sessionState;
-  }
+  // Overwrite (including clear) so recovered circuits drop stale REMOTE_NOT_FORWARDING findings.
+  circuit.remoteForwardingState = live.remoteForwardingState;
+  circuit.sessionState = live.sessionState;
   if (live.description?.trim()) {
     circuit.description = live.description;
   }
@@ -123,6 +189,11 @@ export function applyLiveOpsToCircuit(
 }
 
 export const OPERATIONAL_STALE_TAG = "OPERATIONAL_STALE";
+
+export function stripOperationalStaleTag(tags: string[] | null | undefined): string[] {
+  if (!tags?.length) return [];
+  return tags.filter((tag) => tag !== OPERATIONAL_STALE_TAG);
+}
 
 const LIVE_TRACKED_CIRCUIT_TYPES = new Set(["l2vc", "vpws", "vsi", "vpls"]);
 
@@ -135,6 +206,8 @@ export interface OperationalStaleCheckInput {
   circuitType: string;
   circuitKey: string;
   liveKeys: Set<string>;
+  configParsed?: boolean;
+  configKeys?: Set<string>;
 }
 
 /** Mark DB rows that no longer appear on the device during operational refresh. */
@@ -151,6 +224,16 @@ export function shouldMarkOperationalStale(input: OperationalStaleCheckInput): b
     input.liveKeys.size > 0 &&
     LIVE_TRACKED_CIRCUIT_TYPES.has(input.circuitType) &&
     !input.liveMatched
+  ) {
+    return true;
+  }
+
+  if (
+    input.configParsed &&
+    input.configKeys &&
+    input.configKeys.size > 0 &&
+    isDot1qCircuitType(input.circuitType) &&
+    !input.configKeys.has(input.circuitKey)
   ) {
     return true;
   }

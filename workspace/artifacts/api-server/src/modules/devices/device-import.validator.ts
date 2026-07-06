@@ -1,7 +1,7 @@
 import type { RawDeviceRow, ParsedDevice } from "./device-import.types.js";
 
 const VALID_STATUSES = ["unknown", "active", "inactive", "fail", "pending"];
-const VALID_VENDORS = ["cisco", "huawei", "juniper", "arista", "nokia", "unknown"];
+const VALID_VENDORS = ["cisco", "huawei", "juniper", "arista", "nokia", "raisecom", "datacom", "zte", "unknown"];
 const VALID_ROLES = ["customer", "provider", "ix", "cdn"];
 const VALID_SNMP_VERSIONS = ["1", "2c", "3"];
 

@@ -14,8 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Download, Filter, ShieldCheck } from "lucide-react";
+import { useTranslation } from "@/i18n";
 
 export default function AuditPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [action, setAction] = useState("");
   const [objectType, setObjectType] = useState("");
@@ -69,21 +71,21 @@ export default function AuditPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Audit</h1>
-          <p className="mt-1 text-muted-foreground">Operational audit trail and change history</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("audit.title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("audit.subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportJson} disabled={!rows?.length}>
             <Download className="mr-2 h-4 w-4" />
-            Export JSON
+            {t("audit.exportJson")}
           </Button>
           <Button variant="outline" onClick={exportMarkdown} disabled={!rows?.length}>
             <Download className="mr-2 h-4 w-4" />
-            Export Markdown
+            {t("audit.exportMarkdown")}
           </Button>
           <Button variant="outline" onClick={refresh}>
           <ShieldCheck className="mr-2 h-4 w-4" />
-          Refresh
+          {t("common.refresh")}
           </Button>
         </div>
       </div>
@@ -92,28 +94,28 @@ export default function AuditPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Filter className="h-4 w-4" />
-            Filters
+            {t("audit.filters")}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-4">
           <div className="space-y-2">
-            <Label>Action</Label>
+            <Label>{t("common.action")}</Label>
             <Input value={action} onChange={(event) => setAction(event.target.value)} placeholder="device_update" />
           </div>
           <div className="space-y-2">
-            <Label>Object Type</Label>
+            <Label>{t("audit.objectType")}</Label>
             <Input value={objectType} onChange={(event) => setObjectType(event.target.value)} placeholder="device" />
           </div>
           <div className="space-y-2">
-            <Label>Object ID</Label>
+            <Label>{t("audit.objectId")}</Label>
             <Input value={objectId} onChange={(event) => setObjectId(event.target.value)} placeholder="3" />
           </div>
           <div className="space-y-2">
-            <Label>Date From</Label>
+            <Label>{t("audit.dateFrom")}</Label>
             <Input type="datetime-local" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Date To</Label>
+            <Label>{t("audit.dateTo")}</Label>
             <Input type="datetime-local" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
           </div>
         </CardContent>
@@ -121,27 +123,27 @@ export default function AuditPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Logs</CardTitle>
+          <CardTitle className="text-base">{t("audit.logs")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Actor</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Object</TableHead>
-                <TableHead>Metadata</TableHead>
+                <TableHead>{t("common.date")}</TableHead>
+                <TableHead>{t("audit.actor")}</TableHead>
+                <TableHead>{t("common.action")}</TableHead>
+                <TableHead>{t("audit.object")}</TableHead>
+                <TableHead>{t("audit.metadata")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Loading...</TableCell>
+                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">{t("common.loading")}...</TableCell>
                 </TableRow>
               ) : !rows?.length ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No logs found.</TableCell>
+                  <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">{t("audit.noLogsFound")}</TableCell>
                 </TableRow>
               ) : rows.map((row) => (
                 <TableRow key={row.id} className="cursor-pointer" onClick={() => setSelected(row)}>
@@ -162,7 +164,7 @@ export default function AuditPage() {
       <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Audit Details</DialogTitle>
+            <DialogTitle>{t("audit.auditDetails")}</DialogTitle>
           </DialogHeader>
           {selected && (
             <ScrollArea className="max-h-[70vh] pr-4">
@@ -176,7 +178,7 @@ export default function AuditPage() {
                   <Detail label="Actor ID" value={selected.actorId?.toString() ?? "—"} />
                 </div>
                 <div>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Metadata</div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("audit.metadata")}</div>
                   <pre className="overflow-x-auto rounded-md border bg-muted/20 p-4 text-xs leading-relaxed">
                     {JSON.stringify(selected.metadataJson ?? {}, null, 2)}
                   </pre>

@@ -3,6 +3,8 @@ import { desc, eq, sql } from "drizzle-orm";
 import { snapshotToNetopsData } from "./adapters/snapshot-adapter.js";
 import { deriveDeviceKind } from "./device-profile/device-profile-resolver.js";
 import { snmpReadonlyAdapter } from "./adapters/snmp-readonly-adapter.js";
+import { getLatestDiscoverySnapshot } from "./device-discovery/discovery.service.js";
+import type { DiscoverySource, InterfaceSummary } from "./device-discovery/discovery.types.js";
 import type {
   NetopsAddressFamilyFilter,
   NetopsBgpPeer,
@@ -23,6 +25,7 @@ import type {
   NetopsLatestSnmpSnapshot,
   NetopsLogEntry,
   NetopsReadonlyCollectionResult,
+  NetopsSource,
 } from "./types.js";
 import { toSafeDevice } from "./types.js";
 
@@ -64,9 +67,80 @@ export async function getNetopsSummary(deviceId: number): Promise<NetopsDeviceSu
   };
 }
 
+function discoverySourceToNetops(source: DiscoverySource): NetopsSource {
+  switch (source) {
+    case "snmp_snapshot":
+      return "snmp";
+    case "ssh_live":
+    case "ssh_running_config":
+    case "manual_upload":
+      return "ssh";
+    case "local_db":
+      return "db";
+    default:
+      return "snapshot";
+  }
+}
+
+function mapDiscoveryInterface(iface: InterfaceSummary): NetopsInterface {
+  return {
+    name: iface.name,
+    description: iface.description ?? null,
+    alias: iface.alias ?? null,
+    rawDescr: iface.rawDescr ?? null,
+    adminStatus: iface.adminStatus,
+    operStatus: iface.operStatus,
+    ipv4: iface.ipv4 ?? [],
+    ipv6: iface.ipv6 ?? [],
+    vlan: iface.vlan ?? null,
+    vrf: iface.vrf ?? null,
+    source: discoverySourceToNetops(iface.source),
+    ifIndex: iface.ifIndex,
+    kind: iface.kind,
+    parentInterface: iface.parentInterface,
+    vlanId: iface.vlanId,
+    encapsulation: iface.encapsulation,
+  };
+}
+
 export async function listNetopsInterfaces(deviceId: number): Promise<NetopsInterface[] | null> {
   if (!(await getDeviceOrNull(deviceId))) return null;
-  return snapshotToNetopsData(await getLatestSnapshot(deviceId)).interfaces;
+  const snmpInterfaces = snapshotToNetopsData(await getLatestSnapshot(deviceId)).interfaces;
+
+  const discovery = await getLatestDiscoverySnapshot(deviceId);
+  const discoveryInterfaces = discovery?.interfaces?.length
+    ? discovery.interfaces
+        .filter((iface) => iface.exists !== false)
+        .map(mapDiscoveryInterface)
+    : [];
+
+  if (snmpInterfaces.length === 0) return discoveryInterfaces;
+  if (discoveryInterfaces.length === 0) return snmpInterfaces;
+
+  const byName = new Map<string, NetopsInterface>();
+  for (const iface of snmpInterfaces) byName.set(iface.name, iface);
+  for (const iface of discoveryInterfaces) {
+    const current = byName.get(iface.name);
+    if (!current) {
+      byName.set(iface.name, iface);
+      continue;
+    }
+    byName.set(iface.name, {
+      ...current,
+      description: current.description ?? iface.description ?? null,
+      alias: current.alias ?? iface.alias ?? null,
+      rawDescr: current.rawDescr ?? iface.rawDescr ?? null,
+      ipv4: current.ipv4.length ? current.ipv4 : iface.ipv4,
+      ipv6: current.ipv6.length ? current.ipv6 : iface.ipv6,
+      vlan: current.vlan ?? iface.vlan ?? null,
+      vrf: current.vrf ?? iface.vrf ?? null,
+      parentInterface: current.parentInterface ?? iface.parentInterface,
+      vlanId: current.vlanId ?? iface.vlanId,
+      encapsulation: current.encapsulation ?? iface.encapsulation,
+    });
+  }
+
+  return [...byName.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
 function filterBgpPeers(
@@ -239,15 +313,17 @@ export async function collectNetopsReadOnly(deviceId: number): Promise<NetopsRea
   const result = await snmpReadonlyAdapter.collect({ device });
   const payload = "payload" in result ? result.payload : undefined;
 
+  const normalizedInterfaces = result.executed ? result.data.interfaces : [];
+
   if (result.executed && payload) {
     await db.insert(snmpSnapshotsTable).values({
       deviceId,
       collector: "snmp",
       collectorVersion: "phase5",
-      success: payload.success,
+      success: payload.success && (payload.interfaces.length > 0 || payload.bgpPeers.length > 0),
       errorMessage: payload.errorMessage,
       errorsJson: payload.errors.length > 0 ? JSON.stringify(payload.errors) : null,
-      interfacesJson: payload.interfaces.length > 0 ? JSON.stringify(payload.interfaces) : null,
+      interfacesJson: normalizedInterfaces.length > 0 ? JSON.stringify(normalizedInterfaces) : null,
       bgpPeersJson: payload.bgpPeers.length > 0 ? JSON.stringify(payload.bgpPeers) : null,
       vrfsJson: null,
     });

@@ -28,6 +28,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 import { CalendarClock, CheckCircle2, CircleSlash, Plus, RefreshCw, Rocket, Shield, ShieldAlert, Trash2 } from "lucide-react";
 
 type JobFormState = {
@@ -77,12 +78,13 @@ function parseContexts(text: string): string[] {
   return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
 }
 
-function jobBadge(job: ScheduledJob) {
-  if (!job.enabled) return <Badge variant="outline">Disabled</Badge>;
-  return <Badge variant="default">Enabled</Badge>;
+function jobBadge(job: ScheduledJob, t: (key: string) => string) {
+  if (!job.enabled) return <Badge variant="outline">{t("scheduler.disabled")}</Badge>;
+  return <Badge variant="default">{t("scheduler.enabled")}</Badge>;
 }
 
 export default function SchedulerPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const canRun = user?.role === "admin" || user?.role === "operator";
   const canManage = user?.role === "admin";
@@ -155,7 +157,7 @@ export default function SchedulerPage() {
     try {
       contexts = parseContexts(form.contextsJson);
     } catch {
-      toast({ title: "Contexts inválidos", description: "Use JSON array.", variant: "destructive" });
+      toast({ title: t("scheduler.toastInvalidContexts"), description: t("scheduler.toastInvalidContextsDesc"), variant: "destructive" });
       return;
     }
 
@@ -174,7 +176,7 @@ export default function SchedulerPage() {
     };
 
     if (!payload.name || !payload.jobType || !payload.targetType) {
-      toast({ title: "Campos obrigatórios faltando", variant: "destructive" });
+      toast({ title: t("scheduler.toastMissingFields"), variant: "destructive" });
       return;
     }
 
@@ -182,10 +184,10 @@ export default function SchedulerPage() {
       updateJob.mutate({ id: editingJob.id, data: payload }, {
         onSuccess: async () => {
           await refresh();
-          toast({ title: "Schedule atualizado" });
+          toast({ title: t("scheduler.toastUpdated") });
           setEditingJob(null);
         },
-        onError: () => toast({ title: "Falha ao atualizar", variant: "destructive" }),
+        onError: () => toast({ title: t("scheduler.toastUpdateFailed"), variant: "destructive" }),
       });
       return;
     }
@@ -193,11 +195,11 @@ export default function SchedulerPage() {
     createJob.mutate({ data: payload }, {
       onSuccess: async () => {
         await refresh();
-        toast({ title: "Schedule criado" });
+        toast({ title: t("scheduler.toastCreated") });
         setCreateOpen(false);
         resetForm();
       },
-      onError: () => toast({ title: "Falha ao criar", variant: "destructive" }),
+      onError: () => toast({ title: t("scheduler.toastCreateFailed"), variant: "destructive" }),
     });
   };
 
@@ -216,10 +218,10 @@ export default function SchedulerPage() {
     runNow.mutate({ id }, {
       onSuccess: async (result) => {
         await refresh();
-        toast({ title: "Run executado", description: `Status: ${result.status}` });
+        toast({ title: t("scheduler.toastRunExecuted"), description: t("scheduler.toastRunStatus", { status: result.status }) });
         setSelectedRunId(result.id);
       },
-      onError: () => toast({ title: "Falha no run-now", variant: "destructive" }),
+      onError: () => toast({ title: t("scheduler.toastRunNowFailed"), variant: "destructive" }),
     });
   };
 
@@ -228,20 +230,20 @@ export default function SchedulerPage() {
     mutation.mutate({ id: job.id }, {
       onSuccess: async () => {
         await refresh();
-        toast({ title: job.enabled ? "Schedule desabilitado" : "Schedule habilitado" });
+        toast({ title: job.enabled ? t("scheduler.toastDisabled") : t("scheduler.toastEnabled") });
       },
-      onError: () => toast({ title: "Falha na alteração", variant: "destructive" }),
+      onError: () => toast({ title: t("scheduler.toastToggleFailed"), variant: "destructive" }),
     });
   };
 
   const handleDelete = (id: number) => {
-    if (!confirm("Remover schedule?")) return;
+    if (!confirm(t("scheduler.confirmDelete"))) return;
     deleteJob.mutate({ id }, {
       onSuccess: async () => {
         await refresh();
-        toast({ title: "Schedule removido" });
+        toast({ title: t("scheduler.toastRemoved") });
       },
-      onError: () => toast({ title: "Falha ao remover", variant: "destructive" }),
+      onError: () => toast({ title: t("scheduler.toastRemoveFailed"), variant: "destructive" }),
     });
   };
 
@@ -251,57 +253,57 @@ export default function SchedulerPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Scheduler</h1>
-          <p className="mt-1 text-muted-foreground">Discovery, compliance and health jobs on a safe local loop.</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("scheduler.title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("scheduler.subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={refresh}>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
+            {t("scheduler.refresh")}
           </Button>
           {canManage && (
             <Button onClick={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
-              New Schedule
+              {t("scheduler.newSchedule")}
             </Button>
           )}
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <StatCard title="Jobs ativos" value={String(activeJobs)} icon={<CalendarClock className="h-4 w-4" />} />
-        <StatCard title="Últimas execuções" value={String(recentRuns.length)} icon={<Rocket className="h-4 w-4" />} />
-        <StatCard title="Falhas recentes" value={String(failedRuns)} icon={<ShieldAlert className="h-4 w-4" />} />
-        <StatCard title="Próxima execução" value={nextRun?.nextRunAt ? formatDate(nextRun.nextRunAt) : "—"} icon={<Shield className="h-4 w-4" />} />
+        <StatCard title={t("scheduler.statsActiveJobs")} value={String(activeJobs)} icon={<CalendarClock className="h-4 w-4" />} />
+        <StatCard title={t("scheduler.statsRecentRuns")} value={String(recentRuns.length)} icon={<Rocket className="h-4 w-4" />} />
+        <StatCard title={t("scheduler.statsRecentFailures")} value={String(failedRuns)} icon={<ShieldAlert className="h-4 w-4" />} />
+        <StatCard title={t("scheduler.statsNextRun")} value={nextRun?.nextRunAt ? formatDate(nextRun.nextRunAt) : "—"} icon={<Shield className="h-4 w-4" />} />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Scheduled Jobs</CardTitle>
+          <CardTitle className="text-base">{t("scheduler.scheduledJobs")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>State</TableHead>
-                <TableHead>Interval / Cron</TableHead>
-                <TableHead>Last Run</TableHead>
-                <TableHead>Next Run</TableHead>
-                <TableHead>Last Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{t("scheduler.tableName")}</TableHead>
+                <TableHead>{t("scheduler.tableType")}</TableHead>
+                <TableHead>{t("scheduler.tableTarget")}</TableHead>
+                <TableHead>{t("scheduler.tableState")}</TableHead>
+                <TableHead>{t("scheduler.tableIntervalCron")}</TableHead>
+                <TableHead>{t("scheduler.tableLastRun")}</TableHead>
+                <TableHead>{t("scheduler.tableNextRun")}</TableHead>
+                <TableHead>{t("scheduler.tableLastStatus")}</TableHead>
+                <TableHead className="text-right">{t("scheduler.tableActions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {jobsLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">Loading...</TableCell>
+                  <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">{t("scheduler.loading")}</TableCell>
                 </TableRow>
               ) : !(jobs?.length) ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">No schedules found.</TableCell>
+                  <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">{t("scheduler.noSchedules")}</TableCell>
                 </TableRow>
               ) : jobs.map((job) => {
                 const lastRun = latestRunFor(job.id, runs);
@@ -310,7 +312,7 @@ export default function SchedulerPage() {
                     <TableCell className="font-medium">{job.name}</TableCell>
                     <TableCell>{job.jobType}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{job.targetLabel ?? `${job.targetType}${job.targetId ? ` #${job.targetId}` : ""}`}</TableCell>
-                    <TableCell>{jobBadge(job)}</TableCell>
+                    <TableCell>{jobBadge(job, t)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {job.intervalMinutes}m{job.cronExpression ? <span className="block truncate">{job.cronExpression}</span> : null}
                     </TableCell>
@@ -329,25 +331,25 @@ export default function SchedulerPage() {
                       <div className="flex justify-end gap-2">
                         {canRun && (
                           <Button size="sm" variant="outline" onClick={() => handleRunNow(job.id)}>
-                            Run now
+                            {t("scheduler.runNow")}
                           </Button>
                         )}
                         {canManage && (
                           <>
-                            <Button size="sm" variant="outline" onClick={() => openEdit(job)}>Edit</Button>
+                            <Button size="sm" variant="outline" onClick={() => openEdit(job)}>{t("scheduler.edit")}</Button>
                             <Button size="sm" variant="outline" onClick={() => handleToggle(job)}>
                               {job.enabled ? <CircleSlash className="mr-2 h-4 w-4" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                              {job.enabled ? "Disable" : "Enable"}
+                              {job.enabled ? t("scheduler.disable") : t("scheduler.enable")}
                             </Button>
                             <Button size="sm" variant="destructive" onClick={() => handleDelete(job.id)}>
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              {t("scheduler.delete")}
                             </Button>
                           </>
                         )}
                         {lastRun && (
                           <Button size="sm" variant="ghost" onClick={() => setSelectedRunId(lastRun.id)}>
-                            View run
+                            {t("scheduler.viewRun")}
                           </Button>
                         )}
                       </div>
@@ -362,24 +364,24 @@ export default function SchedulerPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Recent Runs</CardTitle>
+          <CardTitle className="text-base">{t("scheduler.recentRuns")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Job</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Triggered By</TableHead>
-                <TableHead>Summary</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>{t("scheduler.tableDate")}</TableHead>
+                <TableHead>{t("scheduler.tableJob")}</TableHead>
+                <TableHead>{t("scheduler.status")}</TableHead>
+                <TableHead>{t("scheduler.triggeredBy")}</TableHead>
+                <TableHead>{t("scheduler.summary")}</TableHead>
+                <TableHead className="text-right">{t("scheduler.tableAction")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!recentRuns.length ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">No runs yet.</TableCell>
+                  <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">{t("scheduler.noRuns")}</TableCell>
                 </TableRow>
               ) : recentRuns.map((run) => (
                 <TableRow key={run.id}>
@@ -389,7 +391,7 @@ export default function SchedulerPage() {
                   <TableCell>{run.triggeredBy}</TableCell>
                   <TableCell className="max-w-[420px] truncate text-xs text-muted-foreground">{run.summaryJson ? JSON.stringify(run.summaryJson) : "—"}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="ghost" onClick={() => setSelectedRunId(run.id)}>Open</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSelectedRunId(run.id)}>{t("scheduler.open")}</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -401,7 +403,7 @@ export default function SchedulerPage() {
       <Dialog open={createOpen} onOpenChange={(open) => { if (!open) { setCreateOpen(false); setEditingJob(null); resetForm(); } }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{editingJob ? "Edit Schedule" : "New Schedule"}</DialogTitle>
+            <DialogTitle>{editingJob ? t("scheduler.editSchedule") : t("scheduler.newSchedule")}</DialogTitle>
           </DialogHeader>
           <ScheduleForm form={form} setForm={setForm} onSubmit={submitForm} pending={createJob.isPending || updateJob.isPending} />
         </DialogContent>
@@ -410,36 +412,36 @@ export default function SchedulerPage() {
       <Dialog open={selectedRunId !== null} onOpenChange={(open) => !open && setSelectedRunId(null)}>
         <DialogContent className="max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Run Details</DialogTitle>
+            <DialogTitle>{t("scheduler.runDetails")}</DialogTitle>
           </DialogHeader>
           {selectedRun ? (
             <ScrollArea className="max-h-[72vh] pr-4">
               <div className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-3 text-sm">
-                  <InfoBox label="Run ID" value={`#${selectedRun.id}`} />
-                  <InfoBox label="Job ID" value={`#${selectedRun.scheduledJobId}`} />
-                  <InfoBox label="Status" value={selectedRun.status} />
-                  <InfoBox label="Triggered By" value={selectedRun.triggeredBy} />
-                  <InfoBox label="Started" value={formatDate(selectedRun.startedAt)} />
-                  <InfoBox label="Finished" value={formatDate(selectedRun.finishedAt)} />
+                  <InfoBox label={t("scheduler.runId")} value={`#${selectedRun.id}`} />
+                  <InfoBox label={t("scheduler.jobId")} value={`#${selectedRun.scheduledJobId}`} />
+                  <InfoBox label={t("scheduler.status")} value={selectedRun.status} />
+                  <InfoBox label={t("scheduler.triggeredBy")} value={selectedRun.triggeredBy} />
+                  <InfoBox label={t("scheduler.started")} value={formatDate(selectedRun.startedAt)} />
+                  <InfoBox label={t("scheduler.finished")} value={formatDate(selectedRun.finishedAt)} />
                 </div>
                 <div>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Summary</div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("scheduler.summary")}</div>
                   <pre className="overflow-x-auto rounded-md border bg-muted/20 p-4 text-xs leading-relaxed">
                     {JSON.stringify(selectedRun.summaryJson ?? {}, null, 2)}
                   </pre>
                 </div>
                 <div>
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Items</div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("scheduler.items")}</div>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Device</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Ref</TableHead>
-                        <TableHead>Summary</TableHead>
-                        <TableHead>Error</TableHead>
+                        <TableHead>{t("scheduler.tableDevice")}</TableHead>
+                        <TableHead>{t("scheduler.tableAction")}</TableHead>
+                        <TableHead>{t("scheduler.status")}</TableHead>
+                        <TableHead>{t("scheduler.tableRef")}</TableHead>
+                        <TableHead>{t("scheduler.summary")}</TableHead>
+                        <TableHead>{t("scheduler.tableError")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -459,7 +461,7 @@ export default function SchedulerPage() {
               </div>
             </ScrollArea>
           ) : (
-            <div className="py-8 text-center text-muted-foreground">Loading...</div>
+            <div className="py-8 text-center text-muted-foreground">{t("scheduler.loading")}</div>
           )}
         </DialogContent>
       </Dialog>
@@ -501,16 +503,18 @@ function ScheduleForm({
   onSubmit: () => void;
   pending: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Name">
+        <Field label={t("scheduler.scheduleName")}>
           <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
         </Field>
-        <Field label="Description">
+        <Field label={t("scheduler.formDescription")}>
           <Input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} />
         </Field>
-        <Field label="Job Type">
+        <Field label={t("scheduler.formJobType")}>
           <select
             className="h-10 w-full rounded-md border bg-background px-3 text-sm"
             value={form.jobType}
@@ -521,7 +525,7 @@ function ScheduleForm({
             <option value="health_check">health_check</option>
           </select>
         </Field>
-        <Field label="Target Type">
+        <Field label={t("scheduler.formTargetType")}>
           <select
             className="h-10 w-full rounded-md border bg-background px-3 text-sm"
             value={form.targetType}
@@ -532,34 +536,34 @@ function ScheduleForm({
             <option value="all_devices">all_devices</option>
           </select>
         </Field>
-        <Field label="Target ID">
+        <Field label={t("scheduler.formTargetId")}>
           <Input value={form.targetId} onChange={(event) => setForm((current) => ({ ...current, targetId: event.target.value }))} placeholder="1" disabled={form.targetType === "all_devices"} />
         </Field>
-        <Field label="Interval Minutes">
+        <Field label={t("scheduler.formIntervalMinutes")}>
           <Input type="number" min={1} value={form.intervalMinutes} onChange={(event) => setForm((current) => ({ ...current, intervalMinutes: event.target.value }))} />
         </Field>
-        <Field label="Max Runtime Seconds">
+        <Field label={t("scheduler.formMaxRuntime")}>
           <Input type="number" min={60} value={form.maxRuntimeSeconds} onChange={(event) => setForm((current) => ({ ...current, maxRuntimeSeconds: event.target.value }))} />
         </Field>
-        <Field label="Cron Expression">
+        <Field label={t("scheduler.cronExpression")}>
           <Input value={form.cronExpression} onChange={(event) => setForm((current) => ({ ...current, cronExpression: event.target.value }))} placeholder="*/15 * * * *" />
         </Field>
       </div>
-      <Field label="Contexts JSON">
+      <Field label={t("scheduler.formContextsJson")}>
         <Textarea rows={8} value={form.contextsJson} onChange={(event) => setForm((current) => ({ ...current, contextsJson: event.target.value }))} />
       </Field>
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={form.enabled} onChange={(event) => setForm((current) => ({ ...current, enabled: event.target.checked }))} />
-          Enabled
+          {t("scheduler.enabled")}
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={form.runOnStartup} onChange={(event) => setForm((current) => ({ ...current, runOnStartup: event.target.checked }))} />
-          Run on startup
+          {t("scheduler.formRunOnStartup")}
         </label>
       </div>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onSubmit} disabled={pending}>Save</Button>
+        <Button variant="outline" onClick={onSubmit} disabled={pending}>{t("scheduler.save")}</Button>
       </div>
     </div>
   );
@@ -573,3 +577,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
+

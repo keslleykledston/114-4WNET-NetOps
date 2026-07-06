@@ -1,6 +1,10 @@
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n";
+import type { TranslationParams } from "@/i18n/types";
 import { cn } from "@/lib/utils";
 import type { BgpAfiSafi, DependencyStatus } from "./types";
+
+export type TranslateFn = (key: string, params?: TranslationParams) => string;
 
 export function dependencyStatusClass(status: DependencyStatus | string) {
   switch (status) {
@@ -23,7 +27,12 @@ export function DependencyStatusBadge({ status }: { status: DependencyStatus | s
   );
 }
 
-export function afiSafiLabel(afi: BgpAfiSafi | string) {
+export function afiSafiLabel(afi: BgpAfiSafi | string, t?: TranslateFn) {
+  const key = `bgpPeerDrilldown.features.afiSafi.${afi}`;
+  if (t) {
+    const translated = t(key);
+    if (translated !== key) return translated;
+  }
   switch (afi) {
     case "ipv4_unicast":
       return "IPv4 Unicast";
@@ -56,24 +65,26 @@ export function afiSafiClass(afi: BgpAfiSafi | string) {
 }
 
 export function AfiSafiBadge({ afi }: { afi: BgpAfiSafi | string }) {
+  const { t } = useTranslation();
   return (
     <Badge variant="outline" className={cn("text-[10px]", afiSafiClass(afi))}>
-      {afiSafiLabel(afi)}
+      {afiSafiLabel(afi, t)}
     </Badge>
   );
 }
 
 export function PolicySourceBadge({ source, inherited }: { source: "peer" | "peer_group"; inherited?: boolean }) {
+  const { t } = useTranslation();
   if (inherited || source === "peer_group") {
     return (
       <Badge variant="outline" className="bg-purple-500/10 text-purple-300 border-purple-500/20 text-[10px]">
-        inherited
+        {t("bgpPeerDrilldown.features.badges.inherited")}
       </Badge>
     );
   }
   return (
     <Badge variant="outline" className="bg-cyan-500/10 text-cyan-300 border-cyan-500/20 text-[10px]">
-      direct
+      {t("bgpPeerDrilldown.features.badges.direct")}
     </Badge>
   );
 }
@@ -104,9 +115,10 @@ export function cacheStatusClass(status: string) {
 }
 
 export function CacheStatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
   return (
     <Badge variant="outline" className={cn("font-mono text-[10px]", cacheStatusClass(status))}>
-      cache {status}
+      {t("bgpPeerDrilldown.features.badges.cache", { status })}
     </Badge>
   );
 }

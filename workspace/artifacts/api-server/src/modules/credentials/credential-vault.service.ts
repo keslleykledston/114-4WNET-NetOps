@@ -13,6 +13,7 @@ import {
   resolveCredentialById,
   toCredentialPublic,
 } from "./credential-vault.resolver.js";
+import { getSshVersionCommand, normalizeVendorKey } from "../netops/vendor-registry.js";
 
 export const CREDENTIAL_TYPES = ["SSH", "SNMP_V2", "SNMP_V3", "NETCONF", "API_TOKEN"] as const;
 export type CredentialType = (typeof CREDENTIAL_TYPES)[number];
@@ -242,7 +243,7 @@ export async function testCredentialProfile(id: string, input: Record<string, un
   if (!credential) throw new Error("Credential not found or inactive");
   let result;
   if (credential.type === "SSH" || credential.type === "NETCONF") {
-    const command = device.vendor.toLowerCase().includes("huawei") ? "display version" : "show version";
+    const command = getSshVersionCommand(normalizeVendorKey(device.vendor, device.platform));
     result = await executeSshCommand({
       deviceId,
       connectorId,

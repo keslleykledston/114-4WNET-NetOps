@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, ClipboardCopy, Download, Loader2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/i18n";
 import { DependencyRiskBadge } from "./dependency-risk-badge";
 import {
   exportBgpPeerCleanupAnalysis,
@@ -45,10 +46,12 @@ function DependencyBlock({
   title,
   items,
   tone,
+  emptyMessage,
 }: {
   title: string;
   items: BgpPeerCleanupAnalysis["dependencies"]["exclusive" | "shared" | "ambiguous"];
   tone: "emerald" | "amber" | "red";
+  emptyMessage: string;
 }) {
   const border = tone === "emerald" ? "border-emerald-500/20 bg-emerald-500/5" : tone === "amber" ? "border-amber-500/20 bg-amber-500/5" : "border-red-500/20 bg-red-500/5";
   const text = tone === "emerald" ? "text-emerald-200" : tone === "amber" ? "text-amber-200" : "text-red-200";
@@ -75,7 +78,7 @@ function DependencyBlock({
             ) : null}
           </div>
         )) : (
-          <div className="text-sm text-slate-400">Nenhum item nesta categoria.</div>
+          <div className="text-sm text-slate-400">{emptyMessage}</div>
         )}
       </div>
     </div>
@@ -83,6 +86,7 @@ function DependencyBlock({
 }
 
 export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPeerCleanupModalProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const analyze = useBgpPeerCleanupAnalyze();
 
@@ -97,27 +101,36 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
   async function handleCopyScript() {
     if (!analysis) return;
     await copyToClipboard(joinCommands(analysis.script.removalCommands));
-    toast({ title: "Script copiado", description: "Trecho de remoção copiado para a área de transferência." });
+    toast({
+      title: t("bgp.peerCleanupModal.toastScriptCopied"),
+      description: t("bgp.peerCleanupModal.toastScriptCopiedDesc"),
+    });
   }
 
   async function handleCopyValidations() {
     if (!analysis) return;
     const payload = [
-      "## Validation Before",
+      t("bgp.peerCleanupModal.validationBeforeHeader"),
       joinCommands(analysis.script.validationBefore),
       "",
-      "## Validation After",
+      t("bgp.peerCleanupModal.validationAfterHeader"),
       joinCommands(analysis.script.validationAfter),
     ].join("\n");
     await copyToClipboard(payload);
-    toast({ title: "Validações copiadas", description: "Comandos de validação copiados." });
+    toast({
+      title: t("bgp.peerCleanupModal.toastValidationsCopied"),
+      description: t("bgp.peerCleanupModal.toastValidationsCopiedDesc"),
+    });
   }
 
   async function handleExportMarkdown() {
     if (!analysis) return;
     const exported = await exportBgpPeerCleanupAnalysis(analysis.analysisId);
     downloadMarkdown(`bgp-peer-cleanup-${analysis.peerIp}.md`, exported.markdown);
-    toast({ title: "Markdown exportado", description: "Arquivo gerado para revisão humana." });
+    toast({
+      title: t("bgp.peerCleanupModal.toastMarkdownExported"),
+      description: t("bgp.peerCleanupModal.toastMarkdownExportedDesc"),
+    });
   }
 
   return (
@@ -130,39 +143,39 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
             </div>
             <div>
               <DialogTitle className="text-[15px] font-semibold text-slate-100">
-                Planejamento de Remoção de Peer
+                {t("bgp.peerCleanupModal.title")}
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-400">
-                Nenhum comando será executado. Script apenas para revisão humana.
+                {t("bgp.peerCleanupModal.description")}
               </DialogDescription>
               {analyze.isPending ? (
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/80 px-2 py-1 text-[10px] uppercase tracking-wide text-slate-300">
                   <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
-                  Processando consulta / script
+                  {t("bgp.peerCleanupModal.processing")}
                 </div>
               ) : null}
             </div>
           </div>
           <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-            device #{device.id}
+            {t("bgp.peerCleanupModal.device", { id: device.id })}
           </Badge>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-100">
             <ShieldAlert className="h-4 w-4 text-amber-300" />
-            <AlertTitle className="text-amber-100">Modo somente planejamento</AlertTitle>
+            <AlertTitle className="text-amber-100">{t("bgp.peerCleanupModal.planningOnlyTitle")}</AlertTitle>
             <AlertDescription className="text-amber-100/90">
-              Nenhum comando será executado pelo sistema. O resultado serve apenas para revisão e cópia manual.
+              {t("bgp.peerCleanupModal.planningOnlyDesc")}
             </AlertDescription>
           </Alert>
 
           {!canPlan ? (
             <Alert className="border-red-500/30 bg-red-500/10 text-red-100">
               <ShieldAlert className="h-4 w-4 text-red-300" />
-              <AlertTitle className="text-red-100">Proteção ativa</AlertTitle>
+              <AlertTitle className="text-red-100">{t("bgp.peerCleanupModal.protectionTitle")}</AlertTitle>
               <AlertDescription className="text-red-100/90">
-                Peer Established protegido: nenhum plano de remoção será apresentado.
+                {t("bgp.peerCleanupModal.protectionDesc")}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -175,33 +188,33 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
           ) : analyze.error ? (
             <Alert variant="destructive">
               <ShieldAlert className="h-4 w-4" />
-              <AlertTitle>Falha ao analisar peer</AlertTitle>
+              <AlertTitle>{t("bgp.peerCleanupModal.analyzeFailed")}</AlertTitle>
               <AlertDescription>
-                {analyze.error instanceof Error ? analyze.error.message : "Erro desconhecido"}
+                {analyze.error instanceof Error ? analyze.error.message : t("bgp.peerCleanupModal.unknownError")}
               </AlertDescription>
             </Alert>
           ) : analysis ? (
             <div className="space-y-5">
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <InfoCard label="Peer" value={analysis.peerIp} mono />
-                <InfoCard label="VRF" value={analysis.vrf ?? "global"} mono />
-                <InfoCard label="Estado" value={analysis.state} />
-                <InfoCard label="Risco" value={<DependencyRiskBadge risk={analysis.riskLevel} />} />
+                <InfoCard label={t("bgp.peerCleanupModal.peer")} value={analysis.peerIp} mono />
+                <InfoCard label={t("bgp.peerCleanupModal.vrf")} value={analysis.vrf ?? "global"} mono />
+                <InfoCard label={t("bgp.peerCleanupModal.state")} value={analysis.state} />
+                <InfoCard label={t("bgp.peerCleanupModal.risk")} value={<DependencyRiskBadge risk={analysis.riskLevel} />} />
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <InfoCard label="Recomendação" value={analysis.recommendation} />
-                <InfoCard label="Twin" value={analysis.twin ? `${analysis.twin.peerIp} · ${analysis.twin.afi} · ${analysis.twin.state}` : "—"} mono />
+                <InfoCard label={t("bgp.peerCleanupModal.recommendation")} value={analysis.recommendation} />
+                <InfoCard label={t("bgp.peerCleanupModal.twin")} value={analysis.twin ? `${analysis.twin.peerIp} · ${analysis.twin.afi} · ${analysis.twin.state}` : "—"} mono />
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <InfoCard label="Import policies" value={analysis.importPolicies.length ? analysis.importPolicies.join(", ") : "—"} mono wrap />
-                <InfoCard label="Export policies" value={analysis.exportPolicies.length ? analysis.exportPolicies.join(", ") : "—"} mono wrap />
+                <InfoCard label={t("bgp.peerCleanupModal.importPolicies")} value={analysis.importPolicies.length ? analysis.importPolicies.join(", ") : "—"} mono wrap />
+                <InfoCard label={t("bgp.peerCleanupModal.exportPolicies")} value={analysis.exportPolicies.length ? analysis.exportPolicies.join(", ") : "—"} mono wrap />
               </div>
 
               {analysis.blockedReasons.length > 0 ? (
                 <Alert className="border-red-500/30 bg-red-500/10 text-red-100">
-                  <AlertTitle className="text-red-100">Revisão humana obrigatória</AlertTitle>
+                  <AlertTitle className="text-red-100">{t("bgp.peerCleanupModal.humanReviewRequired")}</AlertTitle>
                   <AlertDescription>
                     <ul className="list-disc space-y-1 pl-4">
                       {analysis.blockedReasons.map((item) => <li key={item}>{item}</li>)}
@@ -212,7 +225,7 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
 
               {analysis.warnings.length > 0 ? (
                 <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-100">
-                  <AlertTitle className="text-amber-100">Warnings</AlertTitle>
+                  <AlertTitle className="text-amber-100">{t("bgp.peerCleanupModal.warnings")}</AlertTitle>
                   <AlertDescription>
                     <ul className="list-disc space-y-1 pl-4">
                       {analysis.warnings.map((item) => <li key={item}>{item}</li>)}
@@ -222,23 +235,23 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
               ) : null}
 
               <div className="grid gap-4 lg:grid-cols-3">
-                <DependencyBlock title="Dependências exclusivas" items={analysis.dependencies.exclusive} tone="emerald" />
-                <DependencyBlock title="Dependências compartilhadas" items={analysis.dependencies.shared} tone="amber" />
-                <DependencyBlock title="Dependências ambíguas" items={analysis.dependencies.ambiguous} tone="red" />
+                <DependencyBlock title={t("bgp.peerCleanupModal.exclusiveDeps")} items={analysis.dependencies.exclusive} tone="emerald" emptyMessage={t("bgp.peerCleanupModal.noItemsInCategory")} />
+                <DependencyBlock title={t("bgp.peerCleanupModal.sharedDeps")} items={analysis.dependencies.shared} tone="amber" emptyMessage={t("bgp.peerCleanupModal.noItemsInCategory")} />
+                <DependencyBlock title={t("bgp.peerCleanupModal.ambiguousDeps")} items={analysis.dependencies.ambiguous} tone="red" emptyMessage={t("bgp.peerCleanupModal.noItemsInCategory")} />
               </div>
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <CodeBlock
-                  title="Script sugerido"
+                  title={t("bgp.peerCleanupModal.suggestedScript")}
                   content={analysis.script.removalCommands.join("\n")}
                   emptyMessage={analysis.recommendation === "skip"
-                    ? "Nenhum comando de remoção sugerido. Revisão humana obrigatória."
-                    : "Sem comandos de remoção sugeridos."}
+                    ? t("bgp.peerCleanupModal.noRemovalSuggested")
+                    : t("bgp.peerCleanupModal.noRemovalCommands")}
                 />
-                <CodeBlock title="Validações antes" content={analysis.script.validationBefore.join("\n")} />
+                <CodeBlock title={t("bgp.peerCleanupModal.validationBefore")} content={analysis.script.validationBefore.join("\n")} />
               </div>
               <div className="grid gap-4 lg:grid-cols-2">
-                <CodeBlock title="Validações depois" content={analysis.script.validationAfter.join("\n")} />
+                <CodeBlock title={t("bgp.peerCleanupModal.validationAfter")} content={analysis.script.validationAfter.join("\n")} />
                 <CodeBlock title="SHA-256" content={analysis.script.sha256} monoSmall />
               </div>
             </div>
@@ -248,22 +261,22 @@ export function BgpPeerCleanupModal({ device, peer, open, onOpenChange }: BgpPee
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-800 px-6 py-4">
           <Button variant="outline" onClick={handleCopyScript} disabled={!analysis}>
             <ClipboardCopy className="h-4 w-4" />
-            Copiar script
+            {t("bgp.peerCleanupModal.copyScript")}
           </Button>
           <Button variant="outline" onClick={handleCopyValidations} disabled={!analysis}>
             <CheckCircle2 className="h-4 w-4" />
-            Copiar validações
+            {t("bgp.peerCleanupModal.copyValidations")}
           </Button>
           <Button variant="secondary" onClick={handleExportMarkdown} disabled={!analysis}>
             <Download className="h-4 w-4" />
-            Exportar Markdown
+            {t("bgp.peerCleanupModal.exportMarkdown")}
           </Button>
           <Button variant="default" onClick={() => onOpenChange(false)}>
-            Fechar
+            {t("bgp.peerCleanupModal.close")}
           </Button>
           {!canPlan ? (
             <span className="w-full text-right text-xs text-red-300">
-              Peer Established não pode ser planejado para remoção
+              {t("bgp.peerCleanupModal.establishedCannotPlan")}
             </span>
           ) : null}
         </div>

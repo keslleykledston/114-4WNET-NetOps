@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Activity } from "lucide-react";
+import { useTranslation } from "@/i18n";
 
 export function OperationalLogsPanel({ device }: { device: Device }) {
+  const { t } = useTranslation();
   const { data: logs, isLoading, isError } = useListNetopsDeviceLogs(device.id);
 
   return (
@@ -14,7 +16,7 @@ export function OperationalLogsPanel({ device }: { device: Device }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Activity className="h-5 w-5" />
-          Operational logs
+          {t("deviceInventory.operationalLogs.title")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -22,20 +24,20 @@ export function OperationalLogsPanel({ device }: { device: Device }) {
           <Skeleton className="h-28 w-full" />
         ) : isError ? (
           <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-            Failed to load operational logs.
+            {t("deviceInventory.operationalLogs.loadFailed")}
           </div>
         ) : !logs?.length ? (
           <div className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">
-            No operational logs found for {device.hostname}.
+            {t("deviceInventory.operationalLogs.noLogs", { hostname: device.hostname })}
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Time</TableHead>
-                <TableHead>Level</TableHead>
-                <TableHead>Scope</TableHead>
-                <TableHead>Message</TableHead>
+                <TableHead>{t("deviceInventory.operationalLogs.columns.time")}</TableHead>
+                <TableHead>{t("deviceInventory.operationalLogs.columns.level")}</TableHead>
+                <TableHead>{t("deviceInventory.operationalLogs.columns.scope")}</TableHead>
+                <TableHead>{t("deviceInventory.operationalLogs.columns.message")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

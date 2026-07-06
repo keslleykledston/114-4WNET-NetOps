@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/i18n";
 
 function fsmBadgeClass(fsmState: string): string {
   const value = fsmState.toLowerCase();
@@ -18,16 +19,18 @@ function operBadgeClass(operStatus: string): string {
 }
 
 export function BgpFsmStateBadge({ state }: { state: string }) {
+  const { t } = useTranslation();
   return (
-    <Badge variant="outline" className={fsmBadgeClass(state)}>
+    <Badge variant="outline" className={fsmBadgeClass(state)} aria-label={t("operationalBgp.fsmStateAria", { state })}>
       {state}
     </Badge>
   );
 }
 
 export function BgpOperStatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
   return (
-    <Badge variant="outline" className={operBadgeClass(status)}>
+    <Badge variant="outline" className={operBadgeClass(status)} aria-label={t("operationalBgp.operStatusAria", { status })}>
       {status}
     </Badge>
   );

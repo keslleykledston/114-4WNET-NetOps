@@ -11,12 +11,19 @@ const normalizerDir = path.join(rootDir, "workspace/artifacts/api-server/src/mod
 const code = `
 import assert from "node:assert/strict";
 import { parseHuaweiL2Circuits } from ${JSON.stringify(pathToFileURL(path.join(parserDir, "huawei-vrp-l2.ts")).href)};
+import { expandHuaweiVlanList, parseGlobalVlans } from ${JSON.stringify(pathToFileURL(path.join(parserDir, "classification.helpers.ts")).href)};
 import { normalizeCircuits } from ${JSON.stringify(pathToFileURL(path.join(normalizerDir, "status.normalizer.ts")).href)};
 import { resolveL2Findings } from ${JSON.stringify(pathToFileURL(path.join(normalizerDir, "findings.resolver.ts")).href)};
 
 function findingsFor(circuits) {
   return resolveL2Findings(normalizeCircuits(circuits));
 }
+
+assert.deepEqual(expandHuaweiVlanList("801 to 803"), [801, 802, 803]);
+assert.deepEqual(expandHuaweiVlanList("802 to 807 810"), [802, 803, 804, 805, 806, 807, 810]);
+const summary801 = parseGlobalVlans(undefined, "Static VLAN:\\nTotal 3 static VLAN.\\n  801 to 803\\n");
+assert.equal(summary801.globalVlans.has(802), true);
+assert.equal(summary801.globalVlans.size, 3);
 
 const dot1qOrphan = parseHuaweiL2Circuits({
   "display current-configuration interface": "# hostname=LAB-NE8000\\ninterface Eth-Trunk1.100\\n vlan-type dot1q 100\\n#",
@@ -68,17 +75,19 @@ assert.equal(noPeerNoVpws.some((c) => c.circuitType === "vpws"), false);
 const vsi = parseHuaweiL2Circuits({
   "display vsi verbose": "# hostname=EDGE_S6730\\n***VSI Name               : SERVICOS_CDS\\n    VSI ID                 : 601\\n    VSI State              : up\\n    Peer Router ID         : 10.200.4.1\\n    Session                : up\\n    Encapsulation Type     : VLAN\\n    P2P VSI                : disable\\n",
 });
-assert.equal(vsi[0].classification, "vsi");
+assert.equal(vsi[0].classification, "vpls");
 assert.equal(vsi[0].l2Transport, "multipoint");
 
 const trunkMissingBatch = parseHuaweiL2Circuits({
   "display current-configuration interface": "# hostname=EDGE_S6730\\ninterface GigabitEthernet0/0/1\\n port link-type trunk\\n port trunk allow-pass vlan 400\\n#\\ninterface Vlanif400\\n#",
+  "display vlan summary": "Static VLAN:\\nTotal 3 static VLAN.\\n  401 to 403\\n",
 });
 assert.ok(trunkMissingBatch.some((c) => c.classification === "vlan_not_in_switch_batch"));
 assert.ok(findingsFor(trunkMissingBatch).some((f) => f.code === "VLAN_NOT_IN_SWITCH_BATCH"));
 
 const trunkPresentBatch = parseHuaweiL2Circuits({
-  "display current-configuration interface": "# hostname=EDGE_S6730\\nvlan batch 401\\ninterface GigabitEthernet0/0/1\\n port link-type trunk\\n port trunk allow-pass vlan 401\\n#\\ninterface Vlanif401\\n#",
+  "display current-configuration interface": "# hostname=EDGE_S6730\\ninterface GigabitEthernet0/0/1\\n port link-type trunk\\n port trunk allow-pass vlan 401\\n#\\ninterface Vlanif401\\n#",
+  "display vlan summary": "Static VLAN:\\nTotal 3 static VLAN.\\n  401 to 403\\n",
 });
 assert.equal(trunkPresentBatch[0].classification, "vlan_local");
 assert.equal(findingsFor(trunkPresentBatch).some((f) => f.code === "VLAN_NOT_IN_SWITCH_BATCH"), false);
@@ -89,6 +98,36 @@ const routerNoBatch = parseHuaweiL2Circuits({
 assert.equal(findingsFor(routerNoBatch).some((f) => f.code === "VLAN_NOT_IN_SWITCH_BATCH"), false);
 assert.ok(findingsFor(routerNoBatch).some((f) => f.code === "ROUTER_L2_VLAN_ANOMALY"));
 
+const vlan1705L2BindingMissingBatch = parseHuaweiL2Circuits({
+  "display current-configuration interface": "# hostname=4WNET-BVA-BRT-RA\\ninterface GigabitEthernet0/0/1\\n port hybrid tagged vlan 1705\\n#\\ninterface Vlanif1705\\n description RN|L2L-IMPACTUS-1705\\n l2 binding vsi RN-1705\\n#",
+});
+const vlan1705 = vlan1705L2BindingMissingBatch.find((c) => c.localInterface === "Vlanif1705");
+assert.equal(vlan1705?.classification, "vlan_local");
+assert.equal(findingsFor(vlan1705L2BindingMissingBatch).some((f) => f.code === "VLAN_NOT_IN_SWITCH_BATCH"), false);
+
+const vlan1705FromDisplayVlan = parseHuaweiL2Circuits({
+  "display current-configuration interface": "# hostname=4WNET-BVA-BRT-A_S6730-H48X6C\\ninterface Vlanif1705\\n description RN|L2L-IMPACTUS-1705\\n l2 binding vsi RN-1705\\n#",
+  "display vlan summary": "Static VLAN:\\nTotal 612 static VLAN.\\n  1611 to 1613 1647 1690 1704 to 1705\\n",
+});
+const vlan1705BrtA = vlan1705FromDisplayVlan.find((c) => c.localInterface === "Vlanif1705");
+assert.equal(vlan1705BrtA?.classification, "vlan_local");
+assert.equal(vlan1705BrtA?.evidenceFlags?.vlanDeclaredGlobal, true);
+assert.equal(findingsFor(vlan1705FromDisplayVlan).some((f) => f.code === "VLAN_NOT_IN_SWITCH_BATCH"), false);
+
+const vlan1842EmptyVlanif = parseHuaweiL2Circuits({
+  "display current-configuration interface": "# hostname=4WNET-BVA-BRT-RA_S6730\\ninterface Vlanif1842\\n#\\ninterface Eth-Trunk2\\n port link-type trunk\\n port trunk allow-pass vlan 1842\\n#\\ninterface XGigabitEthernet0/0/38\\n port link-type trunk\\n port trunk allow-pass vlan 1842\\n#\\ninterface XGigabitEthernet0/0/47\\n port link-type trunk\\n port trunk allow-pass vlan 1842\\n#",
+  "display vlan": "VLAN ID: 1842\\nStatus: Enable\\nState: Up\\nDescription: BVA-BRT-RA-L2\\nTagged ports: Eth-Trunk2, XGigabitEthernet0/0/38, XGigabitEthernet0/0/47\\nActive ports: Eth-Trunk2, XGigabitEthernet0/0/38\\n",
+  "display vlan summary": "Static VLAN:\\nTotal 1 static VLAN.\\n  1842\\n",
+});
+const vlan1842 = vlan1842EmptyVlanif.find((c) => c.outerVlan === 1842);
+assert.equal(vlan1842?.classification, "vlan_local");
+const vlan1842Findings = findingsFor(vlan1842EmptyVlanif);
+assert.equal(vlan1842Findings.some((f) => f.code === "VLAN_NOT_IN_SWITCH_BATCH"), false);
+assert.equal(vlan1842Findings.some((f) => f.code === "CIRCUIT_DOWN"), false);
+assert.equal(vlan1842Findings.some((f) => f.code === "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF"), true);
+assert.equal(vlan1842Findings.some((f) => f.code === "DESCRIPTION_MISSING"), false);
+assert.equal(vlan1842Findings.some((f) => f.severity === "critical"), false);
+
 console.log(JSON.stringify({
   dot1qOrphan: dot1qOrphan[0].classification,
   dot1qLocal: dot1qLocal.length,
@@ -97,6 +136,7 @@ console.log(JSON.stringify({
   vpws: vlanifVpws[0].name,
   vsi: vsi[0].name,
   missingBatch: trunkMissingBatch.map((c) => c.classification),
+  vlan1842: vlan1842Findings.map((f) => f.code),
 }, null, 2));
 `;
 

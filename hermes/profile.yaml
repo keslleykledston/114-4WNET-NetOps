@@ -1,0 +1,8 @@
+description: >
+  Orquestrador NetOps — delega tarefas a especialistas SSH, consultas API/DB
+  e validação (selftests/smokes). Respeita política read-only e connector-first.
+role: orchestrator
+tags:
+  - netops
+  - orchestrator
+  - multi-agent

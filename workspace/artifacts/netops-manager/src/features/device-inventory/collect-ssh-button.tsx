@@ -17,6 +17,10 @@ import { useToast } from "@/hooks/use-toast";
 import { TerminalSquare } from "lucide-react";
 import { l2CircuitsQueryKey } from "@/features/l2-circuits/l2-circuits-api";
 import type { DiscoverySnapshot } from "@/features/device-discovery/discovery-api";
+import { useTranslation } from "@/i18n";
+import type { TranslationParams } from "@/i18n/types";
+
+type TranslateFn = (key: string, params?: TranslationParams) => string;
 
 const SSH_DISCOVERY_REQUEST: DeviceDiscoveryRequest = {
   contexts: ["interfaces", "bgp", "l2vpn", "policies", "vrfs"],
@@ -31,32 +35,35 @@ interface CollectSshButtonProps {
   size?: "default" | "sm";
 }
 
-function buildSummaryMessage(result: {
-  status: string;
-  sourceStatus?: { ssh?: string };
-  interfaces?: unknown[];
-  bgpPeers?: unknown[];
-  policies?: unknown[];
-  communities?: unknown[];
-  communityLists?: unknown[];
-  l2vpn?: { l2vcs?: unknown[]; vsis?: unknown[] };
-  warnings?: Array<{ level: string; message: string }>;
-}) {
+function buildSummaryMessage(
+  t: TranslateFn,
+  result: {
+    status: string;
+    sourceStatus?: { ssh?: string };
+    interfaces?: unknown[];
+    bgpPeers?: unknown[];
+    policies?: unknown[];
+    communities?: unknown[];
+    communityLists?: unknown[];
+    l2vpn?: { l2vcs?: unknown[]; vsis?: unknown[] };
+    warnings?: Array<{ level: string; message: string }>;
+  },
+) {
   const sshOk = result.sourceStatus?.ssh === "success";
   const l2Count = (result.l2vpn?.l2vcs?.length ?? 0) + (result.l2vpn?.vsis?.length ?? 0);
   const filters = (result.policies?.length ?? 0) + (result.communities?.length ?? 0) + (result.communityLists?.length ?? 0);
 
   if (!sshOk) {
     const warning = result.warnings?.find((item) => item.level === "error" || item.level === "warning");
-    return warning?.message ?? "SSH discovery failed or returned no data.";
+    return warning?.message ?? t("deviceInventory.collectSsh.sshFailed");
   }
 
   return [
-    `${result.interfaces?.length ?? 0} interfaces`,
-    `${result.bgpPeers?.length ?? 0} BGP peers`,
-    `${filters} policy/community objects`,
-    `${l2Count} L2 entries`,
-    `status ${result.status}`,
+    t("deviceInventory.collectSsh.summary.interfaces", { count: result.interfaces?.length ?? 0 }),
+    t("deviceInventory.collectSsh.summary.bgpPeers", { count: result.bgpPeers?.length ?? 0 }),
+    t("deviceInventory.collectSsh.summary.policyObjects", { count: filters }),
+    t("deviceInventory.collectSsh.summary.l2Entries", { count: l2Count }),
+    t("deviceInventory.collectSsh.summary.status", { status: result.status }),
   ].join(" · ");
 }
 
@@ -78,10 +85,11 @@ async function waitForDiscoverySnapshot(deviceId: number, startedAfterMs: number
     }
     await sleep(3000);
   }
-  throw new Error("Tempo limite aguardando discovery SSH.");
+  throw new Error("timeout");
 }
 
 export function CollectSshButton({ device, variant = "outline", size = "sm" }: CollectSshButtonProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCollecting, setIsCollecting] = useState(false);
@@ -112,7 +120,7 @@ export function CollectSshButton({ device, variant = "outline", size = "sm" }: C
         });
         if (!startRes.ok && startRes.status !== 202) {
           const body = await startRes.text();
-          throw new Error(body || `Discovery SSH falhou (${startRes.status})`);
+          throw new Error(body || `Discovery SSH (${startRes.status})`);
         }
 
         const result = await waitForDiscoverySnapshot(device.id, startedAfterMs);
@@ -120,14 +128,19 @@ export function CollectSshButton({ device, variant = "outline", size = "sm" }: C
 
         const sshOk = result.sourceStatus?.ssh === "success";
         toast({
-          title: sshOk ? "Coleta SSH concluida" : "Coleta SSH com avisos",
-          description: buildSummaryMessage(result),
+          title: sshOk ? t("deviceInventory.collectSsh.toastSuccess") : t("deviceInventory.collectSsh.toastWarnings"),
+          description: buildSummaryMessage(t, result),
           variant: sshOk ? "default" : "destructive",
         });
       } catch (error) {
+        const message = error instanceof Error && error.message === "timeout"
+          ? t("deviceInventory.collectSsh.timeoutError")
+          : error instanceof Error
+            ? error.message
+            : t("deviceInventory.collectSsh.toastFailedDesc");
         toast({
-          title: "Falha na coleta SSH",
-          description: error instanceof Error ? error.message : "Nao foi possivel executar discovery SSH read-only.",
+          title: t("deviceInventory.collectSsh.toastFailed"),
+          description: message,
           variant: "destructive",
         });
       } finally {
@@ -145,7 +158,7 @@ export function CollectSshButton({ device, variant = "outline", size = "sm" }: C
       disabled={isCollecting}
     >
       <TerminalSquare className="mr-2 h-4 w-4" />
-      {isCollecting ? "Coletando SSH..." : "Coletar via SSH"}
+      {isCollecting ? t("deviceInventory.collectSsh.collecting") : t("deviceInventory.collectSsh.button")}
     </Button>
   );
 }

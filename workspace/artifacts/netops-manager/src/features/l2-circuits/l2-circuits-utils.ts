@@ -26,6 +26,8 @@ export const DEFAULT_L2_FILTERS: L2CircuitFilters = {
 
 const PROBLEM_OPER_STATUSES = new Set<L2Status>(["DOWN", "PARTIAL", "CONFIG_ONLY"]);
 
+const OPERATIONAL_STALE_TAG = "OPERATIONAL_STALE";
+
 const PROBLEM_FINDING_CODES = new Set<L2FindingCode>([
   "CIRCUIT_DOWN",
   "L2VC_DOWN",
@@ -39,10 +41,12 @@ const PROBLEM_FINDING_CODES = new Set<L2FindingCode>([
   "ROUTER_L2_VLAN_ANOMALY",
   "VLANIF_ORPHAN",
   "VLAN_NOT_IN_SWITCH_BATCH",
+  "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF",
   "CLASSIFICATION_CONFLICT",
 ]);
 
 export function isProblemCircuit(circuit: L2Circuit): boolean {
+  if ((circuit.anomalyTags ?? []).includes(OPERATIONAL_STALE_TAG)) return false;
   if (PROBLEM_OPER_STATUSES.has(circuit.operStatus)) return true;
   return circuit.findings.some((finding) => PROBLEM_FINDING_CODES.has(finding.code));
 }

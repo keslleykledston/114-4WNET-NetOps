@@ -1,8 +1,5 @@
-import { db } from "@workspace/db";
-import { eq, isNull, and } from "drizzle-orm";
-
-const topologyNodesTable = (null as any);
-const topologyEdgesTable = (null as any);
+import { db, topologyEdgesTable, topologyNodesTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 
 export interface OrphanNode {
   id: number;

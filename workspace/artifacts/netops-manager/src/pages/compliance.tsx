@@ -38,10 +38,12 @@ import {
 import { ComplianceFindingGroupDrawer } from "@/features/compliance/compliance-finding-group-drawer";
 import { ComplianceFindingGroupTable } from "@/features/compliance/compliance-finding-group-table";
 import { OperationalCategoryBadge } from "@/features/compliance/operational-category-badge";
+import { useTranslation } from "@/i18n";
 
 export default function Compliance() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const isAdmin = user?.role === "admin";
 
@@ -81,7 +83,7 @@ export default function Compliance() {
       updateRule(id, { enabled, severity }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance-rules"] });
-      toast({ title: "Rule updated" });
+      toast({ title: t("compliance.toastRuleUpdated") });
     },
   });
 
@@ -89,7 +91,7 @@ export default function Compliance() {
     mutationFn: createBaseline,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance-baselines"] });
-      toast({ title: "Baseline created" });
+      toast({ title: t("compliance.toastBaselineCreated") });
       setCreateBaselineOpen(false);
     },
   });
@@ -98,7 +100,7 @@ export default function Compliance() {
     mutationFn: deleteBaseline,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance-baselines"] });
-      toast({ title: "Baseline deleted" });
+      toast({ title: t("compliance.toastBaselineDeleted") });
     },
   });
 
@@ -121,13 +123,13 @@ export default function Compliance() {
     <div className="space-y-6">
       <Tabs defaultValue="dashboard" className="w-full">
         <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="findings">Findings</TabsTrigger>
-          <TabsTrigger value="drifts">Drifts</TabsTrigger>
-          <TabsTrigger value="runs">Runs</TabsTrigger>
-          <TabsTrigger value="rules">Rules</TabsTrigger>
-          <TabsTrigger value="baselines">Baselines</TabsTrigger>
-          <TabsTrigger value="schedules">Schedules</TabsTrigger>
+          <TabsTrigger value="dashboard">{t("compliance.tabs.dashboard")}</TabsTrigger>
+          <TabsTrigger value="findings">{t("compliance.tabs.findings")}</TabsTrigger>
+          <TabsTrigger value="drifts">{t("compliance.tabs.drifts")}</TabsTrigger>
+          <TabsTrigger value="runs">{t("compliance.tabs.runs")}</TabsTrigger>
+          <TabsTrigger value="rules">{t("compliance.tabs.rules")}</TabsTrigger>
+          <TabsTrigger value="baselines">{t("compliance.tabs.baselines")}</TabsTrigger>
+          <TabsTrigger value="schedules">{t("compliance.tabs.schedules")}</TabsTrigger>
         </TabsList>
 
         {/* DASHBOARD TAB */}
@@ -135,7 +137,7 @@ export default function Compliance() {
           <div className="grid grid-cols-5 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">PASS</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t("compliance.metrics.pass")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-500">{dashboard?.passed || 0}</div>
@@ -143,7 +145,7 @@ export default function Compliance() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">FAIL</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t("compliance.metrics.fail")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-500">{dashboard?.failed || 0}</div>
@@ -151,7 +153,7 @@ export default function Compliance() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">WARNING</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t("compliance.metrics.warning")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-amber-500">{dashboard?.warningFindings || 0}</div>
@@ -159,7 +161,7 @@ export default function Compliance() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">UNKNOWN</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t("compliance.metrics.unknown")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-slate-500">{dashboard?.unknownFindings || 0}</div>
@@ -167,7 +169,7 @@ export default function Compliance() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">DRIFT</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">{t("compliance.metrics.drift")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-blue-500">{drifts?.length || 0}</div>
@@ -179,7 +181,7 @@ export default function Compliance() {
             {/* Site Chart */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Compliance por Site</CardTitle>
+                <CardTitle className="text-lg">{t("compliance.complianceBySite")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {dashboard?.siteAverages && Object.keys(dashboard.siteAverages).length > 0 ? (
@@ -198,7 +200,7 @@ export default function Compliance() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-muted-foreground text-sm">Sem dados</p>
+                  <p className="text-muted-foreground text-sm">{t("compliance.noData")}</p>
                 )}
               </CardContent>
             </Card>
@@ -206,7 +208,7 @@ export default function Compliance() {
             {/* Vendor Chart */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Compliance por Vendor</CardTitle>
+                <CardTitle className="text-lg">{t("compliance.complianceByVendor")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {dashboard?.failuresByContext && Object.keys(dashboard.failuresByContext).length > 0 ? (
@@ -225,7 +227,7 @@ export default function Compliance() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <p className="text-muted-foreground text-sm">Sem dados</p>
+                  <p className="text-muted-foreground text-sm">{t("compliance.noData")}</p>
                 )}
               </CardContent>
             </Card>
@@ -234,7 +236,7 @@ export default function Compliance() {
           {/* Trend Chart */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Evolução Temporal (30 dias)</CardTitle>
+              <CardTitle className="text-lg">{t("compliance.trendEvolution")}</CardTitle>
             </CardHeader>
             <CardContent>
               {trends && trends.length > 0 ? (
@@ -245,11 +247,11 @@ export default function Compliance() {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="score" stroke="#3b82f6" name="Score" />
+                    <Line type="monotone" dataKey="score" stroke="#3b82f6" name={t("compliance.score")} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
-                <p className="text-muted-foreground text-sm">Sem dados de tendência</p>
+                <p className="text-muted-foreground text-sm">{t("compliance.noTrendData")}</p>
               )}
             </CardContent>
           </Card>
@@ -264,7 +266,7 @@ export default function Compliance() {
               onSelectGroup={setSelectedGroup}
             />
           ) : (
-            <p className="text-muted-foreground text-sm">Sem findings</p>
+            <p className="text-muted-foreground text-sm">{t("compliance.noFindingsTab")}</p>
           )}
         </TabsContent>
 
@@ -272,23 +274,23 @@ export default function Compliance() {
         <TabsContent value="drifts" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Configuration Drifts</CardTitle>
+              <CardTitle>{t("compliance.configurationDrifts")}</CardTitle>
             </CardHeader>
             <CardContent>
               {drifts && drifts.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Device</TableHead>
-                      <TableHead>Drift Summary</TableHead>
-                      <TableHead>Created</TableHead>
+                      <TableHead>{t("compliance.device")}</TableHead>
+                      <TableHead>{t("compliance.driftSummary")}</TableHead>
+                      <TableHead>{t("compliance.created")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {drifts.map((drift) => (
                       <TableRow key={drift.id}>
                         <TableCell className="font-mono text-sm">#{drift.deviceId}</TableCell>
-                        <TableCell className="max-w-md truncate text-sm">{drift.driftSummary || "N/A"}</TableCell>
+                        <TableCell className="max-w-md truncate text-sm">{drift.driftSummary || t("compliance.na")}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {new Date(drift.createdAt).toLocaleString()}
                         </TableCell>
@@ -297,7 +299,7 @@ export default function Compliance() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-muted-foreground text-sm">Sem drifts detectados</p>
+                <p className="text-muted-foreground text-sm">{t("compliance.noDrifts")}</p>
               )}
             </CardContent>
           </Card>
@@ -307,7 +309,7 @@ export default function Compliance() {
         <TabsContent value="runs" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Compliance Jobs</CardTitle>
+              <CardTitle>{t("compliance.complianceJobs")}</CardTitle>
             </CardHeader>
             <CardContent>
               {jobs && jobs.length > 0 ? (
@@ -315,10 +317,10 @@ export default function Compliance() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
-                      <TableHead>Device</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Pass/Fail</TableHead>
-                      <TableHead>Completed</TableHead>
+                      <TableHead>{t("compliance.device")}</TableHead>
+                      <TableHead>{t("compliance.status")}</TableHead>
+                      <TableHead>{t("compliance.passFail")}</TableHead>
+                      <TableHead>{t("compliance.completed")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -335,14 +337,14 @@ export default function Compliance() {
                           <span className="text-green-500">{job.passCount}</span> / <span className="text-red-500">{job.failCount}</span>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {job.completedAt ? new Date(job.completedAt).toLocaleString() : "N/A"}
+                          {job.completedAt ? new Date(job.completedAt).toLocaleString() : t("compliance.na")}
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-muted-foreground text-sm">Sem jobs</p>
+                <p className="text-muted-foreground text-sm">{t("compliance.noJobs")}</p>
               )}
             </CardContent>
           </Card>
@@ -352,19 +354,19 @@ export default function Compliance() {
         <TabsContent value="rules" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Compliance Rules</CardTitle>
-              <CardDescription>Enable/disable rules and override severity</CardDescription>
+              <CardTitle>{t("compliance.complianceRules")}</CardTitle>
+              <CardDescription>{t("compliance.rulesDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               {rules && rules.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Context</TableHead>
-                      <TableHead>Vendor</TableHead>
-                      <TableHead>Severity</TableHead>
-                      <TableHead>Enabled</TableHead>
+                      <TableHead>{t("compliance.name")}</TableHead>
+                      <TableHead>{t("compliance.context")}</TableHead>
+                      <TableHead>{t("compliance.vendor")}</TableHead>
+                      <TableHead>{t("compliance.severity")}</TableHead>
+                      <TableHead>{t("compliance.enabled")}</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -373,7 +375,7 @@ export default function Compliance() {
                       <TableRow key={rule.id}>
                         <TableCell className="text-sm">{rule.name}</TableCell>
                         <TableCell className="text-xs">{rule.context}</TableCell>
-                        <TableCell className="text-xs">{rule.vendor || "any"}</TableCell>
+                        <TableCell className="text-xs">{rule.vendor || t("compliance.any")}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className={badgeClass(rule.severity)}>
                             {rule.severity}
@@ -397,7 +399,7 @@ export default function Compliance() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-muted-foreground text-sm">Sem rules</p>
+                <p className="text-muted-foreground text-sm">{t("compliance.noRules")}</p>
               )}
             </CardContent>
           </Card>
@@ -407,11 +409,11 @@ export default function Compliance() {
         <TabsContent value="schedules" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Compliance Schedules (v0.9.2)</CardTitle>
-              <CardDescription>Automated compliance runs on intervals</CardDescription>
+              <CardTitle>{t("compliance.schedulesTitle")}</CardTitle>
+              <CardDescription>{t("compliance.schedulesDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Schedules feature available via API: GET/POST /compliance/schedules</p>
+              <p className="text-sm text-muted-foreground">{t("compliance.schedulesApiHint")}</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -423,12 +425,12 @@ export default function Compliance() {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  New Baseline
+                  {t("compliance.newBaseline")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create Baseline</DialogTitle>
+                  <DialogTitle>{t("compliance.createBaseline")}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <select
@@ -442,18 +444,18 @@ export default function Compliance() {
                   </select>
                   {baselineForm.scopeType !== "GLOBAL" && (
                     <Input
-                      placeholder="Scope ID (site name or vendor)"
+                      placeholder={t("compliance.scopeIdPlaceholder")}
                       value={baselineForm.scopeId || ""}
                       onChange={(e) => setBaselineForm({ ...baselineForm, scopeId: e.target.value })}
                     />
                   )}
                   <Input
-                    placeholder="Name"
+                    placeholder={t("compliance.name")}
                     value={baselineForm.name}
                     onChange={(e) => setBaselineForm({ ...baselineForm, name: e.target.value })}
                   />
                   <Textarea
-                    placeholder="Description (optional)"
+                    placeholder={t("compliance.descriptionOptional")}
                     value={baselineForm.description || ""}
                     onChange={(e) => setBaselineForm({ ...baselineForm, description: e.target.value })}
                   />
@@ -463,7 +465,7 @@ export default function Compliance() {
                     onClick={() => createBaselineMutation.mutate(baselineForm)}
                     disabled={createBaselineMutation.isPending}
                   >
-                    Create
+                    {t("compliance.create")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -474,10 +476,10 @@ export default function Compliance() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Scope</TableHead>
-                  <TableHead>Scope ID</TableHead>
-                  <TableHead>Enabled</TableHead>
+                  <TableHead>{t("compliance.name")}</TableHead>
+                  <TableHead>{t("compliance.scope")}</TableHead>
+                  <TableHead>{t("compliance.scopeId")}</TableHead>
+                  <TableHead>{t("compliance.enabled")}</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -489,7 +491,7 @@ export default function Compliance() {
                       <Badge variant="outline">{baseline.scopeType}</Badge>
                     </TableCell>
                     <TableCell className="text-sm">{baseline.scopeId || "—"}</TableCell>
-                    <TableCell>{baseline.enabled ? "Yes" : "No"}</TableCell>
+                    <TableCell>{baseline.enabled ? t("compliance.yes") : t("compliance.no")}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -505,7 +507,7 @@ export default function Compliance() {
               </TableBody>
             </Table>
           ) : (
-            <p className="text-muted-foreground text-sm">Sem baselines</p>
+            <p className="text-muted-foreground text-sm">{t("compliance.noBaselines")}</p>
           )}
         </TabsContent>
       </Tabs>

@@ -41,6 +41,7 @@ import { collectedConfigsTable } from "@workspace/db";
 import { exportToCSV, exportToJSON, getExportFilename, getContentType } from "../modules/devices/devices-export.service.js";
 import { generateImportPreview, applyImport } from "../modules/devices/device-import.service.js";
 import { FIELD_ALIASES } from "../modules/devices/device-import.types.js";
+import { getSshVersionCommand, normalizeVendorKey } from "../modules/netops/vendor-registry.js";
 
 const router = Router();
 
@@ -137,6 +138,7 @@ function publicDevice<T extends {
     connectorId: device.connectorId ?? null,
     connectorGroupId: device.connectorGroupId ?? null,
     snmpCommunity: null,
+    snmpConfigured: Boolean(device.snmpCommunity?.trim()),
     id: (device as T & { id: number }).id,
     hostname: (device as T & { hostname: string }).hostname,
     ipAddress: (device as T & { ipAddress: string }).ipAddress,
@@ -358,12 +360,15 @@ router.patch("/devices/:id", async (req, res) => {
   const { password, ...rest } = parsed.data as { password?: string; [key: string]: unknown };
   Object.assign(updateData, rest);
   const connectorId = parseConnectorId(req.body as Record<string, unknown>);
-  if (connectorId !== undefined) {
-    updateData.connectorId = connectorId;
-  }
   const connectorGroupId = parseConnectorGroupId(req.body as Record<string, unknown>);
   if (connectorGroupId !== undefined) {
     updateData.connectorGroupId = connectorGroupId;
+    if (connectorGroupId !== null) {
+      updateData.connectorId = null;
+    }
+  }
+  if (connectorId !== undefined) {
+    updateData.connectorId = connectorId;
   }
   if ("snmpCommunity" in rest) {
     updateData.snmpCommunity = typeof rest.snmpCommunity === "string" && rest.snmpCommunity.trim().length > 0
@@ -422,7 +427,7 @@ router.post("/devices/:id/test-connection", async (req, res) => {
         throw new Error("Device has no connector");
       }
       const credentials = await resolveLegacyDeviceCredentialContext(device);
-      const command = device.vendor.toLowerCase().includes("huawei") ? "display version" : "show version";
+      const command = getSshVersionCommand(normalizeVendorKey(device.vendor, device.platform));
       const exec = await executeSshCommand({
         deviceId: device.id,
         connectorId: connectorContext.connectorId,
@@ -453,6 +458,8 @@ router.post("/devices/:id/test-connection", async (req, res) => {
         port: device.sshPort,
         username: device.username,
         password,
+        vendor: device.vendor,
+        platform: device.platform,
       });
       const configCollect = direct.success
         ? await enqueueDirectDiscoveryCollect(device, req)
@@ -515,7 +522,7 @@ router.post("/devices/:id/test-connectivity", async (req, res) => {
       }
       const credentials = await resolveLegacyDeviceCredentialContext(device);
       const community = credentials.community;
-      const command = device.vendor.toLowerCase().includes("huawei") ? "display version" : "show version";
+      const command = getSshVersionCommand(normalizeVendorKey(device.vendor, device.platform));
       const [sshExec, snmpExec] = await Promise.all([
         executeSshCommand({
           deviceId: device.id,
@@ -565,6 +572,8 @@ router.post("/devices/:id/test-connectivity", async (req, res) => {
           port: device.sshPort,
           username: device.username,
           password,
+          vendor: device.vendor,
+          platform: device.platform,
         }),
         device.snmpCommunity
           ? collectSnmpSnapshot({

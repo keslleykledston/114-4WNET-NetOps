@@ -12,6 +12,7 @@ import type { Device } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { RadioTower } from "lucide-react";
+import { useTranslation } from "@/i18n";
 
 interface CollectSnmpButtonProps {
   device: Device;
@@ -20,6 +21,7 @@ interface CollectSnmpButtonProps {
 }
 
 export function CollectSnmpButton({ device, variant = "outline", size = "sm" }: CollectSnmpButtonProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const collect = useCollectNetopsDeviceReadOnly();
@@ -38,22 +40,22 @@ export function CollectSnmpButton({ device, variant = "outline", size = "sm" }: 
 
           if (result.executed) {
             toast({
-              title: result.status === "ready" ? "Coleta SNMP concluida" : "Coleta SNMP com avisos",
+              title: result.status === "ready" ? t("deviceInventory.collectSnmp.toastSuccess") : t("deviceInventory.collectSnmp.toastWarnings"),
               description: result.message,
             });
             return;
           }
 
           toast({
-            title: "Coleta SNMP nao executada",
+            title: t("deviceInventory.collectSnmp.toastNotExecuted"),
             description: result.message,
             variant: "destructive",
           });
         },
         onError: () => {
           toast({
-            title: "Falha na coleta SNMP",
-            description: "Nao foi possivel iniciar a coleta read-only.",
+            title: t("deviceInventory.collectSnmp.toastFailed"),
+            description: t("deviceInventory.collectSnmp.toastFailedDesc"),
             variant: "destructive",
           });
         },
@@ -70,7 +72,7 @@ export function CollectSnmpButton({ device, variant = "outline", size = "sm" }: 
       disabled={collect.isPending}
     >
       <RadioTower className="mr-2 h-4 w-4" />
-      {collect.isPending ? "Coletando..." : "Coletar via SNMP"}
+      {collect.isPending ? t("deviceInventory.collectSnmp.collecting") : t("deviceInventory.collectSnmp.button")}
     </Button>
   );
 }

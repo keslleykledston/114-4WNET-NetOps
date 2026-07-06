@@ -13,6 +13,17 @@ function isPwDown(pwStatus?: string): boolean {
 }
 
 function isServiceDown(circuit: NormalizedL2Circuit): boolean {
+  if (circuit.classification === "vlan_vsi_binding" || circuit.circuitType === "vlan_vsi_binding") {
+    if (hasMultipointVsiPeers(circuit)) {
+      const state = normalizeCliState(circuit.vsiState ?? circuit.adminStatus);
+      return state === "DOWN" || circuit.operStatus === "DOWN" || circuit.operStatus === "PARTIAL";
+    }
+    return circuit.operStatus === "DOWN";
+  }
+  const isLocalVlan = circuit.classification === "vlan_local" || circuit.circuitType === "vlan_local";
+  if (isLocalVlan && circuit.evidenceFlags?.vlanExists && (circuit.evidenceFlags?.activePorts?.length ?? 0) > 0) {
+    return false;
+  }
   if (circuit.operStatus === "DOWN") return true;
   if (isPwDown(circuit.pwStatus)) return true;
   const session = circuit.sessionState?.toLowerCase().trim() ?? "";
@@ -39,6 +50,20 @@ function addFindingToMany(
   }
 }
 
+function isVlanifCircuit(circuit: NormalizedL2Circuit): boolean {
+  if (circuit.evidenceFlags?.hasVlanif) return true;
+  return Boolean(circuit.localInterface?.toLowerCase().startsWith("vlanif"));
+}
+
+function countVlanDeclarations(circuits: NormalizedL2Circuit[]): Map<number, number> {
+  const counts = new Map<number, number>();
+  for (const circuit of circuits) {
+    if (circuit.outerVlan === undefined) continue;
+    counts.set(circuit.outerVlan, (counts.get(circuit.outerVlan) ?? 0) + 1);
+  }
+  return counts;
+}
+
 /** Attach findings per circuit using exact logical keys (no substring matching). */
 export function enrichCircuitsWithFindings(
   circuits: NormalizedL2Circuit[],
@@ -46,28 +71,51 @@ export function enrichCircuitsWithFindings(
 ): NormalizedL2Circuit[] {
   const keyOf = (circuit: NormalizedL2Circuit) => buildCircuitKey(circuit, deviceId);
   const findingsByKey = new Map<string, L2Finding[]>();
+  const vlanDeclarationCount = countVlanDeclarations(circuits);
 
   for (const circuit of circuits) {
   const circuitKey = keyOf(circuit);
   const label = circuitLabel(circuit);
 
     if (circuit.classification === "vlan_orphan") {
-      addFinding(findingsByKey, circuitKey, {
-        code: "VLAN_ORPHAN",
-        severity: "warning",
-        message:
-          `Subinterface ${label} possui apenas encapsulamento dot1q e não apresenta evidência de serviço L2/L3 conhecido. ` +
-          "Validar se é resíduo de configuração. Se não estiver em uso, remover a subinterface; se estiver em uso, corrigir amarração e descrição do serviço.",
-      });
+      const multiInterfaceVlan = (vlanDeclarationCount.get(circuit.outerVlan ?? -1) ?? 0) > 1;
+      if (multiInterfaceVlan) {
+        // VLAN on multiple interfaces is local switching use, not an orphan subinterface.
+      } else if (isVlanifCircuit(circuit)) {
+        addFinding(findingsByKey, circuitKey, {
+          code: "VLANIF_ORPHAN",
+          severity: "info",
+          message:
+            `Vlanif ${label} existe sem IP, VRF, L2VC, VSI ou uso L2 conhecido. ` +
+            "Validar se a interface vlanif é necessária; se não estiver em uso, remover.",
+        });
+      } else {
+        addFinding(findingsByKey, circuitKey, {
+          code: "VLAN_ORPHAN",
+          severity: "warning",
+          message:
+            `Subinterface ${label} possui apenas encapsulamento dot1q e não apresenta evidência de serviço L2/L3 conhecido. ` +
+            "Validar se é resíduo de configuração. Se não estiver em uso, remover a subinterface; se estiver em uso, corrigir amarração e descrição do serviço.",
+        });
+      }
     }
     if (circuit.classification === "vlanif_orphan") {
       addFinding(findingsByKey, circuitKey, {
         code: "VLANIF_ORPHAN",
-        severity: "warning",
-        message: `Vlanif ${label} has no IP, VRF, L2VC, VSI, MAC, or switching service`,
+        severity: "info",
+        message:
+          `Vlanif ${label} existe sem IP, VRF, L2VC, VSI ou uso L2 conhecido. ` +
+          "Validar se a interface vlanif é necessária; se não estiver em uso, remover.",
       });
     }
     if (circuit.classification === "vlan_not_in_switch_batch" || circuit.anomalyTags?.includes("VLAN_NOT_IN_SWITCH_BATCH")) {
+      if (
+        circuit.evidenceFlags?.vlanExists ||
+        circuit.evidenceFlags?.vlanDeclaredGlobal ||
+        (circuit.evidenceFlags?.vlanifBindingVsiName && circuit.vsiName)
+      ) {
+        continue;
+      }
       addFinding(findingsByKey, circuitKey, {
         code: "VLAN_NOT_IN_SWITCH_BATCH",
         severity: "warning",
@@ -131,11 +179,21 @@ export function enrichCircuitsWithFindings(
     }
 
     if (circuit.operStatus === "DOWN") {
+      if (
+        ((circuit.classification === "vlan_local" || circuit.circuitType === "vlan_local") &&
+        circuit.evidenceFlags?.vlanExists &&
+        (circuit.evidenceFlags?.activePorts?.length ?? 0) > 0) ||
+        circuit.classification === "vlan_vsi_binding" ||
+        circuit.circuitType === "vlan_vsi_binding"
+      ) {
+        // Local VLAN alive by VLAN membership, not Vlanif oper status.
+      } else {
       addFinding(findingsByKey, circuitKey, {
         code: "CIRCUIT_DOWN",
         severity: "error",
         message: `Circuit ${label} is operationally down`,
       });
+      }
     }
     if ((circuit.circuitType === "l2vc" || circuit.circuitType === "vpws") && isPwDown(circuit.pwStatus)) {
       addFinding(findingsByKey, circuitKey, {
@@ -182,7 +240,10 @@ export function enrichCircuitsWithFindings(
         message: `VLAN ${circuit.outerVlan} is used in pseudowire ${label}`,
       });
     }
-    if ((circuit.circuitType === "vsi" || circuit.circuitType === "vpls") && (circuit.outerVlan !== undefined || circuit.vsiName)) {
+    if (
+      (circuit.circuitType === "vsi" || circuit.circuitType === "vpls") &&
+      (circuit.outerVlan !== undefined || circuit.vsiName)
+    ) {
       addFinding(findingsByKey, circuitKey, {
         code: "VLAN_USED_IN_VSI",
         severity: "info",
@@ -194,6 +255,16 @@ export function enrichCircuitsWithFindings(
         code: "VLAN_USED_IN_L3_VRF",
         severity: "info",
         message: `VLAN ${circuit.outerVlan} is used by L3 interface ${label}`,
+      });
+    }
+    if (
+      (circuit.classification === "vlan_vsi_binding" || circuit.circuitType === "vlan_vsi_binding") &&
+      circuit.evidenceFlags?.vlanifBindingVsiName
+    ) {
+      addFinding(findingsByKey, circuitKey, {
+        code: "VLAN_USED_IN_VSI",
+        severity: "info",
+        message: `Vlanif ${label} is bound to VSI ${circuit.evidenceFlags.vlanifBindingVsiName}`,
       });
     }
   }
@@ -285,7 +356,21 @@ export function enrichCircuitsWithFindings(
     if (["l2vc", "vpws", "vsi", "vpls"].includes(circuit.circuitType)) {
       continue;
     }
+    if (circuit.classification === "vlan_vsi_binding" || circuit.circuitType === "vlan_vsi_binding") {
+      continue;
+    }
     if (!circuit.description || circuit.description.toLowerCase() === "null" || circuit.description.trim() === "") {
+      const suppressDescriptionMissing =
+        (circuit.classification === "vlan_local" || circuit.circuitType === "vlan_local") &&
+        circuit.evidenceFlags?.vlanExists &&
+        (circuit.evidenceFlags?.activePorts?.length ?? 0) > 0;
+      if (suppressDescriptionMissing) {
+        // VLAN local already has enough operational evidence.
+      } else {
+      const vlanDescription = circuit.evidenceFlags && typeof circuit.evidenceFlags === "object"
+        ? (circuit.evidenceFlags as { vlanDescription?: string }).vlanDescription
+        : undefined;
+      if (vlanDescription && vlanDescription.trim()) continue;
       const isL3Subif =
         circuit.classification === "l3_interface" ||
         circuit.classification === "l3_vrf_link" ||
@@ -297,6 +382,22 @@ export function enrichCircuitsWithFindings(
         message: isL3Subif
           ? "Subinterface dot1q possui serviço L3 atrelado, mas não possui descrição operacional. Adicionar descrição padronizada indicando cliente, circuito, peer ou finalidade operacional."
           : `Circuit ${label} has no description`,
+      });
+      }
+    }
+    if (
+      circuit.classification === "vlan_local" &&
+      circuit.evidenceFlags?.vlanExists &&
+      circuit.evidenceFlags?.vlanifEmpty &&
+      !circuit.evidenceFlags?.vlanifBindingVsiName &&
+      (circuit.evidenceFlags?.activePorts?.length ?? 0) > 0 &&
+      (circuit.evidenceFlags?.taggedPorts?.length ?? 0) > 0
+    ) {
+      addFinding(findingsByKey, circuitKey, {
+        code: "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF",
+        severity: "info",
+        message:
+          "VLAN L2 ativa com Vlanif vazia/desnecessária. Validar se a Vlanif é resíduo de configuração; se não houver uso previsto, remover a Vlanif para evitar ambiguidade operacional.",
       });
     }
   }

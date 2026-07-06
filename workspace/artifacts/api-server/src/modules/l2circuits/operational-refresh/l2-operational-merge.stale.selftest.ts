@@ -2,11 +2,18 @@ import assert from "node:assert/strict";
 import {
   normalizeInterfaceName,
   shouldMarkOperationalStale,
+  stripOperationalStaleTag,
+  OPERATIONAL_STALE_TAG,
 } from "./l2-operational-merge.js";
 
 const liveKeys = new Set(["device:1:l2vc:100"]);
 
 assert.equal(normalizeInterfaceName("GigabitEthernet0/0/1"), normalizeInterfaceName("GE0/0/1"));
+
+assert.deepEqual(
+  stripOperationalStaleTag(["ROUTER_L2_VLAN_ANOMALY", OPERATIONAL_STALE_TAG]),
+  ["ROUTER_L2_VLAN_ANOMALY"],
+);
 
 assert.equal(
   shouldMarkOperationalStale({

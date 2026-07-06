@@ -1,5 +1,5 @@
-export type L2CircuitType = "vlan" | "dot1q_subif" | "vlan_local" | "vlan_orphan" | "l2vc" | "vpws" | "vsi" | "vpls" | "l3_vrf_link" | "l3_interface" | "config_only";
-export type L2Classification = "vlan_orphan" | "vlanif_orphan" | "vlan_not_in_switch_batch" | "vlan_local" | "switching_vlan" | "vpws" | "l2vc" | "vsi" | "vpls" | "l3_vrf_link" | "l3_interface" | "router_l2_vlan_anomaly" | "classification_conflict" | "config_only";
+export type L2CircuitType = "vlan" | "dot1q_subif" | "vlan_local" | "vlan_orphan" | "vlan_vsi_binding" | "l2vc" | "vpws" | "vsi" | "vpls" | "l3_vrf_link" | "l3_interface" | "config_only";
+export type L2Classification = "vlan_orphan" | "vlanif_orphan" | "vlan_not_in_switch_batch" | "vlan_local" | "vlan_vsi_binding" | "switching_vlan" | "vpws" | "l2vc" | "vsi" | "vpls" | "l3_vrf_link" | "l3_interface" | "router_l2_vlan_anomaly" | "classification_conflict" | "config_only";
 export type L2Transport = "local_vlan" | "pseudowire" | "multipoint" | "l3" | "config_only" | "none";
 export type L2DeviceRoleFamily = "ROUTER" | "SWITCH" | "UNKNOWN";
 export type L2Status = "UP" | "DOWN" | "PARTIAL" | "UNKNOWN" | "CONFIG_ONLY";
@@ -21,6 +21,7 @@ export type L2FindingCode =
   | "VLAN_USED_IN_L3_VRF"
   | "VLANIF_ORPHAN"
   | "VLAN_NOT_IN_SWITCH_BATCH"
+  | "VLAN_L2_ACTIVE_WITH_EMPTY_VLANIF"
   | "CLASSIFICATION_CONFLICT";
 export type L2FindingSeverity = "info" | "warning" | "error";
 
@@ -105,6 +106,18 @@ export interface ParsedL2Circuit {
     hasMtu?: boolean;
     hasStatisticEnable?: boolean;
     hasSwitchingUse?: boolean;
+    vlanExists?: boolean;
+    vlanState?: string;
+    vlanStatus?: string;
+    vlanifExists?: boolean;
+    vlanifHasL3?: boolean;
+    vlanifEmpty?: boolean;
+    vlanifVpcBinding?: boolean;
+    vlanifBindingType?: string;
+    vlanifBindingVsiName?: string;
+    taggedPorts?: string[];
+    activePorts?: string[];
+    vlanDescription?: string;
     vlanDeclaredGlobal?: boolean;
     vsiPeers?: L2VsiPeer[];
     pwSummary?: L2PwSummary;
@@ -167,9 +180,12 @@ export interface L2Circuit {
   updatedAt: Date;
 }
 
+export type L2JobType = "discovery" | "refresh";
+
 export interface L2DiscoveryJob {
   id: number;
   runId: string;
+  jobType: L2JobType;
   deviceId: number;
   status: "pending" | "running" | "completed" | "failed";
   startedAt: Date;
@@ -221,6 +237,13 @@ export interface L2OperationalRefreshRequest {
   device_id: number;
 }
 
+export interface L2OperationalRefreshStartResponse {
+  run_id: string;
+  device_id: number;
+  status: "running";
+  started_at: string;
+}
+
 export interface L2OperationalRefreshResponse {
   device_id: number;
   last_refresh_at: string;
@@ -229,6 +252,20 @@ export interface L2OperationalRefreshResponse {
   findings_count: number;
   operational_state: Record<string, unknown>;
   warnings: string[];
+}
+
+export interface L2OperationalRefreshJobResponse {
+  run_id: string;
+  device_id: number;
+  status: "pending" | "running" | "completed" | "failed";
+  started_at: string;
+  finished_at?: string | null;
+  circuits_updated?: number | null;
+  findings_count?: number | null;
+  error_message?: string | null;
+  last_refresh_at?: string | null;
+  freshness?: L2OperationalFreshnessStatus;
+  operational_state?: Record<string, unknown>;
 }
 
 export interface L2DiscoveryJobResponse {
@@ -252,6 +289,7 @@ export interface SSHCollectorOutput extends Record<string, string | undefined> {
   "display current-configuration interface"?: string;
   "display ip interface brief"?: string;
   "display ip vpn-instance"?: string;
+  "display vlan summary"?: string;
   "display vlan"?: string;
   "display mac-address vsi"?: string;
   "display mac-address vlan"?: string;

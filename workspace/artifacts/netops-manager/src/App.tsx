@@ -4,18 +4,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
+import { I18nProvider } from "@/i18n";
 import { AuthProvider, useAuth } from "@/components/auth-provider";
+import { useTranslation } from "@/i18n";
 import { Layout } from "@/components/layout";
 import LoginPage from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Devices from "@/pages/devices";
 import DeviceDetail from "@/pages/device-detail";
 import Compliance from "@/pages/compliance";
-import Provisioning from "@/pages/provisioning";
-import ProvisioningTemplatesPage from "@/pages/provisioning-templates";
-import ProvisioningTemplateDetailPage from "@/pages/provisioning-template-detail";
-import TemplateStudioPage from "@/pages/template-studio";
-import ServiceCatalogPage from "@/pages/service-catalog";
+import L2VPNDashboard from "@/pages/l2vpn-dashboard";
 import Templates from "@/pages/templates";
 import Audit from "@/pages/audit";
 import Reports from "@/pages/reports";
@@ -28,6 +26,8 @@ import NetopsOperations from "@/pages/netops-operations";
 import L2Circuits from "@/pages/l2-circuits";
 import BgpPeerDrilldownPage from "@/pages/bgp-peer-drilldown";
 import OperationalBgpPage from "@/pages/operational-bgp";
+import BgpAnnouncementsPage from "@/pages/bgp-announcements";
+import BgpCustomersPage from "@/pages/bgp-customers";
 import Users from "@/pages/users";
 import ConnectorsPage from "@/pages/connectors";
 import ConnectorDetailPage from "@/pages/connector-detail";
@@ -35,6 +35,8 @@ import ConnectorDashboardPage from "@/pages/connector-dashboard";
 import ConnectorGroupsPage from "@/pages/connector-groups";
 import CredentialVaultPage from "@/pages/credential-vault";
 import NotificationsPage from "@/pages/notifications";
+import NetworkMapPage from "@/pages/network-map";
+import Topology from "@/pages/topology";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -48,6 +50,7 @@ const queryClient = new QueryClient({
 
 function Router() {
   const { user, loading } = useAuth();
+  const { t } = useTranslation();
   const [location, setLocation] = useLocation();
 
   useEffect(() => {
@@ -62,7 +65,7 @@ function Router() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-        Carregando sessão...
+        {t("app.loadingSession")}
       </div>
     );
   }
@@ -78,11 +81,7 @@ function Router() {
         <Route path="/devices" component={Devices} />
         <Route path="/devices/:id" component={DeviceDetail} />
         <Route path="/compliance" component={Compliance} />
-        <Route path="/provisioning" component={Provisioning} />
-        <Route path="/provisioning/templates" component={ProvisioningTemplatesPage} />
-        <Route path="/provisioning/templates/:id" component={ProvisioningTemplateDetailPage} />
-        <Route path="/provisioning/template-studio" component={TemplateStudioPage} />
-        <Route path="/provisioning/service-catalog" component={ServiceCatalogPage} />
+        <Route path="/provisioning" component={L2VPNDashboard} />
         <Route path="/templates" component={Templates} />
         <Route path="/audit" component={Audit} />
         <Route path="/reports" component={Reports} />
@@ -100,8 +99,12 @@ function Router() {
         <Route path="/netops-operations" component={NetopsOperations} />
         <Route path="/l2-circuits" component={L2Circuits} />
         <Route path="/bgp/peer-drilldown" component={BgpPeerDrilldownPage} />
+        <Route path="/bgp/announcements" component={BgpAnnouncementsPage} />
+        <Route path="/bgp/customers" component={BgpCustomersPage} />
         <Route path="/operational/bgp" component={OperationalBgpPage} />
         <Route path="/bgp/operations" component={OperationalBgpPage} />
+        <Route path="/map" component={NetworkMapPage} />
+        <Route path="/topology" component={Topology} />
         <Route path="/users" component={Users} />
         <Route component={NotFound} />
       </Switch>
@@ -111,18 +114,20 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="netops-theme">
-      <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-          </TooltipProvider>
-        </QueryClientProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider defaultTheme="dark" storageKey="netops-theme">
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <Router />
+              </WouterRouter>
+              <Toaster />
+            </TooltipProvider>
+          </QueryClientProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </I18nProvider>
   );
 }
 

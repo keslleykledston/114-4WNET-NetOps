@@ -6,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/components/auth-provider";
+import { useTranslation } from "@/i18n";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { login } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -23,8 +25,8 @@ export default function LoginPage() {
       setLocation("/");
     } catch (error) {
       toast({
-        title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid credentials",
+        title: t("auth.loginFailed"),
+        description: error instanceof Error ? error.message : t("auth.invalidCredentials"),
         variant: "destructive",
       });
     } finally {
@@ -36,21 +38,21 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6">
       <Card className="w-full max-w-md border-border bg-card shadow-2xl shadow-black/20">
         <CardHeader>
-          <CardTitle>NetOps Service Manager</CardTitle>
-          <CardDescription>Login local para acesso controlado.</CardDescription>
+          <CardTitle>{t("auth.title")}</CardTitle>
+          <CardDescription>{t("auth.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
+              <label className="text-sm font-medium">{t("auth.email")}</label>
               <Input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Senha</label>
+              <label className="text-sm font-medium">{t("auth.password")}</label>
               <Input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="current-password" />
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? "Entrando..." : "Entrar"}
+              {submitting ? t("auth.signingIn") : t("auth.signIn")}
             </Button>
           </form>
         </CardContent>

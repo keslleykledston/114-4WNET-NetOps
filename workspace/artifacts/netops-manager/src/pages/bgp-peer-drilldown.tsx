@@ -34,6 +34,7 @@ import { BgpPeerContextCard } from "@/features/bgp/bgp-peer-context-card";
 import { BGP_POLICY_EDITOR_ENABLED } from "@/features/bgp-policy-editor/bgp-policy-editor.utils";
 import { BgpPolicyEditorModal } from "@/features/bgp-policy-editor/bgp-policy-editor-modal";
 import { useCommunityLibraryItems, useCommunitySets } from "@/features/device-discovery/community-api";
+import { useTranslation } from "@/i18n";
 
 function readInitialQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -45,6 +46,7 @@ function readInitialQuery() {
 }
 
 export default function BgpPeerDrilldownPage() {
+  const { t } = useTranslation();
   const initial = useMemo(() => readInitialQuery(), []);
   const [deviceId, setDeviceId] = useState(initial.deviceId);
   const [peer, setPeer] = useState(initial.peer);
@@ -152,30 +154,30 @@ export default function BgpPeerDrilldownPage() {
         <Link href={netopsHref}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Voltar ao cockpit do device
+            {t("bgpPeerDrilldown.backToCockpit")}
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">BGP Peer Drilldown</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("bgpPeerDrilldown.title")}</h1>
           <div className="mt-1 flex flex-wrap gap-2">
-            <Badge variant="outline">Source: snapshot</Badge>
-            <Badge variant="outline">Read-only</Badge>
-            <Badge variant="outline">Sem comandos no equipamento</Badge>
+            <Badge variant="outline">{t("bgpPeerDrilldown.badgeSourceSnapshot")}</Badge>
+            <Badge variant="outline">{t("bgpPeerDrilldown.badgeReadOnly")}</Badge>
+            <Badge variant="outline">{t("bgpPeerDrilldown.badgeNoCommands")}</Badge>
           </div>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Consulta</CardTitle>
-          <CardDescription>GET /api/bgp/peers/:deviceId/:peer/drilldown?source=snapshot</CardDescription>
+          <CardTitle className="text-base">{t("bgpPeerDrilldown.queryTitle")}</CardTitle>
+          <CardDescription>{t("bgpPeerDrilldown.queryDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col md:flex-row gap-4 md:items-end">
           <div className="flex-1 space-y-2">
-            <Label>Device</Label>
+            <Label>{t("bgpPeerDrilldown.device")}</Label>
             <Select value={deviceId} onValueChange={setDeviceId}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o device" />
+                <SelectValue placeholder={t("bgpPeerDrilldown.selectDevice")} />
               </SelectTrigger>
               <SelectContent>
                 {devices.map((d) => (
@@ -187,7 +189,7 @@ export default function BgpPeerDrilldownPage() {
             </Select>
           </div>
           <div className="flex-1 space-y-2">
-            <Label>Peer (IP ou nome)</Label>
+            <Label>{t("bgpPeerDrilldown.peerLabel")}</Label>
             <Input
               value={peer}
               onChange={(e) => setPeer(e.target.value)}
@@ -197,7 +199,7 @@ export default function BgpPeerDrilldownPage() {
           </div>
           <Button type="button" onClick={handleConsultar} disabled={!deviceId || !peer.trim()}>
             <Search className="h-4 w-4 mr-2" />
-            Consultar
+            {t("bgpPeerDrilldown.consult")}
           </Button>
           <Button
             type="button"
@@ -206,7 +208,7 @@ export default function BgpPeerDrilldownPage() {
             disabled={!submitted || query.isFetching}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
-            Recalcular snapshot
+            {t("bgpPeerDrilldown.recomputeSnapshot")}
           </Button>
         </CardContent>
       </Card>
@@ -228,18 +230,18 @@ export default function BgpPeerDrilldownPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Terminal className="h-4 w-4" />
-            SSH detail leve
+            {t("bgpPeerDrilldown.sshDetailTitle")}
           </CardTitle>
           <CardDescription>
-            Executa comandos read-only leves no equipamento. Não coleta rotas.
+            {t("bgpPeerDrilldown.sshDetailDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert className="border-amber-500/30 bg-amber-500/5">
             <Shield className="h-4 w-4 text-amber-400" />
-            <AlertTitle>Protegido por feature gate</AlertTitle>
+            <AlertTitle>{t("bgpPeerDrilldown.featureGateTitle")}</AlertTitle>
             <AlertDescription>
-              BGP_DRILLDOWN_SSH_DETAIL_ENABLED fica false por padrão. Com flag desativada, o backend retorna 503 antes de abrir SSH.
+              {t("bgpPeerDrilldown.featureGateDescription")}
             </AlertDescription>
           </Alert>
           <div className="flex flex-wrap items-center gap-3">
@@ -250,7 +252,7 @@ export default function BgpPeerDrilldownPage() {
               disabled={!submitted || detailStatus === "running" || detailDisabled}
             >
               <Terminal className="h-4 w-4 mr-2" />
-              {detailStatus === "running" ? "Atualizando..." : "Atualizar detalhe via SSH"}
+              {detailStatus === "running" ? t("bgpPeerDrilldown.updating") : t("bgpPeerDrilldown.updateSshDetail")}
             </Button>
             <Badge variant="outline" className="font-mono">
               detail={detailStatus}
@@ -258,7 +260,7 @@ export default function BgpPeerDrilldownPage() {
           </div>
           {detailMutation.error ? (
             <p className="text-sm text-muted-foreground">
-              {detailMutation.error instanceof Error ? detailMutation.error.message : "Falha ao consultar SSH detail."}
+              {detailMutation.error instanceof Error ? detailMutation.error.message : t("bgpPeerDrilldown.sshDetailFailed")}
             </p>
           ) : null}
           {detailMutation.data ? (
@@ -266,13 +268,13 @@ export default function BgpPeerDrilldownPage() {
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">ssh_detail</Badge>
                 <Badge variant="outline">{new Date(detailMutation.data.collectedAt).toLocaleString()}</Badge>
-                <Badge variant="outline">{detailMutation.data.commands.length} comandos</Badge>
+                <Badge variant="outline">{t("bgpPeerDrilldown.commandsCount", { count: detailMutation.data.commands.length })}</Badge>
               </div>
               <div className="max-h-96 overflow-auto rounded-md border border-border bg-muted/20 p-3">
                 {detailMutation.data.evidence.map((item) => (
                   <div key={item.command} className="mb-4">
                     <div className="font-mono text-xs text-muted-foreground">{item.command}</div>
-                    <pre className="mt-1 whitespace-pre-wrap text-xs">{item.error ?? (item.output || "sem saída")}</pre>
+                    <pre className="mt-1 whitespace-pre-wrap text-xs">{item.error ?? (item.output || t("bgpPeerDrilldown.noOutput"))}</pre>
                   </div>
                 ))}
               </div>
@@ -283,8 +285,8 @@ export default function BgpPeerDrilldownPage() {
 
       <Tabs defaultValue="drilldown" className="w-full">
         <TabsList>
-          <TabsTrigger value="drilldown">Drilldown</TabsTrigger>
-          <TabsTrigger value="history">Histórico</TabsTrigger>
+          <TabsTrigger value="drilldown">{t("bgpPeerDrilldown.tabDrilldown")}</TabsTrigger>
+          <TabsTrigger value="history">{t("bgpPeerDrilldown.tabHistory")}</TabsTrigger>
         </TabsList>
         <TabsContent value="drilldown" className="mt-4">
           <BgpPeerDrilldownView

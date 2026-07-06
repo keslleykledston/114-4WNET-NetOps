@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, jsonb, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 
 export const topologyNodesTable = pgTable("topology_nodes", {
   id: serial("id").primaryKey(),
@@ -38,6 +38,18 @@ export const topologySnapshotsTable = pgTable("topology_snapshots", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const topologyLayoutsTable = pgTable("topology_layouts", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  scopeType: text("scope_type").notNull().default("global"),
+  scopeId: integer("scope_id"),
+  isActive: boolean("is_active").notNull().default(false),
+  payloadJson: jsonb("payload_json").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export type TopologyNode = typeof topologyNodesTable.$inferSelect;
 export type TopologyEdge = typeof topologyEdgesTable.$inferSelect;
 export type TopologySnapshot = typeof topologySnapshotsTable.$inferSelect;
+export type TopologyLayout = typeof topologyLayoutsTable.$inferSelect;

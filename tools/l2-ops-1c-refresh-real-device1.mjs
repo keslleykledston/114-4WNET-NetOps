@@ -138,30 +138,66 @@ async function main() {
   } catch {
     /* ignore */
   }
-  const elapsedMs = Date.now() - t0;
-  out.refresh = {
-    status: refreshRes.status,
-    elapsed_ms: elapsedMs,
-    body: refreshBody,
-  };
   log("post_refresh", {
     status: refreshRes.status,
-    elapsed_ms: elapsedMs,
-    freshness: refreshBody.freshness,
-    circuits_updated: refreshBody.circuits_updated,
-    findings_count: refreshBody.findings_count,
-    warnings: refreshBody.warnings,
-    operational_state: refreshBody.operational_state,
+    run_id: refreshBody.run_id,
   });
 
-  if (refreshRes.status !== 200) {
+  if (refreshRes.status !== 202) {
     out.errors.push(`refresh_status_${refreshRes.status}`);
     if (refreshBody.code) out.errors.push(`refresh_code_${refreshBody.code}`);
+    out.refresh = { status: refreshRes.status, elapsed_ms: Date.now() - t0, body: refreshBody };
   } else {
-    if (refreshBody.freshness !== "fresh") out.errors.push(`freshness_${refreshBody.freshness ?? "missing"}`);
-    if (!refreshBody.last_refresh_at) out.errors.push("missing_last_refresh_at");
-    const ops = refreshBody.operational_state ?? {};
-    if (ops.ssh_config === true) out.errors.push("ssh_config_should_be_false");
+    const runId = refreshBody.run_id;
+    if (!runId) out.errors.push("missing_run_id");
+
+    const pollDeadline = Date.now() + 20 * 60 * 1000;
+    let job = refreshBody;
+    while (runId && Date.now() < pollDeadline) {
+      await new Promise((r) => setTimeout(r, 3000));
+      const jobRes = await fetch(`${base}/api/l2-circuits/refresh-jobs/${encodeURIComponent(runId)}`, { headers });
+      const jobText = await jobRes.text();
+      try {
+        job = JSON.parse(jobText);
+      } catch {
+        job = {};
+      }
+      log("poll_refresh_job", { status: jobRes.status, job_status: job.status });
+      if (jobRes.status !== 200) {
+        out.errors.push(`refresh_job_status_${jobRes.status}`);
+        break;
+      }
+      if (job.status !== "running" && job.status !== "pending") break;
+    }
+
+    const elapsedMs = Date.now() - t0;
+    out.refresh = {
+      status: refreshRes.status,
+      elapsed_ms: elapsedMs,
+      run_id: runId,
+      job_status: job.status,
+      body: job,
+    };
+    log("refresh_complete", {
+      elapsed_ms: elapsedMs,
+      job_status: job.status,
+      freshness: job.freshness,
+      circuits_updated: job.circuits_updated,
+      findings_count: job.findings_count,
+      operational_state: job.operational_state,
+    });
+
+    if (job.status === "failed") {
+      out.errors.push("refresh_job_failed");
+      if (job.error_message) out.errors.push(`refresh_error_${job.error_message.slice(0, 80)}`);
+    } else if (job.status !== "completed") {
+      out.errors.push(`refresh_job_status_${job.status ?? "timeout"}`);
+    } else {
+      if (job.freshness !== "fresh") out.errors.push(`freshness_${job.freshness ?? "missing"}`);
+      if (!job.last_refresh_at) out.errors.push("missing_last_refresh_at");
+      const ops = job.operational_state ?? {};
+      if (ops.ssh_config === true) out.errors.push("ssh_config_should_be_false");
+    }
   }
 
   const { snapshot: afterSnap } = await getList(headers, "list_after");
@@ -176,7 +212,8 @@ async function main() {
 
   out.go =
     out.errors.length === 0 &&
-    refreshRes.status === 200 &&
+    refreshRes.status === 202 &&
+    out.refresh?.job_status === "completed" &&
     beforeSnap.status === 200 &&
     afterSnap.status === 200;
 

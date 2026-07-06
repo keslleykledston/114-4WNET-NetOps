@@ -15,6 +15,8 @@ export type UserPermissions = {
   audit?: { read?: boolean };
   provisioning?: { read?: boolean; write?: boolean; export?: boolean };
   bgp?: { read?: boolean; cleanup?: { plan?: boolean } };
+  bgp_announcements?: { view?: boolean; preview?: boolean; change_plan?: { create?: boolean }; approval?: { request?: boolean; review?: boolean }; dry_run?: { execute?: boolean }; execute?: { real?: boolean }; rollback?: { request?: boolean; review?: boolean; dry_run?: boolean; execute?: boolean; postcheck?: boolean } };
+  topology?: { read?: boolean; admin?: boolean };
 };
 
 export const AUTH_COOKIE_NAME = "netops_session";
@@ -313,6 +315,8 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
       bgp: { read: true, cleanup: { plan: true } },
+      bgp_announcements: { view: true, preview: true, change_plan: { create: true }, approval: { request: true, review: true }, dry_run: { execute: true }, execute: { real: true }, rollback: { request: true, review: true, dry_run: true, execute: true, postcheck: true } },
+      topology: { read: true, admin: true },
     };
   }
   if (role === "operator") {
@@ -325,6 +329,8 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
       audit: { read: true },
       provisioning: { read: true, write: true, export: true },
       bgp: { read: true, cleanup: { plan: true } },
+      bgp_announcements: { view: true, preview: true, change_plan: { create: true }, approval: { request: true, review: true }, dry_run: { execute: true }, execute: { real: true }, rollback: { request: true, review: true, dry_run: true, execute: true, postcheck: true } },
+      topology: { read: true, admin: true },
     };
   }
   // viewer
@@ -337,6 +343,8 @@ export function getDefaultPermissions(role: UserRole): UserPermissions {
     audit: { read: true },
     provisioning: { read: true, write: false, export: true },
     bgp: { read: false, cleanup: { plan: false } },
+    bgp_announcements: { view: true, preview: false, change_plan: { create: false }, approval: { request: false, review: false }, dry_run: { execute: false }, execute: { real: false }, rollback: { request: false, review: false, dry_run: false, execute: false, postcheck: false } },
+    topology: { read: true, admin: false },
   };
 }
 

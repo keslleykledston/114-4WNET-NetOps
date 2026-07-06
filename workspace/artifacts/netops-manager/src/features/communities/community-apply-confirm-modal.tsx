@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useTranslation } from "@/i18n";
 
 interface CommunityApplyConfirmModalProps {
   open: boolean;
@@ -33,6 +34,7 @@ export function CommunityApplyConfirmModal({
   onConfirm,
   isPending = false,
 }: CommunityApplyConfirmModalProps) {
+  const { t } = useTranslation();
   const [confirmedChange, setConfirmedChange] = useState(false);
   const [acceptedRisk, setAcceptedRisk] = useState(false);
 
@@ -59,9 +61,9 @@ export function CommunityApplyConfirmModal({
               <ShieldAlert className="h-3.5 w-3.5 text-brand-blue" />
             </span>
             <div>
-              <DialogTitle className="text-[15px] font-semibold text-foreground">Confirmar aplicação</DialogTitle>
+              <DialogTitle className="text-[15px] font-semibold text-foreground">{t("communities.applyModal.title")}</DialogTitle>
               <DialogDescription className="text-[12px] text-muted-foreground">
-                Revisar candidate config, warnings e riscos antes de enviar o commit ao equipamento.
+                {t("communities.applyModal.description")}
               </DialogDescription>
             </div>
           </div>
@@ -72,7 +74,7 @@ export function CommunityApplyConfirmModal({
             {warnings.length > 0 ? (
               <Alert className="border-amber-500/25 bg-amber-500/10 text-amber-100">
                 <AlertCircle className="h-4 w-4 text-amber-300" />
-                <AlertTitle className="text-amber-100">Warnings</AlertTitle>
+                <AlertTitle className="text-amber-100">{t("communities.applyModal.warnings")}</AlertTitle>
                 <AlertDescription className="space-y-1 text-amber-100/90">
                   {warnings.map((warning) => (
                     <div key={warning}>{warning}</div>
@@ -84,9 +86,9 @@ export function CommunityApplyConfirmModal({
             {missingRefs.length > 0 ? (
               <Alert className="border-red-500/30 bg-red-500/10 text-red-100">
                 <ShieldAlert className="h-4 w-4 text-red-300" />
-                <AlertTitle className="text-red-100">Alert missing refs</AlertTitle>
+                <AlertTitle className="text-red-100">{t("communities.applyModal.alertMissingRefs")}</AlertTitle>
                 <AlertDescription className="space-y-2 text-red-100/90">
-                  <p>Alguns members não existem na biblioteca local. Confirme o risco antes de aplicar.</p>
+                  <p>{t("communities.applyModal.missingRefsDesc")}</p>
                   <div className="flex flex-wrap gap-2">
                     {missingRefs.map((ref) => (
                       <span key={ref} className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-1 font-mono text-[10px] text-red-100">
@@ -100,7 +102,7 @@ export function CommunityApplyConfirmModal({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-lg border border-[#252840] bg-[#11141c] p-3">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Comandos SSH</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("communities.applyModal.sshCommands")}</div>
                 <pre className="mt-2 overflow-auto rounded-lg border border-[#252840] bg-[#0f111a] p-3 text-[11px] leading-5 text-foreground">
                   {commandPreview}
                 </pre>
@@ -109,13 +111,13 @@ export function CommunityApplyConfirmModal({
                 <div className="text-[11px] uppercase tracking-wide text-muted-foreground">SHA-256</div>
                 <div className="mt-2 break-all font-mono text-[10px] text-foreground">{candidateSha256}</div>
                 <div className="mt-3 text-xs text-muted-foreground">
-                  Confirme a alteração e, se houver refs ausentes, aceite o risco explicitamente.
+                  {t("communities.applyModal.sha256Hint")}
                 </div>
               </div>
             </div>
 
             <div className="rounded-lg border border-[#252840] bg-[#11141c] p-3">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Config gerado</div>
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("communities.applyModal.generatedConfig")}</div>
               <pre className="mt-2 max-h-72 overflow-auto rounded-lg border border-[#252840] bg-[#0f111a] p-3 text-[11px] leading-5 text-foreground">
                 {candidateConfigText}
               </pre>
@@ -124,12 +126,12 @@ export function CommunityApplyConfirmModal({
             <div className="space-y-3 rounded-lg border border-[#252840] bg-[#11141c] p-3">
               <label className="flex items-start gap-3 text-sm text-foreground">
                 <Checkbox checked={confirmedChange} onCheckedChange={(checked) => setConfirmedChange(Boolean(checked))} />
-                <span>Confirmo que li o candidate config e quero aplicar essa alteração.</span>
+                <span>{t("communities.applyModal.confirmRead")}</span>
               </label>
               {requiresRiskAck ? (
                 <label className="flex items-start gap-3 text-sm text-foreground">
                   <Checkbox checked={acceptedRisk} onCheckedChange={(checked) => setAcceptedRisk(Boolean(checked))} />
-                  <span>Existem members ausentes; aceito o risco de aplicar mesmo assim.</span>
+                  <span>{t("communities.applyModal.acceptRisk")}</span>
                 </label>
               ) : null}
             </div>
@@ -138,7 +140,7 @@ export function CommunityApplyConfirmModal({
 
         <DialogFooter className="border-t border-[#252840] px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="border-[#252840] text-muted-foreground hover:bg-[#1a1d2e] hover:text-foreground">
-            Cancelar
+            {t("communities.applyModal.cancel")}
           </Button>
           <Button
             onClick={() => void onConfirm()}
@@ -146,7 +148,7 @@ export function CommunityApplyConfirmModal({
             className="bg-brand-blue text-white hover:bg-brand-blue-hover"
           >
             <CheckCircle2 className="mr-2 h-4 w-4" />
-            Confirmar e aplicar
+            {t("communities.applyModal.confirmApply")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -10,6 +10,7 @@ import {
 } from "./connector-execution.service.js";
 import { testSSHConnection } from "../../lib/ssh.js";
 import { collectSnmpSnapshot } from "../../lib/snmp.js";
+import { getSshVersionCommand, normalizeVendorKey } from "../netops/vendor-registry.js";
 
 export type DeviceDiagnosticResult = {
   mode: "connector" | "direct";
@@ -21,10 +22,7 @@ export type DeviceDiagnosticResult = {
 };
 
 function sshVersionCommand(vendor: string): string {
-  const v = vendor.toLowerCase();
-  if (v.includes("huawei")) return "display version";
-  if (v.includes("juniper")) return "show version";
-  return "show version";
+  return getSshVersionCommand(normalizeVendorKey(vendor));
 }
 
 export async function runDeviceDiagnostics(deviceId: number): Promise<DeviceDiagnosticResult> {
@@ -77,6 +75,8 @@ export async function runDeviceDiagnostics(deviceId: number): Promise<DeviceDiag
       port: device.sshPort,
       username: device.username,
       password,
+      vendor: device.vendor,
+      platform: device.platform,
     }),
     community
       ? collectSnmpSnapshot({
@@ -116,6 +116,8 @@ export async function runDevicePingDiagnostic(deviceId: number) {
     port: device.sshPort,
     username,
     password,
+    vendor: device.vendor,
+    platform: device.platform,
   });
   return { success: ssh.success, message: ssh.message, mode: "direct" as const };
 }

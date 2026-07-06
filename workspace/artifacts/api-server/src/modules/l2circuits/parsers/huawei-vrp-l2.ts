@@ -7,7 +7,10 @@ import {
   inferDeviceRoleFamily,
   parseGlobalVlans,
   parseMacVlans,
+  parseVlanEvidence,
   parseSwitchingVlans,
+  parseSwitchingVlansFromDisplayVlan,
+  resolveDisplayVlanOutput,
   type ParserContext,
 } from "./classification.helpers.js";
 import { parseVlanLocalCircuits } from "./dot1q-local.parser.js";
@@ -36,18 +39,26 @@ export function parseHuaweiL2Circuits(rawOutputs: Record<string, string | undefi
     circuits.push(...parseVsiVerbose(vsiOutput, deviceRoleFamily));
   }
 
+  const vlanInventoryOutput = resolveDisplayVlanOutput(rawOutputs);
+  const vlanDetailOutput = rawOutputs["display vlan"]?.trim();
+  const vlanEvidenceById = parseVlanEvidence(vlanDetailOutput ?? vlanInventoryOutput, rawOutputs["display current-configuration interface"]);
+
   const { globalVlans, hasGlobalVlanEvidence } = parseGlobalVlans(
     rawOutputs["display current-configuration interface"],
-    rawOutputs["display vlan"],
+    vlanInventoryOutput,
   );
   const context: ParserContext = {
     deviceRoleFamily,
     globalVlans,
     hasGlobalVlanEvidence,
-    switchingVlans: parseSwitchingVlans(rawOutputs["display current-configuration interface"]),
+    switchingVlans: mergeVlanSets(
+      parseSwitchingVlans(rawOutputs["display current-configuration interface"]),
+      parseSwitchingVlansFromDisplayVlan(vlanDetailOutput),
+    ),
     macVlans: parseMacVlans(rawOutputs["display mac-address vlan"]),
     l2vcClientInterfaces: new Set(circuits.filter((c) => c.circuitType === "l2vc" || c.circuitType === "vpws").map((c) => c.localInterface).filter(Boolean) as string[]),
     vsiInterfaces: new Set(circuits.filter((c) => c.circuitType === "vsi" || c.circuitType === "vpls").map((c) => c.localInterface).filter(Boolean) as string[]),
+    vlanEvidenceById,
   };
 
   // Parse dot1q / VLAN_LOCAL from config + interface description
@@ -61,8 +72,8 @@ export function parseHuaweiL2Circuits(rawOutputs: Record<string, string | undefi
     );
   }
 
-  if (rawOutputs["display vlan"]) {
-    circuits.push(...parseDisplayVlanOrphans(rawOutputs["display vlan"], circuits, context));
+  if (vlanDetailOutput) {
+    circuits.push(...parseDisplayVlanOrphans(vlanDetailOutput, circuits, context));
   }
 
   return dedupeCircuits(circuits);
@@ -75,6 +86,14 @@ function collectDisplayVsiOutputs(rawOutputs: Record<string, string | undefined>
     .map(([, value]) => value!.trim());
   if (chunks.length === 0) return undefined;
   return chunks.join("\n\n");
+}
+
+function mergeVlanSets(...sets: Set<number>[]): Set<number> {
+  const merged = new Set<number>();
+  for (const set of sets) {
+    for (const id of set) merged.add(id);
+  }
+  return merged;
 }
 
 function dedupeCircuits(circuits: ParsedL2Circuit[]): ParsedL2Circuit[] {

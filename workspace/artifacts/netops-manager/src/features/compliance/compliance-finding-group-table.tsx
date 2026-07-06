@@ -2,6 +2,7 @@ import type { ComplianceFindingGroup } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useTranslation } from "@/i18n";
 import { Eye } from "lucide-react";
 import { OperationalCategoryBadge } from "./operational-category-badge";
 
@@ -18,26 +19,28 @@ export function ComplianceFindingGroupTable({
   badgeClass,
   onSelectGroup,
 }: ComplianceFindingGroupTableProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="border-t">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Rule</TableHead>
-            <TableHead>Context</TableHead>
-            <TableHead>Severity</TableHead>
-            <TableHead>Categoria operacional</TableHead>
-            <TableHead className="text-right">Count</TableHead>
-            <TableHead>Sample findings</TableHead>
-            <TableHead>Mensagem normalizada</TableHead>
+            <TableHead>{t("compliance.findingGroups.columns.rule")}</TableHead>
+            <TableHead>{t("compliance.findingGroups.columns.context")}</TableHead>
+            <TableHead>{t("compliance.findingGroups.columns.severity")}</TableHead>
+            <TableHead>{t("compliance.findingGroups.columns.operationalCategory")}</TableHead>
+            <TableHead className="text-right">{t("compliance.findingGroups.columns.count")}</TableHead>
+            <TableHead>{t("compliance.findingGroups.columns.sampleFindings")}</TableHead>
+            <TableHead>{t("compliance.findingGroups.columns.normalizedMessage")}</TableHead>
             <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
-            <TableRow><TableCell colSpan={8} className="text-center py-8">Loading...</TableCell></TableRow>
+            <TableRow><TableCell colSpan={8} className="text-center py-8">{t("compliance.findingGroups.loading")}</TableCell></TableRow>
           ) : groups?.length === 0 ? (
-            <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No groups.</TableCell></TableRow>
+            <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t("compliance.findingGroups.noGroups")}</TableCell></TableRow>
           ) : groups?.map((group) => (
             <TableRow key={`${group.ruleId}-${group.context}-${group.severity}-${group.operationalCategory}-${group.message}`}>
               <TableCell>
@@ -59,7 +62,7 @@ export function ComplianceFindingGroupTable({
               </TableCell>
               <TableCell className="max-w-[420px] truncate">{group.message}</TableCell>
               <TableCell>
-                <Button variant="ghost" size="sm" onClick={() => onSelectGroup(group)}>
+                <Button variant="ghost" size="sm" onClick={() => onSelectGroup(group)} aria-label={t("compliance.findingGroups.viewGroup")}>
                   <Eye className="h-4 w-4" />
                 </Button>
               </TableCell>

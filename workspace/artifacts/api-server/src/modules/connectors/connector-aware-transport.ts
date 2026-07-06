@@ -36,6 +36,8 @@ export async function runSSHCommandsForDevice(
     port: device.sshPort ?? 22,
     username: device.username,
     password,
+    vendor: device.vendor,
+    platform: device.platform,
   };
   return runSSHCommands(sshConfig, commands, options);
 }

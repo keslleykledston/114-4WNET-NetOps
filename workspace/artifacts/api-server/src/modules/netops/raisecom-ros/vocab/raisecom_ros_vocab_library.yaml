@@ -1,0 +1,31 @@
+version: 1
+vendor: raisecom
+platform: ros
+mode: readonly
+library:
+  inventory:
+    - show version
+    - show running-config
+  interfaces:
+    - show interface
+    - show interfaces
+    - show ip interface brief
+  vlan:
+    - show vlan
+    - show vlan brief
+  bgp:
+    - show ip bgp summary
+    - show bgp all summary
+    - show ip bgp neighbors
+  mpls_l2vpn:
+    - show mpls l2vc
+    - show mpls l2vpn
+  vrf:
+    - show ip vrf
+    - show vrf
+  routing:
+    - show ip route
+    - show ipv6 route
+  diagnostics:
+    - show clock
+    - show system

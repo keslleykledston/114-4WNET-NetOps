@@ -2,18 +2,16 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n";
 import {
   fetchResourcePools,
   fetchAllocations,
   fetchCollisions,
-  fetchCollisionReport,
   getPoolUsage,
-  createResourcePool,
-  allocateResource,
-  releaseResource,
 } from "@/features/resource-manager/resource-manager-api";
 
 export default function ResourceManager() {
+  const { t } = useTranslation();
   const [pools, setPools] = useState<any[]>([]);
   const [allocations, setAllocations] = useState<any[]>([]);
   const [collisions, setCollisions] = useState<any[]>([]);
@@ -41,25 +39,24 @@ export default function ResourceManager() {
   }
 
   if (loading) {
-    return <div className="p-0">Loading...</div>;
+    return <div className="p-0">{t("common.loading")}...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Resource Manager</h1>
-        <Button onClick={loadData}>Refresh</Button>
+        <h1 className="text-2xl font-bold">{t("resourceManager.title")}</h1>
+        <Button onClick={loadData}>{t("common.refresh")}</Button>
       </div>
 
       <Tabs defaultValue="pools" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="pools">Pools</TabsTrigger>
-          <TabsTrigger value="allocations">Allocations</TabsTrigger>
-          <TabsTrigger value="reservations">Reservations</TabsTrigger>
-          <TabsTrigger value="collisions">Collisions</TabsTrigger>
+          <TabsTrigger value="pools">{t("resourceManager.pools")}</TabsTrigger>
+          <TabsTrigger value="allocations">{t("resourceManager.allocations")}</TabsTrigger>
+          <TabsTrigger value="reservations">{t("resourceManager.reservations")}</TabsTrigger>
+          <TabsTrigger value="collisions">{t("resourceManager.collisions")}</TabsTrigger>
         </TabsList>
 
-        {/* POOLS TAB */}
         <TabsContent value="pools" className="space-y-4 mt-6">
           {pools.map((pool) => (
             <PoolCard key={pool.id} pool={pool} />
@@ -67,29 +64,28 @@ export default function ResourceManager() {
           {pools.length === 0 && (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-muted-foreground">No resource pools configured</p>
+                <p className="text-muted-foreground">{t("resourceManager.noPools")}</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* ALLOCATIONS TAB */}
         <TabsContent value="allocations" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Allocations</CardTitle>
-              <CardDescription>{allocations.length} resources allocated</CardDescription>
+              <CardTitle>{t("resourceManager.allocationsTitle")}</CardTitle>
+              <CardDescription>{t("resourceManager.allocationsCount", { count: allocations.length })}</CardDescription>
             </CardHeader>
             <CardContent>
               {allocations.length > 0 ? (
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-2">Type</th>
-                      <th className="text-left py-2">Value</th>
-                      <th className="text-left py-2">Device</th>
-                      <th className="text-left py-2">Status</th>
-                      <th className="text-left py-2">Date</th>
+                      <th className="text-left py-2">{t("common.type")}</th>
+                      <th className="text-left py-2">{t("common.value")}</th>
+                      <th className="text-left py-2">{t("devices.title")}</th>
+                      <th className="text-left py-2">{t("common.status")}</th>
+                      <th className="text-left py-2">{t("common.date")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -117,26 +113,24 @@ export default function ResourceManager() {
                   </tbody>
                 </table>
               ) : (
-                <p className="text-muted-foreground">No allocations</p>
+                <p className="text-muted-foreground">{t("resourceManager.noAllocations")}</p>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* RESERVATIONS TAB */}
         <TabsContent value="reservations" className="space-y-4 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Reservations</CardTitle>
-              <CardDescription>Temporary resource holds</CardDescription>
+              <CardTitle>{t("resourceManager.reservationsTitle")}</CardTitle>
+              <CardDescription>{t("resourceManager.reservationsDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">Reservation management coming soon</p>
+              <p className="text-sm text-muted-foreground">{t("resourceManager.reservationsComingSoon")}</p>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* COLLISIONS TAB */}
         <TabsContent value="collisions" className="space-y-4 mt-6">
           {collisions.length > 0 ? (
             collisions.map((collision, idx) => (
@@ -148,11 +142,11 @@ export default function ResourceManager() {
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-semibold">Value</p>
+                      <p className="text-sm font-semibold">{t("resourceManager.value")}</p>
                       <p className="font-mono">{collision.value}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold">Severity</p>
+                      <p className="text-sm font-semibold">{t("compliance.severity")}</p>
                       <p
                         className={
                           collision.severity === "CRITICAL"
@@ -166,7 +160,7 @@ export default function ResourceManager() {
                   </div>
                   {collision.devices.length > 0 && (
                     <div className="mt-4">
-                      <p className="text-sm font-semibold">Devices</p>
+                      <p className="text-sm font-semibold">{t("resourceManager.devices")}</p>
                       <p className="text-sm">{collision.devices.join(", ")}</p>
                     </div>
                   )}
@@ -176,7 +170,7 @@ export default function ResourceManager() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-green-600 font-semibold">✓ No resource collisions detected</p>
+                <p className="text-green-600 font-semibold">{t("resourceManager.noCollisions")}</p>
               </CardContent>
             </Card>
           )}
@@ -187,13 +181,14 @@ export default function ResourceManager() {
 }
 
 function PoolCard({ pool }: { pool: any }) {
+  const { t } = useTranslation();
   const [usage, setUsage] = useState<any>(null);
 
   useEffect(() => {
     getPoolUsage(pool.id).then(setUsage).catch(console.error);
   }, [pool.id]);
 
-  if (!usage) return <div>Loading...</div>;
+  if (!usage) return <div>{t("common.loading")}...</div>;
 
   const percentage = ((usage.allocated + usage.reserved) / usage.total) * 100;
 
@@ -206,19 +201,19 @@ function PoolCard({ pool }: { pool: any }) {
       <CardContent>
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>Total</span>
+            <span>{t("resourceManager.total")}</span>
             <span className="font-semibold">{usage.total}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span>Allocated</span>
+            <span>{t("resourceManager.allocated")}</span>
             <span className="font-semibold text-green-600">{usage.allocated}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span>Reserved</span>
+            <span>{t("resourceManager.reserved")}</span>
             <span className="font-semibold text-blue-600">{usage.reserved}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span>Available</span>
+            <span>{t("resourceManager.available")}</span>
             <span className="font-semibold">{usage.available}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
@@ -227,7 +222,7 @@ function PoolCard({ pool }: { pool: any }) {
               style={{ width: `${percentage}%` }}
             ></div>
           </div>
-          <p className="text-xs text-muted-foreground">{percentage.toFixed(1)}% used</p>
+          <p className="text-xs text-muted-foreground">{t("resourceManager.percentUsed", { percent: percentage.toFixed(1) })}</p>
         </div>
       </CardContent>
     </Card>

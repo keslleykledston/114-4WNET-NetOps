@@ -14,15 +14,22 @@ export const L2_OPERATIONAL_SSH_OPS_COMMANDS = [
 export const L2_OPERATIONAL_SSH_CONFIG_COMMANDS = [
   "display current-configuration interface",
   "display interface description",
+  "display vlan",
+  "display vlan summary",
 ] as const;
 
 export async function collectL2OperationalViaSsh(
   device: Device,
   options?: { includeConfig?: boolean },
 ): Promise<SSHCollectorOutput> {
-  const commands: string[] = [...L2_OPERATIONAL_SSH_OPS_COMMANDS];
+  // Interface config is always collected so operational refresh can reclassify local VLAN
+  // circuits and mark removed dot1q subinterfaces as OPERATIONAL_STALE.
+  const commands: string[] = [
+    ...L2_OPERATIONAL_SSH_OPS_COMMANDS,
+    ...L2_OPERATIONAL_SSH_CONFIG_COMMANDS,
+  ];
   if (options?.includeConfig) {
-    commands.push(...L2_OPERATIONAL_SSH_CONFIG_COMMANDS);
+    // Reserved for future extra read-only config commands beyond the baseline interface set.
   }
 
   for (const cmd of commands) {

@@ -23,6 +23,7 @@ export async function startL2DiscoveryJob(deviceId: number, runId: string): Prom
     .insert(l2DiscoveryJobsTable)
     .values({
       runId,
+      jobType: "discovery",
       deviceId,
       status: "running",
       startedAt,
@@ -174,12 +175,11 @@ function inferDot1qView(row: typeof l2CircuitsTable.$inferSelect): {
   l2Transport?: string;
   roleContext?: string;
 } {
-  if (row.classification) {
-    return { classification: row.classification, circuitType: row.circuitType, l2Transport: row.l2Transport ?? undefined };
-  }
-
   const dot1qTypes = new Set(["vlan_local", "vlan_orphan", "dot1q_subif", "vlan", "l3_interface", "l3_vrf_link"]);
   if (!dot1qTypes.has(row.circuitType) || !row.localInterface) {
+    if (row.classification) {
+      return { classification: row.classification, circuitType: row.circuitType, l2Transport: row.l2Transport ?? undefined };
+    }
     return {};
   }
 
@@ -207,12 +207,34 @@ function inferDot1qView(row: typeof l2CircuitsTable.$inferSelect): {
     flags.hasSwitchingUse ||
     flags.hasMac;
   const hasDescription = Boolean(row.description?.trim()) || Boolean(flags.hasDescription);
+  const staleOrphanClassifications = new Set(["vlan_orphan", "vlanif_orphan", "vlan_not_in_switch_batch"]);
+
+  if (row.classification && staleOrphanClassifications.has(row.classification) && (hasBinding || hasDescription)) {
+    return {
+      classification: "vlan_local",
+      circuitType: "vlan_local",
+      l2Transport: "local_vlan",
+    };
+  }
+
+  if (row.classification) {
+    return { classification: row.classification, circuitType: row.circuitType, l2Transport: row.l2Transport ?? undefined };
+  }
 
   if (!hasBinding && !hasDescription) {
+    const isVlanif =
+      Boolean(row.localInterface?.toLowerCase().startsWith("vlanif")) || Boolean(flags.hasVlanif);
+    if (isVlanif) {
+      return { classification: "vlanif_orphan", circuitType: "vlan_orphan", l2Transport: "none" };
+    }
     return { classification: "vlan_orphan", circuitType: "vlan_orphan", l2Transport: "none" };
   }
 
-  return {};
+  return {
+    classification: "vlan_local",
+    circuitType: "vlan_local",
+    l2Transport: "local_vlan",
+  };
 }
 
 function rowToNormalized(row: typeof l2CircuitsTable.$inferSelect): NormalizedL2Circuit {
@@ -344,6 +366,7 @@ export async function getL2DiscoveryJob(runId: string): Promise<L2DiscoveryJob |
   return {
     id: row.id,
     runId: row.runId,
+    jobType: (row.jobType ?? "discovery") as L2DiscoveryJob["jobType"],
     deviceId: row.deviceId,
     status: row.status as L2DiscoveryJob["status"],
     startedAt: row.startedAt,

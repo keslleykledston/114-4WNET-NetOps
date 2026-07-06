@@ -11,7 +11,8 @@ import { buildBgpPeerDetails, normalizeDiscoveryBgpPeers, primaryDirectionForRol
 import { normalizeDiscoveryInterfaces } from "./normalizers/interface.normalizer.js";
 import { emptyL2vpnSummary } from "./normalizers/l2vpn.normalizer.js";
 import { normalizeDiscoveryCommunities, normalizeDiscoveryPolicies } from "./normalizers/policy.normalizer.js";
-import { persistSshDiscoveryToNetopsStores } from "../adapters/discovery-netops.adapter.js";
+import { persistSnmpDiscoveryToNetopsStores, persistSshDiscoveryToNetopsStores } from "../adapters/discovery-netops.adapter.js";
+import { collectSnmpFastInterfaces } from "../../operational/snmp-fast-interfaces.service.js";
 import { COMPLIANCE_PARSER_VERSION, INTERFACE_PARSER_VERSION } from "../versioning.js";
 import { parseHuaweiCommunities } from "../huawei-vrp/parsers/community-parser.js";
 import { buildBgpPolicyBindings, parseHuaweiPolicyDependencyPipeline } from "../huawei-vrp/parsers/policy-dependency-pipeline.js";
@@ -430,6 +431,17 @@ export class CollectionOrchestrator {
 
     if (request.preferLiveSsh && ssh.success) {
       await persistSshDiscoveryToNetopsStores(deviceId, snapshot, ssh.rawOutputs);
+    }
+
+    if (request.allowSnmpFallback && snmp.success) {
+      await persistSnmpDiscoveryToNetopsStores(deviceId, snmp.interfaces, snmp.bgpPeers, {
+        success: true,
+        warnings: snmp.warnings,
+      });
+
+      setImmediate(() => {
+        void collectSnmpFastInterfaces(deviceId, "discovery_autocollect").catch(() => undefined);
+      });
     }
 
     return snapshot;

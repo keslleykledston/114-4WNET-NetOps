@@ -42,5 +42,7 @@ export function resolveDeviceSshConfig(device: Device): SSHConfig {
     port: device.sshPort ?? 22,
     username: device.username.trim(),
     password,
+    vendor: device.vendor,
+    platform: device.platform,
   };
 }

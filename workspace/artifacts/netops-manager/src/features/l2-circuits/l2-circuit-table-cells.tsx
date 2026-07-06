@@ -1,33 +1,19 @@
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useTranslation } from "@/i18n";
+import type { TranslateFn } from "@/features/l2-circuits/l2-circuit-badges";
 import { cn } from "@/lib/utils";
 import type { L2Circuit, L2Finding, L2FindingCode, L2VsiPeer } from "./l2-circuits-api";
 import { circuitTypeGroup } from "./l2-circuit-badges";
 
-const FINDING_SHORT_LABELS: Record<L2FindingCode, string> = {
-  CIRCUIT_DOWN: "CIRCUIT DOWN",
-  L2VC_DOWN: "L2VC DOWN",
-  VSI_DOWN: "VSI DOWN",
-  PW_PARTIAL_DOWN: "PW PARTIAL",
-  REMOTE_NOT_FORWARDING: "REMOTE N/F",
-  INCOMPLETE_L2_CONFIG: "L2 INCOMPLETE",
-  DUPLICATED_VC_ID: "DUPE VC-ID",
-  VLAN_CONFLICT: "VLAN CONFLICT",
-  DESCRIPTION_MISSING: "NO DESCRIPTION",
-  ROUTER_L2_VLAN_ANOMALY: "ROUTER L2 VLAN",
-  VLAN_ORPHAN: "VLAN ÓRFÃ",
-  VLANIF_ORPHAN: "VLANIF ÓRFÃ",
-  VLAN_NOT_IN_SWITCH_BATCH: "VLAN BATCH",
-  VLAN_MULTI_INTERFACE_LOCAL: "VLAN MULTI-IF",
-  VLAN_USED_IN_L2VC: "VLAN IN L2VC",
-  VLAN_USED_IN_VSI: "VLAN IN VSI",
-  VLAN_USED_IN_L3_VRF: "VLAN IN L3",
-  CLASSIFICATION_CONFLICT: "CLASS CONFLICT",
-};
-
-export function findingShortLabel(code: L2FindingCode): string {
-  return FINDING_SHORT_LABELS[code] ?? code.replace(/_/g, " ");
+export function findingShortLabel(code: L2FindingCode, t?: TranslateFn): string {
+  const key = `l2Circuits.tableCells.findingCodes.${code}`;
+  if (t) {
+    const translated = t(key);
+    if (translated !== key) return translated;
+  }
+  return code.replace(/_/g, " ");
 }
 
 function isPeerDown(peer: L2VsiPeer): boolean {
@@ -48,6 +34,7 @@ function vsiPeerList(circuit: L2Circuit): L2VsiPeer[] {
 }
 
 export function PeerCell({ circuit }: { circuit: L2Circuit }) {
+  const { t } = useTranslation();
   const isVsi = circuitTypeGroup(circuit.circuitType) === "vsi";
   const peers = isVsi ? vsiPeerList(circuit) : [];
   const displayPeer = isVsi ? firstPeerIp(circuit) : circuit.peerIp ?? undefined;
@@ -65,14 +52,14 @@ export function PeerCell({ circuit }: { circuit: L2Circuit }) {
               variant="outline"
               size="icon"
               className="h-5 w-5 shrink-0 rounded-sm"
-              aria-label={`Ver ${peers.length} peers`}
+              aria-label={t("l2Circuits.tableCells.viewPeersAria", { count: peers.length })}
             >
               <Plus className="h-3 w-3" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-56 p-2" align="start" onClick={(e) => e.stopPropagation()}>
             <p className="mb-1.5 px-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Peers ({peers.length})
+              {t("l2Circuits.tableCells.peersTitle", { count: peers.length })}
             </p>
             <ul className="space-y-0.5">
               {peers.map((peer) => (
@@ -105,6 +92,8 @@ function findingLabelClass(finding: L2Finding): string {
 }
 
 export function FindingsCell({ findings }: { findings: L2Finding[] }) {
+  const { t } = useTranslation();
+
   if (findings.length === 0) {
     return <span className="text-[10px] text-muted-foreground">—</span>;
   }
@@ -128,7 +117,7 @@ export function FindingsCell({ findings }: { findings: L2Finding[] }) {
           boxWidth,
           countClass,
         )}
-        title={`${findings.length} finding(s)`}
+        title={t("l2Circuits.tableCells.findingsCountTitle", { count: findings.length })}
       >
         {findings.length}
       </span>
@@ -139,7 +128,7 @@ export function FindingsCell({ findings }: { findings: L2Finding[] }) {
             className={cn("truncate text-[10px] font-medium uppercase tracking-wide", findingLabelClass(finding))}
             title={finding.message}
           >
-            {findingShortLabel(finding.code)}
+            {findingShortLabel(finding.code, t)}
           </span>
         ))}
       </div>

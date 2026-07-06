@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n";
 
 async function apiFetch<T>(path: string) {
   const res = await fetch(path, { credentials: "include" });
@@ -16,6 +17,7 @@ interface ServiceItem {
 }
 
 export default function ServiceCatalogPage() {
+  const { t } = useTranslation();
   const { data: catalog } = useQuery({
     queryKey: ["service-catalog"],
     queryFn: () => apiFetch<ServiceItem[]>("/api/service-catalog"),
@@ -23,7 +25,7 @@ export default function ServiceCatalogPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Service Catalog</h1>
+      <h1 className="text-2xl font-bold">{t("serviceCatalog.title")}</h1>
       <div className="grid grid-cols-3 gap-4">
         {catalog?.map((item) => (
           <Card key={item.id} className="hover:shadow-lg cursor-pointer">
@@ -32,7 +34,7 @@ export default function ServiceCatalogPage() {
               <h3 className="font-semibold">{item.name}</h3>
               <p className="text-xs text-muted-foreground mt-2">{item.description}</p>
               <Button size="sm" className="mt-4 w-full">
-                Request
+                {t("serviceCatalog.request")}
               </Button>
             </CardContent>
           </Card>

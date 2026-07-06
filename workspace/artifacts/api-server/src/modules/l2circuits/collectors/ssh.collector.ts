@@ -7,6 +7,8 @@ export const L2_SSH_COMMANDS = [
   "display mpls l2vc verbose",
   "display mpls l2vc",
   "display vsi verbose",
+  "display vlan summary",
+  "display vlan",
   "display interface brief",
   "display interface description",
   "display current-configuration interface",

@@ -1,12 +1,48 @@
 import { Client } from "ssh2";
-import type { AnyAuthMethod, ConnectConfig, KeyboardInteractiveCallback, Prompt } from "ssh2";
+import type { Algorithms, AnyAuthMethod, ConnectConfig, KeyboardInteractiveCallback, Prompt } from "ssh2";
+import { needsLegacySshAlgorithms } from "../modules/netops/vendor-registry.js";
 
 export interface SSHConfig {
   host: string;
   port: number;
   username: string;
   password: string;
+  vendor?: string;
+  platform?: string;
 }
+
+const LEGACY_SSH_ALGORITHMS: Algorithms = {
+  serverHostKey: [
+    "ssh-rsa",
+    "rsa-sha2-256",
+    "rsa-sha2-512",
+    "ecdsa-sha2-nistp256",
+    "ecdsa-sha2-nistp384",
+    "ecdsa-sha2-nistp521",
+    "ssh-ed25519",
+  ],
+  kex: [
+    "diffie-hellman-group-exchange-sha1",
+    "diffie-hellman-group14-sha1",
+    "diffie-hellman-group1-sha1",
+    "diffie-hellman-group-exchange-sha256",
+    "diffie-hellman-group14-sha256",
+    "curve25519-sha256",
+    "curve25519-sha256@libssh.org",
+    "ecdh-sha2-nistp256",
+    "ecdh-sha2-nistp384",
+    "ecdh-sha2-nistp521",
+  ],
+  cipher: [
+    "aes128-cbc",
+    "aes192-cbc",
+    "aes256-cbc",
+    "3des-cbc",
+    "aes128-ctr",
+    "aes192-ctr",
+    "aes256-ctr",
+  ],
+};
 
 export interface SSHCommandResult {
   command: string;
@@ -36,6 +72,9 @@ function buildConnectConfig(config: SSHConfig, readyTimeout: number): ConnectCon
     readyTimeout,
     tryKeyboard: true,
     authHandler,
+    ...(needsLegacySshAlgorithms(config.vendor ?? "", config.platform)
+      ? { algorithms: LEGACY_SSH_ALGORITHMS }
+      : {}),
   };
 }
 
@@ -313,11 +352,12 @@ function runSingleCommand(conn: Client, command: string): Promise<SSHCommandResu
 }
 
 export function getCollectionCommands(vendor: string, platform: string): string[] {
+  const vendorKey = normalizeVendorForParsing(vendor, platform);
   const base = ["show running-config", "show interfaces", "show ip bgp summary"];
   const vlanCmds = ["show vlan brief"];
   const vpnCmds = ["show mpls l2transport vc", "show ip vrf"];
 
-  if (vendor === "huawei" || platform === "vrp") {
+  if (vendorKey === "huawei") {
     return [
       "display current-configuration",
       "display interface brief",
@@ -327,7 +367,19 @@ export function getCollectionCommands(vendor: string, platform: string): string[
       "display ip vpn-instance",
     ];
   }
-  if (vendor === "juniper" || platform === "junos") {
+  if (vendorKey === "raisecom") {
+    return [
+      "show running-config",
+      "show interface",
+      "show ip interface brief",
+      "show ip bgp summary",
+      "show bgp all summary",
+      "show vlan",
+      "show mpls l2vc",
+      "show ip vrf",
+    ];
+  }
+  if (vendorKey === "juniper") {
     return [
       "show configuration",
       "show interfaces terse",
@@ -349,21 +401,34 @@ export interface ParsedConfig {
 
 export function parseConfig(rawOutputs: string[], vendor: string): ParsedConfig {
   const allOutput = rawOutputs.join("\n");
+  const vendorKey = normalizeVendorForParsing(vendor);
 
-  const vlans = parseVlans(allOutput, vendor);
-  const interfaces = parseInterfaces(allOutput, vendor);
-  const bgpPeers = parseBgp(allOutput, vendor);
-  const l2vpn = parseL2vpn(allOutput, vendor);
-  const l3vpn = parseL3vpn(allOutput, vendor);
+  const vlans = parseVlans(allOutput, vendorKey);
+  const interfaces = parseInterfaces(allOutput, vendorKey);
+  const bgpPeers = parseBgp(allOutput, vendorKey);
+  const l2vpn = parseL2vpn(allOutput, vendorKey);
+  const l3vpn = parseL3vpn(allOutput, vendorKey);
 
   return { vlans, interfaces, bgpPeers, l2vpn, l3vpn };
 }
 
-function parseVlans(output: string, vendor: string): Array<{ id: string; name?: string }> {
+function normalizeVendorForParsing(vendor: string, platform?: string): "huawei" | "raisecom" | "juniper" | "generic" {
+  const vendorLower = vendor.trim().toLowerCase();
+  const platformLower = String(platform ?? "").trim().toLowerCase();
+  if (vendorLower.includes("huawei") || platformLower === "vrp") return "huawei";
+  if (vendorLower.includes("raisecom") || platformLower === "ros") return "raisecom";
+  if (vendorLower.includes("juniper") || platformLower === "junos") return "juniper";
+  return "generic";
+}
+
+function parseVlans(output: string, vendor: "huawei" | "raisecom" | "juniper" | "generic"): Array<{ id: string; name?: string }> {
   const vlans: Array<{ id: string; name?: string }> = [];
   if (vendor === "huawei") {
     const matches = output.matchAll(/vlan\s+(\d+)\s*\n(?:\s+description\s+(.+))?/gi);
     for (const m of matches) vlans.push({ id: m[1], name: m[2]?.trim() });
+  } else if (vendor === "raisecom") {
+    const matches = output.matchAll(/^(\d+)\s+(\S+)\s+(?:active|enable|enabled)/gim);
+    for (const m of matches) vlans.push({ id: m[1], name: m[2] });
   } else {
     // Cisco show vlan brief
     const matches = output.matchAll(/^(\d+)\s+(\S+)\s+active/gim);
@@ -372,20 +437,39 @@ function parseVlans(output: string, vendor: string): Array<{ id: string; name?: 
   return vlans;
 }
 
-function parseInterfaces(output: string, _vendor: string): Array<{ name: string; description?: string; ip?: string; state: string }> {
+function parseInterfaces(output: string, vendor: "huawei" | "raisecom" | "juniper" | "generic"): Array<{ name: string; description?: string; ip?: string; state: string }> {
   const ifaces: Array<{ name: string; description?: string; ip?: string; state: string }> = [];
-  const matches = output.matchAll(/^(GigabitEthernet|FastEthernet|TenGigabitEthernet|Loopback|Vlan|Ethernet|Bundle-Ether|GE|XGE)[\d\/\.]+/gim);
-  for (const m of matches) {
-    ifaces.push({ name: m[0].trim(), state: "unknown" });
+  if (vendor === "raisecom") {
+    const matches = output.matchAll(/^(\S+)\s+is\s+(up|down),\s*line protocol is\s+(up|down)/gim);
+    for (const m of matches) {
+      ifaces.push({ name: m[1].trim(), state: m[3].toLowerCase() });
+    }
+  } else {
+    const matches = output.matchAll(/^(GigabitEthernet|FastEthernet|TenGigabitEthernet|Loopback|Vlan|Ethernet|Bundle-Ether|GE|XGE)[\d\/\.]+/gim);
+    for (const m of matches) {
+      ifaces.push({ name: m[0].trim(), state: "unknown" });
+    }
   }
   return ifaces.slice(0, 50);
 }
 
-function parseBgp(output: string, vendor: string): Array<{ neighbor: string; asn: string; state: string; prefixesReceived?: string }> {
+function parseBgp(output: string, vendor: "huawei" | "raisecom" | "juniper" | "generic"): Array<{ neighbor: string; asn: string; state: string; prefixesReceived?: string }> {
   const peers: Array<{ neighbor: string; asn: string; state: string; prefixesReceived?: string }> = [];
   if (vendor === "huawei") {
     const matches = output.matchAll(/(\d+\.\d+\.\d+\.\d+)\s+\d+\s+(\d+)\s+\w+\s+\w+\s+(\w+)/g);
     for (const m of matches) peers.push({ neighbor: m[1], asn: m[2], state: m[3] });
+  } else if (vendor === "raisecom") {
+    const matches = output.matchAll(/(\d+\.\d+\.\d+\.\d+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\S+\s+([A-Za-z0-9()/-]+)/g);
+    for (const m of matches) {
+      const stateToken = m[3];
+      const isEstablished = /^\d+$/.test(stateToken);
+      peers.push({
+        neighbor: m[1],
+        asn: m[2],
+        state: isEstablished ? "Established" : stateToken,
+        prefixesReceived: isEstablished ? stateToken : undefined,
+      });
+    }
   } else {
     const matches = output.matchAll(/(\d+\.\d+\.\d+\.\d+)\s+\d+\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(Established|Active|Idle|Connect)\s+(\d+)/g);
     for (const m of matches) peers.push({ neighbor: m[1], asn: m[2], state: m[3], prefixesReceived: m[4] });
